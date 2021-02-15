@@ -1,8 +1,12 @@
 # qw
-This rcfile is elliptic's DCSS bot "qw", the first (and thus far only) bot
-to win DCSS with no human assistance. A substantial amount of code here was
-contributed by elliott or borrowed from N78291's bot "xw", and many others
-have contributed as well.
+
+This rcfile is elliptic's DCSS bot "qw", the first bot to win DCSS with no
+human assistance. A substantial amount of code here was contributed by elliott
+or borrowed from N78291's bot "xw", and many others have contributed as well.
+The bot is now maintained by the dcss devteam. Please post bug reports as issues
+on the official crawl qw repository:
+
+https://github.com/crawl/qw/issues/new
 
 The current version of qw can start as any species/background combination
 and has some basic grasp of how many of the gods work (see qw.rc
@@ -14,6 +18,9 @@ preferred combo for that being GrFi^Okawaru, converting to TSO after Slime
 (15-rune winrate for this build is about 1%).
 
 ## running on remote DCSS server
+* Please make sure you have permission to run a bot on your server of choice!
+  Misconfigured (or even well-configured) bots can eat up server CPU from
+  actual players.
 * go to e.g. http://crawl.akrasiac.org:8080/
 * click "(edit rc)" link for DCSS trunk
 * replace text that were here with contents of qw.rc file from this repo
