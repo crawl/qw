@@ -120,7 +120,6 @@ force_more_message =
 show_travel_trail = false
 skill_focus = false
 autoinscribe += slay:mikee
-autoinscribe += (inedible|mutagenic|forbidden).*(chunk|corpse):noeat
 flush.failure = false
 char_set = ascii
 cset = cloud:xa4
@@ -138,8 +137,6 @@ note_skill_levels = 1,3,6,9,12,15,18,21,24,27
 note_all_spells = true
 
 fire_order = launcher, rock, javelin, tomahawk
-
-auto_eat_chunks = false
 
 read_persist_options = true
 
@@ -1422,7 +1419,7 @@ function autopickup(it, name)
   ring = false
   if class == "armour" or class == "weapon" or class == "jewellery" then
     return not item_is_dominated(it)
-  elseif class == "food" or class == "gold" then
+  elseif class == "gold" then
     return true
   elseif class == "potion" then
     return want_potion(it)
@@ -2183,10 +2180,6 @@ function dangerous_to_rest()
   return false
 end
 
-function starving()
-  return (you.hunger_name() == "starving" or you.hunger_name() == "fainting")
-end
-
 function transformed()
   return (you.transform() ~= "")
 end
@@ -2226,7 +2219,6 @@ end
 function can_berserk()
   return (not (you.berserk() or you.confused() or you.silenced() or
           you.status("berserk cooldown") or you.mesmerised() or
-          too_hungry_to_berserk() or
           you.piety_rank() < 1 or
           you.god() ~= "Trog" or
           you.transform() == "tree" or
@@ -2239,7 +2231,6 @@ end
 
 function can_heroism()
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                you.god() ~= "Okawaru" or
                you.piety_rank() < 1 or
                you.status("heroism") or
@@ -2253,7 +2244,6 @@ function can_recall()
     return false
   end
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                you.status("recalling") or
                cmp() < 2))
 end
@@ -2263,13 +2253,11 @@ function can_recall_ancestor()
     return false
   end
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                cmp() < 2))
 end
 
 function can_finesse()
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                you.god() ~= "Okawaru" or
                you.piety_rank() < 5 or
                you.status("finesse") or
@@ -2279,7 +2267,6 @@ end
 
 function can_slouch()
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                you.god() ~= "Cheibriados" or
                you.piety_rank() < 4 or
                cmp() < 5))
@@ -2287,7 +2274,6 @@ end
 
 function can_drain_life()
   return (not (you.berserk() or you.confused() or you.silenced() or
-               starving() or
                you.god() ~= "Yredelemnul" or
                you.piety_rank() < 4 or
                cmp() < 6))
@@ -2296,13 +2282,13 @@ end
 function can_hand()
   return (not (you.berserk() or you.confused() or you.silenced() or
           you.regenerating() or
-          starving() or you.piety_rank() < 2 or
+          you.piety_rank() < 2 or
           you.god() ~= "Trog"))
 end
 
 function dd_heal_ability()
   if you.race() == "Deep Dwarf" and you.base_mp() > 0
-     and not (you.berserk() or you.confused() or starving()) then
+     and not (you.berserk() or you.confused()) then
     use_ability("Heal Wounds")
     return true
   end
@@ -2310,64 +2296,63 @@ function dd_heal_ability()
 end
 
 function can_ely_healing()
-  return (not (you.berserk() or you.silenced() or starving()
+  return (not (you.berserk() or you.silenced()
                or you.piety_rank() < 4 or you.god() ~= "Elyvilon"
                or cmp() < 2))
 end
 
 function can_purification()
-  return (not (you.berserk() or you.silenced() or starving()
+  return (not (you.berserk() or you.silenced()
                or you.piety_rank() < 3 or you.god() ~= "Elyvilon"
                or cmp() < 3))
 end
 
 function can_recite()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.status("reciting") or
+          you.status("reciting") or
           you.piety_rank() < 1 or you.god() ~= "Zin"))
 end
 
 function can_ru_healing()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.exhausted() or you.piety_rank() < 3 or
+          you.exhausted() or you.piety_rank() < 3 or
           you.god() ~= "Ru"))
 end
 
 function can_apocalypse()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.exhausted() or you.piety_rank() < 5 or
+          you.exhausted() or you.piety_rank() < 5 or
           cmp() < 8 or you.god() ~= "Ru"))
 end
 
 function can_grand_finale()
-  -- using berserk hunger check as a hack for now
   return (not (you.berserk() or you.confused() or you.silenced() or
-          too_hungry_to_berserk() or you.piety_rank() < 5 or
+          you.piety_rank() < 5 or
           cmp() < 8 or you.god() ~= "Uskayaw"))
 end
 
 function can_bia()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.piety_rank() < 4 or
+          you.piety_rank() < 4 or
           you.god() ~= "Trog"))
 end
 
 function can_sgd()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.piety_rank() < 5 or
+          you.piety_rank() < 5 or
           chp() <= 10 or
           you.god() ~= "Makhleb"))
 end
 
 function can_divine_warrior()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.piety_rank() < 5 or
+          you.piety_rank() < 5 or
           cmp() < 8 or you.god() ~= "the Shining One"))
 end
 
 function can_destruction()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          starving() or you.piety_rank() < 4 or
+          you.piety_rank() < 4 or
           chp() <= 6 or
           you.god() ~= "Makhleb"))
 end
@@ -2377,12 +2362,6 @@ function can_teleport()
           and not you.confused()
           and you.transform() ~= "tree"
           and you.race() ~= "Formicid")
-end
-
-function too_hungry_to_berserk()
-  return (starving() or
-          you.hunger_name() == "near starving" or
-          you.hunger_name() == "very hungry")
 end
 
 function player_speed_num()
@@ -3218,39 +3197,6 @@ function on_corpses()
   return false
 end
 
-function on_bottleable_corpses()
-  for it in at_feet() do
-    if string.find(it.name(), "corpse")
-        and food.bottleable(it) then
-      return true
-    end
-  end
-  return false
-end
-
-function on_dangerous_corpse()
-  for it in at_feet() do
-    if string.find(it.name(), "corpse") then
-      return food.dangerous(it)
-    end
-  end
-  return false
-end
-
-function on_edible_corpse()
-  for it in at_feet() do
-    if it.name():find("corpse") and
-       (not it.name():find("noeat")) and (you.god() ~= "Beogh" or not it.name():find("orc ")) then
-      return true
-    end
-  end
-  return false
-end
-
-function bad_food(it)
-  return food.dangerous(it)
-end
-
 function can_swap(equip_slot)
   local it = items.equipped_at(equip_slot)
   if it and it.cursed then
@@ -3361,8 +3307,7 @@ function reason_to_rest(percentage)
   end
   return (you.confused() or transformed() or
           hp_is_low(percentage) and
-          (you.race() ~= "Deep Dwarf" and you.hunger_name() ~= "bloodless"
-           or you.regenerating())
+          (you.race() ~= "Deep Dwarf" or you.regenerating())
           and (you.god() ~= "the Shining One" or hp_is_low(75) or
                count_divine_warrior(2) == 0)
           or you.slowed() or you.exhausted() or you.teleporting()
@@ -3405,40 +3350,6 @@ function should_ally_rest()
     end
   end
   return false
-end
-
-function want_permafood()
-  if you.race() == "Mummy" or you.race() == "Vampire"
-     or you.transform() == "lich" then
-    return false
-  end
-  if you.race() == "Spriggan" then
-    return (you.hunger_name() ~= "completely stuffed"
-           and you.hunger_name() ~= "very full")
-  end
-  return (you.hunger_name() == "near starving"
-          or you.hunger_name() == "very hungry"
-             and (where == "Snake:4" or where == "Spider:4"
-                  or where == "Swamp:4" or where == "Shoals:4"
-                  or you.xl() >= 18 or intrinsic_gourmand())
-          or starving())
-end
-
-function want_chunk()
-  if you.race() == "Spriggan" or you.race() == "Mummy"
-     or you.race() == "Vampire" or you.transform() == "lich" then
-    return false
-  end
-  if you.race() == "Ghoul" and you.rot() > 0 then
-    return true
-  end
-  if intrinsic_gourmand() and (you.hunger_name() == "not hungry"
-                               or you.hunger_name() == "full"
-                               or you.hunger_name() == "very full") then
-    return true
-  end
-  return you.hunger_name() == "hungry" or
-         you.hunger_name() == "very hungry" or want_permafood()
 end
 
 function rest()
@@ -3697,10 +3608,6 @@ end
 
 function prefer_ely_healing()
   if you.god() ~= "Elyvilon" or you.piety_rank() < 4 then
-    return false
-  end
-  if you.hunger_name() == "near starving" and
-     not (you.race() == "Deep Dwarf" and you.base_mp() < 10) then
     return false
   end
   return true
@@ -4355,7 +4262,7 @@ function dd_want_to_teleport()
   return ((immediate_danger and dd_hw_meter > 300
            or immediate_danger and bad_corrosion()
            or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
-           or you.god() == "Trog" and (you.slowed() or too_hungry_to_berserk())
+           or you.god() == "Trog" and you.slowed()
               and want_to_berserk()
               and not can_berserk())
           and count_bia(4) == 0)
@@ -4392,7 +4299,7 @@ function want_to_teleport()
   end
   return ((immediate_danger and bad_corrosion()
            or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
-           or you.god() == "Trog" and (you.slowed() or too_hungry_to_berserk())
+           or you.god() == "Trog" and you.slowed()
               and want_to_berserk()
               and not can_berserk())
           and count_bia(4) == 0)
@@ -4435,8 +4342,7 @@ function want_to_heal_wounds()
   if you.race() == "Deep Dwarf" then
     return dd_want_to_heal_wounds()
   end
-  if danger and can_ely_healing() and hp_is_low(50) and you.piety_rank() >= 5
-     and you.hunger_name() ~= "near starving" then
+  if danger and can_ely_healing() and hp_is_low(50) and you.piety_rank() >= 5 then
     return true
   end
   return (danger and hp_is_low(25))
@@ -4605,8 +4511,7 @@ function plan_wait_spit()
   if you.berserk() or you.confused() or you.breath_timeout() then
     return false
   end
-  if you.xl() > 11 or starving() or you.hunger_name() == "near starving"
-     or you.hunger_name() == "very hungry" or you.hunger_name() == "hungry" then
+  if you.xl() > 11 then
     return false
   end
   dist = 10
@@ -4689,7 +4594,7 @@ function plan_starting_spell()
   if no_spells then
     return false
   end
-  if you.silenced() or you.confused() or you.berserk() or starving() then
+  if you.silenced() or you.confused() or you.berserk() then
     return false
   end
   local sp = starting_spell()
@@ -4754,106 +4659,6 @@ function plan_attack()
   return false
 end
 
-function plan_eat_chunk()
-  if want_chunk() then
-    for it in inventory() do
-      if string.find(it.name(), "chunk") and
-         not bad_food(it) then
-        magic("ee")
-        return true
-      end
-    end
-  end
-  return false
-end
-
-function plan_eat_permafood()
-  if where == "Zot:5" or where:find("Zot") and count_permafood() >= 10 then
-    return plan_orbrun_eat_permafood()
-  end
-  if want_permafood() then
-    if eat_permafood() then
-      return true
-    end
-  end
-  return false
-end
-
-function plan_orbrun_eat_permafood()
-  if you.hunger_name() ~= "completely stuffed" and
-     you.hunger_name() ~= "very full" and
-     you.hunger_name() ~= "almost alive" and
-     (you.race() ~= "Ghoul" or you.hunger_name() ~= "not hungry") and
-     you.transform() ~= "lich" then
-    if eat_permafood() then
-      return true
-    end
-  end
-  return false
-end
-
-function plan_eat_anyway()
-  if you.hunger_name() == "very hungry" then
-    if eat_permafood() then
-      return true
-    end
-  end
-  return false
-end
-
-function drink_blood()
-  if drink_by_name("coagulated blood") then
-    return true
-  end
-  return drink_by_name("blood")
-end
-
-function eat_permafood(prefer_ration)
-  local l
-  local max_prefer = 0
-  local food_name
-  for it in inventory() do
-    if it.class(true) == "food" and not bad_food(it) then
-      local name = it.name()
-      local prefer
-      if name:find("ration") then
-        if prefer_ration then
-          prefer = 5
-        else
-          prefer = 1
-        end
-      elseif name:find("chunk") then
-        prefer = 0
-      else
-        prefer = 3
-      end
-      if prefer > max_prefer then
-        l = items.index_to_letter(it.slot)
-        max_prefer = prefer
-        food_name = it.name()
-      end
-    end
-  end
-  if max_prefer > 0 then
-    items.swap_slots(items.letter_to_index(l), items.letter_to_index('e'),
-                     false)
-    say("EATING " .. food_name .. ".")
-    magic("ee")
-    return true
-  end
-  return false
-end
-
-function count_permafood()
-  local s = 0
-  for it in inventory() do
-    if it.class(true) == "food" and not bad_food(it) and not food.ischunk(it) then
-      s = s + it.quantity
-    end
-  end
-  return s
-end
-
 function plan_easy_rest()
   if should_rest() then
     easy_rest()
@@ -4895,10 +4700,8 @@ function plan_handle_corpses()
   if not on_corpses() then
     return false
   end
-  if on_edible_corpse() then
-    chop()
-    return true
-  end
+  -- used to be food code.
+  -- add relevant necro spells here and add this back to `plan`?
   return false
 end
 
@@ -5028,7 +4831,7 @@ function plan_join_god()
 end
 
 function plan_find_corpses()
-  magicfind("@/corpse$&&!!rott&&!!skel&&!!noeat")
+  magicfind("@/corpse$&&!!rott&&!!skel&&")
   return true
 end
 
@@ -5786,7 +5589,7 @@ end
 
 function want_to_buy(it)
   local class = it.class(true)
-  if class == "food" or class == "missile" then
+  if class == "missile" then
     return false
   elseif class == "scroll" then
     local sub = it.subtype()
@@ -6246,7 +6049,7 @@ function plan_lugonu_exit_abyss()
   if you.god() ~= "Lugonu" then
     return false
   end
-  if (you.berserk() or you.confused() or you.silenced() or starving()
+  if (you.berserk() or you.confused() or you.silenced()
           or you.piety_rank() < 1 or cmp() < 1) then
     return false
   end
@@ -6465,7 +6268,7 @@ end
 
 function plan_fly()
   if you.xl() >= 14 and intrinsic_flight() and not you.flying() then
-    if cmp() >= 3 and not you.rooted() and not starving() then
+    if cmp() >= 3 and not you.rooted() then
       if use_ability("Fly") then
         say("FLYING.")
         return true
@@ -6500,7 +6303,7 @@ function plan_ancestor_life()
 end
 
 function plan_sacrifice()
-  if you.god() ~= "Ru" or starving() then
+  if you.god() ~= "Ru" then
     return false
   end
   -- sacrifices that we won't do for now: words, drink, courage, durability, hand, resistance, purity, health, artifice (on DD)
@@ -6805,9 +6608,6 @@ function plan_continue_flee()
 end
 
 function plan_stuck()
-  if starving() then
-    return random_step("starving")
-  end
   stuck_turns = stuck_turns + 1
   if stuck_turns > QUIT_TURNS then
     magic(control('q') .. "yes\r")
@@ -6972,14 +6772,6 @@ function plan_cure_confusion()
       magic("s") -- avoid Beogh penance
       return true
     end
-  end
-  return false
-end
-
-function plan_cure_starving()
-  if you.hunger_name() == "fainting"
-     or you.hunger_name() == "starving" then
-    return eat_permafood(true)
   end
   return false
 end
@@ -7669,7 +7461,6 @@ plan_pre_explore2 = cascade {
 } -- hack
 
 plan_emergency = cascade {
-  {plan_cure_starving, "cure_starving"},
   {plan_special_purification, "special_purification"},
   {plan_cure_confusion, "cure_confusion"},
   {plan_coward_step, "coward_step"},
@@ -7706,7 +7497,6 @@ plan_emergency = cascade {
 } -- hack
 
 plan_orbrun_emergency = cascade {
-  {plan_cure_starving, "cure_starving"},
   {plan_special_purification, "special_purification"},
   {plan_cure_confusion, "cure_confusion"},
   {plan_orbrun_teleport, "orbrun_teleport"},
@@ -7721,32 +7511,21 @@ plan_orbrun_emergency = cascade {
   {plan_orbrun_might, "orbrun_might"},
 } -- hack
 
-plan_eatrest = cascade {
-  {plan_eat_chunk, "eat_chunk"},
-  {plan_eat_permafood, "eat_permafood"},
+plan_rest = cascade {
   {plan_dd_hand_for_healing, "dd_hand_for_healing"},
   --{plan_easy_rest, "try_easy_rest"},
   {plan_rest, "rest"},
-  {plan_handle_corpses, "handle_corpses"},
-  {plan_find_corpses, "try_find_corpses"},
-  {plan_eat_anyway, "eat_anyway"},
 } -- hack
 
-plan_abyss_eatrest = cascade {
-  {plan_eat_chunk, "eat_chunk"},
-  {plan_eat_permafood, "eat_permafood"},
+plan_abyss_rest = cascade {
   {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
   {plan_abyss_hand, "abyss_hand"},
   {plan_abyss_rest, "rest"},
-  {plan_handle_corpses, "handle_corpses"},
-  {plan_find_corpses, "try_find_corpses"},
-  {plan_eat_anyway, "eat_anyway"},
   {plan_go_down_abyss, "go_down_abyss"},
   {plan_go_to_abyss_downstairs, "try_go_to_abyss_downstairs"},
 } -- hack
 
-plan_orbrun_eatrest = cascade {
-  {plan_orbrun_eat_permafood, "orbrun_eat_permafood"},
+plan_orbrun_rest = cascade {
   {plan_orbrun_rest, "orbrun_rest"},
   {plan_orbrun_hand, "orbrun_hand"},
 } -- hack
@@ -7804,7 +7583,7 @@ plan_move = cascade {
   {plan_attack, "attack"},
   {plan_cure_poison, "cure_poison"},
   {plan_flail_at_invis, "try_flail_at_invis"},
-  {plan_eatrest, "eatrest"},
+  {plan_rest, "rest"},
   {plan_pre_explore, "pre_explore"},
   {plan_step_towards_lair, "step_towards_lair"},
   {plan_continue_tab, "continue_tab"},
@@ -7838,7 +7617,7 @@ plan_orbrun_move = cascade {
   {plan_recall_ancestor, "try_recall_ancestor"},
   {plan_attack, "attack"},
   {plan_cure_poison, "cure_poison"},
-  {plan_orbrun_eatrest, "orbrun_eatrest"},
+  {plan_orbrun_rest, "orbrun_rest"},
   {plan_go_up, "go_up"},
   {plan_fly, "fly"},
   {plan_use_good_consumables, "use_good_consumables"},
@@ -7861,7 +7640,7 @@ plan_abyss_move = cascade {
   {plan_attack, "attack"},
   {plan_cure_poison, "cure_poison"},
   {plan_flail_at_invis, "try_flail_at_invis"},
-  {plan_abyss_eatrest, "abyss_eatrest"},
+  {plan_abyss_rest, "abyss_rest"},
   {plan_pre_explore, "pre_explore"},
   {plan_autoexplore, "try_autoexplore"},
   {plan_pre_explore2, "pre_explore2"},
