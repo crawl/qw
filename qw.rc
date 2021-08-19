@@ -2218,7 +2218,7 @@ end
 
 function can_berserk()
   return (not (you.berserk() or you.confused() or you.silenced() or
-          you.status("berserk cooldown") or you.mesmerised() or
+          you.status("on berserk cooldown") or you.mesmerised() or
           you.piety_rank() < 1 or
           you.god() ~= "Trog" or
           you.transform() == "tree" or
