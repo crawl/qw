@@ -63,7 +63,7 @@
 combo = GrBe.handaxe
 
 # For random berserkers, use these combos:
-#combo = CeBe.handaxe, DDBe.handaxe, DEBe.handaxe, DrBe.handaxe, DsBe.handaxe
+#combo = DDBe.handaxe, DEBe.handaxe, DrBe.handaxe, DsBe.handaxe
 #combo += FeBe.claws, FoBe.handaxe, GrBe.handaxe, GhBe.claws, HaBe.falchion
 #combo += HEBe.falchion, HOBe.handaxe, HuBe.handaxe, KoBe.mace, MfBe.spear
 #combo += MiBe.handaxe, MuBe.handaxe, NaBe.handaxe, OgBe.mace, OpBe.handaxe
@@ -907,20 +907,10 @@ function armour_value(it, cur, it2)
   -- name always starts with {boots armour} here
   -- ^ is no longer true I think?
   if good_slots[st] == "Boots" then
-    if you.race() == "Centaur" then
-      if not (name:find("centaur barding")
-              or name:find("horse barding")) then
-        return -1,-1
-      end
-    elseif you.race() == "Naga" then
-      if not (name:find("naga barding")
-              or name:find("lightning scales")) then
-        return -1,-1
-      end
-    else
-      if name:find("barding") then
-        return -1,-1
-      end
+    local want_barding = you.race() == "Palentonga" or you.race() == "Naga"
+    local is_barding = name:find("barding") or name:find("lightning scales")
+    if want_barding and not is_barding or not want_barding and is_barding then
+      return -1,-1
     end
   end
   if good_slots[st] == "Armour" then
@@ -1925,7 +1915,7 @@ end
 function intrinsic_fumble()
   local sp = you.race()
   if sp == "Merfolk" or sp == "Octopode" or sp == "Grey Draconian" or
-     sp == "Centaur" or sp == "Naga" or sp == "Troll" or sp == "Ogre"
+     sp == "Palentonga" or sp == "Naga" or sp == "Troll" or sp == "Ogre"
      or sp == "Barachi" then
     return false
   end
@@ -1987,7 +1977,7 @@ end
 
 function unfitting_armour()
   local sp = you.race()
-  return (armour_plan() == "large" or sp == "Centaur" or sp == "Naga")
+  return (armour_plan() == "large" or sp == "Palentonga" or sp == "Naga")
 end
 
 function want_buckler()
@@ -2369,7 +2359,7 @@ function player_speed_num()
   local num = 3
   if you.god() == "Cheibriados" then
     num = 1
-  elseif you.race() == "Spriggan" or you.race() == "Centaur" then
+  elseif you.race() == "Spriggan" then
     num = 4
   elseif you.race() == "Naga" then
     num = 2
@@ -3100,7 +3090,7 @@ function body_size()
   elseif you.race() == "Spriggan" or you.race() == "Felid" then
     return -2
   elseif you.race() == "Troll" or you.race() == "Ogre"
-         or you.race() == "Naga" or you.race() == "Centaur" then
+         or you.race() == "Naga" or you.race() == "Palentonga" then
     return 1
   else
     return 0
@@ -5077,7 +5067,7 @@ function plan_use_good_consumables()
            base_mutation("teleportitis") > 0 or
            base_mutation("inability to read while threatened") > 0 or
            base_mutation("deformed body") > 0 and you.race() ~= "Naga"
-           and you.race() ~= "Centaur"
+           and you.race() ~= "Palentonga"
            and (armour_plan() == "heavy" or armour_plan() == "large") or
            base_mutation("berserk") > 0 or
            base_mutation("deterioration") > 1 or
