@@ -3284,7 +3284,7 @@ function should_rest()
     end
     return true
   end
-  return (reason_to_rest(99.9) or you.status("barbed spikes")
+  return (reason_to_rest(99.9) or you.status("spiked")
           or you.god() == "Makhleb" and you.turns() <= sgd_timer + 100
           or should_ally_rest())
 end
@@ -4029,7 +4029,7 @@ function choose_tactical_step()
   tactical_reason = "none"
   if you.confused() or you.berserk() or you.constricted()
      or you.transform() == "tree" or you.transform() == "fungus"
-     or where:find("Slime") or you.status("barbed spikes") then
+     or where:find("Slime") or you.status("spiked") then
     return
   end
   local a0 = assess_square(0,0)
@@ -5536,7 +5536,7 @@ function want_to_stairdance_up()
   if only_when_safe and follow_count > 0 then
     return false
   end
-  if follow_count == 0 and (reason_to_rest(90) or you.status("barbed spikes"))
+  if follow_count == 0 and (reason_to_rest(90) or you.status("spiked"))
      and not buffed()
      or other_count > 0 and follow_count > 0 then
     stairdance_count[where] = n + 1
@@ -5573,7 +5573,11 @@ function plan_stairdance_up()
       travel_destination = cur_branch()
     end
     say("STAIRDANCE")
-    magic("<")
+    if you.status("spiked") then
+      magic("<Y")
+    else
+      magic("<")
+    end
     return true
   end
   return false
@@ -6579,7 +6583,7 @@ function plan_continue_flee()
   end
   if danger or not reason_to_rest(90) or you.transform() == "tree"
      or count_bia(3) > 0 or count_sgd(3) > 0 or count_divine_warrior(3) > 0
-     or you.status("barbed spikes") or you.confused() or buffed() then
+     or you.status("spiked") or you.confused() or buffed() then
     return false
   end
   local num = waypoint_parity
