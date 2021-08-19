@@ -5075,6 +5075,7 @@ function plan_use_good_consumables()
         if base_mutation("inhibited regeneration") > 0
            and you.race() ~= "Ghoul" or
            base_mutation("teleportitis") > 0 or
+           base_mutation("inability to read while threatened") > 0 or
            base_mutation("deformed body") > 0 and you.race() ~= "Naga"
            and you.race() ~= "Centaur"
            and (armour_plan() == "heavy" or armour_plan() == "large") or
