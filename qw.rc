@@ -5592,6 +5592,10 @@ function want_to_buy(it)
   return autopickup(it, it.name())
 end
 
+function shop_item_sort(i1, i2)
+  return crawl.string_compare(i1[1].name(), i2[1].name()) < 0
+end
+
 function plan_shop()
   if view.feature_at(0,0) ~= "enter_shop" or free_inventory_slots() == 0 then
     return false
@@ -5601,7 +5605,9 @@ function plan_shop()
   end
 
   local it, price, on_list
-  for n,e in ipairs(items.shop_inventory()) do
+  local sitems = items.shop_inventory()
+  table.sort(sitems, shop_item_sort)
+  for n,e in ipairs(sitems) do
     it = e[1]
     price = e[2]
     on_list = e[3]
@@ -5610,8 +5616,8 @@ function plan_shop()
       -- We want the item. Can we afford buying it now?
       local wealth = you.gold()
       if price <= wealth then
-        --say("BUYING " .. it.name() .. " (" .. price .. " gold).")
-        magic("<" .. letter(n-1) .. "\ry")
+        say("BUYING " .. it.name() .. " (" .. price .. " gold).")
+        magic("<//" .. letter(n-1) .. "\ry")
         return
       -- Should in theory also work in Bazaar, but doesn't make much sense
       -- (since we won't really return or acquire money and travel back here)
@@ -5619,12 +5625,12 @@ function plan_shop()
          and not you.where():find("Bazaar") and not zot_soon() then
         say("SHOPLISTING " .. it.name() .. " (" .. price .. " gold"
          .. ", have " .. wealth .. ").")
-        magic("<" .. string.upper(letter(n-1)))
+        magic("<//" .. string.upper(letter(n - 1)))
         return
       end
     elseif on_list then
       -- We no longer want the item. Remove it from shopping list.
-      magic("<" .. string.upper(letter(n-1)))
+      magic("<//" .. string.upper(letter(n - 1)))
       return
     end
   end
