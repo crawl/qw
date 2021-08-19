@@ -3830,7 +3830,7 @@ function heal_wounds()
     dd_hw_meter = dd_hw_meter + 100
     return true
   end
-  if you.mutation("no potion heal") < 3
+  if you.mutation("no potion heal") < 2
      and drink_by_name("heal wounds") then
     dd_hw_meter = dd_hw_meter + 100
     return true
