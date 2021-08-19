@@ -2448,10 +2448,12 @@ function sense_immediate_danger()
   return false
 end
 
-function sense_danger(r, no_ignored)
+function sense_danger(r, moveable, no_ignored)
   local e
   for _,e in ipairs(enemy_list) do
-    if supdist(e.x,e.y) <= r then
+    if (moveable and you.see_cell_solid_see(e.x, e.y)
+         or not moveable and you.see_cell_no_trans(e.x, e.y))
+        and supdist(e.x,e.y) <= r then
       if (not no_ignored) or is_candidate_for_attack(e.x,e.y,no_ignored) then
         return true
       end
@@ -2502,7 +2504,7 @@ function check_monsters(r, mlist)
   local e
   local xl = you.xl()
   for _,e in ipairs(enemy_list) do
-    if supdist(e.x,e.y) <= r then
+    if you.see_cell_no_trans(e.x, e.y) and supdist(e.x,e.y) <= r then
       if not contains_string_in(e.m:name(), {"skeleton", "zombie",
          "simulacrum", "spectral"}) then
         local name = e.m:name()
@@ -4394,7 +4396,7 @@ function want_to_hand()
 end
 
 function want_to_berserk()
-  return (hp_is_low(50) and sense_danger(2) and
+  return (hp_is_low(50) and sense_danger(2, true) and
           (you.race() ~= "Deep Dwarf" or dd_want_to_heal_wounds()) or
           check_monsters(2, scary_monsters) or
           (invisi_sigmund and not options.autopick_on))
