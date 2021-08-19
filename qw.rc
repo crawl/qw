@@ -1302,9 +1302,9 @@ function want_scroll(it)
   if sub == nil then
     return true
   end
-  if sub ~= "identify" and sub ~= "teleportation" and sub ~= "remove curse"
-     and sub ~= "enchant weapon" and sub ~= "enchant armour"
-     and sub ~= "acquirement" and sub ~= "brand weapon"
+  if sub ~= "identify" and sub ~= "teleportation" and sub ~= "enchant weapon"
+     and sub ~= "enchant armour" and sub ~= "acquirement"
+     and sub ~= "brand weapon"
      and (not WILL_ZIG or sub ~= "fog" and sub ~= "blinking") then
     return false
   end
@@ -1381,7 +1381,7 @@ function should_upgrade(it,old_it,sit)
   end
   if not it.fully_identified and not should_drop(it) then
     if equip_slot(it) == "Weapon" and it.weap_skill ~= wskill() then
-      return (count_item("scroll", "remove curse") > 0)
+      return true
     end
     return (old_it.subtype() ~= "amulet of faith")
   end
@@ -5063,12 +5063,6 @@ function plan_use_good_consumables()
             return true
           end
         end
-      elseif it.name():find("remove curse") then
-        for it2 in inventory() do
-          if it2.cursed and it2.equipped then
-            return read(it)
-          end
-        end
       end
     elseif it.class(true) == "potion" then
       if it.name():find("experience") then
@@ -5294,9 +5288,7 @@ function plan_upgrade_amulet()
   it_old = items.equipped_at("Amulet")
   swappable = can_swap("Amulet")
   for it in inventory() do
-    if it and equip_slot(it) == "Amulet"
-          and (it.fully_identified or count_item("scroll", "remove curse") > 1)
-          and not it.equipped then
+    if it and equip_slot(it) == "Amulet" and not it.equipped then
       local equip = false
       local drop = false
       if should_upgrade(it,it_old) then
@@ -5334,9 +5326,7 @@ function plan_upgrade_rings()
   local it_rings = ring_list()
   local empty = (empty_ring_slots() > 0)
   for it in inventory() do
-    if it and equip_slot(it) == "Ring"
-          and (it.fully_identified or count_item("scroll", "remove curse") > 1)
-          and not it.equipped then
+    if it and equip_slot(it) == "Ring" and not it.equipped then
       local equip = false
       local drop = false
       local swap = nil
@@ -5458,7 +5448,7 @@ function plan_upgrade_armour()
     end
   end
   for it in inventory() do
-    if it and it.equipped and it.class(true) == "armour" and (not it.cursed)
+    if it and it.equipped and it.class(true) == "armour" and not it.cursed
           and should_remove(it) then
       l = items.index_to_letter(it.slot)
       say("REMOVING " .. it.name() .. ".")
@@ -5593,8 +5583,7 @@ function want_to_buy(it)
     return false
   elseif class == "scroll" then
     local sub = it.subtype()
-    if (sub == "identify" or sub == "remove curse")
-       and count_item("scroll",sub) > 9 then
+    if sub == "identify" and count_item("scroll",sub) > 9 then
       return false
     end
   end
