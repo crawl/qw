@@ -556,7 +556,7 @@ function player_resist(str, it)
       other_res = other_res + item_resist(str, it2)
     end
   end
-  if str == "rF" or str == "rC" or str == "rN" or str == "MR" then
+  if str == "rF" or str == "rC" or str == "rN" or str == "Will" then
     return other_res
   else
     return ((other_res > 0) and 1 or 0)
@@ -597,7 +597,7 @@ function absolute_resist_value(str, n)
     return 0
   end
   if slime_soon() and (str == "rF" or str == "rElec" or str == "rPois" or
-                       str == "rN" or str == "MR" or str == "SInv") then
+                       str == "rN" or str == "Will" or str == "SInv") then
     return 0
   end
   local val = 0
@@ -623,7 +623,7 @@ function absolute_resist_value(str, n)
     return ((easy_runes() < 2) and 225 or 75)
   elseif str == "rN" then
     return 25*n
-  elseif str == "MR" then
+  elseif str == "Will" then
     if n <= 2 then
       return 75*n
     else
@@ -665,7 +665,7 @@ function max_resist_value(str, d)
     return ((ires < 1) and ((easy_runes() < 2) and 225 or 75) or 0)
   elseif str == "rN" then
     return ((ires < 3) and 25*d or 0)
-  elseif str == "MR" then
+  elseif str == "Will" then
     return 75*d
   elseif str == "rCorr" then
     return (ires < 1 and (SLIMY_RUNE and 1200 or 50) or 0)
@@ -694,7 +694,7 @@ function min_resist_value(str, d)
     return -375
   elseif str == "rC" then
     return (SLIMY_RUNE and -225 or -150)
-  elseif str == "MR" then
+  elseif str == "Will" then
     return 75*d
   end
   return 0
@@ -728,7 +728,8 @@ function linear_resist_value(str)
 end
 
 function total_resist_value(it, cur, it2)
-  resistlist = { "rF", "rC", "rElec", "rPois", "rN", "MR", "rCorr", "SInv", "Spirit", "Str", "Dex", "Int" }
+  resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr", "SInv",
+                 "Spirit", "Str", "Dex", "Int" }
   linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH" }
   local val = 0
   for _,str in ipairs(linearlist) do
@@ -746,7 +747,8 @@ function total_resist_value(it, cur, it2)
 end
 
 function resist_vec(it)
-  local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "MR", "rCorr", "SInv", "Spirit" }
+  local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
+                       "SInv", "Spirit" }
   local vec = { }
   for _,str in ipairs(resistlist) do
     local a,b = resist_value(str, it)
@@ -1487,7 +1489,7 @@ local res_func_table = {
   rElec=you.res_shock,
   rN=you.res_draining,
   rCorr=(function() return you.res_corr() and 1 or 0 end), -- returns a boolean
-  --MR=you.res_magic, -- (doesn't exist yet...)
+  Will=you.willpower,
 } --hack
 
 function check_resist(lev,resist,value)
