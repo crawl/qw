@@ -2209,76 +2209,6 @@ function can_zap()
   return true
 end
 
-function can_berserk()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.status("on berserk cooldown") or you.mesmerised() or
-          you.piety_rank() < 1 or
-          you.god() ~= "Trog" or
-          you.transform() == "tree" or
-          you.transform() == "wisp" or
-          you.transform() == "lich" or
-          you.status("afraid") or
-          you.race() == "Mummy" or you.race() == "Ghoul"
-          or you.race() == "Formicid"))
-end
-
-function can_heroism()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               you.god() ~= "Okawaru" or
-               you.piety_rank() < 1 or
-               you.status("heroism") or
-               cmp() < 2 or
-               you.under_penance()))
-end
-
-function can_recall()
-  if (you.god() ~= "Yredelemnul" or you.piety_rank() < 2)
-     and (you.god() ~= "Beogh" or you.piety_rank() < 4) then
-    return false
-  end
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               you.status("recalling") or
-               cmp() < 2))
-end
-
-function can_recall_ancestor()
-  if you.god() ~= "Hepliaklqana" then
-    return false
-  end
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               cmp() < 2))
-end
-
-function can_finesse()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               you.god() ~= "Okawaru" or
-               you.piety_rank() < 5 or
-               you.status("finesse") or
-               cmp() < 5 or
-               you.under_penance()))
-end
-
-function can_slouch()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               you.god() ~= "Cheibriados" or
-               you.piety_rank() < 4 or
-               cmp() < 5))
-end
-
-function can_drain_life()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-               you.god() ~= "Yredelemnul" or
-               you.piety_rank() < 4 or
-               cmp() < 6))
-end
-
-function can_hand()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.regenerating() or
-          you.piety_rank() < 2 or
-          you.god() ~= "Trog"))
-end
-
 function dd_heal_ability()
   if you.race() == "Deep Dwarf" and you.base_mp() > 0
      and not (you.berserk() or you.confused()) then
@@ -2288,73 +2218,153 @@ function dd_heal_ability()
   return false
 end
 
-function can_ely_healing()
-  return (not (you.berserk() or you.silenced()
-               or you.piety_rank() < 4 or you.god() ~= "Elyvilon"
-               or cmp() < 2))
+function can_invoke()
+  return not (you.berserk() or you.confused() or you.silenced()
+              or you.status("engulfed (cannot breathe)"))
 end
 
-function can_purification()
-  return (not (you.berserk() or you.silenced()
-               or you.piety_rank() < 3 or you.god() ~= "Elyvilon"
-               or cmp() < 3))
+function can_berserk()
+  return you.god() == "Trog"
+         and you.piety_rank() >= 1
+         and you.race() ~= "Mummy"
+         and you.race() ~= "Ghoul"
+         and you.race() ~= "Formicid"
+         and not (you.status("on berserk cooldown")
+                  or you.mesmerised()
+                  or you.transform() == "tree"
+                  or you.transform() == "lich"
+                  or you.status("afraid"))
+         and can_invoke()
 end
 
-function can_recite()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.status("reciting") or
-          you.piety_rank() < 1 or you.god() ~= "Zin"))
-end
-
-function can_ru_healing()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.exhausted() or you.piety_rank() < 3 or
-          you.god() ~= "Ru"))
-end
-
-function can_apocalypse()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.exhausted() or you.piety_rank() < 5 or
-          cmp() < 8 or you.god() ~= "Ru"))
-end
-
-function can_grand_finale()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.piety_rank() < 5 or
-          cmp() < 8 or you.god() ~= "Uskayaw"))
+function can_hand()
+  return you.god() == "Trog"
+         and you.piety_rank() >= 2
+         and not you.regenerating()
+         and can_invoke()
 end
 
 function can_bia()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.piety_rank() < 4 or
-          you.god() ~= "Trog"))
+  return you.god() == "Trog"
+         and you.piety_rank() >= 4
+         and can_invoke()
+end
+
+
+function can_heroism()
+  return you.god() == "Okawaru"
+         and you.piety_rank() >= 1
+         and cmp() >= 2
+         and not you.status("heroism")
+         and can_invoke()
+end
+
+function can_finesse()
+  return you.god() == "Okawaru"
+         and you.piety_rank() >= 5
+         and cmp() >= 5
+         and not you.status("finesse")
+         and can_invoke()
+end
+
+function can_recall()
+  return (you.god() == "Yredelemnul" and you.piety_rank() >= 2)
+          or (you.god() == "Beogh" and you.piety_rank() >= 4)
+         and not you.status("recalling")
+         and cmp() >= 2
+         and can_invoke()
+end
+
+function can_drain_life()
+  return you.god() == "Yredelemnul"
+         and you.piety_rank() >= 4
+         and cmp() >= 6
+         and can_invoke()
+end
+
+function can_recall_ancestor()
+  return you.god() == "Hepliaklqana"
+         and cmp() >= 2
+         and can_invoke()
+end
+
+function can_slouch()
+  return you.god() == "Cheibriados"
+         and you.piety_rank() >= 4
+         and cmp() >= 5
+         and can_invoke()
+end
+
+function can_ely_healing()
+  return you.god() == "Elyvilon"
+         and you.piety_rank() >= 4
+         and cmp() >= 2
+         and can_invoke()
+end
+
+function can_purification()
+  return you.god() == "Elyvilon"
+         and you.piety_rank() >= 3
+         and cmp() >= 3
+         and can_invoke()
+end
+
+function can_recite()
+  return you.god() == "Zin"
+         and you.piety_rank() >= 1
+         and not you.status("reciting")
+         and can_invoke()
+end
+
+function can_ru_healing()
+  return you.god() == "Ru"
+         and you.piety_rank() >= 3
+         and not you.exhausted()
+         and can_invoke()
+end
+
+function can_apocalypse()
+  return you.god() == "Ru"
+         and you.piety_rank() >= 5
+         and cmp >= 8
+         and not you.exhausted()
+         and can_invoke()
+end
+
+function can_grand_finale()
+  return you.god() == "Uskayaw"
+         and you.piety_rank() >= 5
+         and cmp() >= 8
+         and can_invoke()
 end
 
 function can_sgd()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.piety_rank() < 5 or
-          chp() <= 10 or
-          you.god() ~= "Makhleb"))
+  return you.god() == "Makhleb"
+         and you.piety_rank() >= 5
+         and chp() > 10
+         and can_invoke()
 end
 
 function can_divine_warrior()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.piety_rank() < 5 or
-          cmp() < 8 or you.god() ~= "the Shining One"))
+  return you.god() == "the Shining One"
+         and you.piety_rank() >= 5
+         and cmp() >= 8
+         and can_invoke()
 end
 
 function can_destruction()
-  return (not (you.berserk() or you.confused() or you.silenced() or
-          you.piety_rank() < 4 or
-          chp() <= 6 or
-          you.god() ~= "Makhleb"))
+  return you.god() == "Makhleb"
+         and chp() > 6
+         and you.piety_rank() >= 4
+         and can_invoke()
 end
 
 function can_teleport()
-  return (not you.berserk() and not you.teleporting() and not you.anchored()
-          and not you.confused()
-          and you.transform() ~= "tree"
-          and you.race() ~= "Formicid")
+  return can_read()
+         and not (you.teleporting()
+                  or you.anchored()
+                  or you.transform() ~= "tree"
+                  or you.race() ~= "Formicid")
 end
 
 function player_speed_num()
