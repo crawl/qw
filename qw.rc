@@ -1,10 +1,10 @@
 # This rcfile is elliptic's DCSS bot "qw", the first (and thus far only) bot
 # to win DCSS with no human assistance. A substantial amount of code here was
 # contributed by elliott or borrowed from N78291's bot "xw", and many others
-# have contributed as well.
+# have contributed as well. It is now maintained by the DCSS dev team.
 
 # For brief instructions and the most up-to-date version of qw, see
-# https://github.com/elliptic/qw.
+# https://github.com/crawl/qw.
 
 ## qw's settings:
 #
