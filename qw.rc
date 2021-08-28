@@ -31,8 +31,6 @@
 : ENDGAME_PLAN = "zot"
 # depth to attempt to dive in ziggurats
 : ZIG_DIVE = 27
-# burn books with Trog, may theoretically cause navigation problems
-: BURN_BOOKS = true
 # enable certain somewhat spammy notes
 : SPAM = false
 # tab just takes a single action (for testing)
@@ -3282,15 +3280,6 @@ function see_item(item_class, r, name_callback)
     return false
 end
 
--- Matches all unindentified books
-function is_spellbook(book_name)
-    return (book_name ~= nil) and (book_name:find("book") ~= nil)
-end
-
-function see_spellbooks_to_burn()
-    return see_item("name_callback", LOS, is_spellbook)
-                 and not see_item("name_callback", 0, is_spellbook)
-end
 -----------------------------------------
 -- "plans" - functions that take actions, and logic to determine which actions
 --           to take.
