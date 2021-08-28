@@ -2023,8 +2023,7 @@ function want_buckler()
     if wskill() == "Short Blades" or wskill() == "Unarmed Combat" then
         return true
     end
-    if you.race() == "Formicid" or you.race() == "Halfling"
-         or you.race() == "Kobold" then
+    if you.race() == "Formicid" or you.race() == "Kobold" then
         return true
     end
     return false
@@ -3137,7 +3136,7 @@ function have_reaching()
 end
 
 function body_size()
-    if you.race() == "Kobold" or you.race() == "Halfling" then
+    if you.race() == "Kobold" then
         return -1
     elseif you.race() == "Spriggan" or you.race() == "Felid" then
         return -2
