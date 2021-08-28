@@ -2850,11 +2850,6 @@ function is_candidate_for_attack(x, y, no_untabbable)
             or m:name() == "orb of destruction" then
         return false
     end
-    if m:is_firewood() then
-        if not string.find(m:name(), "ballistomycete") then
-            return false
-        end
-    end
     if no_untabbable then
         if will_tab(0,0,x,y,tabbable_square) then
             remove_ignore(x,y)
@@ -4555,7 +4550,6 @@ function plan_wait_for_melee()
         end
         if will_tab(e.x,e.y,0,0,mons_tabbable_square) and not
              (e.m:name() == "wandering mushroom" or
-                e.m:name():find("ballistomycete") or
                 e.m:name():find("vortex") or
                 e.m:desc():find("fleeing") or
                 e.m:status("paralysed") or
@@ -5606,7 +5600,7 @@ function want_to_stairdance_up()
     local e
     for _,e in ipairs(enemy_list) do
         local dist = supdist(e.x,e.y)
-        if dist == 1 and e.m:stabbability() == 0 and can_use_stairs(e.m:name()) then
+        if dist == 1 and e.m:stabbability() == 0 and can_use_stairs(e.m) then
             follow_count = follow_count + 1
         else
             other_count = other_count + 1
@@ -5625,15 +5619,13 @@ function want_to_stairdance_up()
 end
 
 -- adding some clua for this would be better
-function can_use_stairs(mname)
+function can_use_stairs(m)
+    local mname = m:name()
     if mname:find("zombie") or mname:find("skeleton") or mname:find("spectral")
-         or mname:find("simulacrum") or mname:find("oklob")
-         or mname:find("statue") or mname:find("ballistomycete")
-         or mname == "burning bush" or mname == "lightning spire"
+         or mname:find("simulacrum") or m:is_stationary()
          or mname:find("tentacle") or mname == "silent spectre"
          or mname == "Geryon" or mname == "Royal Jelly"
-         or mname:find("'s ghost") or mname:find("' ghost")
-         or mname == "swamp worm" or mname == "electric eel"
+         or mname == "electric eel"
          or mname == "kraken" or mname == "lava snake"
          or mname == "bat" or mname == "unseen horror"
          or mname == "fire vortex" then
