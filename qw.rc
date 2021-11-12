@@ -3979,8 +3979,6 @@ function step_reason(a1,a2)
   elseif have_reaching() and a1.slow_adjacent > 0 and a2.adjacent == 0
          and a2.ranged == 0 then
     return "reaching"
-  elseif cleaving() then
-    return false
   elseif a1.adjacent == 1 then
     return false
   elseif a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2 then
@@ -4046,7 +4044,7 @@ function choose_tactical_step()
   local a0 = assess_square(0,0)
   if a0.cloud_safe and not (a0.fumble and sense_danger(3))
      and (not have_reaching() or a0.slow_adjacent == 0)
-     and (a0.adjacent <= 1 or cleaving())
+     and (a0.adjacent <= 1)
      and (a0.near_ally or a0.enemy_distance == 10) then
     return
   end
