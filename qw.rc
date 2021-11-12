@@ -1476,6 +1476,12 @@ function in_desc(lev,str)
   end
 end
 
+function is_red_threat()
+  return function (m)
+    return m:threat() >= 3
+  end
+end
+
 function pan_lord(lev)
   return function (m)
     return (you.xl() < lev and m:type() == ENUM_MONS_PANDEMONIUM_LORD)
@@ -1533,6 +1539,7 @@ end
 -- berserk these
 local scary_monsters = {
   ["*"] = {
+    is_red_threat(),
     in_desc(15,"hydra"),
     hydra_check_flaming(20),
     in_desc(100,"berserk[^e]"),
@@ -1706,6 +1713,7 @@ local scary_monsters = {
 -- BiA these even at low piety
 local bia_necessary_monsters = {
   ["*"] = {
+    is_red_threat(),
     hydra_check_flaming(15),
     in_desc(100,"statue"),
   },
