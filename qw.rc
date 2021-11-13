@@ -2371,8 +2371,8 @@ function can_teleport()
   return can_read()
          and not (you.teleporting()
                   or you.anchored()
-                  or you.transform() ~= "tree"
-                  or you.race() ~= "Formicid")
+                  or you.transform() == "tree"
+                  or you.race() == "Formicid")
 end
 
 function player_speed_num()
