@@ -1476,6 +1476,12 @@ function in_desc(lev,str)
   end
 end
 
+function is_red_threat()
+  return function (m)
+    return m:threat() >= 3
+  end
+end
+
 function pan_lord(lev)
   return function (m)
     return (you.xl() < lev and m:type() == ENUM_MONS_PANDEMONIUM_LORD)
@@ -1533,6 +1539,7 @@ end
 -- berserk these
 local scary_monsters = {
   ["*"] = {
+    is_red_threat(),
     in_desc(15,"hydra"),
     hydra_check_flaming(20),
     in_desc(100,"berserk[^e]"),
@@ -1706,6 +1713,7 @@ local scary_monsters = {
 -- BiA these even at low piety
 local bia_necessary_monsters = {
   ["*"] = {
+    is_red_threat(),
     hydra_check_flaming(15),
     in_desc(100,"statue"),
   },
@@ -2363,8 +2371,8 @@ function can_teleport()
   return can_read()
          and not (you.teleporting()
                   or you.anchored()
-                  or you.transform() ~= "tree"
-                  or you.race() ~= "Formicid")
+                  or you.transform() == "tree"
+                  or you.race() == "Formicid")
 end
 
 function player_speed_num()
@@ -3971,8 +3979,6 @@ function step_reason(a1,a2)
   elseif have_reaching() and a1.slow_adjacent > 0 and a2.adjacent == 0
          and a2.ranged == 0 then
     return "reaching"
-  elseif cleaving() then
-    return false
   elseif a1.adjacent == 1 then
     return false
   elseif a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2 then
@@ -4038,7 +4044,7 @@ function choose_tactical_step()
   local a0 = assess_square(0,0)
   if a0.cloud_safe and not (a0.fumble and sense_danger(3))
      and (not have_reaching() or a0.slow_adjacent == 0)
-     and (a0.adjacent <= 1 or cleaving())
+     and (a0.adjacent <= 1)
      and (a0.near_ally or a0.enemy_distance == 10) then
     return
   end
@@ -6236,7 +6242,7 @@ function plan_new_travel()
       travel_destination = "L"
     end
   end
-  if where == "Depths:5" then
+  if where == "Depths:4" then
     if game_status == "zot" then
       travel_destination = "Z"
     elseif game_status == "hells" then
@@ -6981,7 +6987,7 @@ function plan_dig_grate()
   local grate_count_needed = 3
   if where:find("Zot") then
     grate_mon_list = {"draconian stormcaller", "draconian scorcher"}
-  elseif where == "Depths:5" then
+  elseif where == "Depths:4" then
     grate_mon_list = {"draconian stormcaller", "draconian scorcher",
                       "angel", "daeva", "lich", "eye"}
   elseif where:find("Depths") then
