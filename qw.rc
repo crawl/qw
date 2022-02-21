@@ -839,7 +839,7 @@ end
 -- list of armour slots, this is used to normalize names for them and also
 -- to iterate over the slots
 good_slots = {cloak="Cloak", helmet="Helmet",
-              gloves="Gloves", boots="Boots", body="Armour", shield="Shield"}
+              gloves="Gloves", boots="Boots", body="Body Armour", shield="Shield"}
 
 function armour_value(it, cur, it2)
   local name = it.name()
@@ -915,7 +915,7 @@ function armour_value(it, cur, it2)
       return -1,-1
     end
   end
-  if good_slots[st] == "Armour" then
+  if good_slots[st] == "Body Armour" then
     if unfitting_armour() then
       value = value - 25*it.ac
     end
@@ -3163,7 +3163,7 @@ function cleaving()
 end
 
 function armour_ac()
-  arm = items.equipped_at("Armour")
+  arm = items.equipped_at("Body Armour")
   if arm then
     return arm.ac
   else
@@ -3185,7 +3185,7 @@ function base_ac()
 end
 
 function armour_evp()
-  arm = items.equipped_at("Armour")
+  arm = items.equipped_at("Body Armour")
   if arm then
     return arm.encumbrance
   else
@@ -5026,7 +5026,7 @@ function plan_use_good_consumables()
           end
         end
       elseif it.name():find("enchant armour") then
-        body = items.equipped_at("Armour")
+        body = items.equipped_at("Body Armour")
         ac = armour_ac()
         if body and not body.artefact and body.plus < ac
            and body_armour_is_great(body)
@@ -5038,7 +5038,7 @@ function plan_use_good_consumables()
           end
         end
         for _,slotname in pairs(good_slots) do
-          if slotname ~= "Armour" and slotname ~= "Shield" then
+          if slotname ~= "Body Armour" and slotname ~= "Shield" then
             it2 = items.equipped_at(slotname)
             if it2 and not it2.artefact and it2.plus < 2 and it2.plus >= 0
                and not it2.name():find("scarf")
