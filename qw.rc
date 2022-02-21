@@ -13,8 +13,9 @@
 # Delay per action in milliseconds.
 # Set this to at least 100 or so when playing online.
 : DELAY_TIME = 125
-# whether to start playing immediately when a new game is started
-# unfortunately this doesn't work if the game starts with a -more-
+# Whether to start playing immediately when a new game is started.
+# Can also be enabled with "-extra-opt-first qw_auto_start=true".
+# Unfortunately this doesn't work if the game starts with a -more-.
 : AUTO_START = false
 # experimental: do second lair rune branch before depths
 : EARLY_SECOND_RUNE = true
@@ -126,6 +127,7 @@ cset = cloud:xa4
 cset = item_orb:0
 use_fake_player_cursor = true
 equip_unequip = true
+tile_skip_title = true
 
 dump_order = header,hiscore,stats,misc,mutations,skills,spells,inventory
 dump_order += overview
@@ -8113,7 +8115,7 @@ end
 
 function first_turn()
   first_turn_persist()
-  if AUTO_START then
+  if AUTO_START or options.qw_auto_start then
     automatic = true
     set_options()
   end
