@@ -2326,7 +2326,7 @@ end
 function can_apocalypse()
   return you.god() == "Ru"
          and you.piety_rank() >= 5
-         and cmp >= 8
+         and cmp() >= 8
          and not you.exhausted()
          and can_invoke()
 end
