@@ -3,50 +3,67 @@
 This rcfile is elliptic's DCSS bot "qw", the first bot to win DCSS with no
 human assistance. A substantial amount of code here was contributed by elliott
 or borrowed from N78291's bot "xw", and many others have contributed as well.
-The bot is now maintained by the dcss devteam. Please post bug reports as issues
-on the official crawl qw repository:
+The bot is now maintained by the dcss devteam. Please post bug reports as
+issues on the official crawl qw repository:
 
 https://github.com/crawl/qw/issues/new
 
-The current version of qw can start as any species/background combination
-and has some basic grasp of how many of the gods work (see qw.rc
-for configuration details). Note though that most spells and racial
-abilities aren't used, and qw is not very good at most combos! Its best
-3-rune combo at the moment is DDFi^Makhleb, which manages a winrate of about
-15% in offline testing. It can optionally try to get more runes, with its
-preferred combo for that being GrFi^Okawaru, converting to TSO after Slime
-(15-rune winrate for this build is about 1%).
+The current version of qw can start as any species/background combination and
+has some basic grasp of how many of the gods work (see qw.rc for configuration
+details). Note though that most spells and racial abilities aren't used, and qw
+is not very good at most combos! Its best 3-rune combo at the moment is
+DDFi^Makhleb, which manages a winrate of about 15% in offline testing. It can
+optionally try to get more runes, with its preferred combo for that being
+GrFi^Okawaru, converting to TSO after Slime (15-rune winrate for this build is
+about 1%).
 
-## running on remote DCSS server
+## Running on remote DCSS server
 * Please make sure you have permission to run a bot on your server of choice!
   Misconfigured (or even well-configured) bots can eat up server CPU from
   actual players.
-* go to e.g. http://crawl.akrasiac.org:8080/
-* click "(edit rc)" link for DCSS trunk
-* replace text that were here with contents of qw.rc file from this repo
-* in ": DELAYED = false" and ": AUTO_START = false" lines change "false" to "true"
-* you may also want to edit some of the configuration lines near the top
+* Go to e.g. http://crawl.akrasiac.org:8080/
+* Click "(edit rc)" link for DCSS trunk
+* Replace text that were here with contents of `qw.rc` file from this repo
+  in `: DELAYED = false` and `: AUTO_START = false` lines change `false` to
+  `true`
+* You may also want to edit some of the configuration lines near the top
   of qw.rc (for instance to choose which combos qw will play)
-* save and run DCSS trunk (either in webtiles or in console)
-* enjoy!
+* At the end of the contents of `qw.rc`, remove the line with `include =
+  qw.lua` and put the contents of the `qw.lua` file in this repository in
+  its place. Note that the line with `{` at the beginning of `qw.lua` and the
+  line with `}` at the end must also be included.
+* Save and run DCSS trunk (either in webtiles or in console)
+* Enjoy!
 
 Since clua works on the server side, webtiles drawing can lag behind things
-actually happening, so the IRC bot [Sequell](https://github.com/greensnark/dcss_sequell) may tell you your character killed Sigmund or died to him before you see that with your own eyes. To see more current events just refresh the page and press "Tab". Alternatively, run or watch the bot in console (via ssh).
+actually happening, so the IRC bot [Sequell](https://github.com/crawl/sequell)
+may tell you your character killed Sigmund or died to him before you see that
+with your own eyes. To see more current events just refresh the page and press
+"Tab". Alternatively, run or watch the bot in console (via ssh).
 
 If you are familiar with Sequell, please add the name of the account that
 you are using for qw to the "bot" nick with "!nick bot <accountname>" so
 that games on the account can be easily filtered out of queries. (Also, please
 don't run qw on the same account that you use for your own personal games!)
 
-## running locally
-* clone this repo
-* run crawl locally with command like "./crawl -rc qw/qw.rc"
-* enter name if necessary and start game. If you did not change "AUTO_START" variable, press "Tab"
-* enjoy!
+## Running locally
+* Clone this repo
+* Run crawl locally with command like `./crawl -rc qw/qw.rc -rcdir qw`. The
+  `-rcdir` option is necessary for `crawl` to find the `qw.lua` file.
+  Alternately you can put the contents of `qw.lua` directly in `qw.rc` per the
+  instructions above for online play.
+* Enter name if necessary and start game. If you did not change `AUTO_START`
+  variable, press "Tab"
+* Enjoy!
 
-The file qw.exp is a simple expect script that automates running qw for many games in a row. The "AUTO_START" variable should be left at false when when using this. (With minor modifications, this can also be used to run games on a remote server over ssh.)
+The file qw.exp is a simple expect script that automates running qw for many
+games in a row. The `AUTO_START` variable should be left at false when when
+using this. (With minor modifications, this can also be used to run games on a
+remote server over ssh.)
 
-## miscellaneous tips for coding/testing qw
+## Miscellaneous tips for coding/testing qw
 * run qw locally with the DCSS command-line option -seed <n> to use a seeded RNG for (mostly) reproducible testing
-* uncomment the "say(plandata[2])" line in the cascade function to track what the bot is doing (very spammy)
-* put code you want to test in the "ttt()" funtion on the bottom; make it run by macroing some key to "===ttt"
+* uncomment the "say(plandata[2])" line in the cascade function to track what
+  the bot is doing (very spammy)
+* put code you want to test in the "ttt()" funtion on the bottom; make it run
+  by macroing some key to "===ttt"
