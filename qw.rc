@@ -54,18 +54,18 @@
 # combos to cycle through - uses the same syntax as the regular combo option
 # with an optional "^<god initials>" suffix to overwrite the GOD_LIST
 # list above. Here are some sample choices:
-: COMBO_CYCLE_LIST = "DDFi.waraxe^M, DDBe.handaxe^T, GrBe.handaxe^T, GrFi.waraxe^O, MiFi.waraxe^O"
+: COMBO_CYCLE_LIST = "GrBe.handaxe^T, GrFi.waraxe^O, MiFi.waraxe^O"
 
 # Choose randomly between these combos. This will not apply if the COMBO_CYCLE
 # option was on in your _previous_ game.
-combo = GrBe.handaxe
+combo = GrFi.waraxe
 
 # For random berserkers, use these combos:
-#combo = DDBe.handaxe, DEBe.handaxe, DrBe.handaxe, DsBe.handaxe
-#combo += FeBe.claws, FoBe.handaxe, GrBe.handaxe, GhBe.claws, HaBe.falchion
-#combo += HEBe.falchion, HOBe.handaxe, HuBe.handaxe, KoBe.mace, MfBe.spear
-#combo += MiBe.handaxe, MuBe.handaxe, NaBe.handaxe, OgBe.mace, OpBe.handaxe
-#combo += SpBe.shortsword, TeBe.handaxe, TrBe.claws, VSBe.handaxe, VpBe.handaxe
+# combo = DEBe.handaxe, DrBe.handaxe, DsBe.handaxe, FeBe.claws, FoBe.handaxe
+# combo += GrBe.handaxe, GhBe.claws, HOBe.handaxe, HuBe.handaxe, KoBe.mace
+# combo += MfBe.spear, MiBe.handaxe, MuBe.handaxe, NaBe.handaxe, OgBe.mace
+# combo += OpBe.handaxe, SpBe.shortsword, TeBe.handaxe, TrBe.claws
+# combo += VSBe.handaxe, VpBe.handaxe, BaBe.handaxe, DjBe.handaxe, PaBe.handaxe
 
 # For a totally random combo (with chosen weapon type), hyperqwcombo.rc can
 # be created using hyperqwcombogen.sh and used:
@@ -126,9 +126,8 @@ use_fake_player_cursor = true
 equip_unequip = true
 
 dump_order = header,hiscore,stats,misc,mutations,skills,spells,inventory
-dump_order += overview
-dump_order += messages,screenshot,monlist,kills,notes,vaults,skill_gains,action_counts
-dump_order += xp_by_level
+dump_order += overview,messages,screenshot,monlist,kills,notes,vaults
+dump_order += skill_gains,action_counts,xp_by_level
 ood_interesting = 6
 note_hp_percent = 25
 note_skill_levels = 1,3,6,9,12,15,18,21,24,27

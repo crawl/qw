@@ -23,8 +23,6 @@ local failed_move = { }
 local invisi_count = 0
 local next_delay = 100
 
-local dd_hw_meter = 0
-
 local sigmund_dx = 0
 local sigmund_dy = 0
 local invisi_sigmund = false
@@ -460,7 +458,7 @@ function absolute_resist_value(str, n)
     elseif str == "SInv" then
         return 200
     elseif str == "Spirit" then
-        return ((you.race() == "Deep Dwarf") and -10000 or 75)
+        return 75
     end
     return 0
 end
@@ -500,8 +498,6 @@ function max_resist_value(str, d)
     elseif str == "Spirit" then
         if ires > 0 then
             return 0
-        elseif you.race() == "Deep Dwarf" then
-            return -10000
         else
             return 75
         end
@@ -510,9 +506,6 @@ function max_resist_value(str, d)
 end
 
 function min_resist_value(str, d)
-    if str == "Spirit" and you.race() == "Deep Dwarf" then
-        return -10000
-    end
     if d >= 0 then
         return 0
     end
@@ -529,15 +522,15 @@ end
 function resist_value(str, it, cur, it2)
     local d = item_resist(str, it)
     if d == 0 then
-        return 0,0
+        return 0, 0
     end
     if cur then
         local c = player_resist(str, it2)
         local diff = absolute_resist_value(str,c+d)
             - absolute_resist_value(str,c)
-        return diff,diff
+        return diff, diff
     else
-        return min_resist_value(str,d),max_resist_value(str,d)
+        return min_resist_value(str,d), max_resist_value(str,d)
     end
 end
 
@@ -669,10 +662,10 @@ function in_extended()
         or game_status == "tomb")
 end
 
--- list of armour slots, this is used to normalize names for them and also
--- to iterate over the slots
+-- A list of armour slots, this is used to normalize names for them and also to
+-- iterate over the slots
 good_slots = {cloak="Cloak", helmet="Helmet", gloves="Gloves", boots="Boots",
-    body="Armour", shield="Shield"}
+    body="Body Armour", shield="Shield"}
 
 function armour_value(it, cur, it2)
     local name = it.name()
@@ -751,7 +744,7 @@ function armour_value(it, cur, it2)
             return -1,-1
         end
     end
-    if good_slots[st] == "Armour" then
+    if good_slots[st] == "Body Armour" then
         if unfitting_armour() then
             value = value - 25*it.ac
         end
@@ -783,10 +776,11 @@ end
 function weapon_value(it, cur, it2, sit)
     local hydra_swap = (sit == "hydra")
     local extended = (sit == "extended")
-    local tso = you.god() == "the Shining One" or extended and TSO_CONVERSION
-                            or you.god() == "Elyvilon"
-                            or you.god() == "Zin"
-                            or you.god() == "No God" and MIGHT_BE_GOOD
+    local tso = you.god() == "the Shining One"
+        or extended and TSO_CONVERSION
+        or you.god() == "Elyvilon"
+        or you.god() == "Zin"
+        or you.god() == "No God" and MIGHT_BE_GOOD
     if it.class(true) ~= "weapon" then
         return -1,-1
     end
@@ -828,9 +822,6 @@ function weapon_value(it, cur, it2, sit)
         value = value + 1200*it.damage/delay_estimate
         return value+val1, value+val2
     end
-    if you.god() == "Cheibriados" and name:find("quick blade") then
-        return -1,-1
-    end
     if tso and name:find("demon") and not name:find("eudemon") then
         return -1,-1
     end
@@ -865,8 +856,8 @@ function weapon_value(it, cur, it2, sit)
         end
     end
     local val1,val2 = total_resist_value(it, cur, it2)
-    if it.artefact and not it.fully_identified or
-         name:find("runed") or name:find("glowing") then
+    if it.artefact and not it.fully_identified or name:find("runed")
+            or name:find("glowing") then
         val2 = val2 + 500
         val1 = val1 + (cur and 500 or -250)
     end
@@ -951,7 +942,7 @@ function weapon_value(it, cur, it2, sit)
         val1 = val1 / 10
         val2 = val2 / 10
     end
-    return value+val1,value+val2
+    return value+val1, value+val2
 end
 
 function amulet_value(it, cur, it2)
@@ -1008,8 +999,7 @@ function amulet_value(it, cur, it2)
                 val1 = val1 - 4*40
             end
         end
-    elseif subtype == "amulet of regeneration"
-            and you.race() ~= "Deep Dwarf" then
+    elseif subtype == "amulet of regeneration" then
         value = value + 50
     elseif subtype == "amulet of inaccuracy" then
         value = value - 250
@@ -1098,7 +1088,8 @@ function want_wand(it)
     end
     only_wand = true
     for it2 in inventory() do
-        if only_wand and it2.class(true) == "wand" and slot(it2) ~= slot(it) then
+        if only_wand and it2.class(true) == "wand"
+                and slot(it2) ~= slot(it) then
             only_wand = false
         end
     end
@@ -1827,11 +1818,12 @@ end
 
 function unfitting_armour()
     local sp = you.race()
-    return (armour_plan() == "large" or sp == "Palentonga" or sp == "Naga")
+    return armour_plan() == "large" or sp == "Palentonga" or sp == "Naga"
 end
 
 function want_buckler()
-    if you.race() == "Felid" then
+    local sp = you.race()
+    if sp == "Felid" then
         return false
     end
     if SHIELD_CRAZY then
@@ -1840,7 +1832,7 @@ function want_buckler()
     if wskill() == "Short Blades" or wskill() == "Unarmed Combat" then
         return true
     end
-    if you.race() == "Formicid" or you.race() == "Kobold" then
+    if sp == "Formicid" or sp == "Kobold" then
         return true
     end
     return false
@@ -2057,13 +2049,12 @@ function can_zap()
     return true
 end
 
-function dd_heal_ability()
-    if you.race() == "Deep Dwarf" and you.base_mp() > 0
-         and not (you.berserk() or you.confused()) then
-        use_ability("Heal Wounds")
-        return true
-    end
-    return false
+function can_teleport()
+    return can_read()
+        and not (you.teleporting()
+            or you.anchored()
+            or you.transform() == "tree"
+            or you.race() == "Formicid")
 end
 
 function can_invoke()
@@ -2174,7 +2165,7 @@ end
 function can_apocalypse()
     return you.god() == "Ru"
                  and you.piety_rank() >= 5
-                 and cmp >= 8
+                 and cmp() >= 8
                  and not you.exhausted()
                  and can_invoke()
 end
@@ -2205,14 +2196,6 @@ function can_destruction()
                  and chp() > 6
                  and you.piety_rank() >= 4
                  and can_invoke()
-end
-
-function can_teleport()
-    return can_read()
-                 and not (you.teleporting()
-                                    or you.anchored()
-                                    or you.transform() ~= "tree"
-                                    or you.race() ~= "Formicid")
 end
 
 function player_speed_num()
@@ -3021,7 +3004,7 @@ function cleaving()
 end
 
 function armour_ac()
-    arm = items.equipped_at("Armour")
+    arm = items.equipped_at("Body Armour")
     if arm then
         return arm.ac
     else
@@ -3043,7 +3026,7 @@ function base_ac()
 end
 
 function armour_evp()
-    arm = items.equipped_at("Armour")
+    arm = items.equipped_at("Body Armour")
     if arm then
         return arm.encumbrance
     else
@@ -3144,35 +3127,31 @@ function should_rest()
         or should_ally_rest()
 end
 
--- check statuses to see whether there is something to rest off,
--- does not include some things in should_rest() because they are
--- not clearly good to wait out with monsters around
+-- Check statuses to see whether there is something to rest off, does not
+-- include some things in should_rest() because they are not clearly good to
+-- wait out with monsters around.
 function reason_to_rest(percentage)
     if not no_spells and starting_spell() then
         local mp,mmp = you.mp()
-        if mp < mmp and (you.race() ~= "Deep Dwarf"
-                or player_resist("Spirit") <= 0) then
+        if mp < mmp then
             return true
         end
     end
     if you.god() == "Elyvilon" and you.piety_rank() >= 4 then
         local mp,mmp = you.mp()
-        if mp < mmp and mp < 10 and (you.race() ~= "Deep Dwarf"
-                or player_resist("Spirit") <= 0) then
+        if mp < mmp and mp < 10 then
             return true
         end
     end
-    return (you.confused() or transformed() or
-                    hp_is_low(percentage) and
-                    (you.race() ~= "Deep Dwarf" or you.regenerating())
-                    and (you.god() ~= "the Shining One" or hp_is_low(75) or
-                             count_divine_warrior(2) == 0)
-                    or you.slowed() or you.exhausted() or you.teleporting()
-                    or you.status("berserk cooldown") or you.status("marked")
-                    or you.silencing() or you.corrosion() > 0)
+    return (you.confused() or transformed() or hp_is_low(percentage)
+	    and (you.god() ~= "the Shining One" or hp_is_low(75)
+	        or count_divine_warrior(2) == 0)
+	    or you.slowed() or you.exhausted() or you.teleporting()
+	    or you.status("berserk cooldown") or you.status("marked")
+	    or you.silencing() or you.corrosion() > 0)
 end
 
--- are we significantly stronger than usual thanks to a buff that we used?
+-- Are we significantly stronger than usual thanks to a buff that we used?
 function buffed()
     if hp_is_low(50) or transformed() or you.corrosion() >= 2 then
         return false
@@ -3344,14 +3323,6 @@ function plan_recite()
     return false
 end
 
-function plan_apocalypse()
-    if can_apocalypse() and want_to_apocalypse() then
-        apocalypse()
-        return true
-    end
-    return false
-end
-
 function plan_grand_finale()
     if not danger or not can_grand_finale() then
         return false
@@ -3381,6 +3352,14 @@ function plan_grand_finale()
     end
     if best_info then
         use_ability("Grand Finale", "r" .. vector_move(bestx,besty) .. "\rY")
+        return true
+    end
+    return false
+end
+
+function plan_apocalypse()
+    if can_apocalypse() and want_to_apocalypse() then
+        apocalypse()
         return true
     end
     return false
@@ -3433,37 +3412,7 @@ function plan_hand()
     return false
 end
 
-function dd_prefer_hand()
-    if you.god() ~= "Trog" then
-        return false
-    end
-    return (you.piety_rank() == 6 or you.base_mp() < 3)
-end
-
-function dd_prefer_ru_healing()
-    if you.god() ~= "Ru" or you.piety_rank() < 3 then
-        return false
-    end
-    if you.status("very heavily drained") then
-        return false
-    end
-    if you.base_mp() < 3 then
-        return true
-    end
-    if you.status("heavily drained") then
-        return false
-    end
-    if not you.status("drained") then
-        return true
-    end
-    local hp,mhp = you.hp()
-    return (mhp - hp >= 45)
-end
-
 function prefer_ru_healing()
-    if you.race() == "Deep Dwarf" then
-        return dd_prefer_ru_healing()
-    end
     return not (you.status("drained") or you.status("heavily drained")
         or you.status("very heavily drained"))
 end
@@ -3473,19 +3422,6 @@ function prefer_ely_healing()
         return false
     end
     return true
-end
-
-function plan_dd_hand_for_healing()
-    if you.race() ~= "Deep Dwarf" then
-        return false
-    end
-    local hp,mhp = you.hp()
-    if mhp - hp >= 30 and can_hand() and
-         dd_prefer_hand() then
-        hand()
-        return true
-    end
-    return false
 end
 
 function plan_abyss_hand()
@@ -3507,7 +3443,7 @@ function plan_orbrun_hand()
 end
 
 function plan_cure_bad_poison()
-    if not (danger or you.race() == "Deep Dwarf") then
+    if not danger then
         return false
     end
     if you.poison_survival() <= chp() - 60 then
@@ -3616,7 +3552,7 @@ function heal_general()
     if heal_wounds() then
         return true
     end
-    if can_ru_healing() and you.race() ~= "Deep Dwarf" then
+    if can_ru_healing() then
         ru_healing()
         return true
     end
@@ -3684,19 +3620,8 @@ function plan_orbrun_finesse()
 end
 
 function heal_wounds()
-    if you.race() == "Deep Dwarf" and you.xl() < 15
-         and not (immediate_danger and (hp_is_low(25) or chp() <= 20))
-         and dd_heal_ability() then
-        dd_hw_meter = dd_hw_meter + 100
-        return true
-    end
     if you.mutation("no potion heal") < 2
          and drink_by_name("heal wounds") then
-        dd_hw_meter = dd_hw_meter + 100
-        return true
-    end
-    if you.race() == "Deep Dwarf" and dd_heal_ability() then
-        dd_hw_meter = dd_hw_meter + 100
         return true
     end
     return false
@@ -4094,7 +4019,7 @@ function want_to_drain_life()
         return false
     end
     local cd = count_drainable()
-    return cd >= 8 or cd >= 3 and you.race() == "Deep Dwarf" and hp_is_low(80)
+    return cd >= 8
 end
 
 function want_to_sgd()
@@ -4123,25 +4048,13 @@ function want_to_orbrun_divine_warrior()
 end
 
 function want_to_apocalypse()
-    if you.race() ~= "Deep Dwarf"
-            and not (you.status("drained") or you.status("heavily drained")
-                or you.status("very heavily drained"))
+    if not (you.status("drained") or you.status("heavily drained")
+	        or you.status("very heavily drained"))
             and (check_monsters(LOS, bia_monsters)
                 or hp_is_low(25) and immediate_danger) then
         return true
     end
     return false
-end
-
-function dd_want_to_teleport()
-    --say("HW: " .. dd_hw_meter)
-    return ((immediate_danger and dd_hw_meter > 300
-                     or immediate_danger and bad_corrosion()
-                     or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
-                     or you.god() == "Trog" and you.slowed()
-                            and want_to_berserk()
-                            and not can_berserk())
-                    and count_bia(4) == 0)
 end
 
 function bad_corrosion()
@@ -4170,9 +4083,6 @@ function want_to_teleport()
     if you.xl() <= 17 and not can_berserk() and count_big_slimes(LOS) > 0 then
         return true
     end
-    if you.race() == "Deep Dwarf" then
-        return dd_want_to_teleport()
-    end
     return ((immediate_danger and bad_corrosion()
                      or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
                      or you.god() == "Trog" and you.slowed()
@@ -4191,34 +4101,9 @@ function need_to_wait_for_ely_healing()
                     and mp < 2)
 end
 
-function dd_want_to_heal_wounds()
-    if (not danger) and (you.regenerating() or dd_prefer_hand() or (dd_prefer_ru_healing() and you.exhausted()) or need_to_wait_for_ely_healing()) then
-        return false
-    end
-    local hp,mhp = you.hp()
-    if immediate_danger then
-        return (hp_is_low(25) or (hp_is_low(50) and mhp - hp >= 30) or
-                        (mhp - hp >= 20 and hp <= 20))
-    else
-        if (dd_prefer_hand() or (dd_prefer_ru_healing() and you.exhausted()) or need_to_wait_for_ely_healing()) and (not you.teleporting()) and not hp_is_low(66) then
-            return false
-        end
-        if (you.god() == "Makhleb" and you.piety_rank() >= 1
-                or you.god() == "Yredelemnul" and you.piety_rank() >= 4)
-             and not hp_is_low(66) then
-            return false
-        end
-        return (hp_is_low(25) or
-                        (mhp - hp >= 30) or
-                        (mhp - hp >= 20 and hp <= 20))
-    end
-end
-
 function want_to_heal_wounds()
-    if you.race() == "Deep Dwarf" then
-        return dd_want_to_heal_wounds()
-    end
-    if danger and can_ely_healing() and hp_is_low(50) and you.piety_rank() >= 5 then
+    if danger and can_ely_healing() and hp_is_low(50)
+	    and you.piety_rank() >= 5 then
         return true
     end
     return (danger and hp_is_low(25))
@@ -4227,9 +4112,6 @@ end
 function want_to_orbrun_heal_wounds()
     if danger then
         return (hp_is_low(25) or hp_is_low(50) and you.teleporting())
-    elseif you.race() == "Deep Dwarf" and you.god() ~= "Trog" and you.god() ~= "Makhleb" then
-        local hp,mhp = you.hp()
-        return (mhp - hp >= 30)
     else
         return (hp_is_low(50))
     end
@@ -4270,10 +4152,9 @@ function want_to_hand()
 end
 
 function want_to_berserk()
-    return (hp_is_low(50) and sense_danger(2, true) and
-                    (you.race() ~= "Deep Dwarf" or dd_want_to_heal_wounds()) or
-                    check_monsters(2, scary_monsters) or
-                    (invisi_sigmund and not options.autopick_on))
+    return (hp_is_low(50) and sense_danger(2, true)
+        or check_monsters(2, scary_monsters)
+	or (invisi_sigmund and not options.autopick_on))
 end
 
 function want_to_heroism()
@@ -4404,7 +4285,8 @@ function plan_wait_spit()
         ab_name = "Breathe Poison Gas"
     end
     if dist <= ab_range then
-        if use_ability(ab_name, "r" .. vector_move(cur_e.x, cur_e.y) .. "\r") then
+        if use_ability(ab_name,
+                "r" .. vector_move(cur_e.x, cur_e.y) .. "\r") then
             return true
         end
     end
@@ -4416,8 +4298,8 @@ function starting_spell()
         no_spells = true
         return
     end
-    -- Missing Infusion for now.
-    local spell_list = {"Shock", "Magic Dart", "Sandblast", "Foxfire", "Freeze", "Pain", "Summon Small Mammal", "Beastly Appendage", "Sting"}
+    local spell_list = {"Shock", "Magic Dart", "Sandblast", "Foxfire",
+        "Freeze", "Pain", "Summon Small Mammal", "Beastly Appendage", "Sting"}
     for _,sp in ipairs(spell_list) do
         if spells.memorised(sp) and spells.fail(sp) <= 25 then
             return sp
@@ -4856,11 +4738,12 @@ function brand_is_great(brand)
     if brand == "speed" then
         return true
     elseif brand == "vampirism" then
-        return (you.race() == "Deep Dwarf" or not you.have_orb())
+        return not you.have_orb()
     elseif brand == "electrocution" then
-        return (where ~= "Zot:5")
+        return where ~= "Zot:5"
     elseif brand == "holy wrath" then
-        return (where == "Zot:5" or you.have_orb() or PAN_RUNE or HELL_RUNE or GOLDEN_RUNE)
+        return where == "Zot:5" or you.have_orb() or PAN_RUNE or HELL_RUNE
+	or GOLDEN_RUNE
     else
         return false
     end
@@ -4896,7 +4779,7 @@ function plan_use_good_consumables()
                     end
                 end
             elseif it.name():find("enchant armour") then
-                body = items.equipped_at("Armour")
+                body = items.equipped_at("Body Armour")
                 ac = armour_ac()
                 if body and not body.artefact and body.plus < ac
                      and body_armour_is_great(body)
@@ -4908,7 +4791,7 @@ function plan_use_good_consumables()
                     end
                 end
                 for _,slotname in pairs(good_slots) do
-                    if slotname ~= "Armour" and slotname ~= "Shield" then
+                    if slotname ~= "Body Armour" and slotname ~= "Shield" then
                         it2 = items.equipped_at(slotname)
                         if it2 and not it2.artefact and it2.plus < 2 and it2.plus >= 0
                              and not it2.name():find("scarf")
@@ -5591,8 +5474,8 @@ function plan_simple_go_down()
 end
 
 function want_altar()
-    return (you.race() ~= "Demigod" and you.num_runes() == 0
-                    and not util.contains(god_options(), you.god()))
+    return you.race() ~= "Demigod" and you.num_runes() == 0
+        and not util.contains(god_options(), you.god())
 end
 
 function plan_go_to_temple()
@@ -6102,7 +5985,7 @@ function plan_new_travel()
             travel_destination = "L"
         end
     end
-    if where == "Depths:5" then
+    if where == "Depths:4" then
         if game_status == "zot" then
             travel_destination = "Z"
         elseif game_status == "hells" then
@@ -7014,15 +6897,13 @@ end
 
 function teleport()
     if read_by_name("teleportation") then
-        dd_hw_meter = 0
         return true
     end
     return false
 end
 
 function plan_cure_poison()
-    if you.poison_survival() <= 1 and you.poisoned()
-         or you.race() == "Deep Dwarf" and you.poison_survival() <= chp() - 10 then
+    if you.poison_survival() <= 1 and you.poisoned() then
         if drink_by_name("curing") then
             say("(to cure poison)")
             return true
@@ -7383,7 +7264,6 @@ plan_orbrun_emergency = cascade {
 } -- hack
 
 plan_rest = cascade {
-    {plan_dd_hand_for_healing, "dd_hand_for_healing"},
     --{plan_easy_rest, "try_easy_rest"},
     {plan_rest, "rest"},
 } -- hack
@@ -7521,13 +7401,12 @@ plan_abyss_move = cascade {
 
 ----------------------------------------
 -- skill selection
-local skill_list = {"Fighting","Short Blades","Long Blades","Axes","Maces & Flails",
-                                "Polearms","Staves","Unarmed Combat","Bows","Crossbows",
-                                "Throwing","Slings","Armour","Dodging","Shields",
-                                "Invocations","Evocations","Stealth","Spellcasting",
-                                "Conjurations","Hexes","Charms","Summonings","Necromancy",
-                                "Translocations","Transmutations","Fire Magic","Ice Magic",
-                                "Air Magic","Earth Magic","Poison Magic"}
+local skill_list = {"Fighting", "Short Blades", "Long Blades", "Axes",
+    "Maces & Flails", "Polearms", "Staves", "Unarmed Combat", "Bows",
+    "Crossbows", "Throwing", "Slings", "Armour", "Dodging", "Shields",
+    "Invocations", "Evocations", "Stealth", "Spellcasting", "Conjurations",
+    "Hexes", "Summonings", "Necromancy", "Translocations", "Transmutations",
+    "Fire Magic", "Ice Magic", "Air Magic", "Earth Magic", "Poison Magic"}
 
 function choose_single_skill(sk)
     you.train_skill(sk, 1)
@@ -7579,11 +7458,7 @@ function skill_value(sk)
         if you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
         elseif you.god() == "Elyvilon" then
-            if you.piety_rank() >= 4 and you.race() == "Deep Dwarf" then
-                return 1
-            else
-                return 0.5
-            end
+	    return 0.5
         else
             return 0
         end
@@ -7595,7 +7470,8 @@ end
 function choose_skills()
     skills = {}
     -- Choose one martial skill to train.
-    martial_skills = { wskill(), "Fighting", "Shields", "Armour", "Dodging", "Invocations"}
+    martial_skills = { wskill(), "Fighting", "Shields", "Armour", "Dodging",
+    "Invocations"}
     local best_sk
     local best_utility = 0
     local utility
@@ -7631,15 +7507,14 @@ function choose_skills()
         table.insert(skills, mp_skill)
     elseif you.god() == "Cheibriados" and you.piety_rank() >= 5 and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "Yredelemnul" and you.piety_rank() >= 4 and (mp_skill_level < 8 or you.race() == "Deep Dwarf" and bmp < 10) then
+    elseif you.god() == "Yredelemnul" and you.piety_rank() >= 4
+	    and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
-    elseif you.race() == "Deep Dwarf" and you.god() ~= "No God"
-                 and (bmp < 5 or mp_skill_level < 2 or mp_skill ~= "Spellcasting" and mp_skill_level < 4) then
-        table.insert(skills, mp_skill)
-    elseif you.race() == "Vine Stalker" and you.god() ~= "No God"
-                 and mp_skill_level < 12
-                 and (at_min_delay() or you.base_skill(wskill())
-                                                                >= 3*mp_skill_level) then
+    elseif you.race() == "Vine Stalker"
+	    and you.god() ~= "No God"
+	    and mp_skill_level < 12
+	    and (at_min_delay()
+	         or you.base_skill(wskill()) >= 3 * mp_skill_level) then
         table.insert(skills, mp_skill)
     end
     skills2 = {}
@@ -7822,9 +7697,6 @@ function make_endgame_plans()
     if endgame_plan_list[#endgame_plan_list] ~= "zot" then
         table.insert(endgame_plan_list, "zot")
     end
-    if you.race() == "Deep Dwarf" and you.god() == "Lugonu" then
-        LUGONU_CONVERSION = true
-    end
 end
 
 function initialize()
@@ -7929,7 +7801,8 @@ function first_turn_persist()
     c_persist.cur_god_list = god_list
     if COMBO_CYCLE then
         local combo_string_list = split(COMBO_CYCLE_LIST, ", ")
-        local combo_string = combo_string_list[1 + (c_persist.record.counter % (#combo_string_list))]
+        local combo_string = combo_string_list[
+            1 + (c_persist.record.counter % (#combo_string_list))]
         local combo_parts = split(combo_string, "^")
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
@@ -8030,7 +7903,6 @@ function update_stuff()
         move_count = 0
     end
     did_move = false
-    dd_hw_meter = math.floor(6*dd_hw_meter/7)
     if did_move_towards_monster > 0 then
         did_move_towards_monster = did_move_towards_monster - 1
     end
