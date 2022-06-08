@@ -3144,11 +3144,11 @@ function reason_to_rest(percentage)
         end
     end
     return (you.confused() or transformed() or hp_is_low(percentage)
-	    and (you.god() ~= "the Shining One" or hp_is_low(75)
-	        or count_divine_warrior(2) == 0)
-	    or you.slowed() or you.exhausted() or you.teleporting()
-	    or you.status("berserk cooldown") or you.status("marked")
-	    or you.silencing() or you.corrosion() > 0)
+            and (you.god() ~= "the Shining One" or hp_is_low(75)
+                or count_divine_warrior(2) == 0)
+            or you.slowed() or you.exhausted() or you.teleporting()
+            or you.status("berserk cooldown") or you.status("marked")
+            or you.silencing() or you.corrosion() > 0)
 end
 
 -- Are we significantly stronger than usual thanks to a buff that we used?
@@ -4049,7 +4049,7 @@ end
 
 function want_to_apocalypse()
     if not (you.status("drained") or you.status("heavily drained")
-	        or you.status("very heavily drained"))
+                or you.status("very heavily drained"))
             and (check_monsters(LOS, bia_monsters)
                 or hp_is_low(25) and immediate_danger) then
         return true
@@ -4103,7 +4103,7 @@ end
 
 function want_to_heal_wounds()
     if danger and can_ely_healing() and hp_is_low(50)
-	    and you.piety_rank() >= 5 then
+            and you.piety_rank() >= 5 then
         return true
     end
     return (danger and hp_is_low(25))
@@ -4154,7 +4154,7 @@ end
 function want_to_berserk()
     return (hp_is_low(50) and sense_danger(2, true)
         or check_monsters(2, scary_monsters)
-	or (invisi_sigmund and not options.autopick_on))
+        or (invisi_sigmund and not options.autopick_on))
 end
 
 function want_to_heroism()
@@ -4743,7 +4743,7 @@ function brand_is_great(brand)
         return where ~= "Zot:5"
     elseif brand == "holy wrath" then
         return where == "Zot:5" or you.have_orb() or PAN_RUNE or HELL_RUNE
-	or GOLDEN_RUNE
+        or GOLDEN_RUNE
     else
         return false
     end
@@ -7341,7 +7341,8 @@ plan_move = cascade {
     {plan_abandon_god, "abandon_god"},
     {plan_unwield_weapon, "unwield_weapon"},
     {plan_convert, "convert"},
-    {plan_join_god, "try_join_god"}, -- bug with faded altar not taking time
+    -- bug with faded altar not taking time
+    {plan_join_god, "try_join_god"},
     {plan_find_conversion_altar, "try_find_conversion_altar"},
     {plan_find_altar, "try_find_altar"},
     {plan_go_to_temple, "try_go_to_temple"},
@@ -7458,7 +7459,7 @@ function skill_value(sk)
         if you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
         elseif you.god() == "Elyvilon" then
-	    return 0.5
+            return 0.5
         else
             return 0
         end
@@ -7508,13 +7509,13 @@ function choose_skills()
     elseif you.god() == "Cheibriados" and you.piety_rank() >= 5 and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
     elseif you.god() == "Yredelemnul" and you.piety_rank() >= 4
-	    and mp_skill_level < 8 then
+            and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
     elseif you.race() == "Vine Stalker"
-	    and you.god() ~= "No God"
-	    and mp_skill_level < 12
-	    and (at_min_delay()
-	         or you.base_skill(wskill()) >= 3 * mp_skill_level) then
+            and you.god() ~= "No God"
+            and mp_skill_level < 12
+            and (at_min_delay()
+                 or you.base_skill(wskill()) >= 3 * mp_skill_level) then
         table.insert(skills, mp_skill)
     end
     skills2 = {}
