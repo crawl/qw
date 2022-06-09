@@ -3044,7 +3044,8 @@ end
 
 function can_swap(equip_slot)
     local it = items.equipped_at(equip_slot)
-    if it and it.cursed then
+    if it and (it.cursed or it.name():find("+14 obsidian axe")
+	        and you.status("mesmerised")) then
         return false
     end
     if it and it.ego() == "flying" and
