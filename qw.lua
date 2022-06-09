@@ -8110,6 +8110,9 @@ function c_answer_prompt(prompt)
     if prompt:find("Shopping list") then
         return false
     end
+    if prompt:find("Are you sure you want to drop") then
+        return true
+    end
 end
 
 function ch_stash_search_annotate_item(it)
