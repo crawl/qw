@@ -2282,14 +2282,13 @@ function sense_immediate_danger()
     return false
 end
 
-function sense_danger(r, moveable, no_ignored)
+function sense_danger(r, moveable)
     local e
     for _,e in ipairs(enemy_list) do
         if (moveable and you.see_cell_solid_see(e.x, e.y)
-                    or not moveable and you.see_cell_no_trans(e.x, e.y))
+                or not moveable and you.see_cell_no_trans(e.x, e.y))
                 and supdist(e.x,e.y) <= r then
-            if not no_ignored
-                    or is_candidate_for_attack(e.x, e.y, no_ignored) then
+            if is_candidate_for_attack(e.x, e.y) then
                 return true
             end
         end
@@ -2637,7 +2636,7 @@ function is_candidate_for_attack(x, y, no_untabbable)
     if not m or m:attitude() > ATT_NEUTRAL then
         return false
     end
-    if m:name() == "butterfly"
+    if m:is_firewood() or m:name() == "butterfly"
             or m:name() == "orb of destruction" then
         return false
     end
@@ -3825,10 +3824,11 @@ function choose_tactical_step()
         return
     end
     local a0 = assess_square(0,0)
-    if a0.cloud_safe and not (a0.fumble and sense_danger(3))
-         and (not have_reaching() or a0.slow_adjacent == 0)
-         and (a0.adjacent <= 1 or cleaving())
-         and (a0.near_ally or a0.enemy_distance == 10) then
+    if a0.cloud_safe
+            and not (a0.fumble and sense_danger(3))
+            and (not have_reaching() or a0.slow_adjacent == 0)
+            and (a0.adjacent <= 1 or cleaving())
+            and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end
     local bestx,besty,bestreason
