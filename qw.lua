@@ -1236,7 +1236,7 @@ function want_missile(it)
     return (st == "large rock"
         and (you.race() == "Troll" or you.race() == "Ogre")
             or st == "javelin" and you.xl() < 21
-            or st == "tomahawk" and you.xl() < 15)
+            or st == "boomerang" and you.xl() < 15)
 end
 
 function autopickup(it, name)
