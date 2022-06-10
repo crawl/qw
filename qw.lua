@@ -893,7 +893,7 @@ function weapon_value(it, cur, it2, sit)
             if you.god() == "Cheibriados" then
                 return -1,-1
             end
-        elseif ego == "electrocution" then
+        elseif ego == "electrocution" or ego == "spectralizing" then
             value = value + 150 -- not bad
         elseif ego == "draining" then
             if not extended then
@@ -902,14 +902,12 @@ function weapon_value(it, cur, it2, sit)
             if tso then
                 return -1,-1
             end
-        elseif ego == "flaming" or ego == "freezing" or ego == "crushing"
-                or ego == "slicing" or ego == "piercing" or ego == "chopping"
-                or ego == "slashing" then
+        elseif ego == "flaming" or ego == "freezing" or ego == "vorpal" then
             value = value + 75
-        elseif ego == "venom" then
-            if not extended then
-                value = value + 50
-            end
+        elseif ego == "protection" then
+            value = value + 50
+        elseif ego == "venom" and not extended then
+            value = value + 50
         elseif ego == "antimagic" then
             if you.race() == "Vine Stalker" then
                 value = value - 300
@@ -4740,6 +4738,8 @@ function brand_is_great(brand)
         return true
     elseif brand == "vampirism" then
         return not you.have_orb()
+    elseif brand == "spectralizing" then
+        return true
     elseif brand == "electrocution" then
         return where ~= "Zot:5"
     elseif brand == "holy wrath" then
