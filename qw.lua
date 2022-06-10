@@ -3043,7 +3043,7 @@ end
 function can_swap(equip_slot)
     local it = items.equipped_at(equip_slot)
     if it and (it.cursed or it.name():find("+14 obsidian axe")
-	        and you.status("mesmerised")) then
+                and you.status("mesmerised")) then
         return false
     end
     if it and it.ego() == "flying" and
@@ -4179,14 +4179,18 @@ function want_to_stay_in_abyss()
 end
 
 function have_pan_runes()
-    return (you.have_rune("demonic") and you.have_rune("fiery")
-                                     and you.have_rune("dark") and you.have_rune("magical")
-                                     and you.have_rune("glowing"))
+    return you.have_rune("demonic")
+        and you.have_rune("fiery")
+        and you.have_rune("dark")
+        and you.have_rune("magical")
+        and you.have_rune("glowing")
 end
 
 function have_hell_runes()
-    return (you.have_rune("iron") and you.have_rune("obsidian")
-                                     and you.have_rune("icy") and you.have_rune("bone"))
+    return you.have_rune("iron")
+        and you.have_rune("obsidian")
+        and you.have_rune("icy")
+        and you.have_rune("bone")
 end
 
 function want_to_be_in_pan()
@@ -4195,12 +4199,17 @@ end
 
 function plan_wait_for_melee()
     is_waiting = false
-    if sense_danger(1) or (have_reaching() and sense_danger(2))
-         or (not options.autopick_on) or
-         you.berserk() or you.have_orb() or count_bia(LOS) > 0 or count_sgd(LOS) > 0 or count_divine_warrior(LOS) > 0 or
-         not view.is_safe_square(0,0) or
-         view.feature_at(0,0) == "shallow_water" and not you.flying() or
-         where:find("Abyss") then
+    if sense_danger(1)
+            or have_reaching() and sense_danger(2)
+            or not options.autopick_on
+            or you.berserk()
+            or you.have_orb()
+            or count_bia(LOS) > 0
+            or count_sgd(LOS) > 0
+            or count_divine_warrior(LOS) > 0
+            or not view.is_safe_square(0,0)
+            or view.feature_at(0,0) == "shallow_water" and not you.flying()
+            or where:find("Abyss") then
         wait_count = 0
         return false
     end
@@ -4629,12 +4638,12 @@ function plan_read_id()
         return false
     end
     for it in inventory() do
-        if it.class(true) == "scroll" and
-             not it.fully_identified then
+        if it.class(true) == "scroll" and not it.fully_identified then
             items.swap_slots(it.slot, items.letter_to_index('Y'), false)
             weap = items.equipped_at("Weapon")
             scroll_letter = 'Y'
-            if weap and not weap.artefact and not brand_is_great(weap.ego()) then
+            if weap and not weap.artefact
+                    and not brand_is_great(weap.ego()) then
                 scroll_letter = items.index_to_letter(weap.slot)
                 items.swap_slots(weap.slot, items.letter_to_index('Y'), false)
             end
@@ -4755,15 +4764,15 @@ function plan_use_good_consumables()
         if it.class(true) == "scroll" and can_read() then
             if it.name():find("acquirement") then
                 if view.feature_at(0,0) ~= "deep_water"
-                     and view.feature_at(0,0) ~= "lava" then
-                        if read(it) then
-                            return true
-                        end
+                        and view.feature_at(0,0) ~= "lava" then
+                    if read(it) then
+                        return true
+                    end
                 end
             elseif it.name():find("enchant weapon") then
                 weapon = items.equipped_at("weapon")
-                if weapon and weapon.class(true) == "weapon" and not weapon.artefact and
-                     weapon.plus < 9 then
+                if weapon and weapon.class(true) == "weapon"
+                        and not weapon.artefact and weapon.plus < 9 then
                     oldname = weapon.name()
                     if read2(it, letter(weapon)) then
                         say("ENCHANTING " .. oldname .. ".")
@@ -4772,7 +4781,9 @@ function plan_use_good_consumables()
                 end
             elseif it.name():find("brand weapon") then
                 weapon = items.equipped_at("weapon")
-                if weapon and weapon.class(true) == "weapon" and not weapon.artefact and not brand_is_great(weapon.ego()) then
+                if weapon and weapon.class(true) == "weapon"
+                        and not weapon.artefact
+                        and not brand_is_great(weapon.ego()) then
                     oldname = weapon.name()
                     if read2(it, letter(weapon)) then
                         say("BRANDING " .. oldname .. ".")
@@ -4783,8 +4794,8 @@ function plan_use_good_consumables()
                 body = items.equipped_at("Body Armour")
                 ac = armour_ac()
                 if body and not body.artefact and body.plus < ac
-                     and body_armour_is_great(body)
-                     and not body.name():find("quicksilver dragon scales") then
+                         and body_armour_is_great(body)
+                         and not body.name():find("quicksilver dragon") then
                     oldname = body.name()
                     if read2(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
@@ -4794,9 +4805,9 @@ function plan_use_good_consumables()
                 for _,slotname in pairs(good_slots) do
                     if slotname ~= "Body Armour" and slotname ~= "Shield" then
                         it2 = items.equipped_at(slotname)
-                        if it2 and not it2.artefact and it2.plus < 2 and it2.plus >= 0
-                             and not it2.name():find("scarf")
-                             then
+                        if it2 and not it2.artefact and it2.plus < 2
+                            and it2.plus >= 0
+                            and not it2.name():find("scarf") then
                             oldname = it2.name()
                             if read2(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
@@ -4829,21 +4840,24 @@ function plan_use_good_consumables()
             end
             if it.name():find("mutation") then
                 if base_mutation("inhibited regeneration") > 0
-                     and you.race() ~= "Ghoul" or
-                     base_mutation("teleportitis") > 0 or
-                     base_mutation("inability to read while threatened") > 0 or
-                     base_mutation("deformed body") > 0 and you.race() ~= "Naga"
-                     and you.race() ~= "Palentonga"
-                     and (armour_plan() == "heavy" or armour_plan() == "large") or
-                     base_mutation("berserk") > 0 or
-                     base_mutation("deterioration") > 1 or
-                     base_mutation("frail") > 0 or
-                     base_mutation("no potion heal") > 0 and you.race() ~= "Vine Stalker"
-                     then
+                            and you.race() ~= "Ghoul"
+                        or base_mutation("teleportitis") > 0
+                        or base_mutation("inability to read while threatened") > 0
+                        or base_mutation("deformed body") > 0
+                            and you.race() ~= "Naga"
+                            and you.race() ~= "Palentonga"
+                            and (armour_plan() == "heavy"
+                                or armour_plan() == "large")
+                        or base_mutation("berserk") > 0
+                        or base_mutation("deterioration") > 1
+                        or base_mutation("frail") > 0
+                        or base_mutation("no potion heal") > 0
+                            and you.race() ~= "Vine Stalker" then
                     if you.god() ~= "Zin" then
                         return drink(it)
-                    elseif you.piety_rank() >= 6 and not you.one_time_ability_used() and
-                                 use_ability("Cure All Mutations", "Y") then
+                    elseif you.piety_rank() >= 6
+                            and not you.one_time_ability_used()
+                            and use_ability("Cure All Mutations", "Y") then
                         return true
                     end
                 end
@@ -4889,7 +4903,8 @@ function plan_wield_weapon()
 end
 
 function plan_swap_weapon()
-    if you.race() == "Troll" or you.berserk() or transformed() or not items.equipped_at("Weapon") then
+    if you.race() == "Troll" or you.berserk() or transformed()
+            or not items.equipped_at("Weapon") then
         return false
     end
     local sit
@@ -4898,7 +4913,8 @@ function plan_swap_weapon()
         for x = -3,3 do
             for y = -3,3 do
                 m = monster_array[x][y]
-                if m and string.find(m:desc(), "hydra") and will_tab(0,0,x,y,tabbable_square) then
+                if m and string.find(m:desc(), "hydra")
+                        and will_tab(0,0,x,y,tabbable_square) then
                     sit = "hydra"
                 end
             end
