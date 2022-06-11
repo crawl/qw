@@ -96,7 +96,6 @@ combo = GrFi.waraxe
 name = qw
 restart_after_game = false
 
-bold_brightens_foreground = true
 equip_bar = true
 ability_menu = false
 view_delay = 0
@@ -108,7 +107,6 @@ explore_delay = -1
 rest_delay = -1
 travel_key_stop = false
 default_manual_training = true
-autopickup_no_burden = false
 auto_exclude =
 hp_warning = 0
 show_more = false
@@ -133,7 +131,7 @@ note_hp_percent = 25
 note_skill_levels = 1,3,6,9,12,15,18,21,24,27
 note_all_spells = true
 
-fire_order = launcher, rock, javelin, tomahawk
+fire_order = launcher, rock, javelin, boomerang
 
 read_persist_options = true
 
@@ -179,16 +177,21 @@ autopickup =
 autopickup_exceptions =
 
 ####################################
-# To include qw's lua, you can either:
-# (1) Include qw.lua in this RC and run crawl with the appropriate options.
+# NOTE: You must include the 'qw.lua' file for qw to work.
+# To do this, you can either:
+# (1) Use an 'include' statement to load qw.lua into this RC and run crawl with
+#     the appropriate options.
 # (2) Directly include the contents of qw.lua at the end of this file.
 #
-# To do (1), use the 'include' line below and run crawl with the '-rc'
-# and '-rcdir' options. For example:
+# To do (1), uncomment the 'include = qw.lua' line below and run crawl with the
+# '-rc' and '-rcdir' options. For example:
+#
 # $ crawl -rc DIR/qw.rc -rcdir DIR
-# where DIR is the full path to the qw repository.
-include = qw.lua
-
-# To do (2), comment out or remove the 'include' line and add the contents of
-# qw.lua. Make sure the first line before the Lua is `<` and the last line is
-# '>', otherwise the code won't execute.
+#
+# Here DIR is the full path to the qw repository.
+#
+# To do (2), add the contents of qw.lua directly at the end of this file. Make
+# sure that the lines with '{' at the beginning of the file and '}' at the end
+# of the file are both included, otherwise the Lua code won't execute.
+#
+# include = qw.lua
