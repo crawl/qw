@@ -278,6 +278,25 @@ function item_resist(str, it)
             else
                 return 0
             end
+        elseif str == "Regen" then
+             if name:find("troll leather")
+                     or subtype == "amulet of regeneration" then
+                 return 1
+             else
+                 return 0
+             end
+        elseif str == "Acrobat" then
+             if subtype == "amulet of the acrobat" then
+                 return 1
+             else
+                 return 0
+             end
+        elseif str == "Reflect" then
+             if ego == "reflection" or subtype == "amulet of reflection" then
+                 return 1
+             else
+                 return 0
+             end
         elseif str == "Str" then
             if subtype == "ring of strength" then
                 return it.plus or 0
@@ -313,7 +332,7 @@ function item_resist(str, it)
             end
         elseif str == "SH" then
             if subtype == "amulet of reflection" then
-                return it.plus or 0
+                return 5
             end
         end
     end
@@ -446,10 +465,10 @@ function absolute_resist_value(str, n)
     elseif str == "rPois" then
         return ((easy_runes() < 2) and 225 or 75)
     elseif str == "rN" then
-        return 25*n
+        return 25 * n
     elseif str == "Will" then
         if n <= 2 then
-            return 75*n
+            return 75 * n
         else
             return 200
         end
@@ -458,7 +477,11 @@ function absolute_resist_value(str, n)
     elseif str == "SInv" then
         return 200
     elseif str == "Spirit" then
-        return 75
+        return 100
+    elseif str == "Acrobat" then
+        return 100
+    elseif str == "Reflect" then
+        return 20
     end
     return 0
 end
@@ -488,7 +511,7 @@ function max_resist_value(str, d)
     elseif str == "rPois" then
         return ((ires < 1) and ((easy_runes() < 2) and 225 or 75) or 0)
     elseif str == "rN" then
-        return ((ires < 3) and 25*d or 0)
+        return ((ires < 3) and 25 * d or 0)
     elseif str == "Will" then
         return 75*d
     elseif str == "rCorr" then
@@ -496,11 +519,11 @@ function max_resist_value(str, d)
     elseif str == "SInv" then
         return ((ires < 1) and 200 or 0)
     elseif str == "Spirit" then
-        if ires > 0 then
-            return 0
-        else
-            return 75
-        end
+        return ((ires < 1) and 100 or 0)
+    elseif str == "Acrobat" then
+        return ((ires < 1) and 100 or 0)
+    elseif str == "Reflect" then
+        return ((ires < 1) and 20 or 0)
     end
     return 0
 end
@@ -535,7 +558,9 @@ function resist_value(str, it, cur, it2)
 end
 
 function linear_resist_value(str)
-    if str == "Slay" or str == "AC" or str == "EV" then
+    if str == "Regen" then
+        return 100
+    elseif str == "Slay" or str == "AC" or str == "EV" then
         return 50
     elseif str == "SH" then
         return 40
@@ -549,26 +574,26 @@ end
 
 function total_resist_value(it, cur, it2)
     resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr", "SInv",
-                   "Spirit", "Str", "Dex", "Int" }
-    linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH" }
+                   "Spirit", "Acrobat", "Reflect", "Str", "Dex", "Int" }
+    linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
     local val = 0
     for _,str in ipairs(linearlist) do
-        val = val + item_resist(str, it)*linear_resist_value(str)
+        val = val + item_resist(str, it) * linear_resist_value(str)
     end
-    local val1, val2 = val,val
+    local val1, val2 = val, val
     if not only_linear_resists then
         for _,str in ipairs(resistlist) do
-            local a,b = resist_value(str, it, cur, it2)
+            local a, b = resist_value(str, it, cur, it2)
             val1 = val1 + a
             val2 = val2 + b
         end
     end
-    return val1,val2
+    return val1, val2
 end
 
 function resist_vec(it)
     local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
-                         "SInv", "Spirit" }
+                         "SInv", "Spirit", "Acrobat", "Reflect" }
     local vec = { }
     for _,str in ipairs(resistlist) do
         local a,b = resist_value(str, it)
@@ -698,8 +723,11 @@ function armour_value(it, cur, it2)
         if ap and ap["*Corrode"] then
             value = value - 100
         end
-    elseif name:find("runed") or name:find("glowing") or name:find("dyed") or
-                 name:find("embroidered") or name:find("shiny") then
+        if ap and ap["Harm"] then
+            return -1,-1
+        end
+    elseif name:find("runed") or name:find("glowing") or name:find("dyed")
+            or name:find("embroidered") or name:find("shiny") then
         val2 = val2 + 400
         val1 = val1 + (cur and 400 or -200)
     elseif ego then -- names in armour_ego_name()
@@ -712,16 +740,16 @@ function armour_value(it, cur, it2)
             if not intrinsic_flight() then
                 value = value + 200
             end
-        elseif ego == "ponderousness" then
+        elseif ego == "ponderousness" or ego == "harm" then
             return -1,-1
         elseif ego == "repulsion" then
             value = value + 200
         end
     end
 
-    value = value + 50*expected_armour_multiplier()*it.ac
+    value = value + 50 * expected_armour_multiplier() * it.ac
     if it.plus then
-        value = value + 50*it.plus
+        value = value + 50 * it.plus
     end
     st, _ = it.subtype()
     if good_slots[st] == "Shield" then
@@ -989,21 +1017,6 @@ function amulet_value(it, cur, it2)
         end
     end
     local val1,val2 = total_resist_value(it, cur, it2)
-    if subtype == "amulet of reflection" then
-        value = value + 20 -- for reflection
-        if not it.artefact and not it.plus then
-            value = value + 6*40
-            if not cur then
-                val1 = val1 - 4*40
-            end
-        end
-    elseif subtype == "amulet of regeneration" then
-        value = value + 50
-    elseif subtype == "amulet of inaccuracy" then
-        value = value - 250
-    elseif subtype == "amulet of harm" then
-        value = value - 150
-    end
     return value+val1,value+val2
 end
 
@@ -1034,7 +1047,8 @@ function ring_value(it, cur, it2)
     if subtype == "ring of teleportation" and you.race() ~= "Formicid" then
         return -1,-1
     end
-    if it.artefact and not it.fully_identified or not (it.artefact or name:find("ring of")) then
+    if it.artefact and not it.fully_identified
+            or not (it.artefact or name:find("ring of")) then
         if cur then
             return 5000,5000
         else
@@ -1172,9 +1186,10 @@ function item_is_dominated(it)
                  and not item_is_sit_dominated(it, "extended") then
         return false
     elseif slotname == "Weapon"
-                 and (you.god() == "the Shining One" and not you.one_time_ability_used()
-                 or you.god() ~= "the Shining One" and TSO_CONVERSION)
-                 and not item_is_sit_dominated(it, "bless") then
+            and (you.god() == "the Shining One"
+                and not you.one_time_ability_used()
+                or you.god() ~= "the Shining One" and TSO_CONVERSION)
+            and not item_is_sit_dominated(it, "bless") then
         return false
     end
     local minv,maxv = equip_value(it)
@@ -1188,8 +1203,10 @@ function item_is_dominated(it)
     for it2 in inventory() do
         if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
             local minv2,maxv2 = equip_value(it2)
-            if minv2 >= maxv or
-                 minv2 >= minv and maxv2 >= maxv and resist_dominated(it,it2) then
+            if minv2 >= maxv
+                    or minv2 >= minv
+                    and maxv2 >= maxv
+                    and resist_dominated(it,it2) then
                 num_slots = num_slots - 1
                 if num_slots == 0 then
                     return true
