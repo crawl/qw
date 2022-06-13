@@ -3,25 +3,18 @@
 This rcfile is elliptic's DCSS bot "qw", the first bot to win DCSS with no
 human assistance. A substantial amount of code here was contributed by elliott
 or borrowed from N78291's bot "xw", and many others have contributed as well.
-The bot is now maintained by the dcss devteam. Please post bug reports as
+The bot is now maintained by the DCSS devteam. Please post bug reports as
 issues on the official crawl qw repository:
 
 https://github.com/crawl/qw/issues/new
 
-The current version of qw can start as any species/background combination and
-has some basic grasp of how many of the gods work (see qw.rc for configuration
-details). Note though that most spells and racial abilities aren't used, and qw
-is not very good at most combos! Historically, its best 3-rune combo was
-DFi^Makhleb, which managed a winrate of about 15% in offline testing. As of
-0.29-a, it hasn't managed to win with combos like GrFi^Oka, MiFi^Oka, GrBe, or
-MiBe, but it has gotten to Vaults:5 with a couple of these combos. It can
-optionally try to get more runes, with its preferred combo for that being
-GrFi^Okawaru, converting to TSO after Slime. The 15-rune winrate for this build
-was about 1% before the Hell rework in 0.28.
-
-Future work on qw will focus on the fundamentals of improving its winrate,
-mostly likely through better using of throwing and evocables, particularly
-versus nasty summoners.
+The current version of qw can play most species and background combinations in
+a melee-focused way and has some basic grasp of how many gods work (see qw.rc
+for configuration details). Note though that most spells and racial abilities
+aren't used, and qw is not very good! It can win games with 3 runes for combos
+like GrBe, and we try to maintain qw so it can continue to play and win the
+current version. See `??qw` in the LearnDB for a list of its current and past
+achievements as well as its limitations.
 
 ## Running on remote DCSS server
 * Please make sure you have permission to run a bot on your server of choice!
