@@ -34,7 +34,8 @@ achievements as well as its limitations.
 * Go to your WebTiles server lobby.
 * Click the "(edit rc)" link for DCSS trunk, paste the contents of the modified
   `qw.rc` you made, and click Save.
-* Run DCSS trunk, either in WebTiles or in console. If you don't
+* Run DCSS trunk, either in WebTiles or in console. If you didn't change the
+  `AUTO_START` variable to `true`, press "Tab".
 * Enjoy!
 
 Since clua works on the server side, WebTiles drawing can lag behind things
@@ -54,8 +55,8 @@ don't run qw on the same account that you use for your own personal games!
   here the repo is in a directory named `qw`. The `-rcdir` option is necessary
   for `crawl` to find the `qw.lua` file. Alternately you can put the contents of
   `qw.lua` directly in `qw.rc` per the instructions above for online play.
-* Enter name if necessary and start game. If you did not change `AUTO_START`
-  variable, press "Tab".
+* Enter name if necessary and start game. If you didn't change the
+  `AUTO_START` variable, press "Tab".
 * Enjoy!
 
 The file qw.exp is a simple expect script that automates running qw for many
