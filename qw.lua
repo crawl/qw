@@ -3048,15 +3048,6 @@ function armour_evp()
     end
 end
 
-function on_corpses()
-    for it in at_feet() do
-        if string.find(it.name(), "corpse") then
-            return true
-        end
-    end
-    return false
-end
-
 function can_swap(equip_slot)
     local it = items.equipped_at(equip_slot)
     if it and (it.cursed or it.name():find("+14 obsidian axe")
@@ -4478,15 +4469,6 @@ function plan_abyss_rest()
     return false
 end
 
-function plan_handle_corpses()
-    if not on_corpses() then
-        return false
-    end
-    -- used to be food code.
-    -- add relevant necro spells here and add this back to `plan`?
-    return false
-end
-
 function magicfind(target)
     -- this will be turned on again in ready()
     offlevel_travel = false
@@ -4610,11 +4592,6 @@ function plan_join_god()
         return true
     end
     return false
-end
-
-function plan_find_corpses()
-    magicfind("@/corpse$&&!!rott&&!!skel&&")
-    return true
 end
 
 function plan_autoexplore()
