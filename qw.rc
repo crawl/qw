@@ -26,9 +26,16 @@
 # * smart - currently prefers Spider > Snake/Swamp > Shoals
 # * dsmart - Swamp/Spider > Snake > Shoals (DsBe data)
 : RUNE_PREFERENCE = "random"
-# plan for post-V:5, should end with zot
-# maximal example: "tso,tomb,hells,pan,slime,abyss,zig,zot"
-: ENDGAME_PLAN = "zot"
+# A set of possible plans for post-V:5. Entries should always end with "zot".
+# These names can be used in the ENDGAME_PLAN or COMBO_CYCLE_LIST variables.
+: ENDGAME_PLANS = {
+:     ["3rune"]  = "zot",
+:     ["15rune"] = "tso,tomb,pan,slime,hells,abyss,zot",
+:     ["all"]    = "tso,tomb,pan,slime,hells,abyss,zig,zot",
+:     ["zig"]    = "tso,tomb,pan,slime,zig,zot",
+: }
+# The default plan.
+: ENDGAME_PLAN = "3rune"
 # depth to attempt to dive in ziggurats
 : ZIG_DIVE = 27
 # enable certain somewhat spammy notes
@@ -45,21 +52,22 @@
 # acceptable gods (join whichever one we find first)
 # gods who have been at least partially implemented: BCHLMOQRTUXY1
 # gods who are actually pretty decent on qw: CMORT
-: GOD_LIST = { "Trog", }
+: GOD_LIST = { "Trog", "Okawaru", "Makhleb"}
 # use faded altar, abandoning if we don't get one of the gods in GOD_LIST
 : FADED_ALTAR = false
 
-# cycle through combos using c_persist.options
+# Set to true to cycle through the combos in COMBO_CYCLE_LIST.
 : COMBO_CYCLE = false
-# combos to cycle through - uses the same syntax as the regular combo option
-# with an optional "^<god initials>" suffix to overwrite the GOD_LIST
-# list above. Here are some sample choices:
-: COMBO_CYCLE_LIST = "GrBe.handaxe^T, GrFi.waraxe^O, MiFi.waraxe^O"
+# The combos to cycle through. This uses the same syntax as the regular 'combo'
+# option below with an optional "^<god initials>" suffix to overwrite the
+# GOD_LIST list above. Additionally, after this god list, you can specify an
+# endgame plan name from ENDGAME_PLANS with a "!<plan name>" suffix. Here are
+# some sample choices:
+: COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
 
 # Choose randomly between these combos. This will not apply if the COMBO_CYCLE
 # option was on in your _previous_ game.
 combo = GrFi.waraxe
-
 # For random berserkers, use these combos:
 # combo = DEBe.handaxe, DrBe.handaxe, DsBe.handaxe, FeBe.claws, FoBe.handaxe
 # combo += GrBe.handaxe, GhBe.claws, HOBe.handaxe, HuBe.handaxe, KoBe.mace

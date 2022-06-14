@@ -4479,6 +4479,11 @@ function god_options()
     return c_persist.cur_god_list or GOD_LIST
 end
 
+function endgame_plan_options()
+    local plan = c_persist.cur_endgame_plan or ENDGAME_PLAN
+    return ENDGAME_PLANS[plan]
+end
+
 function plan_find_altar()
     if not want_altar() then
         return false
@@ -7688,7 +7693,7 @@ end
 -- initialization/control/saving
 
 function make_endgame_plans()
-    endgame_plan_list = split(ENDGAME_PLAN, ", ")
+    endgame_plan_list = split(endgame_plan_options(), ", ")
     for _,pl in ipairs(endgame_plan_list) do
         if pl == "slime" then
             SLIMY_RUNE = true
@@ -7805,12 +7810,14 @@ function first_turn_persist()
     --    end
     --end
     local god_list = c_persist.next_god_list
+    local plan = c_persist.next_endgame_plan
     for key,_ in pairs(c_persist) do
         if key ~= "record" then
             c_persist[key] = nil
         end
     end
     c_persist.cur_god_list = god_list
+    c_persist.cur_endgame_plan = plan
     if COMBO_CYCLE then
         local combo_string_list = split(COMBO_CYCLE_LIST, ", ")
         local combo_string = combo_string_list[
@@ -7818,9 +7825,17 @@ function first_turn_persist()
         local combo_parts = split(combo_string, "^")
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
+            local plan_parts = split(combo_parts[2], "!")
             c_persist.next_god_list = { }
-            for g in combo_parts[2]:gmatch(".") do
+            for g in plan_parts[1]:gmatch(".") do
                 table.insert(c_persist.next_god_list, fullgodname(g))
+            end
+            if #plan_parts > 1 then
+                if not ENDGAME_PLANS[plan_parts[2]] then
+                    error("Unknown plan name '" .. plan_parts[2] .. "'" ..
+                    " given in combo spec '" .. combo_string .. "'")
+                end
+                c_persist.next_endgame_plan = plan_parts[2]
             end
         end
     end
