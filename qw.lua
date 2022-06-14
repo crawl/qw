@@ -8138,6 +8138,9 @@ function c_answer_prompt(prompt)
     if prompt:find("Are you sure you want to drop") then
         return true
     end
+    if prompt:find("Really rampage") then
+        return true
+    end
 end
 
 function ch_stash_search_annotate_item(it)
