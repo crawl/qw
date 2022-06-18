@@ -2103,7 +2103,7 @@ function can_heroism()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 1
                  and cmp() >= 2
-                 and not you.status("heroism")
+                 and not you.status("heroic")
                  and can_invoke()
 end
 
@@ -2111,7 +2111,7 @@ function can_finesse()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 5
                  and cmp() >= 5
-                 and not you.status("finesse")
+                 and not you.status("finesse-ful")
                  and can_invoke()
 end
 
@@ -3122,7 +3122,7 @@ function should_rest()
         end
         return true
     end
-    return reason_to_rest(99.9) or you.status("spiked")
+    return reason_to_rest(99.9)
         or you.god() == "Makhleb" and you.turns() <= sgd_timer + 100
         or should_ally_rest()
 end
@@ -3143,12 +3143,20 @@ function reason_to_rest(percentage)
             return true
         end
     end
-    return (you.confused() or transformed() or hp_is_low(percentage)
-            and (you.god() ~= "the Shining One" or hp_is_low(75)
-                or count_divine_warrior(2) == 0)
-            or you.slowed() or you.exhausted() or you.teleporting()
-            or you.status("berserk cooldown") or you.status("marked")
-            or you.silencing() or you.corrosion() > 0)
+    return you.confused()
+        or transformed()
+        or hp_is_low(percentage)
+        and (you.god() ~= "the Shining One" or hp_is_low(75)
+            or count_divine_warrior(2) == 0)
+        or you.slowed()
+        or you.exhausted()
+        or you.teleporting()
+        or you.status("on berserk cooldown")
+        or you.status("marked")
+        or you.status("spiked")
+        or you.status("weakened")
+        or you.silencing()
+        or you.corrosion() > 0
 end
 
 -- Are we significantly stronger than usual thanks to a buff that we used?
@@ -3157,7 +3165,7 @@ function buffed()
         return false
     end
     if you.god() == "Okawaru" and
-         (you.status("heroism") or you.status("finesse")) then
+         (you.status("heroic") or you.status("finesse-ful")) then
         return true
     end
     if you.extra_resistant() then
@@ -3578,7 +3586,7 @@ function plan_orbrun_heal_wounds()
 end
 
 function plan_orbrun_haste()
-    if want_to_orbrun_buff() and not you.status("finesse") then
+    if want_to_orbrun_buff() and not you.status("finesse-ful") then
         return haste()
     end
     return false
