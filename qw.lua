@@ -6767,7 +6767,7 @@ function plan_dig_grate()
     local grate_count_needed = 3
     if where:find("Zot") then
         grate_mon_list = {"draconian stormcaller", "draconian scorcher"}
-    elseif where == "Depths:5" then
+    elseif where == "Depths:4" then
         grate_mon_list = {"draconian stormcaller", "draconian scorcher",
                                             "angel", "daeva", "lich", "eye"}
     elseif where:find("Depths") then
