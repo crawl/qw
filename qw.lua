@@ -2055,12 +2055,6 @@ function can_zap()
     if you.mutation("inability to use devices") > 0 then
         return false
     end
-    local x = you.mutation("MP-powered wands")
-    if x > 0 then
-        if cmp() < 3*x then
-            return false
-        end
-    end
     return true
 end
 
