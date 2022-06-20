@@ -5516,9 +5516,10 @@ function plan_go_to_temple()
     if c and c >= 100 then
         return false
     end
-    if found_branch("T") and (want_altar() or TSO_CONVERSION
-                                                        or LUGONU_CONVERSION) and not
-         util.contains(c_persist.branches_entered, "T") and in_branch("D") then
+    if found_branch("T")
+            and (want_altar() or TSO_CONVERSION or LUGONU_CONVERSION)
+            and not util.contains(c_persist.branches_entered, "T")
+            and in_branch("D") then
         expect_new_location = true
         magic("GTY")
         return true
@@ -5869,7 +5870,7 @@ function plan_exit_pan()
     return false
 end
 
-function plan_step_towards_lair()
+function plan_step_towards_branch()
     local x, y, feat
     if (stepped_on_lair or not found_branch("L"))
          and (where ~= "Crypt:3" or stepped_on_tomb or not found_branch("W")) then
@@ -7209,10 +7210,12 @@ function cascade(plans)
                 if not plandata[2]:find("^try") then
                     panic(plandata[2] .. " failed despite returning true.")
                 end
-                if not c_persist.plan_fail_count[plandata[2]] then
-                    c_persist.plan_fail_count[plandata[2]] = 0
+                fail_count = c_persist.plan_fail_count[plandata[2]]
+                if not fail_count then
+                    fail_count = 0
                 end
-                c_persist.plan_fail_count[plandata[2]] = c_persist.plan_fail_count[plandata[2]] + 1
+                fail_count = fail_count + 1
+                c_persist.plan_fail_count[plandata[2]] = fail_count
             end
         end
         return false
@@ -7377,7 +7380,7 @@ plan_move = cascade {
     {plan_flail_at_invis, "try_flail_at_invis"},
     {plan_rest, "rest"},
     {plan_pre_explore, "pre_explore"},
-    {plan_step_towards_lair, "step_towards_lair"},
+    {plan_step_towards_branch, "step_towards_branch"},
     {plan_continue_tab, "continue_tab"},
     {plan_abandon_god, "abandon_god"},
     {plan_unwield_weapon, "unwield_weapon"},
@@ -7959,7 +7962,8 @@ function update_stuff()
         did_move_towards_monster = did_move_towards_monster - 1
     end
     if you.where() ~= where then
-        if (where == "nowhere" or is_waypointable(where)) and is_waypointable(you.where()) then
+        if (where == "nowhere" or is_waypointable(where))
+                and is_waypointable(you.where()) then
             waypoint_parity = 3 - waypoint_parity
             if you.where() ~= prev_where or you.where():find("Tomb") then
                 clear_level_map(waypoint_parity)
@@ -7988,7 +7992,8 @@ function update_stuff()
             end
         end
         where = you.where()
-        if cur_branch() and not util.contains(c_persist.branches_entered, cur_branch()) then
+        if cur_branch() and not util.contains(c_persist.branches_entered,
+                cur_branch()) then
             say("Entered " .. cur_branch() .. ".")
             table.insert(c_persist.branches_entered, cur_branch())
         end
@@ -8052,8 +8057,6 @@ function magic(command)
     crawl.process_keys(command .. string.char(27) .. string.char(27) ..
                                          string.char(27))
 end
-
-
 
 --------------------------------
 -- a function to test various things conveniently
