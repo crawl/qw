@@ -79,7 +79,7 @@ combo = GrBe.handaxe
 # Acceptable gods (join whichever one we find first)
 # Gods who have been at least partially implemented: BCHLMOQRTUXY1
 # Gods who are actually pretty decent on qw: CMORT
-: GOD_LIST = { "Okawaru", "Makhleb"}
+: GOD_LIST = { "Trog", "Okawaru", "Makhleb"}
 # Use faded altar, abandoning if we don't get one of the gods in GOD_LIST
 : FADED_ALTAR = false
 
@@ -99,13 +99,13 @@ combo = GrBe.handaxe
 # A set of possible plans for post-V:5. Entries should always end with "zot".
 # These names can be used in the ENDGAME_PLAN or COMBO_CYCLE_LIST variables.
 : ENDGAME_PLANS = {
-:     ["3rune"]  = "zot",
-:     ["15rune"] = "tso,tomb,pan,slime,hells,abyss,zot",
+:     ["3runes"]  = "zot",
+:     ["15runes"] = "tso,tomb,pan,slime,hells,abyss,zot",
 :     ["all"]    = "tso,tomb,pan,slime,hells,abyss,zig,zot",
 :     ["zig"]    = "tso,tomb,pan,slime,zig,zot",
 : }
 # The default plan.
-: ENDGAME_PLAN = "3rune"
+: ENDGAME_PLAN = "3runes"
 
 # Depth to attempt to dive in ziggurats
 : ZIG_DIVE = 27
