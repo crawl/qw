@@ -4585,7 +4585,7 @@ function plan_convert()
                 end
             end
         end
-        magic("<YYY")
+        magic("<JY")
     end
     return true
 end
