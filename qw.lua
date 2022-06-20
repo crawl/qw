@@ -4486,10 +4486,15 @@ function plan_abyss_rest()
     return false
 end
 
-function magicfind(target)
-    -- this will be turned on again in ready()
+function magicfind(target, secondary)
+    -- This will be turned on again in ready().
     offlevel_travel = false
-    magic(control('f') .. target .. "\ra\r")
+    if secondary then
+        crawl.sendkeys(control('f') .. target .. "\r", arrowkey('d'), "\r\r" ..
+            string.char(27) .. string.char(27) .. string.char(27))
+    else
+        magic(control('f') .. target .. "\r\r\r")
+    end
 end
 
 function god_options()
@@ -4514,7 +4519,7 @@ function plan_find_altar()
     return true
 end
 
-local tried_find_altar_turn = -1
+-- local tried_find_altar_turn = -1
 function plan_find_conversion_altar()
     if unshafting() then
         return false
@@ -4527,12 +4532,14 @@ function plan_find_conversion_altar()
         return false
     end
     expect_new_location = true
-    if tried_find_altar_turn ~= you.turns() then
-        tried_find_altar_turn = you.turns()
-        magic(control('f') .. str .. "\ra\r")
-        return nil
-    end
-    magic(control('f') .. str .. "\rb\r")
+    magicfind(str)
+    -- Currently broken.
+--  if tried_find_altar_turn ~= you.turns() then
+--      tried_find_altar_turn = you.turns()
+--      magicfind(str)
+--      return true
+--  end
+--  -- magicfind(str, true)
     return true
 end
 
@@ -7647,6 +7654,11 @@ end
 
 function control(c)
     return string.char(string.byte(c) - string.byte('a') + 1)
+end
+
+function arrowkey(c)
+    local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
+    return a2c[c]
 end
 
 function delta_to_vi(dx, dy)
