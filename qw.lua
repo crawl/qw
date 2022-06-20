@@ -3136,9 +3136,7 @@ function should_rest()
         return false
     end
     if you.turns() < hiding_turn_count + 10 then
-        if SPAM then
-            say("Waiting for ranged monster.")
-        end
+        say("Waiting for ranged monster.", true)
         return true
     end
     return reason_to_rest(99.9)
@@ -3205,9 +3203,7 @@ function should_ally_rest()
         for y = -3, 3 do
             m = monster_array[x][y]
             if m and m:attitude() == ATT_FRIENDLY and m:damage_level() > 0 then
-                if SPAM then
-                    say("Waiting for " .. m:name() .. " to heal.")
-                end
+                say("Waiting for " .. m:name() .. " to heal.", true)
                 return true
             end
         end
@@ -3910,9 +3906,7 @@ function plan_coward_step()
         if tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end
-        if SPAM then
-            say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        end
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").", true)
         magic(tactical_step .. "Y")
         return true
     end
@@ -3921,9 +3915,7 @@ end
 
 function plan_flee_step()
     if tactical_reason == "fleeing" then
-        if SPAM then
-            say("FLEEEEING.")
-        end
+        say("FLEEEEING.", true)
         set_stair_target(tactical_step)
         last_flee_turn = you.turns()
         magic(tactical_step .. "Y")
@@ -6397,9 +6389,7 @@ function plan_continue_flee()
                  and not view.withheld(x,y) then
                 val = stair_dists[num][target_stair][dx+x][dy+y]
                 if val and val < stair_dists[num][target_stair][dx][dy] then
-                    if SPAM then
-                        say("STILL FLEEEEING.")
-                    end
+                    say("STILL FLEEEEING.", true)
                     magic(delta_to_vi(x,y) .. "YY")
                     return true
                 end
@@ -6434,7 +6424,7 @@ end
 
 function plan_unshaft()
     if unshafting() and where ~= "Temple" then
-        --say("Trying to unshaft to " .. where_shafted_from .. ".")
+        say("Trying to unshaft to " .. where_shafted_from .. ".", true)
         expect_new_location = true
         magic("G<")
         return true
@@ -7049,7 +7039,7 @@ function add_ignore(dx,dy)
     if not util.contains(ignore_list, name) then
         table.insert(ignore_list, name)
         crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
-        --say("Ignoring " .. name .. ".")
+        say("Ignoring " .. name .. ".", true)
     end
 end
 
@@ -7060,7 +7050,7 @@ function remove_ignore(dx,dy)
         if mname == name then
             table.remove(ignore_list, i)
             crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            --say("Unignoring " .. name .. ".")
+            say("Unignoring " .. name .. ".", true)
             return
         end
     end
@@ -7074,7 +7064,7 @@ function clear_ignores()
         for i = 1, size do
             mname = table.remove(ignore_list)
             crawl.setopt("runrest_ignore_monster -= " .. mname .. ":1")
-            --say("Unignoring " .. mname .. ".")
+            say("Unignoring " .. mname .. ".", true)
         end
     end
 end
@@ -7117,7 +7107,7 @@ end
 function use_ability(name, extra, mute)
     for letter, abil in pairs(you.ability_table()) do
         if abil == name then
-            if not mute or SPAM then
+            if not mute or DEBUG_MODE then
                 say("INVOKING " .. name .. ".")
             end
             magic("a" .. letter .. (extra or ""))
@@ -7130,9 +7120,11 @@ function note(x)
     crawl.take_note(you.turns() .. " ||| " .. x)
 end
 
-function say(x)
-    crawl.mpr(you.turns() .. " ||| " .. x)
-    note(x)
+function say(x, debug)
+    if not debug or DEBUG_MODE then
+        crawl.mpr(you.turns() .. " ||| " .. x)
+        note(x)
+    end
 end
 
 -- these few functions are called directly from ready()
@@ -7198,8 +7190,9 @@ function cascade(plans)
         for i, plandata in ipairs(plans) do
             plan = plandata[1]
             if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
-                --say(plandata[2])
                 result = plan()
+                say("Executed " .. plandata[2] ..  ", result: " ..
+                    tostring(result), true)
                 if not automatic then
                     return true
                 end

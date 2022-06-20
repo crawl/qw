@@ -196,8 +196,8 @@ autopickup_exceptions =
 ### Debugging ###
 #################
 
-# Enable certain somewhat spammy notes.
-: SPAM = false
+# Set to true to enable debug output. Generates a lot of output.
+: DEBUG_MODE = false
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false
 
