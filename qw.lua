@@ -1389,17 +1389,18 @@ end
 -- XL < num, otherwise we want a function. ["*"] should be a table of
 -- functions to check for every monster.
 
--- berserk these
+-- Used for:
+-- Trog's Berserk, Okawaru's Heroism, whether to buff on the orb run.
 local scary_monsters = {
     ["*"] = {
-        in_desc(15,"hydra"),
+        in_desc(15, "hydra"),
         hydra_check_flaming(20),
-        in_desc(100,"berserk[^e]"),
-        in_desc(100,"statue"),
-        in_desc(100,"'s ghost"),
-        in_desc(100,"' ghost"),
-        in_desc(100,"'s illusion"),
-        in_desc(100,"' illusion"),
+        in_desc(100, "berserk[^e]"),
+        in_desc(100, "statue"),
+        in_desc(100, "'s ghost"),
+        in_desc(100, "' ghost"),
+        in_desc(100, "'s illusion"),
+        in_desc(100, "' illusion"),
         pan_lord(100),
     },
 
@@ -1414,7 +1415,7 @@ local scary_monsters = {
     ["Robin"] = 5,
 
     ["Ijyb"] = 7,
-    ["ice beast"] = check_resist(7,"rC",1),
+    ["ice beast"] = check_resist(7, "rC", 1),
     ["orc wizard"] = 7,
     ["Grinder"] = 7,
     ["Dowan"] = 7,
@@ -1467,7 +1468,6 @@ local scary_monsters = {
     ["fire dragon"] = 17,
     ["ice dragon"] = 17,
     ["storm dragon"] = 17,
-    ["hell hog"] = 17,
     ["ogre mage"] = 17,
     ["orc sorcerer"] = 17,
     ["orc high priest"] = 17,
@@ -1477,20 +1477,34 @@ local scary_monsters = {
     ["quicksilver ooze"] = 17,
     ["skeletal warrior"] = 17,
     ["Arachne"] = 17,
+    ["Mlioglotl"] = 17,
     ["deep troll"] = 17,
     ["thorn hunter"] = 17,
     ["goliath frog"] = 17,
     ["bunyip"] = 17,
+    ["meliai"] = 17,
     ["shambling mangrove"] = 17,
     ["sun demon"] = 17,
-    ["white ugly thing"] = check_resist(17,"rC",1),
-    ["white very ugly thing"] = check_resist(17,"rC",1),
+    ["white ugly thing"] = check_resist(17, "rC", 1),
+    ["white very ugly thing"] = check_resist(17, "rC", 1),
 
+    ["merfolk impaler"] = 20,
+    ["water nymph"] = 20,
+    ["alligator snapping turtle"] = 20,
     ["fenstrider witch"] = 20,
+    ["goliath frog"] = 20,
+    ["spriggan rider"] = 20,
+    ["spriggan druid"] = 20,
+    ["spriggan berserker"] = 20,
+    ["spriggan defender"] = 20,
+    ["spriggan air mage"] = 20,
     ["nagaraja"] = 20,
     ["naga sharpshooter"] = 20,
     ["salamander tyrant"] = 20,
-    ["shock serpent"] = 20,
+    ["shock serpent"] = check_resist(17, "rElec", 1),
+    ["sun moth"] = 20,
+    ["broodmother"] = 20,
+    ["radroach"] = 20,
     ["emperor scorpion"] = 20,
     ["Donald"] = 20,
     ["Rupert"] = 20,
@@ -1508,27 +1522,36 @@ local scary_monsters = {
     ["azure jelly"] = 20,
     ["rockslime"] = 20,
     ["Asterion"] = 20,
-    ["spriggan defender"] = 20,
-    ["spriggan air mage"] = 20,
-    ["spriggan druid"] = 20,
     ["deep troll shaman"] = 20,
     ["Xtahua"] = 20,
-    ["tengu reaver"] = 20,
-    ["ironbound thunderhulk"] = 20,
+    ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
+    ["ironbound frostheart"] = check_resist(20, "rC", 1),
     ["ettin"] = 20,
     ["Polyphemus"] = 20,
     ["Bai Suzhen"] = 20,
+    ["Zenata"] = 20,
+    ["crystal guardian"] = 20,
 
-    ["storm dragon"] = check_resist(24,"rElec",1),
-    ["fire giant"] = check_resist(24,"rF",1),
-    ["frost giant"] = check_resist(24,"rC",1),
-    ["azure jelly"] = check_resist(24,"rC",1),
+    ["tentacled monstrosity"] = 24,
+    ["golden dragon"] = 24,
+    ["merfolk javelineer"] = 24,
+    ["hell hog"] = check_resist(24, "rF", 1),
+    ["storm dragon"] = check_resist(24, "rElec", 1),
+    ["titan"] = check_resist(24, "rElec", 1),
+    ["fire giant"] = check_resist(24, "rF", 1),
+    ["frost giant"] = check_resist(24, "rC", 1),
+    ["azure jelly"] = check_resist(24, "rC", 1),
 
-    ["Xtahua"] = check_resist(100,"rF",1),
+    ["walking crystal tome"] = 100,
+    ["walking divine tome"] = 100,
+    ["tengu reaver"] = 100,
+    ["Xtahua"] = check_resist(100, "rF", 1),
     ["deep elf annihilator"] = 100,
     ["deep elf sorcerer"] = 100,
     ["draconian annihilator"] = 100,
-    ["draconian sorcerer"] = 100,
+    ["draconian scorcher"] = 100,
+    ["draconian stormcaller"] = 100,
+    ["draconian monk"] = 100,
     ["the Enchantress"] = 100,
     ["Vashnia"] = 100,
     ["Sojobo"] = 100,
@@ -1538,7 +1561,7 @@ local scary_monsters = {
     ["Sonja"] = 100,
     ["Louise"] = 100,
     ["Mennas"] = 100,
-    ["Margery"] = check_resist(100,"rF",2),
+    ["Margery"] = check_resist(100, "rF", 2),
     ["Frederick"] = 100,
     ["Boris"] = 100,
     ["Mara"] = 100,
@@ -1560,6 +1583,7 @@ local scary_monsters = {
     ["enormous slime creature"] = 100,
     ["titan"] = 100,
     ["orb of fire"] = 100,
+    ["Killer Klown"] = 100,
     ["caustic shrike"] = 100,
     ["seraph"] = 100,
     ["juggernaut"] = 100,
@@ -1579,23 +1603,15 @@ local scary_monsters = {
     ["Parghit"] = 100,
 } -- hack
 
--- BiA these even at low piety
-local bia_necessary_monsters = {
-    ["*"] = {
-        hydra_check_flaming(15),
-        in_desc(100,"statue"),
-    },
-
-    ["orb spider"] = 20,
-} -- hack
-
--- BiA these
-local bia_monsters = {
+-- Used for:
+-- Trog's Brothers in Arms, Okawaru's Finesse, Makhleb's Summon Greater
+-- Servant, Ru's Apocalypse, The Shining One's Summon Divine Warrior.
+local nasty_monsters = {
     ["*"] = {
         hydra_check_flaming(17),
-        in_desc(100,"statue"),
-        in_desc(100,"'s ghost"),
-        in_desc(100,"' ghost"),
+        in_desc(100, "statue"),
+        in_desc(100, "'s ghost"),
+        in_desc(100, "' ghost"),
         pan_lord(100),
     },
 
@@ -1616,19 +1632,22 @@ local bia_monsters = {
     ["Agnes"] = 20,
     ["Jory"] = 20,
     ["Arachne"] = 20,
-    ["Nikola"] = check_resist(20,"rElec",1),
+    ["Nikola"] = check_resist(20, "rElec", 1),
     ["Vashnia"] = 20,
     ["Asterion"] = 20,
     ["orb spider"] = 20,
     ["thorn hunter"] = 20,
-    ["sun demon"] = check_resist(20,"rF",1),
+    ["sun demon"] = check_resist(20, "rF", 1),
     ["Polyphemus"] = 20,
     ["Ilsuiw"] = 20,
     ["Bai Suzhen"] = 20,
     ["merfolk avatar"] = 20,
+    ["Zenata"] = 20,
+    ["crystal guardian"] = 20,
+    ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
 
     ["deep troll shaman"] = 100,
-    ["spriggan air mage"] = check_resist(100,"rElec",1),
+    ["spriggan air mage"] = check_resist(100, "rElec", 1),
     ["the Enchantress"] = 100,
     ["Sojobo"] = 100,
     ["Roxanne"] = 100,
@@ -1651,13 +1670,14 @@ local bia_monsters = {
     ["Tzitzimitl"] = 100,
     ["Tiamat"] = 100,
     ["orb of fire"] = 100,
+    ["Killer Klown"] = 100,
     ["caustic shrike"] = 100,
     ["seraph"] = 100,
     ["Royal Jelly"] = 100,
-    ["spark wasp"] = check_resist(100,"rElec",1),
+    ["spark wasp"] = check_resist(100, "rElec", 1),
     ["juggernaut"] = 100,
     ["iron giant"] = 100,
-    ["entropy weaver"] = check_resist(100,"rCorr",1),
+    ["entropy weaver"] = check_resist(100, "rCorr", 1),
     ["Cerebov"] = 100,
     ["Gloorx Vloq"] = 100,
     ["Lom Lobon"] = 100,
@@ -1668,9 +1688,21 @@ local bia_monsters = {
     ["Ereshkigal"] = 100,
     ["greater mummy"] = 100,
     ["Khufu"] = 100,
+    ["Parghit"] = 100,
+    ["Vv"] = 100,
 } -- hack
 
--- Use haste/might on these few
+-- BiA these even at low piety.
+local bia_necessary_monsters = {
+    ["*"] = {
+        hydra_check_flaming(15),
+        in_desc(100, "statue"),
+    },
+
+    ["orb spider"] = 20,
+} -- hack
+
+-- Use haste/might on these few.
 local ridiculous_uniques = {
     ["*"] = {},
     ["Antaeus"] = 100,
@@ -1678,7 +1710,7 @@ local ridiculous_uniques = {
     ["Lom Lobon"] = 100,
 } -- hack
 
--- Trog's Hand these
+-- Trog's Hand these.
 local hand_monsters = {
     ["*"] = {},
 
@@ -1711,28 +1743,31 @@ local hand_monsters = {
     ["merfolk avatar"] = 100,
 } -- hack
 
--- potion of resistance these
+-- Potion of resistance these.
 local fire_resistance_monsters = {
     ["*"] = {},
 
-    ["Margery"] = check_resist(100,"rF",2),
+    ["Margery"] = check_resist(100, "rF", 2),
     ["orb of fire"] = 100,
-    ["hellephant"] = check_resist(100,"rF",2),
-    ["Xtahua"] = check_resist(100,"rF",2),
+    ["hellephant"] = check_resist(100, "rF", 2),
+    ["Xtahua"] = check_resist(100, "rF", 2),
     ["Cerebov"] = 100,
-    ["Asmodeus"] = check_resist(100,"rF",2),
+    ["Asmodeus"] = check_resist(100, "rF", 2),
+    ["Vv"] = 100,
 } -- hack
 
 local cold_resistance_monsters = {
     ["*"] = {},
     ["Ice Fiend"] = 100,
     ["Antaeus"] = 100,
+    ["Vv"] = 100,
 } -- hack
 
 local elec_resistance_monsters = {
     ["*"] = {
-        in_desc(20,"black draconian"),
+        in_desc(20, "black draconian"),
     },
+    ["ironbound thunderhulk"] = 20,
     ["storm dragon"] = 20,
     ["electric golem"] = 100,
     ["spark wasp"] = 100,
@@ -4006,7 +4041,7 @@ function want_to_bia()
     end
     if check_monsters(LOS, bia_necessary_monsters) or you.piety_rank() > 4 and
          ((want_to_berserk() and not can_berserk()) or
-         check_monsters(LOS, bia_monsters)) then
+         check_monsters(LOS, nasty_monsters)) then
         if count_bia(4) == 0 and not you.teleporting() then
             return true
         end
@@ -4019,7 +4054,7 @@ function want_to_finesse()
             and count_nearby(0, 0, LOS) >= 5 then
         return true
     end
-    if danger and check_monsters(LOS, bia_monsters)
+    if danger and check_monsters(LOS, nasty_monsters)
             and not you.teleporting() then
         return true
     end
@@ -4043,7 +4078,7 @@ function want_to_drain_life()
 end
 
 function want_to_sgd()
-    if you.skill("Invocations") >= 12 and (check_monsters(LOS, bia_monsters)
+    if you.skill("Invocations") >= 12 and (check_monsters(LOS, nasty_monsters)
             or hp_is_low(50) and immediate_danger) then
         if count_sgd(4) == 0 and not you.teleporting() then
             return true
@@ -4053,7 +4088,7 @@ function want_to_sgd()
 end
 
 function want_to_divine_warrior()
-    if you.skill("Invocations") >= 8 and (check_monsters(LOS, bia_monsters)
+    if you.skill("Invocations") >= 8 and (check_monsters(LOS, nasty_monsters)
             or hp_is_low(50) and immediate_danger) then
         if count_divine_warrior(4) == 0 and not you.teleporting() then
             return true
@@ -4070,7 +4105,7 @@ end
 function want_to_apocalypse()
     if not (you.status("drained") or you.status("heavily drained")
                 or you.status("very heavily drained"))
-            and (check_monsters(LOS, bia_monsters)
+            and (check_monsters(LOS, nasty_monsters)
                 or hp_is_low(25) and immediate_danger) then
         return true
     end
@@ -4160,13 +4195,17 @@ function want_to_serious_buff()
 end
 
 function want_resistance()
-    return (check_monsters(LOS, fire_resistance_monsters) and you.res_fire() < 3
-                    or check_monsters(LOS, cold_resistance_monsters) and you.res_cold() < 3
-                    or check_monsters(LOS, elec_resistance_monsters) and you.res_shock() < 1
-                    or check_monsters(LOS, pois_resistance_monsters) and
-                         you.res_poison() < 1
-                    or where:find("Zig") and check_monsters(LOS, acid_resistance_monsters)
-                         and not you.res_corr())
+    return check_monsters(LOS, fire_resistance_monsters)
+            and you.res_fire() < 3
+        or check_monsters(LOS, cold_resistance_monsters)
+            and you.res_cold() < 3
+        or check_monsters(LOS, elec_resistance_monsters)
+            and you.res_shock() < 1
+        or check_monsters(LOS, pois_resistance_monsters)
+            and you.res_poison() < 1
+        or where:find("Zig")
+            and check_monsters(LOS, acid_resistance_monsters)
+            and not you.res_corr()
 end
 
 function want_to_hand()
