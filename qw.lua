@@ -2400,8 +2400,8 @@ end
 function check_monsters(r, mlist)
     local e
     local xl = you.xl()
-    for _,e in ipairs(enemy_list) do
-        if you.see_cell_no_trans(e.x, e.y) and supdist(e.x,e.y) <= r then
+    for _, e in ipairs(enemy_list) do
+        if you.see_cell_no_trans(e.x, e.y) and supdist(e.x, e.y) <= r then
             if not contains_string_in(e.m:name(), {"skeleton", "zombie",
                  "simulacrum", "spectral"}) then
                 local name = e.m:name()
@@ -3535,8 +3535,7 @@ function plan_cancellation()
 end
 
 function plan_blinking()
-    if not where:find("Zig") or not danger or not can_read()
-         or you.mutation("blurry vision") > 0 then
+    if not where:find("Zig") or not danger or not can_read() then
         return false
     end
     local para_danger = false
@@ -4135,19 +4134,19 @@ function want_to_teleport()
         sgd_timer = you.turns()
         return true
     end
-    if where == "Pan" and (count_hellions(LOS) >= 3 or count_daevas(LOS) >= 3) then
+    if where == "Pan"
+            and (count_hellions(LOS) >= 3 or count_daevas(LOS) >= 3) then
         dislike_pan_level = true
         return true
     end
     if you.xl() <= 17 and not can_berserk() and count_big_slimes(LOS) > 0 then
         return true
     end
-    return ((immediate_danger and bad_corrosion()
-                     or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
-                     or you.god() == "Trog" and you.slowed()
-                            and want_to_berserk()
-                            and not can_berserk())
-                    and count_bia(4) == 0)
+    return (immediate_danger and bad_corrosion()
+            or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
+            or you.god() == "Trog"
+                and you.slowed() and want_to_berserk() and not can_berserk())
+        and count_bia(4) == 0
 end
 
 function want_to_orbrun_teleport()
@@ -6151,24 +6150,25 @@ function plan_sacrifice()
     if you.god() ~= "Ru" then
         return false
     end
-    -- sacrifices that we won't do for now: words, drink, courage, durability, hand, resistance, purity, health, artifice (on DD)
+    -- Sacrifices that we won't do for now: words, drink, courage, durability,
+    -- hand, resistance, purity, health
     good_sacrifices = {
-        "Sacrifice Artifice", -- 70
+        "Sacrifice Artifice", -- 55
         "Sacrifice Arcana", -- 25
-        "Sacrifice Love", -- 25
+        "Sacrifice Love", -- 40
         "Sacrifice Stealth", -- 15
         "Sacrifice Essence", -- variable
         "Sacrifice Nimbleness", -- 30
-        "Sacrifice Skill", -- 35
+        "Sacrifice Skill", -- 30
         "Sacrifice an Eye", -- 20
-        "Sacrifice Experience", -- 30
+        "Sacrifice Experience", -- 40
         "Reject Sacrifices",
     } -- hack
     for _,sacrifice in ipairs(good_sacrifices) do
         if sacrifice == "Sacrifice Nimbleness" then
             for letter, abil in pairs(you.ability_table()) do
                 if abil == sacrifice then
-                    you.train_skill("Fighting",1)
+                    you.train_skill("Fighting", 1)
                     say("INVOKING " .. sacrifice .. ".")
                     magic("a" .. letter .. "YY")
                     return true
@@ -7012,9 +7012,12 @@ function plan_cure_poison()
 end
 
 function move_towards(dx, dy)
-    if you.transform() == "tree" or you.transform() == "fungus"
-         or you.confused() and
-                (count_bia(1) > 0 or count_sgd(1) > 0 or count_divine_warrior(1) > 0) then
+    if you.transform() == "tree"
+            or you.transform() == "fungus"
+            or you.confused()
+                and (count_bia(1) > 0
+                    or count_sgd(1) > 0
+                    or count_divine_warrior(1) > 0) then
         magic("s")
         return true
     end
@@ -8188,9 +8191,6 @@ end
 function c_answer_prompt(prompt)
     if prompt == "Die?" then
         return false
-    end
-    if prompt:find("blurry vision") then
-        return true
     end
     if prompt:find("Have to go through") then
         return offlevel_travel
