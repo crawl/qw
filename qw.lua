@@ -3521,8 +3521,12 @@ function plan_cancellation()
     if not danger or not can_drink() or you.teleporting() then
         return false
     end
-    if you.petrifying() or you.corrosion() >= 4
-         or you.corrosion() >= 3 and hp_is_low(70) then
+    if you.petrifying()
+            or you.corrosion() >= 4
+            or you.corrosion() >= 3 and hp_is_low(70)
+            or you.transform() == "pig"
+            or you.transform() == "wisp"
+            or you.transform() == "bat" then
         if drink_by_name("cancellation") then
             return true
         end
