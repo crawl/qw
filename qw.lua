@@ -7814,11 +7814,10 @@ function make_endgame_plans()
 end
 
 function initialize()
-    make_endgame_plans()
-    if not did_first_turn and you.turns() == 0 then
-        did_first_turn = true
-        first_turn()
+    if you.turns() == 0 then
+        first_turn_initialize()
     end
+    make_endgame_plans()
     where = "nowhere"
     expect_new_location = true
     if c_persist.branches_entered == nil then
@@ -7877,22 +7876,32 @@ function hit_closest()
 end
 
 function set_counter()
-    crawl.formatted_mpr("Set counter to what? ", "prompt")
+    crawl.formatted_mpr("Set game counter to what? ", "prompt")
     local res = crawl.c_input_line()
     c_persist.record.counter = tonumber(res)
-    note("counter set to " .. c_persist.record.counter)
+    note("Game counter set to " .. c_persist.record.counter)
 end
 
-function first_turn_persist()
+function first_turn_initialize()
+    note("Running first turn initialization.")
+
+    if AUTO_START then
+        automatic = true
+    end
+
     if not c_persist.record then
         c_persist.record = {}
     end
-    if not c_persist.record.counter then
-        c_persist.record.counter = 1
+
+    local counter = c_persist.record.counter
+    if not counter then
+        counter = 1
     else
-        c_persist.record.counter = c_persist.record.counter + 1
+        counter = counter + 1
     end
-    note("counter = " .. c_persist.record.counter)
+    c_persist.record.counter = counter
+    note("Game counter: " .. counter)
+
     --if not c_persist.mlist then
     --    c_persist.mlist = {}
     --end
@@ -7906,6 +7915,7 @@ function first_turn_persist()
     --        c_persist.record.mlist[mname] = c_persist.record.mlist[mname] + 1
     --    end
     --end
+
     local god_list = c_persist.next_god_list
     local plan = c_persist.next_endgame_plan
     for key,_ in pairs(c_persist) do
@@ -7913,8 +7923,12 @@ function first_turn_persist()
             c_persist[key] = nil
         end
     end
+
     c_persist.cur_god_list = god_list
     c_persist.cur_endgame_plan = plan
+    note("God list: " .. table.concat(god_options(), ", "))
+    note("Endgame plans: " .. endgame_plan_options())
+
     if COMBO_CYCLE then
         local combo_string_list = split(COMBO_CYCLE_LIST, ", ")
         local combo_string = combo_string_list[
@@ -7974,14 +7988,6 @@ function fullgodname(g)
     end
 end
 
-function first_turn()
-    first_turn_persist()
-    if AUTO_START then
-        automatic = true
-        set_options()
-    end
-end
-
 function run_update()
     if update_coroutine == nil then
         update_coroutine = coroutine.create(update_stuff)
@@ -8009,10 +8015,6 @@ function update_stuff()
     end
     time_passed = true
     old_turn_count = you.turns()
-    if not did_first_turn and you.turns() == 0 then
-        did_first_turn = true
-        first_turn()
-    end
     if you.turns() >= dump_count then
         dump_count = dump_count + 100
         crawl.dump_char()
