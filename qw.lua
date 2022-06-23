@@ -3475,8 +3475,7 @@ function plan_hand()
 end
 
 function prefer_ru_healing()
-    return not (you.status("drained") or you.status("heavily drained")
-        or you.status("very heavily drained"))
+    return drain_level() <= 1
 end
 
 function prefer_ely_healing()
@@ -4109,14 +4108,24 @@ function want_to_orbrun_divine_warrior()
         and count_divine_warrior(4) == 0 and not you.teleporting()
 end
 
-function want_to_apocalypse()
-    if not (you.status("drained") or you.status("heavily drained")
-                or you.status("very heavily drained"))
-            and (check_monsters(LOS, nasty_monsters)
-                or hp_is_low(25) and immediate_danger) then
-        return true
+function drain_level()
+    local drain_levs = { ["lightly drained"] = 1, ["drained"] = 2,
+        ["heavily drained"] = 3, ["very heavily drained"] = 4,
+        ["extremely drained"] = 5 }
+    for s, v in pairs(drain_levs) do
+        if you.status(s) then
+            return v
+        end
     end
-    return false
+    return 0
+end
+
+function want_to_apocalypse()
+    local dlevel = drain_level()
+    return dlevel == 0 and check_monsters(LOS, scary_monsters)
+        or dlevel <= 2
+            and (danger and hp_is_low(50)
+                or check_monsters(LOS, nasty_monsters))
 end
 
 function bad_corrosion()
