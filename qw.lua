@@ -114,7 +114,6 @@ local prev_hatch_y
 -- maybe should add more mutes for watchability
 
 function set_options()
-    crawl.setopt("confirm_butcher = always")
     crawl.setopt("pickup_mode = multi")
     crawl.setopt("message_colour += mute:Search for what")
     crawl.setopt("message_colour += mute:Can't find anything")
@@ -132,7 +131,6 @@ function set_options()
 end
 
 function unset_options()
-    crawl.setopt("always_confirm_butcher = auto")
     crawl.setopt("pickup_mode = auto")
     crawl.setopt("message_colour -= mute:Search for what")
     crawl.setopt("message_colour -= mute:Can't find anything")
@@ -2048,22 +2046,24 @@ function in_branch(br)
     return false
 end
 
-function is_traversable(x,y)
-    local feat = view.feature_at(x,y)
+function is_traversable(x, y)
+    local feat = view.feature_at(x, y)
     return feat ~= "unseen" and travel.feature_traversable(feat)
 end
 
-function is_cornerish(x,y)
-    if is_traversable(x+1,y+1) or is_traversable(x+1,y-1)
-         or is_traversable(x-1,y+1) or is_traversable(x-1,y-1) then
+function is_cornerish(x, y)
+    if is_traversable(x+ 1, y + 1)
+            or is_traversable(x + 1, y - 1)
+            or is_traversable(x - 1, y + 1)
+            or is_traversable(x - 1, y - 1) then
         return false
     end
-    return ((is_traversable(x+1,y) or is_traversable(x-1,y))
-                    and (is_traversable(x,y+1) or is_traversable(x,y-1)))
+    return (is_traversable(x + 1, y) or is_traversable(x - 1, y))
+        and (is_traversable(x, y + 1) or is_traversable(x, y - 1))
 end
 
-function is_solid(x,y)
-    local feat = view.feature_at(x,y)
+function is_solid(x, y)
+    local feat = view.feature_at(x, y)
     return feat == "unseen" or travel.feature_solid(feat)
 end
 
@@ -2073,7 +2073,7 @@ function dangerous_to_rest()
     end
     for x = -1, 1 do
         for y = -1, 1 do
-            if view.feature_at(x,y) == "slimy_wall" then
+            if view.feature_at(x, y) == "slimy_wall" then
                 return true
             end
         end
@@ -2082,7 +2082,7 @@ function dangerous_to_rest()
 end
 
 function transformed()
-    return (you.transform() ~= "")
+    return you.transform() ~= ""
 end
 
 function can_read()
@@ -2095,8 +2095,10 @@ function can_read()
 end
 
 function can_drink()
-    if you.berserk() or you.race() == "Mummy" or you.transform() == "bat"
-         or you.transform() == "lich" or you.status("unable to drink") then
+    if you.berserk()
+            or you.race() == "Mummy"
+            or you.transform() == "lich"
+            or you.status("unable to drink") then
         return false
     end
     return true
@@ -2121,22 +2123,24 @@ function can_teleport()
 end
 
 function can_invoke()
-    return not (you.berserk() or you.confused() or you.silenced()
-                            or you.status("engulfed (cannot breathe)"))
+    return not (you.berserk()
+            or you.confused()
+            or you.silenced()
+            or you.status("engulfed (cannot breathe)"))
 end
 
 function can_berserk()
     return you.god() == "Trog"
-                 and you.piety_rank() >= 1
-                 and you.race() ~= "Mummy"
-                 and you.race() ~= "Ghoul"
-                 and you.race() ~= "Formicid"
-                 and not (you.status("on berserk cooldown")
-                                    or you.mesmerised()
-                                    or you.transform() == "tree"
-                                    or you.transform() == "lich"
-                                    or you.status("afraid"))
-                 and can_invoke()
+        and you.piety_rank() >= 1
+        and you.race() ~= "Mummy"
+        and you.race() ~= "Ghoul"
+        and you.race() ~= "Formicid"
+        and not (you.status("on berserk cooldown")
+            or you.mesmerised()
+            or you.transform() == "tree"
+            or you.transform() == "lich"
+            or you.status("afraid"))
+        and can_invoke()
 end
 
 function can_hand()
@@ -3266,10 +3270,6 @@ function attack()
         success = make_attack(bestx, besty, best_info)
     end
     return true
-end
-
-function chop()
-    magic("cYq")
 end
 
 function berserk()
@@ -5324,10 +5324,21 @@ function plan_go_down()
 end
 
 function ready_for_lair()
-    if you.god() == "Trog" or you.god() == "Cheibriados" or you.god() == "Okawaru" or you.god() == "Qazlal" or you.god() == "the Shining One" or you.god() == "Lugonu" or you.god() == "Uskayaw" or you.god() == "Xom" or you.god() == "Zin" or
-         (you.god() == "Beogh" or you.god() == "Makhleb" or you.god() == "Yredelemnul") and you.piety_rank() >= 4 or
-         (you.god() == "Ru" or you.god() == "Elyvilon") and you.piety_rank() >= 3 or
-         you.god() == "Hepliaklqana" and you.piety_rank() >= 2 then
+    if you.god() == "Trog"
+            or you.god() == "Cheibriados"
+            or you.god() == "Okawaru"
+            or you.god() == "Qazlal"
+            or you.god() == "the Shining One"
+            or you.god() == "Lugonu"
+            or you.god() == "Uskayaw"
+            or you.god() == "Xom"
+            or you.god() == "Zin"
+            or (you.god() == "Beogh"
+                or you.god() == "Makhleb"
+                or you.god() == "Yredelemnul") and you.piety_rank() >= 4
+            or (you.god() == "Ru" or you.god() == "Elyvilon")
+                and you.piety_rank() >= 3
+            or you.god() == "Hepliaklqana" and you.piety_rank() >= 2 then
         return true
     end
     return false
@@ -8003,11 +8014,11 @@ function update_stuff()
         first_turn()
     end
     if you.turns() >= dump_count then
-        dump_count = dump_count+100
+        dump_count = dump_count + 100
         crawl.dump_char()
     end
     if you.turns() >= skill_count then
-        skill_count = skill_count+5
+        skill_count = skill_count + 5
         handle_skills()
     end
     if did_move then
