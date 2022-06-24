@@ -7386,7 +7386,7 @@ plan_orbrun_emergency = cascade {
 } -- hack
 
 plan_rest = cascade {
-    --{plan_easy_rest, "try_easy_rest"},
+    {plan_easy_rest, "try_easy_rest"},
     {plan_rest, "rest"},
 } -- hack
 
