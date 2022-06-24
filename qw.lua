@@ -6179,14 +6179,14 @@ function plan_sacrifice()
     -- hand, resistance, purity, health
     good_sacrifices = {
         "Sacrifice Artifice", -- 55
-        "Sacrifice Arcana", -- 25
         "Sacrifice Love", -- 40
-        "Sacrifice Stealth", -- 15
-        "Sacrifice Essence", -- variable
+        "Sacrifice Experience", -- 40
         "Sacrifice Nimbleness", -- 30
         "Sacrifice Skill", -- 30
+        "Sacrifice Arcana", -- 25
         "Sacrifice an Eye", -- 20
-        "Sacrifice Experience", -- 40
+        "Sacrifice Stealth", -- 15
+        "Sacrifice Essence", -- variable
         "Reject Sacrifices",
     } -- hack
     for _,sacrifice in ipairs(good_sacrifices) do
