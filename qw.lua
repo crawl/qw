@@ -1388,7 +1388,8 @@ end
 -- functions to check for every monster.
 
 -- Used for:
--- Trog's Berserk, Okawaru's Heroism, whether to buff on the orb run.
+-- Ru's Apocalypse, Trog's Berserk, Okawaru's Heroism, whether to buff on the
+-- orb run.
 local scary_monsters = {
     ["*"] = {
         in_desc(15, "hydra"),
@@ -1428,12 +1429,12 @@ local scary_monsters = {
     ["Pikel"] = 10,
     ["Crazy Yiuf"] = 10,
     ["Sigmund"] = 10,
+    ["orc priest"] = 10,
     ["ogre"] = 10,
     ["decayed bog body"] = 10,
 
-    ["two-headed ogre"] = 12,
-    ["orc priest"] = 12,
     ["orc warrior"] = 12,
+    ["two-headed ogre"] = 12,
     ["troll"] = 12,
     ["cyclops"] = 12,
     ["cane toad"] = 12,
