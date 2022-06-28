@@ -7896,9 +7896,30 @@ function set_counter()
     note("Game counter set to " .. c_persist.record.counter)
 end
 
-function first_turn_initialize()
-    note("Running first turn initialization.")
+function bool_string(x)
+    return x and "true" or "false"
+end
 
+function note_qw_data()
+    note("qw: Game counter: " .. c_persist.record.counter)
+    note("qw: Always use a shield: " .. bool_string(SHIELD_CRAZY))
+    if not util.contains(god_options(), you.god()) then
+        note("qw: God list: " .. table.concat(god_options(), ", "))
+        note("qw: Allow faded altars: " .. bool_string(FADED_ALTAR))
+    end
+    note("qw: Do Orc after D:15: " .. bool_string(LATE_ORC))
+    note("qw: Do second Lair branch before Depths: " ..
+        bool_string(EARLY_SECOND_RUNE))
+    note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
+
+    local plans = endgame_plan_options()
+    note("qw: Endgame plans: " .. plans)
+    if plans:find("zig") then
+        note("qw: Max Zig depth: " .. ZIG_DIVE)
+    end
+end
+
+function first_turn_initialize()
     if AUTO_START then
         automatic = true
     end
@@ -7914,7 +7935,6 @@ function first_turn_initialize()
         counter = counter + 1
     end
     c_persist.record.counter = counter
-    note("Game counter: " .. counter)
 
     --if not c_persist.mlist then
     --    c_persist.mlist = {}
@@ -7940,8 +7960,7 @@ function first_turn_initialize()
 
     c_persist.cur_god_list = god_list
     c_persist.cur_endgame_plan = plan
-    note("God list: " .. table.concat(god_options(), ", "))
-    note("Endgame plans: " .. endgame_plan_options())
+    note_qw_data()
 
     if COMBO_CYCLE then
         local combo_string_list = split(COMBO_CYCLE_LIST, ", ")

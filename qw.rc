@@ -83,6 +83,9 @@ combo = GrBe.handaxe
 # Use faded altar, abandoning if we don't get one of the gods in GOD_LIST
 : FADED_ALTAR = false
 
+# Use a shield at all cost
+: SHIELD_CRAZY = true
+
 # Do second lair rune branch before depths.
 : EARLY_SECOND_RUNE = true
 
@@ -116,8 +119,6 @@ combo = GrBe.handaxe
 # Quit after this number of turns while stuck
 : QUIT_TURNS = 1000
 
-# Use a shield at all cost
-: SHIELD_CRAZY = true
 
 #############################
 ### Miscellaneous options ###
