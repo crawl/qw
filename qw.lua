@@ -166,8 +166,8 @@ end
 -- if cur, return the current value instead of minmax
 -- if it2, pretend we aren't equipping it2
 -- if sit = "hydra", assume we are fighting a hydra at lowish XL
---        = "extended", assume we are in (or about to enter) Pan
---                     if TSO_CONVERSION, we need this weapon to be TSO-friendly
+--        = "extended", assume we are in (or about to enter) Pan if
+--                      TSO_CONVERSION, we need this weapon to be TSO-friendly
 --        = "bless", assume we want to bless the weapon with TSO eventually
 function equip_value(it, cur, it2, sit)
     if not it then
@@ -380,14 +380,14 @@ end
 function player_resist(str, it)
     local it_res = it and it.equipped and item_resist(str, it) or 0
     if str == "Str" then
-        stat,_ = you.strength()
-        return stat-it_res
+        stat, _ = you.strength()
+        return stat - it_res
     elseif str == "Dex" then
-        stat,_ = you.dexterity()
-        return stat-it_res
+        stat, _ = you.dexterity()
+        return stat - it_res
     elseif str == "Int" then
-        stat,_ = you.intelligence()
-        return stat-it_res
+        stat, _ = you.intelligence()
+        return stat - it_res
     end
     local other_res = intrinsic_resist(str)
     for it2 in inventory() do
@@ -511,7 +511,7 @@ function max_resist_value(str, d)
     elseif str == "rN" then
         return ((ires < 3) and 25 * d or 0)
     elseif str == "Will" then
-        return 75*d
+        return 75 * d
     elseif str == "rCorr" then
         return (ires < 1 and (SLIMY_RUNE and 1200 or 50) or 0)
     elseif str == "SInv" then
@@ -535,7 +535,7 @@ function min_resist_value(str, d)
     elseif str == "rC" then
         return (SLIMY_RUNE and -225 or -150)
     elseif str == "Will" then
-        return 75*d
+        return 75 * d
     end
     return 0
 end
@@ -547,11 +547,11 @@ function resist_value(str, it, cur, it2)
     end
     if cur then
         local c = player_resist(str, it2)
-        local diff = absolute_resist_value(str,c+d)
-            - absolute_resist_value(str,c)
+        local diff = absolute_resist_value(str, c + d)
+            - absolute_resist_value(str, c)
         return diff, diff
     else
-        return min_resist_value(str,d), max_resist_value(str,d)
+        return min_resist_value(str, d), max_resist_value(str, d)
     end
 end
 
@@ -575,12 +575,12 @@ function total_resist_value(it, cur, it2)
                    "Spirit", "Acrobat", "Reflect", "Str", "Dex", "Int" }
     linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
     local val = 0
-    for _,str in ipairs(linearlist) do
+    for _, str in ipairs(linearlist) do
         val = val + item_resist(str, it) * linear_resist_value(str)
     end
     local val1, val2 = val, val
     if not only_linear_resists then
-        for _,str in ipairs(resistlist) do
+        for _, str in ipairs(resistlist) do
             local a, b = resist_value(str, it, cur, it2)
             val1 = val1 + a
             val2 = val2 + b
@@ -593,8 +593,8 @@ function resist_vec(it)
     local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
                          "SInv", "Spirit", "Acrobat", "Reflect" }
     local vec = { }
-    for _,str in ipairs(resistlist) do
-        local a,b = resist_value(str, it)
+    for _, str in ipairs(resistlist) do
+        local a, b = resist_value(str, it)
         table.insert(vec, b > 0 and b or a)
     end
     return vec
@@ -604,12 +604,12 @@ function base_equip_value(it)
     only_linear_resists = true
     local val1, val2 = equip_value(it)
     only_linear_resists = false
-    return val1,val2
+    return val1, val2
 end
 
 -- complicated check:
 -- is it going to be worse than it2 no matter what other resists we have?
-function resist_dominated(it,it2)
+function resist_dominated(it, it2)
     local bmin, bmax = base_equip_value(it)
     local bmin2, bmax2 = base_equip_value(it2)
     local diff = bmin2 - bmax
@@ -619,7 +619,7 @@ function resist_dominated(it,it2)
     local vec = resist_vec(it)
     local vec2 = resist_vec(it2)
     local l = #vec
-    for i = 1,l do
+    for i = 1, l do
         if vec[i] > vec2[i] then
             diff = diff - (vec[i] - vec2[i])
         end
@@ -693,7 +693,7 @@ good_slots = {cloak="Cloak", helmet="Helmet", gloves="Gloves", boots="Boots",
 function armour_value(it, cur, it2)
     local name = it.name()
     local value = 0
-    local val1,val2 = total_resist_value(it, cur, it2)
+    local val1, val2 = total_resist_value(it, cur, it2)
     local ego = it.ego()
     if it.artefact then
         if not it.fully_identified then -- could be good or bad
@@ -772,7 +772,7 @@ function armour_value(it, cur, it2)
     end
     if good_slots[st] == "Body Armour" then
         if unfitting_armour() then
-            value = value - 25*it.ac
+            value = value - 25 * it.ac
         end
         evp = it.encumbrance
         ap = armour_plan()
@@ -796,7 +796,7 @@ function armour_value(it, cur, it2)
             end
         end
     end
-    return value+val1,value+val2
+    return value + val1, value + val2
 end
 
 function weapon_value(it, cur, it2, sit)
@@ -841,7 +841,7 @@ function weapon_value(it, cur, it2, sit)
         if it.plus then
             value = value + 30 * it.plus
         end
-        delay_estimate = min(7,math.floor(it.delay / 2))
+        delay_estimate = min(7, math.floor(it.delay / 2))
         if it.weap_skill == "Short Blades" and delay_estimate > 5 then
             delay_estimate = 5
         end
@@ -881,7 +881,7 @@ function weapon_value(it, cur, it2, sit)
             end
         end
     end
-    local val1,val2 = total_resist_value(it, cur, it2)
+    local val1, val2 = total_resist_value(it, cur, it2)
     if it.artefact and not it.fully_identified or name:find("runed")
             or name:find("glowing") then
         val2 = val2 + 500
@@ -949,7 +949,7 @@ function weapon_value(it, cur, it2, sit)
     if it.plus then
         value = value + 30 * it.plus
     end
-    delay_estimate = min(7,math.floor(it.delay / 2))
+    delay_estimate = min(7, math.floor(it.delay / 2))
     if it.weap_skill == "Short Blades" and delay_estimate > 5 then
         delay_estimate = 5
     end
@@ -1014,8 +1014,8 @@ function amulet_value(it, cur, it2)
             return -1, 1000
         end
     end
-    local val1,val2 = total_resist_value(it, cur, it2)
-    return value+val1,value+val2
+    local val1, val2 = total_resist_value(it, cur, it2)
+    return value + val1, value + val2
 end
 
 function ring_value(it, cur, it2)
@@ -1053,7 +1053,7 @@ function ring_value(it, cur, it2)
             return -1, 5000
         end
     end
-    local val1,val2 = total_resist_value(it, cur, it2)
+    local val1, val2 = total_resist_value(it, cur, it2)
     if not it.artefact and not it.plus then
         local linval = 0
         if subtype == "ring of slaying" or subtype == "ring of protection"
@@ -1064,12 +1064,12 @@ function ring_value(it, cur, it2)
         elseif subtype == "ring of dexterity" then
             linval = 20
         end
-        value = value + 6*linval
+        value = value + 6 * linval
         if not cur then
-            val1 = val1 - 12*linval
+            val1 = val1 - 12 * linval
         end
     end
-    return value+val1,value+val2
+    return value + val1, value + val2
 end
 
 function count_charges(wand_type, ignore_it)
@@ -1156,15 +1156,15 @@ end
 -- This doesn't handle rings correctly at the moment, but right now we are
 -- only using this for weapons anyway.
 -- Also maybe this should check resist_dominated too?
-function item_is_sit_dominated(it,sit)
+function item_is_sit_dominated(it, sit)
     local slotname = equip_slot(it)
-    local minv,maxv = equip_value(it, nil, nil, sit)
+    local minv, maxv = equip_value(it, nil, nil, sit)
     if maxv <= 0 then
         return true
     end
     for it2 in inventory() do
         if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
-            local minv2,maxv2 = weapon_value(it2, nil, nil, sit)
+            local minv2, maxv2 = weapon_value(it2, nil, nil, sit)
             if minv2 >= maxv and not
                  (slotname == "Weapon" and you.base_skill("Shields") > 0
                     and it.hands == 1 and it2.hands == 2) then
@@ -1190,7 +1190,7 @@ function item_is_dominated(it)
             and not item_is_sit_dominated(it, "bless") then
         return false
     end
-    local minv,maxv = equip_value(it)
+    local minv, maxv = equip_value(it)
     if maxv <= 0 then
         return true
     end
@@ -1200,11 +1200,11 @@ function item_is_dominated(it)
     end
     for it2 in inventory() do
         if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
-            local minv2,maxv2 = equip_value(it2)
+            local minv2, maxv2 = equip_value(it2)
             if minv2 >= maxv
                     or minv2 >= minv
                     and maxv2 >= maxv
-                    and resist_dominated(it,it2) then
+                    and resist_dominated(it, it2) then
                 num_slots = num_slots - 1
                 if num_slots == 0 then
                     return true
@@ -1220,9 +1220,9 @@ function should_drop(it)
 end
 
 -- assumes old_it is equipped
-function should_upgrade(it,old_it,sit)
+function should_upgrade(it, old_it, sit)
     if not old_it then
-        return should_equip(it,sit)
+        return should_equip(it, sit)
     end
     if not it.fully_identified and not should_drop(it) then
         if equip_slot(it) == "Weapon" and it.weap_skill ~= wskill() then
@@ -1230,17 +1230,17 @@ function should_upgrade(it,old_it,sit)
         end
         return (old_it.subtype() ~= "amulet of faith")
     end
-    return (equip_value(it,true,old_it,sit) > equip_value(old_it,true,old_it,sit))
+    return (equip_value(it, true, old_it, sit) > equip_value(old_it, true, old_it, sit))
 end
 
 -- assumes it is not equipped and an empty slot is available
-function should_equip(it,sit)
-    return (equip_value(it,true,nil,sit) > 0)
+function should_equip(it, sit)
+    return (equip_value(it, true, nil, sit) > 0)
 end
 
 -- assumes it is equipped
 function should_remove(it)
-    return (equip_value(it,true,it) <= 0)
+    return (equip_value(it, true, it) <= 0)
 end
 
 function want_missile(it)
@@ -1326,7 +1326,7 @@ local portal_data = {
 } -- hack
 
 -- functions for use in the monster lists below
-function in_desc(lev,str)
+function in_desc(lev, str)
     return function (m)
         return (you.xl() < lev and m:desc():find(str))
     end
@@ -1349,7 +1349,7 @@ local res_func_table = {
     Will=you.willpower,
 } --hack
 
-function check_resist(lev,resist,value)
+function check_resist(lev, resist, value)
     return function (m)
         return (you.xl() < lev and res_func_table[resist]() < value)
     end
@@ -1964,7 +1964,7 @@ end
 
 function hp_is_low(percentage)
     local hp, mhp = you.hp()
-    return (100*hp <= percentage*mhp)
+    return (100 * hp <= percentage * mhp)
 end
 
 function chp()
@@ -2345,15 +2345,17 @@ end
 
 function sense_immediate_danger()
     local e
-    for _,e in ipairs(enemy_list) do
-        if supdist(e.x,e.y) <= 2 then
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(e.x, e.y)
+        if dist <= 2 then
             return true
-        elseif supdist(e.x,e.y) <= 3 and e.m:reach_range() >= 2 then
+        elseif dist == 3 and e.m:reach_range() >= 2 then
             return true
         elseif is_ranged(e.m) then
             return true
         end
     end
+
     return false
 end
 
@@ -2362,17 +2364,16 @@ function sense_danger(r, moveable)
     for _, e in ipairs(enemy_list) do
         if (moveable and you.see_cell_solid_see(e.x, e.y) or not moveable)
                 and supdist(e.x, e.y) <= r then
-            if is_candidate_for_attack(e.x, e.y) then
-                return true
-            end
+            return true
         end
     end
+
     return false
 end
 
 function sense_sigmund()
     local e
-    for _,e in ipairs(enemy_list) do
+    for _, e in ipairs(enemy_list) do
         if e.m:name() == "Sigmund" then
             sigmund_dx = e.x
             sigmund_dy = e.y
@@ -2384,7 +2385,7 @@ end
 function initialize_monster_array()
     monster_array = {}
     local x
-    for x = -LOS,LOS do
+    for x = -LOS, LOS do
         monster_array[x] = {}
     end
 end
@@ -2438,6 +2439,7 @@ function check_monsters(r, mlist)
             end
         end
     end
+
     return false
 end
 
@@ -2445,15 +2447,16 @@ function count_bia(r)
     if you.god() ~= "Trog" then
         return 0
     end
+
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             m = monster_array[x][y]
             if m and m:is_safe() and m:is("berserk")
                     and contains_string_in(m:name(),
                         {"ogre", "giant", "bear", "troll"}) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2464,14 +2467,15 @@ function count_elliptic(r)
     if you.god() ~= "Hepliaklqana" then
         return 0
     end
+
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             m = monster_array[x][y]
             if m and m:is_safe() and contains_string_in(m:name(),
                     {"elliptic"}) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2487,14 +2491,15 @@ function count_sgd(r)
     if you.god() ~= "Makhleb" then
         return 0
     end
+
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             local m = monster_array[x][y]
             if m and m:is_safe() and m:is("summoned")
                     and mons_is_greater_demon(m) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2505,14 +2510,15 @@ function count_divine_warrior(r)
     if you.god() ~= "the Shining One" then
         return 0
     end
+
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             local m = monster_array[x][y]
             if m and m:is_safe()
                     and contains_string_in(m:name(), {"angel", "daeva"}) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2525,12 +2531,12 @@ function count_hostile_sgd(r)
     end
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             local m = monster_array[x][y]
             if m and not m:is_safe() and m:is("summoned")
                     and mons_is_greater_demon(m) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2540,12 +2546,12 @@ end
 function count_big_slimes(r)
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             m = monster_array[x][y]
             if m and not m:is_safe() and contains_string_in(m:name(),
                     {"enormous slime creature", "titanic slime creature"}) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2555,12 +2561,12 @@ end
 function count_hellions(r)
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             m = monster_array[x][y]
             if m and not m:is_safe()
              and m:name() == "hellion" then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2570,12 +2576,12 @@ end
 function count_daevas(r)
     local x, y
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             m = monster_array[x][y]
             if m and not m:is_safe()
              and m:name() == "daeva" then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2585,9 +2591,9 @@ end
 function count_pan_lords(r)
     local e
     local i = 0
-    for _,e in ipairs(enemy_list) do
+    for _, e in ipairs(enemy_list) do
         if e.m:type() == ENUM_MONS_PANDEMONIUM_LORD then
-            i = i+1
+            i = i + 1
         end
     end
     return i
@@ -2605,8 +2611,8 @@ function monster_in_way(dx, dy)
                 or view.feature_at(0, 0) == "trap_zot"))
 end
 
-function tabbable_square(x,y)
-    if view.feature_at(x,y) ~= "unseen" and view.is_safe_square(x,y) then
+function tabbable_square(x, y)
+    if view.feature_at(x, y) ~= "unseen" and view.is_safe_square(x, y) then
         local m = monster_array[x][y]
         if not m or not m:is_firewood() then
             return true
@@ -2615,14 +2621,15 @@ function tabbable_square(x,y)
     return false
 end
 
-function mons_tabbable_square(x,y)
-    local feat = view.feature_at(x,y)
-    return (feat ~= "deep_water" and feat ~= "lava" and not is_solid(x,y))
+function mons_tabbable_square(x, y)
+    local feat = view.feature_at(x, y)
+    return feat ~= "deep_water" and feat ~= "lava" and not is_solid(x, y)
 end
 
 function try_move(dx, dy)
-    if view.is_safe_square(dx, dy) and not view.withheld(dx, dy) and
-         not monster_in_way(dx,dy) then
+    if view.is_safe_square(dx, dy)
+            and not view.withheld(dx, dy)
+            and not monster_in_way(dx, dy) then
         return delta_to_vi(dx, dy)
     else
         return nil
@@ -2637,9 +2644,9 @@ function will_tab(cx, cy, ex, ey, square_func)
     end
     local function attempt_move(fx, fy)
         if fx == 0 and fy == 0 then return end
-        if supdist(cx+fx,cy+fy) > LOS then return end
-        if square_func(cx+fx, cy+fy) then
-            return will_tab(cx+fx, cy+fy, ex, ey, square_func)
+        if supdist(cx + fx, cy + fy) > LOS then return end
+        if square_func(cx + fx, cy + fy) then
+            return will_tab(cx + fx, cy + fy, ex, ey, square_func)
         end
     end
     local move = nil
@@ -2647,9 +2654,9 @@ function will_tab(cx, cy, ex, ey, square_func)
         if abs(dy) == 1 then move = attempt_move(sign(dx), 0) end
         if move == nil then move = attempt_move(sign(dx), sign(dy)) end
         if move == nil then move = attempt_move(sign(dx), 0) end
-        if move == nil and abs(dx) > abs(dy)+1 then
+        if move == nil and abs(dx) > abs(dy) + 1 then
                  move = attempt_move(sign(dx), 1) end
-        if move == nil and abs(dx) > abs(dy)+1 then
+        if move == nil and abs(dx) > abs(dy) + 1 then
                  move = attempt_move(sign(dx), -1) end
         if move == nil then move = attempt_move(0, sign(dy)) end
     elseif abs(dx) == abs(dy) then
@@ -2660,9 +2667,9 @@ function will_tab(cx, cy, ex, ey, square_func)
         if abs(dx) == 1 then move = attempt_move(0, sign(dy)) end
         if move == nil then move = attempt_move(sign(dx), sign(dy)) end
         if move == nil then move = attempt_move(0, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx)+1 then
+        if move == nil and abs(dy) > abs(dx) + 1 then
                  move = attempt_move(1, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx)+1 then
+        if move == nil and abs(dy) > abs(dx) + 1 then
                  move = attempt_move(-1, sign(dy)) end
         if move == nil then move = attempt_move(sign(dx), 0) end
     end
@@ -2675,9 +2682,9 @@ function get_monster_info(dx, dy)
     if not m then return nil end
     local name = m:name()
     local info = {}
-    info.distance = (abs(dx) > abs(dy)) and -abs(dx) or -abs(dy)
+    info.distance = abs(dx) > abs(dy) and -abs(dx) or -abs(dy)
     if not have_reaching() then
-        info.attack_type = (-info.distance < 2) and 2 or 0
+        info.attack_type = -info.distance < 2 and 2 or 0
     else
         if -info.distance > 2 then info.attack_type = 0
         elseif -info.distance < 2 then info.attack_type = 2
@@ -2696,18 +2703,30 @@ function get_monster_info(dx, dy)
     return info
 end
 
-function compare_monster_info(m1, m2)
-    local flag_order = {"can_attack", "safe", "distance", "constricting_you",
-        "very_stabbable", "injury", "threat", "orc_priest_wizard"}
+function compare_monster_info(m1, m2, flag_order, flag_reversed)
+    local i, flag
+
+    if not flag_order then
+        flag_order = {"can_attack", "safe", "distance", "constricting_you",
+            "very_stabbable", "injury", "threat", "orc_priest_wizard"}
+    end
+    if not flag_reversed then
+        flag_reversed = {}
+        for _, flag in ipairs(flag_order) do
+            table.insert(flag_reversed, false)
+        end
+    end
+
     for i, flag in ipairs(flag_order) do
-        if m1[flag] > m2[flag] then return true end
-        if m1[flag] < m2[flag] then return false end
+        local if_greater_val = not flag_reversed[i] and true or false
+        if m1[flag] > m2[flag] then return if_greater_val end
+        if m1[flag] < m2[flag] then return not if_greater_val end
     end
     return false
 end
 
 function is_candidate_for_attack(x, y, no_untabbable)
-    if supdist(x,y) > LOS then
+    if supdist(x, y) > LOS then
         return false
     end
     local m = monster_array[x][y]
@@ -2719,7 +2738,7 @@ function is_candidate_for_attack(x, y, no_untabbable)
         return false
     end
     if no_untabbable then
-        if will_tab(0, 0, x, y,tabbable_square) then
+        if will_tab(0, 0, x, y, tabbable_square) then
             remove_ignore(x, y)
         else
             add_ignore(x, y)
@@ -2732,13 +2751,13 @@ end
 function count_ranged(cx, cy, r)
     local e
     local i = 0
-    for _,e in ipairs(enemy_list) do
+    for _, e in ipairs(enemy_list) do
         local dist = supdist(cx - e.x, cy - e.y)
         if dist > 1 and dist <= r then
             if dist == 2 and is_fast(e.m)
                  or (is_ranged(e.m) or dist == 2 and e.m:reach_range() >= 2)
                         and view.cell_see_cell(cx, cy, e.x, e.y) then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2748,21 +2767,21 @@ end
 function count_longranged(cx, cy, r)
     local e
     local i = 0
-    for _,e in ipairs(enemy_list) do
-        local dist = supdist(cx-e.x,cy-e.y)
-        if dist >= 4 and dist <= r then
-            if is_ranged(e.m) and view.cell_see_cell(cx,cy,e.x,e.y)
-                    and not (e.m:desc():find("wandering")
-                        or e.m:desc():find("sleeping")
-                        or e.m:desc():find("dormant")
-                        or e.m:name() == "electric eel"
-                        or e.m:name() == "lava snake"
-                        or e.m:is_stationary()
-                        or e.m:desc():find("stupefied")) then
-                if will_tab(e.x,e.y,0, 0,mons_tabbable_square) then
-                    i = i+1
-                end
-            end
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(cx - e.x, cy - e.y)
+        if dist >= 4
+                and dist <= r
+                and is_ranged(e.m)
+                and view.cell_see_cell(cx, cy, e.x, e.y)
+                and not (e.m:desc():find("wandering")
+                    or e.m:desc():find("sleeping")
+                    or e.m:desc():find("dormant")
+                    or e.m:name() == "electric eel"
+                    or e.m:name() == "lava snake"
+                    or e.m:is_stationary()
+                    or e.m:desc():find("stupefied"))
+                and will_tab(e.x, e.y, 0, 0, mons_tabbable_square) then
+            i = i + 1
         end
     end
     return i
@@ -2771,10 +2790,9 @@ end
 function count_shortranged(cx, cy, r)
     local e
     local i = 0
-    for _,e in ipairs(enemy_list) do
-        local dist = supdist(cx-e.x,cy-e.y)
-        if dist <= r and is_ranged(e.m) then
-            i = i+1
+    for _, e in ipairs(enemy_list) do
+        if supdist(cx - e.x, cy - e.y) <= r and is_ranged(e.m) then
+            i = i + 1
         end
     end
     return i
@@ -2783,13 +2801,13 @@ end
 function count_unalert(cx, cy, r)
     local e
     local i = 0
-    for _,e in ipairs(enemy_list) do
-        local dist = supdist(cx-e.x,cy-e.y)
-        if dist <= r and dist > 1 and view.cell_see_cell(cx,cy,e.x,e.y) then
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(cx - e.x, cy - e.y)
+        if dist <= r and dist > 1 and view.cell_see_cell(cx, cy, e.x, e.y) then
             if e.m:desc():find("wandering") and not e.m:desc():find("mushroom")
                     or e.m:desc():find("sleeping")
                     or e.m:desc():find("dormant") then
-                i = i+1
+                i = i + 1
             end
         end
     end
@@ -2799,27 +2817,25 @@ end
 function estimate_slouch_damage()
     local e
     local count = 0
-    local s,v
-    for _,e in ipairs(enemy_list) do
-        if you.see_cell_no_trans(e.x,e.y) then
-            s = mon_speed_num(e.m)
-            v = 0
-            if s >= 6 then
-                v = 3
-            elseif s == 5 then
-                v = 2.5
-            elseif s == 4 then
-                v = 1.5
-            elseif s == 3 then
-                v = 1
-            end
-            if e.m:name() == "orb of fire" then
-                v = v + 1
-            elseif v > 0 and e.m:threat() <= 1 then
-                v = 0.5
-            end
-            count = count + v
+    local s, v
+    for _, e in ipairs(enemy_list) do
+        s = mon_speed_num(e.m)
+        v = 0
+        if s >= 6 then
+            v = 3
+        elseif s == 5 then
+            v = 2.5
+        elseif s == 4 then
+            v = 1.5
+        elseif s == 3 then
+            v = 1
         end
+        if e.m:name() == "orb of fire" then
+            v = v + 1
+        elseif v > 0 and e.m:threat() <= 1 then
+            v = 0.5
+        end
+        count = count + v
     end
     return count
 end
@@ -2836,54 +2852,52 @@ function count_drainable()
 end
 
 function count_nearby(cx, cy, r)
-    local x, y
+    local e
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
-            if supdist(x,y) > 0 and is_candidate_for_attack(cx+x, cy+y) then
-                i = i+1
-            end
+    for _, e in ipairs(enemy_list) do
+        if supdist(cx - e.x, cy - e.y) <= r then
+            i = i + 1
         end
     end
     return i
 end
 
 function count_slow_nearby(cx, cy, r)
-    local x, y
+    local e
     local i = 0
-    for x = -r,r do
-        for y = -r,r do
-            if supdist(x,y) > 0 and is_candidate_for_attack(cx+x, cy+y)
-                 then
-                m = monster_array[cx+x][cy+y]
-                if mon_speed_num(m) < player_speed_num()
-                     and not is_ranged(m) and m:reach_range() < 2 then
-                    i = i+1
-                end
-            end
+    for _, e in ipairs(enemy_list) do
+        if supdist(cx - e.x, cy - e.y) <= r
+                and supdist(x, y) > 0
+                and m
+                and mon_speed_num(m) < player_speed_num()
+                and not is_ranged(m)
+                and m:reach_range() < 2 then
+            i = i + 1
         end
     end
     return i
 end
 
 function distance_to_enemy(cx, cy)
-    local dist = 10
+    local best_dist = 10
     local e
-    for _,e in ipairs(enemy_list) do
-        if supdist(cx-e.x,cy-e.y) < dist then
-            dist = supdist(cx-e.x,cy-e.y)
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(cx - e.x, cy - e.y)
+        if dist < best_dist then
+            best_dist = dist
         end
     end
-    return dist
+    return best_dist
 end
 
 function distance_to_tabbable_enemy(cx, cy)
-    local dist = 10
+    local best_dist = 10
     local e
-    for _,e in ipairs(enemy_list) do
-        if supdist(cx-e.x,cy-e.y) < dist then
-            if will_tab(e.x,e.y,0, 0,mons_tabbable_square) then
-                dist = supdist(cx-e.x,cy-e.y)
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(cx - e.x, cy - e.y)
+        if dist < best_dist then
+            if will_tab(e.x, e.y, 0,  0, mons_tabbable_square) then
+                best_dist = dist
             end
         end
     end
@@ -2972,7 +2986,7 @@ function have_two_hander()
     return false
 end
 
-function find_item(cls,name)
+function find_item(cls, name)
     if cls == "wand" then return find_wand(name) end
     for it in inventory() do
         if it.class(true) == cls and it.name():find(name) then
@@ -2981,7 +2995,7 @@ function find_item(cls,name)
     end
 end
 
-function have_item(cls,name)
+function have_item(cls, name)
     for it in inventory() do
         if it.class(true) == cls and it.name():find(name) then
             return true
@@ -2999,7 +3013,7 @@ function find_wand(name)
     end
 end
 
-function count_item(cls,name)
+function count_item(cls, name)
     f = find_item(cls, name)
     if f then
         return item(f).quantity
@@ -3091,7 +3105,7 @@ end
 
 function base_ac()
     local total = 0
-    for _,slotname in pairs(good_slots) do
+    for _, slotname in pairs(good_slots) do
         if slotname ~= "Shield" then
             it = items.equipped_at(slotname)
             if it then
@@ -3128,13 +3142,13 @@ end
 -- plural form, e.g. "Scrolls"
 -- or invoke with item_class="name_callback" and provide callback for name
 function see_item(item_class, r, name_callback)
-    for x = -r,r do
-        for y = -r,r do
+    for x = -r, r do
+        for y = -r, r do
             -- crawl.mpr("(" .. x .. ", " .. y .. "): "
-            --     .. view.feature_at(x,y) .."\r")
+            --     .. view.feature_at(x, y) .."\r")
             local is = items.get_items_at(x, y)
-            if (is ~= nil) and (#is > 0) and (you.see_cell(x,y)) then
-                for ind,i in pairs(is) do
+            if (is ~= nil) and (#is > 0) and (you.see_cell(x, y)) then
+                for ind, i in pairs(is) do
                     local iname = i.name()
                     if (i:class(true) == item_class)
                             or ((item_class == "name_callback")
@@ -3162,12 +3176,12 @@ function get_target()
     bestx = 0
     besty = 0
     best_info = nil
-    for _,e in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20*e.x+e.y) then
+    for _, e in ipairs(enemy_list) do
+        if not util.contains(failed_move, 20 * e.x + e.y) then
             if is_candidate_for_attack(e.x, e.y, true) then
                 new_info = get_monster_info(e.x, e.y)
-                if (not best_info) or
-                     compare_monster_info(new_info, best_info) then
+                if not best_info
+                        or compare_monster_info(new_info, best_info) then
                     bestx = e.x
                     besty = e.y
                     best_info = new_info
@@ -3199,13 +3213,13 @@ end
 -- wait out with monsters around.
 function reason_to_rest(percentage)
     if not no_spells and starting_spell() then
-        local mp,mmp = you.mp()
+        local mp, mmp = you.mp()
         if mp < mmp then
             return true
         end
     end
     if you.god() == "Elyvilon" and you.piety_rank() >= 4 then
-        local mp,mmp = you.mp()
+        local mp, mmp = you.mp()
         if mp < mmp and mp < 10 then
             return true
         end
@@ -3248,7 +3262,7 @@ function should_ally_rest()
     if dangerous_to_rest() then
         return false
     end
-    local x,y
+    local x, y
     for x = -3, 3 do
         for y = -3, 3 do
             m = monster_array[x][y]
@@ -3271,6 +3285,7 @@ function easy_rest()
 end
 
 function attack()
+    local bestx, besty, best_info
     local success = false
     failed_move = { }
     while not success do
@@ -3402,17 +3417,17 @@ function plan_grand_finale()
         return false
     end
     local e, bestx, besty, best_info, new_info
+    local flag_order = {"threat", "injury", "distance"}
+    local flag_reversed = {false, true, true}
     best_info = nil
-    for _,e in ipairs(enemy_list) do
-        if is_traversable(e.x,e.y) and you.see_cell_no_trans(e.x,e.y)
-             and not cloud_is_dangerous(view.cloud_at(e.x,e.y)) then
+    for _, e in ipairs(enemy_list) do
+        if is_traversable(e.x, e.y)
+                and not cloud_is_dangerous(view.cloud_at(e.x, e.y)) then
             new_info = get_monster_info(e.x, e.y)
-            if new_info.safe == 0 and
-                 ((not best_info) or new_info.threat > best_info.threat
-                    or new_info.threat == best_info.threat and
-                    (new_info.injury < best_info.injury
-                     or new_info.injury == best_info.injury and
-                            new_info.distance < best_info.distance)) then
+            if new_info.safe == 0
+                    and (not best_info
+                        or compare_monster_info(new_info, best_info,
+                            flag_order, flag_reversed)) then
                 best_info = new_info
                 bestx = e.x
                 besty = e.y
@@ -3420,7 +3435,7 @@ function plan_grand_finale()
         end
     end
     if best_info then
-        use_ability("Grand Finale", "r" .. vector_move(bestx,besty) .. "\rY")
+        use_ability("Grand Finale", "r" .. vector_move(bestx, besty) .. "\rY")
         return true
     end
     return false
@@ -3435,14 +3450,10 @@ function plan_apocalypse()
 end
 
 function plan_hydra_destruction()
-    if not can_destruction() then
-        return false
-    end
-    if you.skill("Invocations") < 8 then
-        return false
-    end
-    if count_sgd(4) > 0
-            or (hydra_weapon_status(items.equipped_at("Weapon")) > -1)
+    if not can_destruction()
+            or you.skill("Invocations") < 8
+            or count_sgd(4) > 0
+            or hydra_weapon_status(items.equipped_at("Weapon")) > -1
             or you.xl() >= 20 then
         return false
     end
@@ -3491,7 +3502,7 @@ function prefer_ely_healing()
 end
 
 function plan_abyss_hand()
-    local hp,mhp = you.hp()
+    local hp, mhp = you.hp()
     if mhp - hp >= 30 and can_hand() then
         hand()
         return true
@@ -3500,7 +3511,7 @@ function plan_abyss_hand()
 end
 
 function plan_orbrun_hand()
-    local hp,mhp = you.hp()
+    local hp, mhp = you.hp()
     if mhp - hp >= 30 and can_hand() then
         hand()
         return true
@@ -3547,7 +3558,8 @@ function plan_blinking()
         return false
     end
     local para_danger = false
-    for _,e in ipairs(enemy_list) do
+    local e
+    for _, e in ipairs(enemy_list) do
         if e.m:name() == "floating eye" or e.m:name() == "starcursed mass" then
             para_danger = true
         end
@@ -3558,11 +3570,11 @@ function plan_blinking()
     if count_item("scroll", "of blinking") == 0 then
         return false
     end
-    local x,y,dx,dy,m
+    local x, y, dx, dy, m
     local cur_count = 0
     local best_count = 0
     local count
-    local best_x,best_y
+    local best_x, best_y
     for x = -1, 1 do
         for y = -1, 1 do
             m = monster_array[x][y]
@@ -3576,16 +3588,19 @@ function plan_blinking()
     if cur_count >= 2 then
         return false
     end
-    for x = -LOS,LOS do
-        for y = -LOS,LOS do
-            if is_traversable(x,y) and not is_solid(x,y)
-                 and monster_array[x][y] == nil and view.is_safe_square(x,y)
-                 and not view.withheld(x,y) and you.see_cell_no_trans(x,y) then
+    for x = -LOS, LOS do
+        for y = -LOS, LOS do
+            if is_traversable(x, y)
+                    and not is_solid(x, y)
+                    and monster_array[x][y] == nil
+                    and view.is_safe_square(x, y)
+                    and not view.withheld(x, y)
+                    and you.see_cell_no_trans(x, y) then
                 count = 0
                 for dx = -1, 1 do
                     for dy = -1, 1 do
-                        if abs(x+dx) <= LOS and abs(y+dy) <= LOS then
-                            m = monster_array[x+dx][y+dy]
+                        if abs(x + dx) <= LOS and abs(y + dy) <= LOS then
+                            m = monster_array[x + dx][y + dy]
                             if m and m:name() == "floating eye" then
                                 count = count + 3
                             elseif m and m:name() == "starcursed mass" then
@@ -3604,7 +3619,7 @@ function plan_blinking()
     end
     if best_count >= cur_count + 2 then
         local c = find_item("scroll", "blinking")
-        return read2(letter(c), vector_move(best_x,best_y) .. ".")
+        return read2(letter(c),  vector_move(best_x, best_y) .. ".")
     end
     return false
 end
@@ -3730,64 +3745,70 @@ function cloud_is_dangerous(cloud)
     return false
 end
 
-function assess_square(x,y)
+function assess_square(x, y)
     a = {}
-    -- distance to current square
-    a.supdist = supdist(x,y)
-    -- is current square near a BiA/SGD?
+
+    -- Distance to current square
+    a.supdist = supdist(x, y)
+
+    -- Is current square near a BiA/SGD?
     if a.supdist == 0 then
         a.near_ally = count_bia(3) + count_sgd(3)
             + count_divine_warrior(3) > 0
     end
-    -- can we move there?
+
+    -- Can we move there?
     a.can_move = (a.supdist == 0)
-                  or not view.withheld(x,y)
-                      and not monster_in_way(x,y)
-                      and is_traversable(x,y)
-                      and not is_solid(x,y)
+                  or not view.withheld(x, y)
+                      and not monster_in_way(x, y)
+                      and is_traversable(x, y)
+                      and not is_solid(x, y)
     if not a.can_move then
         return a
     end
-    cloud = view.cloud_at(x,y)
+    cloud = view.cloud_at(x, y)
     -- nonadjacent monsters who might be able to attack you
     -- (ranged/reaching/fast)
-    a.ranged = count_ranged(x,y,LOS)
+    a.ranged = count_ranged(x, y, LOS)
     -- alert ranged monsters at distance >= 4
-    a.longranged = count_longranged(x,y,LOS)
+    a.longranged = count_longranged(x, y, LOS)
     -- adjacent monsters
-    a.adjacent = count_nearby(x,y,1)
+    a.adjacent = count_nearby(x, y, 1)
     -- wandering or sleeping monsters
-    a.unalert = count_unalert(x,y,LOS)
-    -- ranged monsters at distance <= 5, not necessarily visible
-    a.shortranged = count_shortranged(x,y,5)
+    a.unalert = count_unalert(x, y, LOS)
+    -- ranged monsters at distance <= 5,  not necessarily visible
+    a.shortranged = count_shortranged(x, y, 5)
 
     -- corners - avoid these if possible
-    a.cornerish = is_cornerish(x,y)
+    a.cornerish = is_cornerish(x, y)
     if have_reaching() then
-        -- slow adjacent nonranged monsters, for kiting
-        a.slow_adjacent = count_slow_nearby(x,y,1)
+        -- slow adjacent nonranged monsters,  for kiting
+        a.slow_adjacent = count_slow_nearby(x, y, 1)
     end
     -- distance to nearest enemy
-    a.enemy_distance = distance_to_enemy(x,y)
+    a.enemy_distance = distance_to_enemy(x, y)
     -- will we fumble if we try to attack from this square?
-    a.fumble = (not you.flying() and view.feature_at(x,y) == "shallow_water"
+    a.fumble = (not you.flying() and view.feature_at(x, y) == "shallow_water"
                 and intrinsic_fumble() and not (you.god() == "Beogh"
                 and you.piety_rank() >= 5))
     -- will we be slow if we move into this square?
-    a.slow = (not you.flying() and view.feature_at(x,y) == "shallow_water"
+    a.slow = (not you.flying() and view.feature_at(x, y) == "shallow_water"
               and you.race() ~= "Merfolk" and you.race() ~= "Octopode"
               and you.race() ~= "Barachi"
               and not (you.god() == "Beogh" and you.piety_rank() >= 5))
-    -- is the square safe to step in? (checks traps+clouds)
-    a.safe = view.is_safe_square(x,y)
-    cloud = view.cloud_at(x,y)
-    -- would we want to move out of a cloud? note that we don't worry about
-    -- weak clouds if monsters are around
+    -- is the square safe to step in? (checks traps & clouds)
+    a.safe = view.is_safe_square(x, y)
+    cloud = view.cloud_at(x, y)
+
+    -- Would we want to move out of a cloud? note that we don't worry about
+    -- weak clouds if monsters are around.
     a.cloud_safe = (cloud == nil) or a.safe
                                  or danger and not cloud_is_dangerous(cloud)
-    -- equal to 10000 if the move is not closer to any stair in
+
+    -- Equal to 10000 if the move is not closer to any stair in
     -- good_stair_list, otherwise equal to the (min) dist to such a stair
-    a.stair_closer = stair_improvement(x,y)
+    a.stair_closer = stair_improvement(x, y)
+
     return a
 end
 
@@ -3801,7 +3822,7 @@ end
 --   outnumbered - stepping away from a square adjacent to multiple monsters
 --                 (when not cleaving)
 --   fleeing     - moving towards stairs
-function step_reason(a1,a2)
+function step_reason(a1, a2)
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
         return false
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
@@ -3843,7 +3864,7 @@ end
 -- determines whether moving a0->a2 is an improvement over a0->a1
 -- assumes that these two moves have already been determined to be better
 -- than not moving, with given reasons
-function step_improvement(bestreason,reason,a1,a2)
+function step_improvement(bestreason, reason, a1, a2)
     if reason == "fleeing" and bestreason ~= "fleeing" then
         return true
     elseif bestreason == "fleeing" and reason ~= "fleeing" then
@@ -3854,17 +3875,17 @@ function step_improvement(bestreason,reason,a1,a2)
     elseif reason == "water" and bestreason == "water"
          and a2.enemy_distance > a1.enemy_distance then
         return false
-    elseif a2.adjacent+a2.ranged < a1.adjacent+a1.ranged then
+    elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true
-    elseif a2.adjacent+a2.ranged > a1.adjacent+a1.ranged then
+    elseif a2.adjacent + a2.ranged > a1.adjacent + a1.ranged then
         return false
     elseif cleaving() and a2.ranged < a1.ranged then
         return true
     elseif cleaving() and a2.ranged > a1.ranged then
         return false
-    elseif a2.adjacent+a2.ranged == 0 and a2.unalert < a1.unalert then
+    elseif a2.adjacent + a2.ranged == 0 and a2.unalert < a1.unalert then
         return true
-    elseif a2.adjacent+a2.ranged == 0 and a2.unalert > a1.unalert then
+    elseif a2.adjacent + a2.ranged == 0 and a2.unalert > a1.unalert then
         return false
     elseif reason == "fleeing" and a2.stair_closer < a1.stair_closer then
         return true
@@ -3888,9 +3909,13 @@ end
 function choose_tactical_step()
     tactical_step = nil
     tactical_reason = "none"
-    if you.confused() or you.berserk() or you.constricted()
-         or you.transform() == "tree" or you.transform() == "fungus"
-         or where:find("Slime") or you.status("spiked") then
+    if you.confused()
+            or you.berserk()
+            or you.constricted()
+            or you.transform() == "tree"
+            or you.transform() == "fungus"
+            or where:find("Slime")
+            or you.status("spiked") then
         return
     end
     local a0 = assess_square(0, 0)
@@ -3901,19 +3926,20 @@ function choose_tactical_step()
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end
-    local bestx,besty,bestreason
+    local bestx, besty, bestreason
     local besta = nil
-    local x,y
+    local x, y
     local a
     local reason
     for x = -1, 1 do
         for y = -1, 1 do
-            if supdist(x,y) > 0 then
-                a = assess_square(x,y)
-                reason = step_reason(a0,a)
+            if supdist(x, y) > 0 then
+                a = assess_square(x, y)
+                reason = step_reason(a0, a)
                 if reason then
                     if besta == nil
-                            or step_improvement(bestreason,reason,besta,a) then
+                            or step_improvement(bestreason, reason, besta,
+                                a) then
                         bestx = x
                         besty = y
                         besta = a
@@ -3924,7 +3950,7 @@ function choose_tactical_step()
         end
     end
     if besta then
-        tactical_step = delta_to_vi(bestx,besty)
+        tactical_step = delta_to_vi(bestx, besty)
         tactical_reason = bestreason
     end
 end
@@ -4015,7 +4041,7 @@ function plan_zig_fog()
     if not where:find("Zig")
          or you.berserk() or you.teleporting() or you.confused()
          or not danger or not hp_is_low(70)
-         or count_nearby(0, 0,LOS) - count_nearby(0, 0, 2) < 15
+         or count_nearby(0, 0, LOS) - count_nearby(0, 0, 2) < 15
          or view.cloud_at(0, 0) ~= nil then
         return false
     end
@@ -4172,7 +4198,7 @@ function want_to_orbrun_teleport()
 end
 
 function need_to_wait_for_ely_healing()
-    local mp,mmp = you.mp()
+    local mp, mmp = you.mp()
     return (you.god() == "Elyvilon" and you.piety_rank() >= 4 and mmp >= 2
                     and mp < 2)
 end
@@ -4250,7 +4276,7 @@ function want_to_recall()
     if immediate_danger and hp_is_low(66) then
         return false
     end
-    local mp,mmp = you.mp()
+    local mp, mmp = you.mp()
     return (mp == mmp)
 end
 
@@ -4312,12 +4338,12 @@ function plan_wait_for_melee()
     count = 0
     sleeping_count = 0
     local e
-    for _,e in ipairs(enemy_list) do
+    for _, e in ipairs(enemy_list) do
         if is_ranged(e.m) then
             wait_count = 0
             return false
         end
-        if e.m:reach_range() >= 2 and supdist(e.x,e.y) <= 2 then
+        if e.m:reach_range() >= 2 and supdist(e.x, e.y) <= 2 then
             wait_count = 0
             return false
         end
@@ -4363,11 +4389,13 @@ function plan_wait_spit()
     if you.xl() > 11 then
         return false
     end
-    dist = 10
-    cur_e = none
-    for _,e in ipairs(enemy_list) do
-        if supdist(e.x,e.y) < dist and e.m:res_poison() < 1 then
-            dist = supdist(e.x,e.y)
+    local best_dist = 10
+    local cur_e = none
+    local e
+    for _, e in ipairs(enemy_list) do
+        local dist = supdist(e.x, e.y)
+        if dist < best_dist and e.m:res_poison() < 1 then
+            best_dist = dist
             cur_e = e
         end
     end
@@ -4377,7 +4405,7 @@ function plan_wait_spit()
         ab_range = 7
         ab_name = "Breathe Poison Gas"
     end
-    if dist <= ab_range then
+    if best_dist <= ab_range then
         if use_ability(ab_name,
                 "r" .. vector_move(cur_e.x, cur_e.y) .. "\r") then
             return true
@@ -4393,7 +4421,7 @@ function starting_spell()
     end
     local spell_list = {"Shock", "Magic Dart", "Sandblast", "Foxfire",
         "Freeze", "Pain", "Summon Small Mammal", "Beastly Appendage", "Sting"}
-    for _,sp in ipairs(spell_list) do
+    for _, sp in ipairs(spell_list) do
         if spells.memorised(sp) and spells.fail(sp) <= 25 then
             return sp
         end
@@ -4419,10 +4447,10 @@ function spell_castable(sp)
             return false
         end
     elseif sp == "Summon Small Mammal" then
-        local x,y
+        local x, y
         local count = 0
-        for x = -LOS,LOS do
-            for y = -LOS,LOS do
+        for x = -LOS, LOS do
+            for y = -LOS, LOS do
                 m = monster_array[x][y]
                 if m and m:attitude() == ATT_FRIENDLY then
                     count = count + 1
@@ -4536,7 +4564,7 @@ function plan_orbrun_rest()
 end
 
 function plan_abyss_rest()
-    local hp,mhp = you.hp()
+    local hp, mhp = you.hp()
     if you.confused() or you.slowed() or
          you.berserk() or you.teleporting() or you.silencing() or
          transformed() or (hp < mhp) and you.regenerating() then
@@ -4627,7 +4655,7 @@ function plan_join_beogh()
     if you.race() ~= "Hill Orc" or not want_altar() or you.confused() then
         return false
     end
-    for _,god in ipairs(god_options()) do
+    for _, god in ipairs(god_options()) do
         if god == "Beogh" and use_ability("Convert to Beogh", "YY") then
             return true
         end
@@ -4646,9 +4674,9 @@ function plan_convert()
         rest()
     else
         if view.feature_at(0, 0) == "altar_makhleb" then
-            for i,br in ipairs(c_persist.branches_entered) do
+            for i, br in ipairs(c_persist.branches_entered) do
                 if br == "L" then
-                    table.remove(c_persist.branches_entered,i)
+                    table.remove(c_persist.branches_entered, i)
                 end
             end
         end
@@ -4662,7 +4690,7 @@ function plan_join_god()
         return false
     end
     feat = view.feature_at(0, 0)
-    for _,god in ipairs(god_options()) do
+    for _, god in ipairs(god_options()) do
         if feat == ("altar_" .. string.gsub(string.lower(god), " ", "_")) then
             if you.silenced() then
                 rest()
@@ -4885,7 +4913,7 @@ function plan_use_good_consumables()
                         return true
                     end
                 end
-                for _,slotname in pairs(good_slots) do
+                for _, slotname in pairs(good_slots) do
                     if slotname ~= "Body Armour" and slotname ~= "Shield" then
                         it2 = items.equipped_at(slotname)
                         if it2 and not it2.artefact and it2.plus < 2
@@ -5012,13 +5040,13 @@ function plan_swap_weapon()
     if not swappable then
         return false
     end
-    cur_val = weapon_value(it_old,true,it_old,sit)
+    cur_val = weapon_value(it_old, true, it_old, sit)
     max_val = cur_val
     max_it = nil
     for it in inventory() do
         if it and it.class(true) == "weapon" and not it.equipped then
             if twohands or it.hands < 2 then
-                val2 = weapon_value(it,true,it_old,sit)
+                val2 = weapon_value(it, true, it_old, sit)
                 if val2 > max_val then
                     max_val = val2
                     max_it = it
@@ -5045,7 +5073,7 @@ function plan_bless_weapon()
     local minv, maxv, bestletter
     for it in inventory() do
         if equip_slot(it) == "Weapon" then
-            minv,maxv = equip_value(it, true, nil, "bless")
+            minv, maxv = equip_value(it, true, nil, "bless")
             if minv > bestv then
                 bestv = minv
                 bestletter = letter(it)
@@ -5090,7 +5118,7 @@ function plan_upgrade_weapon()
         if it and it.class(true) == "weapon" and not it.equipped then
             local equip = false
             local drop = false
-            if should_upgrade(it,it_old,sit) then
+            if should_upgrade(it, it_old, sit) then
                 equip = true
             elseif should_drop(it) then
                 drop = true
@@ -5145,7 +5173,7 @@ function plan_upgrade_amulet()
         if it and equip_slot(it) == "Amulet" and not it.equipped then
             local equip = false
             local drop = false
-            if should_upgrade(it,it_old) then
+            if should_upgrade(it, it_old) then
                 equip = true
             elseif should_drop(it) then
                 drop = true
@@ -5225,7 +5253,7 @@ end
 function plan_maybe_upgrade_armour()
     local acquire = false
     if acquirement_class ~= nil then
-        for _,s in pairs(good_slots) do
+        for _, s in pairs(good_slots) do
             if acquirement_class == s then
                 acquire = true
                 break
@@ -5256,7 +5284,7 @@ function plan_upgrade_armour()
             local swappable
             it_old = items.equipped_at(good_slots[st])
             swappable = can_swap(good_slots[st])
-            if should_upgrade(it,it_old) then
+            if should_upgrade(it, it_old) then
                 equip = true
             elseif should_drop(it) then
                 drop = true
@@ -5371,26 +5399,35 @@ function feat_is_upstairs(feat)
 end
 
 function want_to_stairdance_up()
-    local feat = view.feature_at(0, 0)
-    if not feat_is_upstairs(feat) then
+    if not feat_is_upstairs(view.feature_at(0, 0)) then
         return false
     end
+
     local n = stairdance_count[where] or 0
     if n >= 20 then
         return false
     end
-    if you.caught() or you.mesmerised() or you.constricted() or you.rooted()
-         or you.transform() == "tree" or you.transform() == "fungus"
-         or count_bia(3) > 0 or count_sgd(3) > 0 or count_divine_warrior(3) > 0 then
+
+    if you.caught()
+            or you.mesmerised()
+            or you.constricted()
+            or you.rooted()
+            or you.transform() == "tree"
+            or you.transform() == "fungus"
+         or count_bia(3) > 0
+         or count_sgd(3) > 0
+         or count_divine_warrior(3) > 0 then
         return false
     end
-    local only_when_safe = (you.berserk() or hp_is_low(33))
+
+    local only_when_safe = you.berserk() or hp_is_low(33)
     local follow_count = 0
     local other_count = 0
     local e
-    for _,e in ipairs(enemy_list) do
-        local dist = supdist(e.x,e.y)
-        if dist == 1 and e.m:stabbability() == 0 and can_use_stairs(e.m) then
+    for _, e in ipairs(enemy_list) do
+        if supdist(e.x, e.y) == 1
+                and e.m:stabbability() == 0
+                and can_use_stairs(e.m) then
             follow_count = follow_count + 1
         else
             other_count = other_count + 1
@@ -5399,9 +5436,11 @@ function want_to_stairdance_up()
     if only_when_safe and follow_count > 0 then
         return false
     end
-    if follow_count == 0 and (reason_to_rest(90) or you.status("spiked"))
-         and not buffed()
-         or other_count > 0 and follow_count > 0 then
+    if follow_count == 0
+                and (reason_to_rest(90) or you.status("spiked"))
+                and not buffed()
+            or other_count > 0
+                and follow_count > 0 then
         stairdance_count[where] = n + 1
         return true
     end
@@ -5411,14 +5450,20 @@ end
 -- adding some clua for this would be better
 function can_use_stairs(m)
     local mname = m:name()
-    if mname:find("zombie") or mname:find("skeleton") or mname:find("spectral")
-         or mname:find("simulacrum") or m:is_stationary()
-         or mname:find("tentacle") or mname == "silent spectre"
-         or mname == "Geryon" or mname == "Royal Jelly"
-         or mname == "electric eel"
-         or mname == "kraken" or mname == "lava snake"
-         or mname == "bat" or mname == "unseen horror"
-         or mname == "fire vortex" then
+
+    if m:is_stationary()
+            or mons_liquid_bound(m)
+            or mname:find("zombie")
+            or mname:find("skeleton")
+            or mname:find("spectral")
+            or mname:find("simulacrum")
+            or mname:find("tentacle")
+            or mname == "silent spectre"
+            or mname == "Geryon"
+            or mname == "Royal Jelly"
+            or mname == "bat"
+            or mname == "unseen horror"
+            or mname == "fire vortex" then
         return false
     else
         return true
@@ -5472,7 +5517,7 @@ function plan_shop()
     local it, price, on_list
     local sitems = items.shop_inventory()
     table.sort(sitems, shop_item_sort)
-    for n,e in ipairs(sitems) do
+    for n, e in ipairs(sitems) do
         it = e[1]
         price = e[2]
         on_list = e[3]
@@ -5482,7 +5527,7 @@ function plan_shop()
             local wealth = you.gold()
             if price <= wealth then
                 say("BUYING " .. it.name() .. " (" .. price .. " gold).")
-                magic("<//" .. letter(n-1) .. "\ry")
+                magic("<//" .. letter(n - 1) .. "\ry")
                 return
             -- Should in theory also work in Bazaar, but doesn't make much sense
             -- (since we won't really return or acquire money and travel back here)
@@ -5737,8 +5782,8 @@ function plan_open_runed_doors()
     end
     for x = -1, 1 do
         for y = -1, 1 do
-            if view.feature_at(x,y) == "runed_door" then
-                magic(delta_to_vi(x,y) .. "Y")
+            if view.feature_at(x, y) == "runed_door" then
+                magic(delta_to_vi(x, y) .. "Y")
                 return true
             end
         end
@@ -5951,11 +5996,11 @@ function plan_step_towards_branch()
          and (where ~= "Crypt:3" or stepped_on_tomb or not found_branch("W")) then
         return false
     end
-    for x = -LOS,LOS do
-        for y = -LOS,LOS do
-            feat = view.feature_at(x,y)
+    for x = -LOS, LOS do
+        for y = -LOS, LOS do
+            feat = view.feature_at(x, y)
             if (feat == "enter_lair" or feat == "enter_tomb")
-                 and you.see_cell_no_trans(x,y) then
+                 and you.see_cell_no_trans(x, y) then
                 if x == 0 and y == 0 then
                     if where == "Crypt:3" then
                         stepped_on_tomb = true
@@ -5965,7 +6010,7 @@ function plan_step_towards_branch()
                     return false
                 else
                     lair_step_mode = true
-                    local result = move_towards(x,y)
+                    local result = move_towards(x, y)
                     lair_step_mode = false
                     return result
                 end
@@ -6033,7 +6078,7 @@ function choose_hell_rune_branch()
     if count == 0 then
         return "U" -- depths
     end
-    return untried_branches[crawl.roll_dice(1,count)]
+    return untried_branches[crawl.roll_dice(1, count)]
 end
 
 local depths_loop_count = 0
@@ -6190,7 +6235,7 @@ function plan_sacrifice()
         "Sacrifice Essence", -- variable
         "Reject Sacrifices",
     } -- hack
-    for _,sacrifice in ipairs(good_sacrifices) do
+    for _, sacrifice in ipairs(good_sacrifices) do
         if sacrifice == "Sacrifice Nimbleness" then
             for letter, abil in pairs(you.ability_table()) do
                 if abil == sacrifice then
@@ -6234,10 +6279,10 @@ function plan_find_downstairs()
     -- try to avoid branch entrances by going to a random > from them
     local feat = view.feature_at(0, 0)
     if feat:find("enter_") or feat == "escape_hatch_down" then
-        local i,j
+        local i, j
         local c = "X"
         j = crawl.roll_dice(1, 12)
-        for i = 1,j do
+        for i = 1, j do
             c = (c .. ">")
         end
         magic(c .. "\r")
@@ -6262,23 +6307,23 @@ function clear_level_map(num)
 end
 
 function update_level_map(num)
-    local dx,dy = travel.waypoint_delta(num)
-    local val,oldval
+    local dx, dy = travel.waypoint_delta(num)
+    local val, oldval
     local staircount = #stair_dists[num]
     local newcount = staircount
     local mapqueue = {}
     local distqueue = {}
-    for j = 1,staircount do
+    for j = 1, staircount do
         distqueue[j] = {}
     end
-    for x = -LOS,LOS do
-        for y = -LOS,LOS do
-            table.insert(mapqueue, {x+dx,y+dy})
+    for x = -LOS, LOS do
+        for y = -LOS, LOS do
+            table.insert(mapqueue, {x + dx, y + dy})
         end
     end
     local first = 1
     local last = #mapqueue
-    local x,y
+    local x, y
     local feat
     while first < last do
         if first % 1000 == 0 then
@@ -6287,44 +6332,47 @@ function update_level_map(num)
         x = mapqueue[first][1]
         y = mapqueue[first][2]
         first = first + 1
-        feat = view.feature_at(x-dx,y-dy)
+        feat = view.feature_at(x - dx, y - dy)
         if feat ~= "unseen" then
             if level_map[num][x][y] == nil then
                 for ddx = -1, 1 do
                     for ddy = -1, 1 do
                         if ddx ~= 0 or ddy ~= 0 then
                             last = last + 1
-                            mapqueue[last] = {x+ddx,y+ddy}
+                            mapqueue[last] = {x + ddx, y + ddy}
                         end
                     end
                 end
             end
-            if travel.feature_traversable(feat) and not travel.feature_solid(feat) then
+            if travel.feature_traversable(feat)
+                    and not travel.feature_solid(feat) then
                 if level_map[num][x][y] ~= "." then
                     if feat_is_upstairs(feat) then
-                        newcount = #stair_dists[num]+1
+                        newcount = #stair_dists[num] + 1
                         stair_dists[num][newcount] = {}
                         for i = -100, 100 do
                             stair_dists[num][newcount][i] = {}
                         end
                         stair_dists[num][newcount][x][y] = 0
-                        distqueue[newcount] = {{x,y},}
+                        distqueue[newcount] = {{x, y}}
                     end
-                    for j = 1,staircount do
+                    for j = 1, staircount do
                         oldval = stair_dists[num][j][x][y]
                         for ddx = -1, 1 do
                             for ddy = -1, 1 do
                                 if (ddx ~= 0 or ddy ~= 0) then
-                                    val = stair_dists[num][j][x+ddx][y+ddy]
-                                    if val ~= nil and (oldval == nil or oldval > val+1) then
-                                        oldval = val+1
+                                    val = stair_dists[num][j][x + ddx][y + ddy]
+                                    if val ~= nil
+                                            and (oldval == nil
+                                                or oldval > val + 1) then
+                                        oldval = val + 1
                                     end
                                 end
                             end
                         end
                         if stair_dists[num][j][x][y] ~= oldval then
                             stair_dists[num][j][x][y] = oldval
-                            table.insert(distqueue[j],{x,y})
+                            table.insert(distqueue[j], {x, y})
                         end
                     end
                 end
@@ -6334,15 +6382,15 @@ function update_level_map(num)
             end
         end
     end
-    for j = 1,newcount do
-        update_dist_map(stair_dists[num][j],distqueue[j])
+    for j = 1, newcount do
+        update_dist_map(stair_dists[num][j], distqueue[j])
     end
 end
 
-function update_dist_map(dist_map,queue)
+function update_dist_map(dist_map, queue)
     local first = 1
     local last = #queue
-    local x,y,val
+    local x, y, val
     while first <= last do
         if first % 300 == 0 then
             coroutine.yield()
@@ -6353,12 +6401,12 @@ function update_dist_map(dist_map,queue)
         val = dist_map[x][y] + 1
         for dx = -1, 1 do
             for dy = -1, 1 do
-                if (dx ~= 0 or dy ~= 0) and level_map[waypoint_parity][x+dx][y+dy] == "." then
-                    oldval = dist_map[x+dx][y+dy]
+                if (dx ~= 0 or dy ~= 0) and level_map[waypoint_parity][x + dx][y + dy] == "." then
+                    oldval = dist_map[x + dx][y + dy]
                     if oldval == nil or oldval > val then
-                        dist_map[x+dx][y+dy] = val
-                        last = last+1
-                        queue[last] = {x+dx,y+dy}
+                        dist_map[x + dx][y + dy] = val
+                        last = last + 1
+                        queue[last] = {x + dx, y + dy}
                     end
                 end
             end
@@ -6368,22 +6416,25 @@ end
 
 function find_good_stairs()
     good_stair_list = { }
+
     if not is_waypointable(where) then
         return
     end
+
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
+    local dx, dy = travel.waypoint_delta(num)
     local staircount = #(stair_dists[num])
-    local pdist,mdist,minmdist,speed_diff
+    local pdist, mdist, minmdist, speed_diff
     local pspeed = player_speed_num()
-    for i = 1,staircount do
+    for i = 1, staircount do
         pdist = stair_dists[num][i][dx][dy]
         if pdist == nil then
             pdist = 10000
         end
         minmdist = 1000
-        for _,e in ipairs(enemy_list) do
-            mdist = stair_dists[num][i][dx+e.x][dy+e.y]
+        local e
+        for _, e in ipairs(enemy_list) do
+            mdist = stair_dists[num][i][dx + e.x][dy + e.y]
             if mdist == nil then
                 mdist = 10000
             end
@@ -6406,7 +6457,7 @@ function find_good_stairs()
     end
 end
 
-function stair_improvement(x,y)
+function stair_improvement(x, y)
     if not is_waypointable(where) then
         return 10000
     end
@@ -6418,11 +6469,11 @@ function stair_improvement(x,y)
         end
     end
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
+    local dx, dy = travel.waypoint_delta(num)
     local val
     local minval = 10000
-    for _,i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx+x][dy+y]
+    for _, i in ipairs(good_stair_list) do
+        val = stair_dists[num][i][dx + x][dy + y]
         if val < stair_dists[num][i][dx][dy] and val < minval then
             minval = val
         end
@@ -6431,14 +6482,14 @@ function stair_improvement(x,y)
 end
 
 function set_stair_target(c)
-    local x,y = vi_to_delta(c)
+    local x, y = vi_to_delta(c)
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
+    local dx, dy = travel.waypoint_delta(num)
     local val
     local minval = 10000
     local best_stair
-    for _,i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx+x][dy+y]
+    for _, i in ipairs(good_stair_list) do
+        val = stair_dists[num][i][dx + x][dy + y]
         if val < stair_dists[num][i][dx][dy] and val < minval then
             minval = val
             best_stair = i
@@ -6457,17 +6508,17 @@ function plan_continue_flee()
         return false
     end
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
+    local dx, dy = travel.waypoint_delta(num)
     local val
     for x = -1, 1 do
         for y = -1, 1 do
-            if is_traversable(x,y) and not is_solid(x,y)
-                 and not monster_in_way(x,y) and view.is_safe_square(x,y)
-                 and not view.withheld(x,y) then
-                val = stair_dists[num][target_stair][dx+x][dy+y]
+            if is_traversable(x, y) and not is_solid(x, y)
+                 and not monster_in_way(x, y) and view.is_safe_square(x, y)
+                 and not view.withheld(x, y) then
+                val = stair_dists[num][target_stair][dx + x][dy + y]
                 if val and val < stair_dists[num][target_stair][dx][dy] then
                     say("STILL FLEEEEING.", true)
-                    magic(delta_to_vi(x,y) .. "YY")
+                    magic(delta_to_vi(x, y) .. "YY")
                     return true
                 end
             end
@@ -6520,14 +6571,15 @@ function random_step(reason)
         magic("s")
         return true
     end
-    local i,j
-    local dx,dy
+    local i, j
+    local dx, dy
     local count = 0
     for i = -1, 1 do
         for j = -1, 1 do
-            if not (i == 0 and j == 0) and is_traversable(i,j)
-                                                                 and not view.withheld(i,j)
-                 and not monster_in_way(i,j) then
+            if not (i == 0 and j == 0)
+                    and is_traversable(i, j)
+                    and not view.withheld(i, j)
+                    and not monster_in_way(i, j) then
                 count = count + 1
                 if crawl.one_chance_in(count) then
                     dx = i
@@ -6538,7 +6590,7 @@ function random_step(reason)
     end
     if count > 0 then
         say("Stepping randomly (" .. reason .. ").")
-        magic(delta_to_vi(dx,dy) .. "YY")
+        magic(delta_to_vi(dx, dy) .. "YY")
         return true
     else
         say("Standing still (" .. reason .. ").")
@@ -6574,12 +6626,12 @@ function plan_flail_at_invis()
         return true
     end
     invisi_count = invisi_count + 1
-    local x,y
+    local x, y
 
     for x = -1, 1 do
         for y = -1, 1 do
-            if supdist(x,y) > 0 and view.invisible_monster(x,y) then
-                magic(control(delta_to_vi(x,y)))
+            if supdist(x, y) > 0 and view.invisible_monster(x, y) then
+                magic(control(delta_to_vi(x, y)))
                 return true
             end
         end
@@ -6588,11 +6640,11 @@ function plan_flail_at_invis()
     if invisi_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
         x = sigmund_dx
         y = sigmund_dy
-        if adjacent(x,y) and is_traversable(x,y) then
-            magic(control(delta_to_vi(x,y)))
+        if adjacent(x, y) and is_traversable(x, y) then
+            magic(control(delta_to_vi(x, y)))
             return true
-        elseif x == 0 and is_traversable(0,sign(y)) then
-            magic(delta_to_vi(0,sign(y)))
+        elseif x == 0 and is_traversable(0, sign(y)) then
+            magic(delta_to_vi(0, sign(y)))
             return true
         elseif y == 0 and is_traversable(sign(x),0) then
             magic(delta_to_vi(sign(x),0))
@@ -6606,16 +6658,16 @@ function plan_flail_at_invis()
         x = -1 + crawl.random2(3)
         y = -1 + crawl.random2(3)
         tries = tries + 1
-        if (x ~= 0 or y ~= 0) and is_traversable(x,y)
-             and view.feature_at(x,y) ~= "closed_door"
-             and view.feature_at(x,y) ~= "runed_door" then
+        if (x ~= 0 or y ~= 0) and is_traversable(x, y)
+             and view.feature_at(x, y) ~= "closed_door"
+             and view.feature_at(x, y) ~= "runed_door" then
             success = true
         end
     end
     if tries >= 100 then
         magic("s")
     else
-        magic(control(delta_to_vi(x,y)))
+        magic(control(delta_to_vi(x, y)))
     end
     return true
 end
@@ -6657,9 +6709,9 @@ function plan_special_purification()
     local str, mstr = you.strength()
     local int, mint = you.intelligence()
     local dex, mdex = you.dexterity()
-    if str < mstr and (str < mstr-5 or str < 3)
+    if str < mstr and (str < mstr - 5 or str < 3)
          or int < mint and int < 3
-         or dex < mdex and (dex < mdex-8 or dex < 3) then
+         or dex < mdex and (dex < mdex - 8 or dex < 3) then
         purification()
         return true
     end
@@ -6723,8 +6775,8 @@ function plan_tomb_go_to_hatch()
             return false
         end
         if view.feature_at(0, 0) == "escape_hatch_up" then
-            local x,y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x,y)
+            local x, y = travel.waypoint_delta(waypoint_parity)
+            local new_hatch_dist = supdist(x, y)
             if new_hatch_dist >= prev_hatch_dist
                  and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
                 return false
@@ -6737,8 +6789,8 @@ function plan_tomb_go_to_hatch()
         return true
     elseif where == "Tomb:1" then
         if view.feature_at(0, 0) == "escape_hatch_down" then
-            local x,y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x,y)
+            local x, y = travel.waypoint_delta(waypoint_parity)
+            local new_hatch_dist = supdist(x, y)
             if new_hatch_dist >= prev_hatch_dist
                  and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
                 return false
@@ -6758,7 +6810,7 @@ function plan_stuck_clear_exclusions()
     if n > 20 then
         return false
     end
-    clear_exclusion_count[where] = n+1
+    clear_exclusion_count[where] = n + 1
     magic("X" .. control('e'))
     return true
 end
@@ -6795,23 +6847,24 @@ function plan_swamp_clouds_hack()
         magic("s")
         return true
     end
-    local x,y
-    local bestx,besty
+    local x, y
+    local bestx, besty
     local dist
     local bestdist = 11
     for x = -1, 1 do
         for y = -1, 1 do
-            if supdist(x,y) > 0 and view.is_safe_square(x,y)
-                 and not view.withheld(x,y) and not monster_in_way(x,y) then
+            if supdist(x, y) > 0 and view.is_safe_square(x, y)
+                 and not view.withheld(x, y) and not monster_in_way(x, y) then
                 dist = 11
-                for x2 = -LOS,LOS do
-                    for y2 = -LOS,LOS do
-                        if (view.cloud_at(x2,y2) == "freezing vapour"
-                                or view.cloud_at(x2,y2) == "foul pestilence")
-                             and you.see_cell_no_trans(x2,y2)
-                             and (you.god() ~= "Qazlal" or not view.is_safe_square(x2,y2)) then
-                            if supdist(x-x2,y-y2) < dist then
-                                dist = supdist(x-x2,y-y2)
+                for x2 = -LOS, LOS do
+                    for y2 = -LOS, LOS do
+                        if (view.cloud_at(x2, y2) == "freezing vapour"
+                                or view.cloud_at(x2, y2) == "foul pestilence")
+                             and you.see_cell_no_trans(x2, y2)
+                             and (you.god() ~= "Qazlal"
+                                 or not view.is_safe_square(x2, y2)) then
+                            if supdist(x - x2, y - y2) < dist then
+                                dist = supdist(x - x2, y - y2)
                             end
                         end
                     end
@@ -6825,14 +6878,14 @@ function plan_swamp_clouds_hack()
         end
     end
     if bestdist < 11 then
-        magic(delta_to_vi(bestx,besty) .. "Y")
+        magic(delta_to_vi(bestx, besty) .. "Y")
         return true
     end
-    for x = -LOS,LOS do
-        for y = -LOS,LOS do
-            if (view.cloud_at(x,y) == "freezing vapour"
-                    or view.cloud_at(x,y) == "foul pestilence")
-                 and you.see_cell_no_trans(x,y) then
+    for x = -LOS, LOS do
+        for y = -LOS, LOS do
+            if (view.cloud_at(x, y) == "freezing vapour"
+                    or view.cloud_at(x, y) == "foul pestilence")
+                 and you.see_cell_no_trans(x, y) then
                 return random_step("Swamp:4")
             end
         end
@@ -6847,7 +6900,7 @@ function plan_dig_grate()
         grate_mon_list = {"draconian stormcaller", "draconian scorcher"}
     elseif where == "Depths:4" then
         grate_mon_list = {"draconian stormcaller", "draconian scorcher",
-                                            "angel", "daeva", "lich", "eye"}
+            "angel", "daeva", "lich", "eye"}
     elseif where:find("Depths") then
         grate_mon_list = {"angel", "daeva", "lich", "eye"}
     elseif where == "Pan" or where == "Geh:7" then
@@ -6860,21 +6913,23 @@ function plan_dig_grate()
         return false
     end
     local e
-    for _,e in ipairs(enemy_list) do
+    for _, e in ipairs(enemy_list) do
         local name = e.m:name()
-        if contains_string_in(name,grate_mon_list)
-             and not will_tab(0, 0,e.x,e.y,tabbable_square) then
+        if contains_string_in(name, grate_mon_list)
+             and not will_tab(0, 0, e.x, e.y, tabbable_square) then
             local grate_count = 0
-            local dx,dy
+            local dx, dy
             local closest_grate = 20
-            local gx,gy,cgx,cgy
+            local gx, gy, cgx, cgy
             for dx = -1, 1 do
                 for dy = -1, 1 do
                     gx = e.x + dx
                     gy = e.y + dy
-                    if supdist(gx,gy) <= LOS and view.feature_at(gx,gy) == "iron_grate" then
+                    if supdist(gx, gy) <= LOS
+                            and view.feature_at(gx, gy) == "iron_grate" then
                         grate_count = grate_count + 1
-                        if abs(gx) + abs(gy) < closest_grate and you.see_cell_solid_see(gx,gy) then
+                        if abs(gx) + abs(gy) < closest_grate
+                                and you.see_cell_solid_see(gx, gy) then
                             cgx = gx
                             cgy = gy
                             closest_grate = abs(gx) + abs(gy)
@@ -6886,7 +6941,8 @@ function plan_dig_grate()
                 local c = find_item("wand", "digging")
                 if c and can_zap() then
                     say("ZAPPING " .. item(c).name() .. ".")
-                    magic("V" .. letter(c) .. "r" .. vector_move(cgx,cgy) .. "\r")
+                    magic("V" .. letter(c) .. "r" .. vector_move(cgx, cgy) ..
+                        "\r")
                     return true
                 end
             end
@@ -6896,13 +6952,14 @@ function plan_dig_grate()
 end
 
 function plan_stuck_dig_grate()
-    local dx,dy
+    local dx, dy
     local closest_grate = 20
-    local cx,cy
-    for dx = -LOS,LOS do
-        for dy = -LOS,LOS do
-            if view.feature_at(dx,dy) == "iron_grate" then
-                if abs(dx) + abs(dy) < closest_grate and you.see_cell_solid_see(dx,dy) then
+    local cx, cy
+    for dx = -LOS, LOS do
+        for dy = -LOS, LOS do
+            if view.feature_at(dx, dy) == "iron_grate" then
+                if abs(dx) + abs(dy) < closest_grate
+                        and you.see_cell_solid_see(dx, dy) then
                     cx = dx
                     cy = dy
                     closest_grate = abs(dx) + abs(dy)
@@ -6910,21 +6967,24 @@ function plan_stuck_dig_grate()
             end
         end
     end
+
     if closest_grate < 20 then
         local c = find_item("wand", "digging")
         if c and can_zap() then
             say("ZAPPING " .. item(c).name() .. ".")
-            magic("V" .. letter(c) .. "r" .. vector_move(cx,cy) .. "\r")
+            magic("V" .. letter(c) .. "r" .. vector_move(cx, cy) .. "\r")
             return true
         end
     end
+
     return false
 end
 
 function plan_stuck_forget_map()
-    if not cloudy and not danger
-         and (where == "Slime:5" and not you.have_rune("slimy")
-         or where == "Geh:7" and not you.have_rune("obsidian")) then
+    if not cloudy
+            and not danger
+            and (where == "Slime:5" and not you.have_rune("slimy")
+                or where == "Geh:7" and not you.have_rune("obsidian")) then
         magic("X" .. control('f'))
         return true
     end
@@ -6954,7 +7014,7 @@ function read(c)
     return true
 end
 
-function read2(c,etc)
+function read2(c, etc)
     if not can_read() then
         return false
     end
@@ -7052,9 +7112,9 @@ function move_towards(dx, dy)
         if abs(dy) == 1 then move = try_move(sign(dx), 0) end
         if move == nil then move = try_move(sign(dx), sign(dy)) end
         if move == nil then move = try_move(sign(dx), 0) end
-        if move == nil and abs(dx) > abs(dy)+1 then
+        if move == nil and abs(dx) > abs(dy) + 1 then
                  move = try_move(sign(dx), 1) end
-        if move == nil and abs(dx) > abs(dy)+1 then
+        if move == nil and abs(dx) > abs(dy) + 1 then
                  move = try_move(sign(dx), -1) end
         if move == nil then move = try_move(0, sign(dy)) end
     elseif abs(dx) == abs(dy) then
@@ -7065,19 +7125,19 @@ function move_towards(dx, dy)
         if abs(dx) == 1 then move = try_move(0, sign(dy)) end
         if move == nil then move = try_move(sign(dx), sign(dy)) end
         if move == nil then move = try_move(0, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx)+1 then
+        if move == nil and abs(dy) > abs(dx) + 1 then
                  move = try_move(1, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx)+1 then
+        if move == nil and abs(dy) > abs(dx) + 1 then
                  move = try_move(-1, sign(dy)) end
         if move == nil then move = try_move(sign(dx), 0) end
     end
     if move == nil or move_count >= 10 then
-        add_ignore(dx,dy)
-        table.insert(failed_move, 20*dx+dy)
+        add_ignore(dx, dy)
+        table.insert(failed_move, 20 * dx + dy)
         return false
     else
         if (abs(dx) > 1 or abs(dy) > 1) and not lair_step_mode
-             and view.feature_at(dx,dy) ~= "closed_door" then
+             and view.feature_at(dx, dy) ~= "closed_door" then
             did_move = true
             if monster_array[dx][dy] or did_move_towards_monster > 0 then
                 local move_x, move_y = vi_to_delta(move)
@@ -7110,7 +7170,7 @@ function plan_continue_tab()
     return move_towards(target_memory_x, target_memory_y)
 end
 
-function add_ignore(dx,dy)
+function add_ignore(dx, dy)
     m = monster_array[dx][dy]
     if not m then
         return
@@ -7123,10 +7183,10 @@ function add_ignore(dx,dy)
     end
 end
 
-function remove_ignore(dx,dy)
+function remove_ignore(dx, dy)
     m = monster_array[dx][dy]
     name = m:name()
-    for i,mname in ipairs(ignore_list) do
+    for i, mname in ipairs(ignore_list) do
         if mname == name then
             table.remove(ignore_list, i)
             crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
@@ -7534,7 +7594,7 @@ local skill_list = {"Fighting", "Short Blades", "Long Blades", "Axes",
 
 function choose_single_skill(sk)
     you.train_skill(sk, 1)
-    for _,sk2 in ipairs(skill_list) do
+    for _, sk2 in ipairs(skill_list) do
         if sk ~= sk2 then
             you.train_skill(sk2, 0)
         end
@@ -7546,11 +7606,11 @@ function skill_value(sk)
         return 0
     end
     if sk == "Dodging" then
-        local str,_ = you.strength()
+        local str, _ = you.strength()
         if str < 1 then
             str = 1
         end
-        local dex,_ = you.dexterity()
+        local dex, _ = you.dexterity()
         local evp_adj = max(armour_evp() - 3, 0)
         local penalty_factor
         if evp_adj >= str then
@@ -7561,13 +7621,14 @@ function skill_value(sk)
         if you.race() == "Tengu" and you.xl() >= 14 then
             penalty_factor = penalty_factor * 1.2 -- flying EV mult
         end
-        return 18 * math.log(1 + dex/18) / (20 + 2 * body_size()) * penalty_factor
+        return 18 * math.log(1 + dex / 18)
+            / (20 + 2 * body_size()) * penalty_factor
     elseif sk == "Armour" then
-        local str,_ = you.strength()
+        local str, _ = you.strength()
         if str < 0 then
             str = 0
         end
-        local val1 = 2/225 * armour_evp()^2 / (3 + str)
+        local val1 = 2 / 225 * armour_evp() ^ 2 / (3 + str)
         local val2 = base_ac()/22
         return val1 + val2
     elseif sk == "Fighting" then
@@ -7599,7 +7660,7 @@ function choose_skills()
     local best_sk
     local best_utility = 0
     local utility
-    for _,sk in ipairs(martial_skills) do
+    for _, sk in ipairs(martial_skills) do
         if you.skill_cost(sk) then
             utility = skill_value(sk) / you.skill_cost(sk)
             if utility > best_utility then
@@ -7643,7 +7704,7 @@ function choose_skills()
     end
     skills2 = {}
     safe_count = 0
-    for _,sk in ipairs(skills) do
+    for _, sk in ipairs(skills) do
         if you.can_train_skill(sk) and you.base_skill(sk) < 27 then
             table.insert(skills2, sk)
             if you.base_skill(sk) < 26.5 then
@@ -7663,7 +7724,7 @@ function choose_skills()
         elseif you.base_skill(mp_skill) < 26.5 then
             table.insert(skills2, mp_skill)
         else
-            for _,sk in ipairs(skill_list) do
+            for _, sk in ipairs(skill_list) do
                 if you.can_train_skill(sk) and you.base_skill(sk) < 26.5 then
                     table.insert(skills2, sk)
                     return skills2
@@ -7677,7 +7738,7 @@ end
 function handle_skills()
     skills = choose_skills()
     choose_single_skill(skills[1])
-    for _,sk in ipairs(skills) do
+    for _, sk in ipairs(skills) do
         you.train_skill(sk, 1)
     end
 end
@@ -7689,9 +7750,9 @@ function choose_stat_gain()
     elseif ap == "light" then
         return "d"
     else
-        local str,_ = you.strength()
-        local dex,_ = you.dexterity()
-        if 3*str < 2*dex then
+        local str, _ = you.strength()
+        local dex, _ = you.dexterity()
+        if 3 * str < 2 * dex then
             return "s"
         else
             return "d"
@@ -7706,7 +7767,7 @@ end
 -------------------------------------------
 -- a few utility functions
 
-function contains_string_in(name,t)
+function contains_string_in(name, t)
     for _, value in ipairs(t) do
         if string.find(name, value) then
             return true
@@ -7748,11 +7809,11 @@ function vi_to_delta(c)
         [0]    = { [-1] = 'k',                        [1] = 'j'},
         [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
     } -- hack
-    local x,y
+    local x, y
     for x = -1, 1 do
         for y = -1, 1 do
-            if supdist(x,y) > 0 and d2v[x][y] == c then
-                return x,y
+            if supdist(x, y) > 0 and d2v[x][y] == c then
+                return x, y
             end
         end
     end
@@ -7806,7 +7867,7 @@ end
 
 function make_endgame_plans()
     endgame_plan_list = split(endgame_plan_options(), ", ")
-    for _,pl in ipairs(endgame_plan_list) do
+    for _, pl in ipairs(endgame_plan_list) do
         if pl == "slime" then
             SLIMY_RUNE = true
         elseif pl == "pan" then
@@ -7854,7 +7915,7 @@ function initialize()
         waypoint_parity = 1
         prev_where = "nowhere"
     end
-    for _,god in ipairs(god_options()) do
+    for _, god in ipairs(god_options()) do
         if god == "the Shining One" or god == "Elyvilon" or god == "Zin" then
             MIGHT_BE_GOOD = true
         end
@@ -7944,7 +8005,7 @@ function first_turn_initialize()
     --if not c_persist.record.mlist then
     --    c_persist.record.mlist = {}
     --end
-    --for _,mname in ipairs(c_persist.mlist) do
+    --for _, mname in ipairs(c_persist.mlist) do
     --    if not c_persist.record.mlist[mname] then
     --        c_persist.record.mlist[mname] = 1
     --    else
@@ -7954,7 +8015,7 @@ function first_turn_initialize()
 
     local god_list = c_persist.next_god_list
     local plan = c_persist.next_endgame_plan
-    for key,_ in pairs(c_persist) do
+    for key, _ in pairs(c_persist) do
         if key ~= "record" then
             c_persist[key] = nil
         end
@@ -8169,7 +8230,7 @@ end
 function ttt()
     for i = -7, 7 do
         for j = -7, 7 do
-            m = monster.get_monster_at(i,j)
+            m = monster.get_monster_at(i, j)
             if m then
                 crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name() .. ", desc = " .. m:desc() .. ".")
             end
@@ -8181,8 +8242,8 @@ function ttt()
     --        (it.subtype() or "none") .. ", slot = " .. slot(it) .. ".")
     --end
     for it in at_feet() do
-        local val1,val2 = equip_value(it)
-        local val3,val4 = equip_value(it, true)
+        local val1, val2 = equip_value(it)
+        local val3, val4 = equip_value(it, true)
         crawl.mpr("name = " .. it.name() .. ", ego = " ..
             (it.ego() or "none") .. it.ego_type .. ", subtype = " ..
             (it.subtype() or "none") .. ", slot = " .. (slot(it) or -1) ..
@@ -8193,16 +8254,16 @@ end
 
 function print_level_map()
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
-    local x,y
+    local dx, dy = travel.waypoint_delta(num)
+    local x, y
     local str
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            if level_map[num][dx+x][dy+y] == nil then
+            if level_map[num][dx + x][dy + y] == nil then
                 str = str .. " "
             else
-                str = str .. level_map[num][dx+x][dy+y]
+                str = str .. level_map[num][dx + x][dy + y]
             end
         end
         say(str)
@@ -8211,8 +8272,8 @@ end
 
 function print_stair_dists()
     local num = waypoint_parity
-    local dx,dy = travel.waypoint_delta(num)
-    local x,y
+    local dx, dy = travel.waypoint_delta(num)
+    local x, y
     local i
     local str
     for i = 1, #stair_dists[num] do
@@ -8286,18 +8347,18 @@ function c_choose_acquirement()
     -- These categories should be in order of preference.
     local wanted = {"weapon", "armour", "jewellery", "gold"}
     local item_ind = {}
-    for _,c in ipairs(wanted) do
+    for _, c in ipairs(wanted) do
         item_ind[c] = 0
     end
 
-    for n,it in ipairs(acq_items) do
+    for n, it in ipairs(acq_items) do
         local class = it.class(true)
         if item_ind[class] ~= nil then
             item_ind[class] = n
         end
     end
 
-    for _,c in ipairs(wanted) do
+    for _, c in ipairs(wanted) do
         local ind = item_ind[c]
         if item_ind[c] > 0 then
             local item = acq_items[ind]
