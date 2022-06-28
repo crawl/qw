@@ -2313,6 +2313,9 @@ function mon_speed_num(m)
     if m:status("slow") then
         num = num - 1
     end
+    if m:name():find("boulder beetle") then
+        num = num + 3
+    end
     if m:name():find("spriggan") or m:name() == "the Enchantress" then
         num = num + 1
     elseif m:name():find("naga") or m:name() == "Vashnia" then
