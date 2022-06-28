@@ -119,6 +119,9 @@ combo = GrBe.handaxe
 # Quit after this number of turns while stuck
 : QUIT_TURNS = 1000
 
+# The version of qw for logging purposes. Either run make-qw-rc.sh to set this
+# automatically, or change this variable to a custom version string.
+: QW_VERSION = "%VERSION%"
 
 #############################
 ### Miscellaneous options ###

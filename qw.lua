@@ -7901,6 +7901,7 @@ function bool_string(x)
 end
 
 function note_qw_data()
+    note("qw: Version: " .. QW_VERSION)
     note("qw: Game counter: " .. c_persist.record.counter)
     note("qw: Always use a shield: " .. bool_string(SHIELD_CRAZY))
     if not util.contains(god_options(), you.god()) then
