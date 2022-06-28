@@ -2356,10 +2356,9 @@ end
 
 function sense_danger(r, moveable)
     local e
-    for _,e in ipairs(enemy_list) do
-        if (moveable and you.see_cell_solid_see(e.x, e.y)
-                or not moveable and you.see_cell_no_trans(e.x, e.y))
-                and supdist(e.x,e.y) <= r then
+    for _, e in ipairs(enemy_list) do
+        if (moveable and you.see_cell_solid_see(e.x, e.y) or not moveable)
+                and supdist(e.x, e.y) <= r then
             if is_candidate_for_attack(e.x, e.y) then
                 return true
             end
@@ -2388,19 +2387,23 @@ function initialize_monster_array()
 end
 
 function update_monster_array()
-    local x,y
+    local x, y
     enemy_list = {}
     --c_persist.mlist = {}
-    for x = -LOS,LOS do
-        for y = -LOS,LOS do
-            monster_array[x][y] = monster.get_monster_at(x, y)
-            if is_candidate_for_attack(x, y) then
-                entry = {}
-                entry.x = x
-                entry.y = y
-                entry.m = monster_array[x][y]
-                table.insert(enemy_list, entry)
-                --table.insert(c_persist.mlist, entry.m:name())
+    for x = -LOS, LOS do
+        for y = -LOS, LOS do
+            if you.see_cell_no_trans(x, y) then
+                monster_array[x][y] = monster.get_monster_at(x, y)
+                if is_candidate_for_attack(x, y) then
+                    entry = {}
+                    entry.x = x
+                    entry.y = y
+                    entry.m = monster_array[x][y]
+                    table.insert(enemy_list, entry)
+                    --table.insert(c_persist.mlist, entry.m:name())
+                end
+            else
+                monster_array[x][y] = nil
             end
         end
     end
@@ -2821,8 +2824,8 @@ end
 function count_drainable()
     local e
     local count = 0
-    for _,e in ipairs(enemy_list) do
-        if you.see_cell_no_trans(e.x,e.y) and e.m:res_draining() == 0 then
+    for _, e in ipairs(enemy_list) do
+        if e.m:res_draining() == 0 then
             count = count + 1
         end
     end
@@ -3440,18 +3443,16 @@ function plan_hydra_destruction()
             or you.xl() >= 20 then
         return false
     end
-    local x,y
-    for x = -5, 5 do
-        for y = -5, 5 do
-            m = monster_array[x][y]
-            if m and string.find(m:desc(), "hydra") then
-                say("INVOKING MAJOR DESTRUCTION")
-                for letter, abil in pairs(you.ability_table()) do
-                    if abil == "Major Destruction" then
-                        magic("a" .. letter .. "r" .. vector_move(x, y) ..
-                            "\r")
-                        return true
-                    end
+
+    local e
+    for _, e in ipairs(enemy_list) do
+        if supdist(e.x, e.y) <= 5 and string.find(e.m:desc(), "hydra") then
+            say("INVOKING MAJOR DESTRUCTION")
+            for letter, abil in pairs(you.ability_table()) do
+                if abil == "Major Destruction" then
+                    magic("a" .. letter .. "r" .. vector_move(e.x, e.y) ..
+                        "\r")
+                    return true
                 end
             end
         end
@@ -4986,16 +4987,13 @@ function plan_swap_weapon()
             or not items.equipped_at("Weapon") then
         return false
     end
-    local sit
-    local x,y
+    local sit, e
     if you.xl() < 18 then
-        for x = -3, 3 do
-            for y = -3, 3 do
-                m = monster_array[x][y]
-                if m and string.find(m:desc(), "hydra")
-                        and will_tab(0, 0, x, y, tabbable_square) then
-                    sit = "hydra"
-                end
+        for _, e in ipairs(enemy_list) do
+            if supdist(e.x, e.y) <= 3
+                    and string.find(e.m:desc(), "hydra")
+                    and will_tab(0, 0, e.x, e.y, tabbable_square) then
+                sit = "hydra"
             end
         end
     end
