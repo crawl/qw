@@ -734,10 +734,8 @@ function armour_value(it, cur, it2)
             if you.god() == "Cheibriados" then
                 return -1, -1
             end
-        elseif ego == "flying" and not intrinsic_flight() then
-            if not intrinsic_flight() then
-                value = value + 200
-            end
+        elseif ego == "flying" and not intrinsic_amphibious_or_flight() then
+            value = value + 200
         elseif ego == "ponderousness" or ego == "harm" then
             return -1, -1
         elseif ego == "repulsion" then
@@ -1822,10 +1820,13 @@ function intrinsic_sinv()
     return false
 end
 
-function intrinsic_flight() -- or swimming
+function intrinsic_amphibious_or_flight()
     local sp = you.race()
-    if sp == "Gargoyle" or sp == "Tengu" or sp == "Black Draconian" or
-         sp == "Merfolk" or sp == "Octopode" or sp == "Barachi" then
+    if (sp == "Gargoyle" or sp == "Black Draconian") and you.xl() >= 14
+            or sp == "Tengu" and you.xl() >= 5
+            or sp == "Merfolk"
+            or sp == "Octopode"
+            or sp == "Barachi" then
         return true
     end
     return false
@@ -1833,9 +1834,12 @@ end
 
 function intrinsic_fumble()
     local sp = you.race()
-    if sp == "Merfolk" or sp == "Octopode" or sp == "Grey Draconian" or
-         sp == "Palentonga" or sp == "Naga" or sp == "Troll" or sp == "Ogre"
-         or sp == "Barachi" then
+    if intrinsic_amphibious_or_flight()
+            or sp == "Grey Draconian"
+            or sp == "Palentonga"
+            or sp == "Naga"
+            or sp == "Troll"
+            or sp == "Ogre" then
         return false
     end
     return true
@@ -3766,7 +3770,6 @@ function assess_square(x, y)
     if not a.can_move then
         return a
     end
-    cloud = view.cloud_at(x, y)
     -- nonadjacent monsters who might be able to attack you
     -- (ranged/reaching/fast)
     a.ranged = count_ranged(x, y, LOS)
@@ -3787,16 +3790,20 @@ function assess_square(x, y)
     end
     -- distance to nearest enemy
     a.enemy_distance = distance_to_enemy(x, y)
-    -- will we fumble if we try to attack from this square?
-    a.fumble = (not you.flying() and view.feature_at(x, y) == "shallow_water"
-                and intrinsic_fumble() and not (you.god() == "Beogh"
-                and you.piety_rank() >= 5))
-    -- will we be slow if we move into this square?
-    a.slow = (not you.flying() and view.feature_at(x, y) == "shallow_water"
-              and you.race() ~= "Merfolk" and you.race() ~= "Octopode"
-              and you.race() ~= "Barachi"
-              and not (you.god() == "Beogh" and you.piety_rank() >= 5))
-    -- is the square safe to step in? (checks traps & clouds)
+
+    -- Will we fumble if we try to attack from this square?
+    a.fumble = not you.flying()
+        and view.feature_at(x, y) == "shallow_water"
+        and intrinsic_fumble()
+        and not (you.god() == "Beogh" and you.piety_rank() >= 5)
+
+    -- Will we be slow if we move into this square?
+    a.slow = not you.flying()
+        and view.feature_at(x, y) == "shallow_water"
+        and not intrinsic_amphibious_or_flight()
+        and not (you.god() == "Beogh" and you.piety_rank() >= 5)
+
+    -- Is the square safe to step in? (checks traps & clouds)
     a.safe = view.is_safe_square(x, y)
     cloud = view.cloud_at(x, y)
 
@@ -6180,18 +6187,6 @@ function plan_new_travel()
     return plan_continue_travel()
 end
 
-function plan_fly()
-    if you.xl() >= 14 and intrinsic_flight() and not you.flying() then
-        if cmp() >= 3 and not you.rooted() then
-            if use_ability("Fly") then
-                say("FLYING.")
-                return true
-            end
-        end
-    end
-    return false
-end
-
 local did_ancestor_identity = false
 function plan_ancestor_identity()
     if you.god() ~= "Hepliaklqana" then
@@ -7374,7 +7369,6 @@ plan_handle_acquirement_result = cascade {
 
 
 plan_pre_explore = cascade {
-    {plan_fly, "fly"},
     {plan_ancestor_life, "ancestor_life"},
     {plan_sacrifice, "sacrifice"},
     {plan_handle_acquirement_result, "handle_acquirement_result"},
@@ -7554,7 +7548,6 @@ plan_orbrun_move = cascade {
     {plan_cure_poison, "cure_poison"},
     {plan_orbrun_rest, "orbrun_rest"},
     {plan_go_up, "go_up"},
-    {plan_fly, "fly"},
     {plan_use_good_consumables, "use_good_consumables"},
     {plan_find_upstairs, "try_find_upstairs"},
     {plan_disturbance_random_step, "disturbance_random_step"},
