@@ -2768,51 +2768,12 @@ function count_ranged(cx, cy, r)
     return i
 end
 
-function count_longranged(cx, cy, r)
-    local e
-    local i = 0
-    for _, e in ipairs(enemy_list) do
-        local dist = supdist(cx - e.x, cy - e.y)
-        if dist >= 4
-                and dist <= r
-                and is_ranged(e.m)
-                and view.cell_see_cell(cx, cy, e.x, e.y)
-                and not (e.m:desc():find("wandering")
-                    or e.m:desc():find("sleeping")
-                    or e.m:desc():find("dormant")
-                    or e.m:name() == "electric eel"
-                    or e.m:name() == "lava snake"
-                    or e.m:is_stationary()
-                    or e.m:desc():find("stupefied"))
-                and will_tab(e.x, e.y, 0, 0, mons_tabbable_square) then
-            i = i + 1
-        end
-    end
-    return i
-end
-
 function count_shortranged(cx, cy, r)
     local e
     local i = 0
     for _, e in ipairs(enemy_list) do
         if supdist(cx - e.x, cy - e.y) <= r and is_ranged(e.m) then
             i = i + 1
-        end
-    end
-    return i
-end
-
-function count_unalert(cx, cy, r)
-    local e
-    local i = 0
-    for _, e in ipairs(enemy_list) do
-        local dist = supdist(cx - e.x, cy - e.y)
-        if dist <= r and dist > 1 and view.cell_see_cell(cx, cy, e.x, e.y) then
-            if e.m:desc():find("wandering") and not e.m:desc():find("mushroom")
-                    or e.m:desc():find("sleeping")
-                    or e.m:desc():find("dormant") then
-                i = i + 1
-            end
         end
     end
     return i
@@ -2866,20 +2827,81 @@ function count_nearby(cx, cy, r)
     return i
 end
 
-function count_slow_nearby(cx, cy, r)
+function mons_liquid_bound(m)
+    return m:name() == "electric eel"
+        or m:name() == "kraken"
+        or m:name() == "elemental wellspring"
+        or m:name() == "lava snake"
+end
+
+function assess_square_monsters(a, cx, cy)
+    local best_dist = 10
     local e
-    local i = 0
+
+    a.enemy_distance = 0
+    a.followers_to_land = false
+    a.adjacent = 0
+    a.slow_adjacent = 0
+    a.ranged = 0
+    a.unalert = 0
+    a.longranged = 0
     for _, e in ipairs(enemy_list) do
-        if supdist(cx - e.x, cy - e.y) <= r
-                and supdist(x, y) > 0
-                and m
-                and mon_speed_num(m) < player_speed_num()
-                and not is_ranged(m)
-                and m:reach_range() < 2 then
-            i = i + 1
+        local dist = supdist(cx - e.x, cy - e.y)
+        local see_cell = view.cell_see_cell(cx, cy, e.x, e.y)
+        local ranged = is_ranged(e.m)
+        local liquid_bound = mons_liquid_bound(e.m, true)
+
+        if dist < best_dist then
+            best_dist = dist
         end
+
+        if dist == 1 then
+            a.adjacent = a.adjacent + 1
+
+            if not liquid_bound and not ranged and e.m:reach_range() < 2 then
+                a.followers_to_land = true
+            end
+
+            if have_reaching()
+                    and not ranged
+                    and e.m:reach_range() < 2
+                    and mon_speed_num(e.m) < player_speed_num() then
+                a.slow_adjacent = a.slow_adjacent + 1
+            end
+        end
+
+        if dist > 1
+                and see_cell
+                and (dist == 2 and (is_fast(e.m) or e.m:reach_range() >= 2)
+                    or ranged) then
+            a.ranged = a.ranged + 1
+        end
+
+        if dist > 1
+                and see_cell
+                and (e.m:desc():find("wandering")
+                        and not e.m:desc():find("mushroom")
+                    or e.m:desc():find("sleeping")
+                    or e.m:desc():find("dormant")) then
+            a.unalert = a.unalert + 1
+        end
+
+        if dist >= 4
+                and see_cell
+                and ranged
+                and not (e.m:desc():find("wandering")
+                    or e.m:desc():find("sleeping")
+                    or e.m:desc():find("dormant")
+                    or e.m:desc():find("stupefied")
+                    or liquid_bound
+                    or e.m:is_stationary())
+                and will_tab(e.x, e.y, 0, 0, mons_tabbable_square) then
+            a.longranged = a.longranged + 1
+        end
+
     end
-    return i
+
+    a.enemy_distance = best_dist
 end
 
 function distance_to_enemy(cx, cy)
@@ -3770,26 +3792,12 @@ function assess_square(x, y)
     if not a.can_move then
         return a
     end
-    -- nonadjacent monsters who might be able to attack you
-    -- (ranged/reaching/fast)
-    a.ranged = count_ranged(x, y, LOS)
-    -- alert ranged monsters at distance >= 4
-    a.longranged = count_longranged(x, y, LOS)
-    -- adjacent monsters
-    a.adjacent = count_nearby(x, y, 1)
-    -- wandering or sleeping monsters
-    a.unalert = count_unalert(x, y, LOS)
-    -- ranged monsters at distance <= 5,  not necessarily visible
-    a.shortranged = count_shortranged(x, y, 5)
 
-    -- corners - avoid these if possible
+    -- Count various classes of monsters from the enemy list.
+    assess_square_monsters(a, x, y)
+
+    -- Avoid corners if possible.
     a.cornerish = is_cornerish(x, y)
-    if have_reaching() then
-        -- slow adjacent nonranged monsters,  for kiting
-        a.slow_adjacent = count_slow_nearby(x, y, 1)
-    end
-    -- distance to nearest enemy
-    a.enemy_distance = distance_to_enemy(x, y)
 
     -- Will we fumble if we try to attack from this square?
     a.fumble = not you.flying()
@@ -3849,10 +3857,16 @@ function step_reason(a1, a2)
     elseif not a1.cloud_safe then
         return "cloud"
     elseif a1.fumble then
-        if a2.ranged > a1.ranged and a2.enemy_distance > a1.enemy_distance then
-            return false
-        else
+        -- We require some close threats that try to say adjacent to us before
+        -- we'll try to move out of water. We also require that we are no worse
+        -- in at least one of ranged threats or enemy distance at the new
+        -- position.
+        if a1.followers_to_land
+                and (a2.ranged <= a1.ranged
+                    or a2.enemy_distance <= a1.enemy_distance) then
             return "water"
+        else
+            return false
         end
     elseif have_reaching() and a1.slow_adjacent > 0 and a2.adjacent == 0
                  and a2.ranged == 0 then
