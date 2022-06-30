@@ -3037,14 +3037,14 @@ function have_item(cls, name)
 end
 
 function best_missile()
-    local ratings = {"boomerang", "javelin", "large rock"}
+    local missiles = {"boomerang", "javelin", "large rock"}
     local best_rating = 0
-    local best_item = it
-    local i, n
+    local best_item = nil
+    local it, i, name
     for it in inventory() do
         local rating = 0
         if it.class(true) == "missile" then
-            for i, name in ipairs(ratings) do
+            for i, name in ipairs(missiles) do
                 if it.name():find(name) then
                     rating = i
                     if it.ego() then
