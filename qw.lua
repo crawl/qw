@@ -7641,7 +7641,7 @@ function skill_value(sk)
         else
             penalty_factor = 1 - evp_adj / (2 * str)
         end
-        if you.race() == "Tengu" and you.xl() >= 14 then
+        if you.race() == "Tengu" and intrinsic_amphibious_or_flight() then
             penalty_factor = penalty_factor * 1.2 -- flying EV mult
         end
         return 18 * math.log(1 + dex / 18)
