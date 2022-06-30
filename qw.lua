@@ -798,30 +798,36 @@ function armour_value(it, cur, it2)
 end
 
 function weapon_value(it, cur, it2, sit)
-    local hydra_swap = (sit == "hydra")
-    local extended = (sit == "extended")
+    if it.class(true) ~= "weapon" then
+        return -1, -1
+    end
+
+    local hydra_swap = sit == "hydra"
+    local extended = sit == "extended"
     local tso = you.god() == "the Shining One"
         or extended and TSO_CONVERSION
         or you.god() == "Elyvilon"
         or you.god() == "Zin"
         or you.god() == "No God" and MIGHT_BE_GOOD
-    if it.class(true) ~= "weapon" then
-        return -1, -1
-    end
     local name = it.name()
     local value = 1000
-    if it.weap_skill ~= wskill() then
-        weap = items.equipped_at("Weapon")
-        if weap and weap.weap_skill == wskill() or wskill() == "Unarmed Combat"
-                or it.weap_skill == "Crossbows" or it.weap_skill == "Bows"
-                or it.weap_skill == "Slings" then
-            if not (hydra_swap and (it.weap_skill == "Maces & Flails"
-                        and wskill() == "Axes"
-                    or it.weap_skill == "Short Blades"
-                        and wskill() == "Long Blades")) then
-                return -1, -1
-            end
-        end
+    local weap = items.equipped_at("Weapon")
+    -- The evaluating weapon doesn't match our desired skill...
+    if it.weap_skill ~= wskill()
+            -- ...and our current weapon already matches our desired skill or
+            -- we use UC or the evaluating weapon is not a melee weapon
+            and (weap and weap.weap_skill == wskill()
+                or wskill() == "Unarmed Combat"
+                or it.weap_skill == "Ranged Weapons")
+            -- ...and we either don't need a hydra swap weapon or the
+            -- evaluating weapon isn't a hydra swap weapon for our desired
+            -- skill.
+            and (not hydra_swap
+                or not (it.weap_skill == "Maces & Flails"
+                            and wskill() == "Axes"
+                        or it.weap_skill == "Short Blades"
+                            and wskill() == "Long Blades")) then
+        return -1, -1
     end
     if it.hands == 2 and want_buckler() then
         return -1, -1
@@ -1217,35 +1223,36 @@ function should_drop(it)
     return item_is_dominated(it)
 end
 
--- assumes old_it is equipped
+-- Assumes old_it is equipped.
 function should_upgrade(it, old_it, sit)
     if not old_it then
         return should_equip(it, sit)
     end
+
     if not it.fully_identified and not should_drop(it) then
         if equip_slot(it) == "Weapon" and it.weap_skill ~= wskill() then
             return true
         end
-        return (old_it.subtype() ~= "amulet of faith")
+
+        return old_it.subtype() ~= "amulet of faith"
     end
-    return (equip_value(it, true, old_it, sit) > equip_value(old_it, true, old_it, sit))
+
+    return equip_value(it, true, old_it, sit)
+        > equip_value(old_it, true, old_it, sit)
 end
 
--- assumes it is not equipped and an empty slot is available
+-- Assumes it is not equipped and an empty slot is available.
 function should_equip(it, sit)
-    return (equip_value(it, true, nil, sit) > 0)
+    return equip_value(it, true, nil, sit) > 0
 end
 
--- assumes it is equipped
+-- Assumes it is equipped.
 function should_remove(it)
-    return (equip_value(it, true, it) <= 0)
+    return equip_value(it, true, it) <= 0
 end
 
 function want_missile(it)
-    st = it.subtype()
-    if not no_spells and st == "stone" and starting_spell() == "Sandblast" then
-        return true
-    end
+    local st = it.subtype()
     return (st == "large rock"
         and (you.race() == "Troll" or you.race() == "Ogre")
             or st == "javelin" and you.xl() < 21
@@ -3226,7 +3233,7 @@ function should_rest()
         return false
     end
     if you.turns() < hiding_turn_count + 10 then
-        say("Waiting for ranged monster.", true)
+        dsay("Waiting for ranged monster.")
         return true
     end
     return reason_to_rest(99.9)
@@ -3293,7 +3300,7 @@ function should_ally_rest()
         for y = -3, 3 do
             m = monster_array[x][y]
             if m and m:attitude() == ATT_FRIENDLY and m:damage_level() > 0 then
-                say("Waiting for " .. m:name() .. " to heal.", true)
+                dsay("Waiting for " .. m:name() .. " to heal.")
                 return true
             end
         end
@@ -3999,7 +4006,7 @@ function plan_coward_step()
         if tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").", true)
+        dsay("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
         magic(tactical_step .. "Y")
         return true
     end
@@ -4008,7 +4015,7 @@ end
 
 function plan_flee_step()
     if tactical_reason == "fleeing" then
-        say("FLEEEEING.", true)
+        dsay("FLEEEEING.")
         set_stair_target(tactical_step)
         last_flee_turn = you.turns()
         magic(tactical_step .. "Y")
@@ -6526,7 +6533,7 @@ function plan_continue_flee()
                  and not view.withheld(x, y) then
                 val = stair_dists[num][target_stair][dx + x][dy + y]
                 if val and val < stair_dists[num][target_stair][dx][dy] then
-                    say("STILL FLEEEEING.", true)
+                    dsay("STILL FLEEEEING.")
                     magic(delta_to_vi(x, y) .. "YY")
                     return true
                 end
@@ -6561,7 +6568,7 @@ end
 
 function plan_unshaft()
     if unshafting() and where ~= "Temple" then
-        say("Trying to unshaft to " .. where_shafted_from .. ".", true)
+        dsay("Trying to unshaft to " .. where_shafted_from .. ".")
         expect_new_location = true
         magic("G<")
         return true
@@ -7188,7 +7195,7 @@ function add_ignore(dx, dy)
     if not util.contains(ignore_list, name) then
         table.insert(ignore_list, name)
         crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
-        say("Ignoring " .. name .. ".", true)
+        dsay("Ignoring " .. name .. ".")
     end
 end
 
@@ -7199,7 +7206,7 @@ function remove_ignore(dx, dy)
         if mname == name then
             table.remove(ignore_list, i)
             crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            say("Unignoring " .. name .. ".", true)
+            dsay("Unignoring " .. name .. ".")
             return
         end
     end
@@ -7213,7 +7220,7 @@ function clear_ignores()
         for i = 1, size do
             mname = table.remove(ignore_list)
             crawl.setopt("runrest_ignore_monster -= " .. mname .. ":1")
-            say("Unignoring " .. mname .. ".", true)
+            dsay("Unignoring " .. mname .. ".")
         end
     end
 end
@@ -7270,9 +7277,13 @@ function note(x)
 end
 
 function say(x, debug)
-    if not debug or DEBUG_MODE then
+    crawl.mpr(you.turns() .. " ||| " .. x)
+    note(x)
+end
+
+function dsay(x)
+    if DEBUG_MODE then
         crawl.mpr(you.turns() .. " ||| " .. x)
-        note(x)
     end
 end
 
@@ -7340,8 +7351,6 @@ function cascade(plans)
             plan = plandata[1]
             if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
                 result = plan()
-                say("Executed " .. plandata[2] ..  ", result: " ..
-                    tostring(result), true)
                 if not automatic then
                     return true
                 end
@@ -7609,9 +7618,13 @@ function choose_single_skill(sk)
 end
 
 function skill_value(sk)
-    if you.god() == "Okawaru" and sk ~= "Fighting" and sk ~= "Invocations" and you.base_skill(sk) >= 22 then
+    if you.god() == "Okawaru"
+            and you.base_skill(sk) >= 22
+            and sk ~= "Fighting"
+            and sk ~= "Invocations" then
         return 0
     end
+
     if sk == "Dodging" then
         local str, _ = you.strength()
         if str < 1 then
@@ -7636,7 +7649,7 @@ function skill_value(sk)
             str = 0
         end
         local val1 = 2 / 225 * armour_evp() ^ 2 / (3 + str)
-        local val2 = base_ac()/22
+        local val2 = base_ac() / 22
         return val1 + val2
     elseif sk == "Fighting" then
         return 0.75
@@ -7645,7 +7658,7 @@ function skill_value(sk)
         if not shield then
             return 0
         end
-        return (at_target_shield_skill() and 0.2 or 0.75)
+        return at_target_shield_skill() and 0.2 or 0.75
     elseif sk == "Invocations" then
         if you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
@@ -7655,8 +7668,23 @@ function skill_value(sk)
             return 0
         end
     elseif sk == wskill() then
-        return (at_min_delay() and 0.5 or 1.5)
+        return (at_min_delay() and 0.20 or 1.5)
     end
+end
+
+function god_wants_invocations()
+    return you.god() == "Makhleb"
+        or you.god() == "Cheibriados"
+        or you.god() == "Okawaru"
+        or you.god() == "Yredelemnul"
+        or you.god() == "Beogh"
+        or you.god() == "Qazlal"
+        or you.god() == "the Shining One"
+        or you.god() == "Lugonu"
+        or you.god() == "Hepliaklqana"
+        or you.god() == "Uskayaw"
+        or you.god() == "Elyvilon"
+        or you.god() == "Zin"
 end
 
 function choose_skills()
@@ -7677,29 +7705,41 @@ function choose_skills()
         end
     end
     if best_utility > 0 then
+        dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility)
         table.insert(skills, best_sk)
     end
 
     -- Choose one MP skill to train.
     mp_skill = "Evocations"
-    if you.god() == "Makhleb" or you.god() == "Cheibriados" or you.god() == "Okawaru" or you.god() == "Yredelemnul" or you.god() == "Beogh" or you.god() == "Qazlal" or you.god() == "the Shining One" or you.god() == "Lugonu" or you.god() == "Hepliaklqana" or you.god() == "Uskayaw" or you.god() == "Elyvilon" or you.god() == "Zin" then
+    if god_wants_invocations() then
         mp_skill = "Invocations"
     elseif you.god() == "Ru" or you.god() == "Xom" then
         mp_skill = "Spellcasting"
     end
     mp_skill_level = you.base_skill(mp_skill)
     bmp = you.base_mp()
-    if you.god() == "Makhleb" and you.piety_rank() >= 2 and mp_skill_level < 15 then
+    if you.god() == "Makhleb"
+            and you.piety_rank() >= 2
+            and mp_skill_level < 15 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "the Shining One" and you.piety_rank() >= 5 and mp_skill_level < 12 then
+    elseif you.god() == "the Shining One"
+            and you.piety_rank() >= 5
+            and mp_skill_level < 12 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "Okawaru" and you.piety_rank() >= 1 and mp_skill_level < 4 then
+    elseif you.god() == "Okawaru"
+            and you.piety_rank() >= 1
+            and mp_skill_level < 4 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "Okawaru" and you.piety_rank() >= 4 and mp_skill_level < 10 then
+    elseif you.god() == "Okawaru"
+            and you.piety_rank() >= 4
+            and mp_skill_level < 10 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "Cheibriados" and you.piety_rank() >= 5 and mp_skill_level < 8 then
+    elseif you.god() == "Cheibriados"
+            and you.piety_rank() >= 5
+            and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
-    elseif you.god() == "Yredelemnul" and you.piety_rank() >= 4
+    elseif you.god() == "Yredelemnul"
+            and you.piety_rank() >= 4
             and mp_skill_level < 8 then
         table.insert(skills, mp_skill)
     elseif you.race() == "Vine Stalker"
@@ -7709,6 +7749,7 @@ function choose_skills()
                  or you.base_skill(wskill()) >= 3 * mp_skill_level) then
         table.insert(skills, mp_skill)
     end
+
     skills2 = {}
     safe_count = 0
     for _, sk in ipairs(skills) do
@@ -7719,11 +7760,6 @@ function choose_skills()
             end
         end
     end
-    --if you.god() == "Xom" and safe_count == 1 and util.contains(skills2, weapon_skill) and you.base_skill(weapon_skill) < 26.5 and you.base_skill("Fighting") < 26.5 then
-        -- Just in case Xom unwields our weapon in early game before we abandon,
-        -- though currently we abandon Xom on T0.
-        --table.insert(skills2, "Fighting")
-    --end
     -- Try to avoid getting stuck in the skill screen.
     if safe_count == 0 then
         if you.base_skill("Fighting") < 26.5 then
