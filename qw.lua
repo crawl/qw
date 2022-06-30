@@ -1254,9 +1254,9 @@ end
 function want_missile(it)
     local st = it.subtype()
     return (st == "large rock"
-        and (you.race() == "Troll" or you.race() == "Ogre")
-            or st == "javelin" and you.xl() < 21
-            or st == "boomerang" and you.xl() < 15)
+                and (you.race() == "Troll" or you.race() == "Ogre")
+            or st == "boomerang" and you.xl() < 15
+            or st == "javelin")
 end
 
 function autopickup(it, name)
@@ -5011,8 +5011,9 @@ function base_mutation(str)
 end
 
 function is_melee_weapon(it)
-    return (it and it.class(true) == "weapon" and it.weap_skill ~= "Bows"
-                    and it.weap_skill ~= "Crossbows" and it.weap_skill ~= "Slings")
+    return it
+        and it.class(true) == "weapon"
+        and it.weap_skill ~= "Ranged Weapons"
 end
 
 function plan_wield_weapon()
@@ -7601,12 +7602,14 @@ plan_abyss_move = cascade {
 
 ----------------------------------------
 -- skill selection
-local skill_list = {"Fighting", "Short Blades", "Long Blades", "Axes",
-    "Maces & Flails", "Polearms", "Staves", "Unarmed Combat", "Bows",
-    "Crossbows", "Throwing", "Slings", "Armour", "Dodging", "Shields",
-    "Invocations", "Evocations", "Stealth", "Spellcasting", "Conjurations",
-    "Hexes", "Summonings", "Necromancy", "Translocations", "Transmutations",
-    "Fire Magic", "Ice Magic", "Air Magic", "Earth Magic", "Poison Magic"}
+local skill_list = {
+    "Fighting", "Short Blades", "Long Blades", "Axes", "Maces & Flails",
+    "Polearms", "Staves", "Unarmed Combat", "Ranged Weapons", "Throwing",
+    "Armour", "Dodging", "Shields", "Invocations", "Evocations", "Stealth",
+    "Spellcasting", "Conjurations", "Hexes", "Summonings",
+    "Necromancy", "Translocations", "Transmutations", "Fire Magic",
+    "Ice Magic", "Air Magic", "Earth Magic", "Poison Magic"
+} -- hack
 
 function choose_single_skill(sk)
     you.train_skill(sk, 1)
