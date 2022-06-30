@@ -3036,6 +3036,31 @@ function have_item(cls, name)
     end
 end
 
+function best_missile()
+    local ratings = {"boomerang", "javelin", "large rock"}
+    local best_rating = 0
+    local best_item = it
+    local i, n
+    for it in inventory() do
+        local rating = 0
+        if it.class(true) == "missile" then
+            for i, name in ipairs(ratings) do
+                if it.name():find(name) then
+                    rating = i
+                    if it.ego() then
+                        rating = rating + 0.5
+                    end
+                    if rating > best_rating then
+                        best_rating = rating
+                        best_item = it
+                    end
+                end
+            end
+        end
+    end
+    return best_rating, best_item
+end
+
 function find_wand(name)
     for it in inventory() do
         if it.class(true) == "wand" and it.name():find(name)
@@ -4539,11 +4564,20 @@ function plan_wait_throw()
     if not is_waiting then
         return false
     end
+
     if distance_to_enemy(0, 0) < 3 then
         return false
     end
-    if items.fired_item() then
-        magic("Q-ff") -- reset quiver before throwing
+
+    local missile
+    _, missile = best_missile()
+    if missile then
+        local cur_missile = items.fired_item()
+        if cur_missile and missile.name() == cur_missile.name() then
+            magic("ff")
+        else
+            magic("Q*" .. letter(missile) .. "ff")
+        end
         return true
     else
         return false
@@ -7662,6 +7696,10 @@ function skill_value(sk)
             return 0
         end
         return at_target_shield_skill() and 0.2 or 0.75
+    elseif sk == "Throwing" then
+        local rating
+        rating, _ = best_missile()
+        return 0.3 * rating
     elseif sk == "Invocations" then
         if you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
@@ -7691,10 +7729,13 @@ function god_wants_invocations()
 end
 
 function choose_skills()
-    skills = {}
+    local skills = {}
     -- Choose one martial skill to train.
-    martial_skills = { wskill(), "Fighting", "Shields", "Armour", "Dodging",
-    "Invocations"}
+    local martial_skills = {
+        wskill(), "Fighting", "Shields", "Armour", "Dodging", "Invocations",
+        "Throwing"
+    } --hack
+
     local best_sk
     local best_utility = 0
     local utility
