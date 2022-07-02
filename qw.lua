@@ -3120,9 +3120,7 @@ end
 
 function find_wand(name)
     for it in inventory() do
-        if it.class(true) == "wand" and it.name():find(name)
-                and not it.name():find("empty")
-                and (it.plus == nil or it.plus > 0) then
+        if it.class(true) == "wand" and it.name():find(name) then
             return items.index_to_letter(it.slot)
         end
     end
@@ -4957,27 +4955,6 @@ function plan_use_id_scrolls()
     local oldslots = { }
     local newslots = {[0] = 'B', [1] = 'N', [2] = 'Y'} -- harmless keys
     local count = 0
-    for it in inventory() do
-        if it.class(true) == "wand" and not it.fully_identified and
-             (it.name():find("empty") or
-                it.name():find("digging")
-                and (where:find("Depths") or where:find("Zot"))) then
-            oldname = it.name()
-            if read2(id_scroll, letter(it)) then
-                say("IDENTIFYING " .. oldname)
-                return true
-            end
-        end
-    end
-    for it in inventory() do
-        if it.class(true) == "jewellery" and not it.fully_identified then
-            oldname = it.name()
-            if read2(id_scroll, letter(it)) then
-                say("IDENTIFYING " .. oldname)
-                return true
-            end
-        end
-    end
     if id_scroll.quantity > 1 then
         for it in inventory() do
             if it.class(true) == "potion" and not it.fully_identified then
