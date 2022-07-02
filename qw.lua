@@ -1264,10 +1264,15 @@ end
 
 function want_missile(it)
     local st = it.subtype()
-    return (st == "large rock"
+    if st == "javelin"
+            or st == "large rock"
                 and (you.race() == "Troll" or you.race() == "Ogre")
-            or st == "boomerang" and you.xl() < 15
-            or st == "javelin")
+            or st == "boomerang"
+                and count_item("missile", "javelin") < 20 then
+        return true
+    end
+
+    return false
 end
 
 function autopickup(it, name)
@@ -3074,6 +3079,16 @@ function have_two_hander()
         end
     end
     return false
+end
+
+function count_item(cls, name)
+    local count = 0
+    for it in inventory() do
+        if it.class(true) == cls and it.name():find(name) then
+            count = count + it.quantity
+        end
+    end
+    return count
 end
 
 function find_item(cls, name)
