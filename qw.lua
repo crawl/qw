@@ -673,16 +673,17 @@ function update_game_status()
 end
 
 function zot_soon()
-    return (game_status == "zot")
+    return game_status == "zot"
 end
 
 function slime_soon()
-    return (game_status == "slime")
+    return game_status == "slime"
 end
 
 function in_extended()
-    return (game_status == "pan" or game_status == "hells"
-        or game_status == "tomb")
+    return game_status == "pan"
+        or game_status == "hells"
+        or game_status == "tomb"
 end
 
 -- A list of armour slots, this is used to normalize names for them and also to
@@ -1100,6 +1101,7 @@ function want_wand(it)
     if you.mutation("inability to use devices") > 0 then
         return false
     end
+
     only_wand = true
     for it2 in inventory() do
         if only_wand and it2.class(true) == "wand"
@@ -1135,12 +1137,11 @@ function want_potion(it)
     if sub == nil then
         return true
     end
-    if sub ~= "curing" and sub ~= "heal wounds" and sub ~= "haste"
-         and sub ~= "resistance" and sub ~= "experience" and sub ~= "might"
-         and sub ~= "mutation" and sub ~= "cancellation" then
-        return false
-    end
-    return true
+
+    wanted = { "curing", "heal wounds", "haste", "resistance",
+        "experience", "might", "mutation", "cancellation" }
+
+    return util.contains(wanted, sub)
 end
 
 function want_scroll(it)
@@ -1148,13 +1149,16 @@ function want_scroll(it)
     if sub == nil then
         return true
     end
-    if sub ~= "identify" and sub ~= "teleportation" and sub ~= "enchant weapon"
-         and sub ~= "enchant armour" and sub ~= "acquirement"
-         and sub ~= "brand weapon"
-         and (not WILL_ZIG or sub ~= "fog" and sub ~= "blinking") then
-        return false
+
+    wanted = { "acquirement", "brand weapon", "enchant armour",
+        "enchant weapon", "identify", "teleportation"}
+
+    if WILL_ZIG then
+        table.insert(wanted, "blinking")
+        table.insert(wanted, "fog")
     end
-    return true
+
+    return util.contains(wanted, sub)
 end
 
 -- This doesn't handle rings correctly at the moment, but right now we are
@@ -1333,7 +1337,7 @@ local portal_data = {
 -- functions for use in the monster lists below
 function in_desc(lev, str)
     return function (m)
-        return (you.xl() < lev and m:desc():find(str))
+        return you.xl() < lev and m:desc():find(str)
     end
 end
 
@@ -1418,25 +1422,25 @@ local scary_monsters = {
     ["Natasha"] = 5,
     ["Robin"] = 5,
 
-    ["Ijyb"] = 7,
     ["ice beast"] = check_resist(7, "rC", 1),
     ["orc wizard"] = 7,
+    ["gnoll sergeant"] = 7,
     ["Grinder"] = 7,
+    ["Ijyb"] = 7,
     ["Dowan"] = 7,
     ["Duvessa"] = 7,
     ["Menkaure"] = 7,
     ["Edmund"] = 7,
     ["Blork the orc"] = 7,
     ["Eustachio"] = 7,
-    ["gnoll sergeant"] = 7,
 
+    ["orc priest"] = 10,
+    ["ogre"] = 10,
+    ["decayed bog body"] = 10,
     ["Prince Ribbit"] = 10,
     ["Pikel"] = 10,
     ["Crazy Yiuf"] = 10,
     ["Sigmund"] = 10,
-    ["orc priest"] = 10,
-    ["ogre"] = 10,
-    ["decayed bog body"] = 10,
 
     ["orc warrior"] = 12,
     ["two-headed ogre"] = 12,
@@ -1444,19 +1448,19 @@ local scary_monsters = {
     ["cyclops"] = 12,
     ["cane toad"] = 12,
     ["black mamba"] = 12,
-    ["Snorg"] = 12,
-    ["Harold"] = 12,
-    ["Gastronok"] = 12,
     ["snapping turtle"] = 12,
-    ["Urug"] = 12,
-    ["Grum"] = 12,
-    ["Amaemon"] = 12,
     ["electric eel"] = 12,
     ["Nergalle"] = 12,
     ["jelly"] = 12,
     ["guardian mummy"] = 12,
-    ["Psyche"] = 12,
     ["oklob sapling"] = 12,
+    ["Snorg"] = 12,
+    ["Harold"] = 12,
+    ["Gastronok"] = 12,
+    ["Psyche"] = 12,
+    ["Urug"] = 12,
+    ["Grum"] = 12,
+    ["Amaemon"] = 12,
 
     ["komodo dragon"] = 14,
     ["lindwurm"] = 14,
@@ -1466,12 +1470,13 @@ local scary_monsters = {
 
     ["torpor snail"] = 15,
     ["death yak"] = 15,
-    ["Erica"] = 15,
     ["catoblepas"] = 15,
     ["orc knight"] = 15,
     ["swamp worm"] = 15,
     ["boulder beetle"] = 15,
     ["wolf spider"] = 15,
+    ["Erica"] = 15,
+    ["Erolcha"] = 15,
 
     ["fire dragon"] = 17,
     ["ice dragon"] = 17,
@@ -1559,12 +1564,36 @@ local scary_monsters = {
     ["draconian annihilator"] = 100,
     ["draconian scorcher"] = 100,
     ["draconian stormcaller"] = 100,
+    ["titanic slime creature"] = 100,
+    ["enormous slime creature"] = 100,
+    ["titan"] = 100,
+    ["juggernaut"] = 100,
+    ["caustic shrike"] = 100,
+    ["Killer Klown"] = 100,
+    ["orb of fire"] = 100,
+    ["mummy priest"] = 100,
+    ["royal mummy"] = 100,
+    ["seraph"] = 100,
     ["draconian monk"] = 100,
+    ["boggart"] = 100,
+    ["lich"] = 100,
+    ["ancient lich"] = 100,
+    ["dread lich"] = 100,
+    ["oklob plant"] = 100,
+    ["hellion"] = 100,
+    ["tormentor"] = 100,
+    ["doom hound"] = 100,
+    ["curse toe"] = 100,
+    ["curse skull"] = 100,
+    ["iron giant"] = 100,
+    ["Hell Sentinel"] = 100,
+    ["Ice Fiend"] = 100,
+    ["Tzitzimitl"] = 100,
+    ["Brimstone Fiend"] = 100,
     ["the Enchantress"] = 100,
     ["Vashnia"] = 100,
     ["Sojobo"] = 100,
     ["Roxanne"] = 100,
-    ["Erolcha"] = 100,
     ["Nessos"] = 100,
     ["Sonja"] = 100,
     ["Louise"] = 100,
@@ -1573,30 +1602,8 @@ local scary_monsters = {
     ["Frederick"] = 100,
     ["Boris"] = 100,
     ["Mara"] = 100,
-    ["boggart"] = 100,
-    ["lich"] = 100,
-    ["ancient lich"] = 100,
-    ["dread lich"] = 100,
-    ["oklob plant"] = 100,
-    ["hellion"] = 100,
-    ["tormentor"] = 100,
-    ["Hell Sentinel"] = 100,
-    ["Ice Fiend"] = 100,
-    ["Tzitzimitl"] = 100,
-    ["Brimstone Fiend"] = 100,
-    ["curse toe"] = 100,
-    ["curse skull"] = 100,
     ["Tiamat"] = 100,
-    ["titanic slime creature"] = 100,
-    ["enormous slime creature"] = 100,
-    ["titan"] = 100,
-    ["orb of fire"] = 100,
-    ["Killer Klown"] = 100,
-    ["caustic shrike"] = 100,
-    ["seraph"] = 100,
-    ["juggernaut"] = 100,
     ["Royal Jelly"] = 100,
-    ["iron giant"] = 100,
     ["Cerebov"] = 100,
     ["Gloorx Vloq"] = 100,
     ["Lom Lobon"] = 100,
@@ -1605,10 +1612,10 @@ local scary_monsters = {
     ["Asmodeus"] = 100,
     ["Antaeus"] = 100,
     ["Ereshkigal"] = 100,
-    ["greater mummy"] = 100,
     ["Khufu"] = 100,
     ["Vv"] = 100,
     ["Parghit"] = 100,
+    ["Grunn"] = 100,
 } -- hack
 
 -- Used for:
@@ -1623,69 +1630,71 @@ local nasty_monsters = {
         pan_lord(100),
     },
 
-    ["Rupert"] = 15,
-    ["Azrael"] = 15,
     ["fire dragon"] = 15,
     ["ice dragon"] = 15,
     ["Snorg"] = 15,
     ["death yak"] = 15,
     ["red devil"] = 15,
+    ["Erolcha"] = 15,
+    ["Rupert"] = 15,
+    ["Azrael"] = 15,
 
     ["Nikola"] = 17,
 
     ["orc warlord"] = 20,
-    ["Aizul"] = 20,
-    ["Frances"] = 20,
-    ["Saint Roka"] = 20,
-    ["Agnes"] = 20,
-    ["Jory"] = 20,
-    ["Arachne"] = 20,
-    ["Nikola"] = check_resist(20, "rElec", 1),
-    ["Vashnia"] = 20,
-    ["Asterion"] = 20,
     ["orb spider"] = 20,
     ["thorn hunter"] = 20,
     ["sun demon"] = check_resist(20, "rF", 1),
-    ["Polyphemus"] = 20,
-    ["Ilsuiw"] = 20,
-    ["Bai Suzhen"] = 20,
     ["merfolk avatar"] = 20,
-    ["Zenata"] = 20,
     ["crystal guardian"] = 20,
     ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
+    ["Aizul"] = 20,
+    ["Agnes"] = 20,
+    ["Arachne"] = 20,
+    ["Asterion"] = 20,
+    ["Bai Suzhen"] = 20,
+    ["Frances"] = 20,
+    ["Ilsuiw"] = 20,
+    ["Jory"] = 20,
+    ["Nikola"] = check_resist(20, "rElec", 1),
+    ["Polyphemus"] = 20,
+    ["Saint Roka"] = 20,
+    ["Vashnia"] = 20,
+    ["Zenata"] = 20,
 
+    ["oklob plant"] = 100,
     ["deep troll shaman"] = 100,
     ["spriggan air mage"] = check_resist(100, "rElec", 1),
-    ["the Enchantress"] = 100,
+    ["boggart"] = 100,
+    ["lich"] = 100,
+    ["ancient lich"] = 100,
+    ["spark wasp"] = check_resist(100, "rElec", 1),
+    ["juggernaut"] = 100,
+    ["iron giant"] = 100,
+    ["Hell Sentinel"] = 100,
+    ["Ice Fiend"] = 100,
+    ["Brimstone Fiend"] = 100,
+    ["Tzitzimitl"] = 100,
+    ["entropy weaver"] = check_resist(100, "rCorr", 1),
+    ["doom hound"] = 100,
+    ["royal mummy"] = 100,
+    ["orb of fire"] = 100,
+    ["Killer Klown"] = 100,
+    ["caustic shrike"] = 100,
+    ["seraph"] = 100,
     ["Sojobo"] = 100,
     ["Roxanne"] = 100,
-    ["Erolcha"] = 100,
     ["Nessos"] = 100,
     ["Sonja"] = 100,
     ["Louise"] = 100,
+    ["the Enchantress"] = 100,
     ["Mennas"] = 100,
     ["Margery"] = 100,
     ["Frederick"] = 100,
     ["Boris"] = 100,
     ["Mara"] = 100,
-    ["boggart"] = 100,
-    ["lich"] = 100,
-    ["ancient lich"] = 100,
-    ["oklob plant"] = 100,
-    ["Hell Sentinel"] = 100,
-    ["Ice Fiend"] = 100,
-    ["Brimstone Fiend"] = 100,
-    ["Tzitzimitl"] = 100,
-    ["Tiamat"] = 100,
-    ["orb of fire"] = 100,
-    ["Killer Klown"] = 100,
-    ["caustic shrike"] = 100,
-    ["seraph"] = 100,
     ["Royal Jelly"] = 100,
-    ["spark wasp"] = check_resist(100, "rElec", 1),
-    ["juggernaut"] = 100,
-    ["iron giant"] = 100,
-    ["entropy weaver"] = check_resist(100, "rCorr", 1),
+    ["Tiamat"] = 100,
     ["Cerebov"] = 100,
     ["Gloorx Vloq"] = 100,
     ["Lom Lobon"] = 100,
@@ -1694,10 +1703,10 @@ local nasty_monsters = {
     ["Asmodeus"] = 100,
     ["Antaeus"] = 100,
     ["Ereshkigal"] = 100,
-    ["greater mummy"] = 100,
     ["Khufu"] = 100,
     ["Parghit"] = 100,
     ["Vv"] = 100,
+    ["Grunn"] = 100,
 } -- hack
 
 -- BiA these even at low piety.
@@ -4163,13 +4172,13 @@ function want_to_drain_life()
     if not danger then
         return false
     end
-    local cd = count_drainable()
-    return cd >= 8
+    return count_drainable() >= 8
 end
 
 function want_to_sgd()
-    if you.skill("Invocations") >= 12 and (check_monsters(LOS, nasty_monsters)
-            or hp_is_low(50) and immediate_danger) then
+    if you.skill("Invocations") >= 12
+            and (check_monsters(LOS, nasty_monsters)
+                or hp_is_low(50) and immediate_danger) then
         if count_sgd(4) == 0 and not you.teleporting() then
             return true
         end
@@ -4177,14 +4186,19 @@ function want_to_sgd()
     return false
 end
 
+function want_to_cleansing_flame()
+    return not check_monsters(1, scary_monsters)
+            and check_monsters(2, scary_monsters)
+        or count_holy_vulnerable(2) > 8
+        or hp_is_low(50) and immediate_danger and count_tso_restore_hp(2) >= 4
+end
+
 function want_to_divine_warrior()
-    if you.skill("Invocations") >= 8 and (check_monsters(LOS, nasty_monsters)
-            or hp_is_low(50) and immediate_danger) then
-        if count_divine_warrior(4) == 0 and not you.teleporting() then
-            return true
-        end
-    end
-    return false
+    return you.skill("Invocations") >= 8
+        and (check_monsters(LOS, nasty_monsters)
+            or hp_is_low(50) and immediate_danger)
+        and count_divine_warrior(4) == 0
+        and not you.teleporting()
 end
 
 function want_to_orbrun_divine_warrior()
@@ -4338,8 +4352,9 @@ function want_to_recall_ancestor()
 end
 
 function want_to_stay_in_abyss()
-    return (game_status == "abyss" and not you.have_rune("abyssal")
-                    and not hp_is_low(50))
+    return game_status == "abyss"
+        and not you.have_rune("abyssal")
+        and not hp_is_low(50)
 end
 
 function have_pan_runes()
