@@ -2276,10 +2276,17 @@ function can_sgd()
                  and can_invoke()
 end
 
-function can_divine_warrior()
+function can_cleansing_flame(ignore_mp)
+    return you.god() == "the Shining One"
+        and you.piety_rank() >= 3
+        and (ignore_mp or cmp() >= 5)
+        and can_invoke()
+end
+
+function can_divine_warrior(ignore_mp)
     return you.god() == "the Shining One"
                  and you.piety_rank() >= 5
-                 and cmp() >= 8
+                 and (ignore_mp or cmp() >= 8)
                  and can_invoke()
 end
 
@@ -2433,11 +2440,13 @@ function update_monster_array()
     end
 end
 
-function check_monsters(r, mlist)
+function check_monsters(r, mlist, filter)
     local e
     local xl = you.xl()
     for _, e in ipairs(enemy_list) do
-        if you.see_cell_no_trans(e.x, e.y) and supdist(e.x, e.y) <= r then
+        if you.see_cell_no_trans(e.x, e.y)
+                and supdist(e.x, e.y) <= r
+                and (not filter or filter(e.m)) then
             if not contains_string_in(e.m:name(), {"skeleton", "zombie",
                  "simulacrum", "spectral"}) then
                 local name = e.m:name()
@@ -2826,6 +2835,38 @@ function count_drainable()
     local count = 0
     for _, e in ipairs(enemy_list) do
         if e.m:res_draining() == 0 then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function mons_is_holy_vulnerable(m)
+    local holiness = m:holiness()
+    return holiness == "undead" or holiness == "demonic"
+end
+
+function count_holy_vulnerable(r)
+    local e
+    local count = 0
+    for _, e in ipairs(enemy_list) do
+        if supdist(e.x, e.y) <= r and mons_is_holy_vulnerable(e.m)  then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function count_tso_restore_hp(r)
+    local e
+    local count = 0
+    for _, e in ipairs(enemy_list) do
+        local holiness = e.m:holiness()
+        if supdist(e.x, e.y) <= r
+                and not e.m:desc():find("summoned")
+                and (holiness == "undead"
+                    or holiness == "demonic"
+                    or holiness == "evil") then
             count = count + 1
         end
     end
@@ -3425,6 +3466,10 @@ function sgd()
     use_ability("Greater Servant of Makhleb")
 end
 
+function cleansing_flame()
+    use_ability("Cleansing Flame")
+end
+
 function divine_warrior()
     use_ability("Summon Divine Warrior")
 end
@@ -3444,6 +3489,14 @@ end
 function plan_sgd()
     if can_sgd() and want_to_sgd() then
         sgd()
+        return true
+    end
+    return false
+end
+
+function plan_cleansing_flame()
+    if can_cleansing_flame() and want_to_cleansing_flame() then
+        cleansing_flame()
         return true
     end
     return false
@@ -3783,6 +3836,7 @@ function haste()
             or you.god() == "Cheibriados" then
         return false
     end
+
     return drink_by_name("haste")
 end
 
@@ -4187,10 +4241,19 @@ function want_to_sgd()
 end
 
 function want_to_cleansing_flame()
-    return not check_monsters(1, scary_monsters)
-            and check_monsters(2, scary_monsters)
-        or count_holy_vulnerable(2) > 8
-        or hp_is_low(50) and immediate_danger and count_tso_restore_hp(2) >= 4
+    if not check_monsters(1, scary_monsters, mons_is_holy_vulnerable)
+            and check_monsters(2, scary_monsters, mons_is_holy_vulnerable)
+        or count_holy_vulnerable(2) > 8 then
+        return true
+    end
+
+    if hp_is_low(50) and immediate_danger then
+        local flame_restore_count = count_tso_restore_hp(2)
+        return flame_restore_count > count_tso_restore_hp(1)
+            and flame_restore_count >= 4
+    end
+
+    return false
 end
 
 function want_to_divine_warrior()
@@ -7478,6 +7541,7 @@ plan_emergency = cascade {
     {plan_haste, "haste"},
     {plan_resistance, "resistance"},
     {plan_heroism, "heroism"},
+    {plan_cleansing_flame, "try_cleansing_flame"},
     {plan_bia, "bia"},
     {plan_sgd, "sgd"},
     {plan_divine_warrior, "divine_warrior"},
@@ -7716,7 +7780,9 @@ function skill_value(sk)
         rating, _ = best_missile()
         return 0.3 * rating
     elseif sk == "Invocations" then
-        if you.god() == "Uskayaw" or you.god() == "Zin" then
+        if you.god() == "the Shining One" then
+            return in_extended() and 1.5 or 0.5
+        elseif you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
         elseif you.god() == "Elyvilon" then
             return 0.5
@@ -7780,10 +7846,6 @@ function choose_skills()
     if you.god() == "Makhleb"
             and you.piety_rank() >= 2
             and mp_skill_level < 15 then
-        table.insert(skills, mp_skill)
-    elseif you.god() == "the Shining One"
-            and you.piety_rank() >= 5
-            and mp_skill_level < 12 then
         table.insert(skills, mp_skill)
     elseif you.god() == "Okawaru"
             and you.piety_rank() >= 1
