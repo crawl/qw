@@ -8536,7 +8536,8 @@ function print_stair_dists()
 end
 
 function c_trap_is_safe(trap)
-    return (trap ~= "permanent teleport")
+    return you.race() == "Formicid"
+        or trap ~= "permanent teleport" and trap ~= "dispersal"
 end
 
 function c_answer_prompt(prompt)
