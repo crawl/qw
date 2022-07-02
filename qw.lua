@@ -71,6 +71,8 @@ local did_first_turn = false
 local stairdance_count = {}
 local clear_exclusion_count = {}
 local v5_entry_turn
+local tomb2_entry_turn
+local tomb3_entry_turn
 
 local last_swamp_fail_count = -1
 local swamp_rune_reachable = false
@@ -1140,6 +1142,11 @@ function want_potion(it)
 
     wanted = { "curing", "heal wounds", "haste", "resistance",
         "experience", "might", "mutation", "cancellation" }
+
+    if TSO_CONVERSION and (PAN_RUNE or HELL_RUNE or GOLDEN_RUNE) then
+        table.insert(wanted, "magic")
+        table.insert(wanted, "attraction")
+    end
 
     return util.contains(wanted, sub)
 end
@@ -3602,6 +3609,13 @@ function plan_resistance()
     return false
 end
 
+function plan_magic_points()
+    if not you.teleporting() and want_magic_points() then
+        return drink_by_name("magic")
+    end
+    return false
+end
+
 function plan_hand()
     if can_hand() and want_to_hand() and not you.teleporting() then
         hand()
@@ -3844,7 +3858,16 @@ function might()
     if you.mighty() then
         return false
     end
+
     return drink_by_name("might")
+end
+
+function attraction()
+    if you.status("attractive") then
+        return false
+    end
+
+    return drink_by_name("attraction")
 end
 
 function cloud_is_dangerous(cloud)
@@ -4383,6 +4406,16 @@ function want_resistance()
         or where:find("Zig")
             and check_monsters(LOS, acid_resistance_monsters)
             and not you.res_corr()
+end
+
+function want_magic_points()
+    return (you.where() == "Tomb:2" or you.where() == "Tomb:3")
+        and (can_cleansing_flame(true)
+                and not can_cleansing_flame()
+                and want_to_cleansing_flame()
+            or can_divine_warrior(true)
+                and not can_divine_warrior()
+                and want_to_divine_warrior())
 end
 
 function want_to_hand()
@@ -5628,6 +5661,42 @@ function plan_stairdance_up()
         return true
     end
     return false
+end
+
+function plan_tomb2_arrival()
+    if not tomb2_entry_turn
+            or you.turns() >= tomb2_entry_turn + 5
+            or c_persist.did_tomb2_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if attraction() then
+            c_persist.did_tomb2_buff = true
+            return true
+        end
+        return false
+    end
+end
+
+function plan_tomb3_arrival()
+    if not tomb3_entry_turn
+            or you.turns() >= tomb3_entry_turn + 5
+            or c_persist.did_tomb3_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if attraction() then
+            c_persist.did_tomb3_buff = true
+            return true
+        end
+        return false
+    end
 end
 
 function want_to_buy(it)
@@ -7540,6 +7609,7 @@ plan_emergency = cascade {
     {plan_hand, "hand"},
     {plan_haste, "haste"},
     {plan_resistance, "resistance"},
+    {plan_magic_points, "magic_points"},
     {plan_heroism, "heroism"},
     {plan_cleansing_flame, "try_cleansing_flame"},
     {plan_bia, "bia"},
@@ -7637,6 +7707,8 @@ plan_move = cascade {
     {plan_shop, "shop"},
     {plan_stairdance_up, "stairdance_up"},
     {plan_emergency, "emergency"},
+    {plan_tomb2_arrival, "tomb2_arrival"},
+    {plan_tomb3_arrival, "tomb3_arrival"},
     {plan_recall, "recall"},
     {plan_recall_ancestor, "try_recall_ancestor"},
     {plan_recite, "try_recite"},
@@ -8334,6 +8406,12 @@ function update_stuff()
         c_persist.portals_found = { }
         if where == "Vaults:5" and not v5_entry_turn then
             v5_entry_turn = you.turns()
+        elseif where == "Tomb:2" and not tomb2_entry_turn then
+            dsay("Tomb:2 arrival")
+            tomb2_entry_turn = you.turns()
+        elseif where == "Tomb:3" and not tomb3_entry_turn then
+            dsay("Tomb:3 arrival")
+            tomb3_entry_turn = you.turns()
         end
     end
     if is_waypointable(where) then
