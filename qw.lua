@@ -15,6 +15,7 @@ local where
 local where_shafted_from = nil
 local expect_new_location
 local expect_portal
+local base_corrosion
 
 local automatic = false
 
@@ -3365,12 +3366,14 @@ function reason_to_rest(percentage)
         or you.status("spiked")
         or you.status("weakened")
         or you.silencing()
-        or you.corrosion() > 0
+        or you.corrosion() > base_corrosion
 end
 
 -- Are we significantly stronger than usual thanks to a buff that we used?
 function buffed()
-    if hp_is_low(50) or transformed() or you.corrosion() >= 2 then
+    if hp_is_low(50)
+            or transformed()
+            or you.corrosion() >= 2 + base_corrosion then
         return false
     end
     if you.god() == "Okawaru" and
@@ -3688,8 +3691,8 @@ function plan_cancellation()
         return false
     end
     if you.petrifying()
-            or you.corrosion() >= 4
-            or you.corrosion() >= 3 and hp_is_low(70)
+            or you.corrosion() >= 4 + base_corrosion
+            or you.corrosion() >= 3 + base_corrosion and hp_is_low(70)
             or you.transform() == "pig"
             or you.transform() == "wisp"
             or you.transform() == "bat" then
@@ -4328,13 +4331,13 @@ function want_to_apocalypse()
 end
 
 function bad_corrosion()
-    if you.corrosion() == 0 then
+    if you.corrosion() == base_corrosion then
         return false
     elseif where:find("Slime") then
-        return (you.corrosion() >= 6 and hp_is_low(70))
+        return you.corrosion() >= 6 + base_corrosion and hp_is_low(70)
     else
-        return (you.corrosion() >= 3 and hp_is_low(50) or
-                        you.corrosion() >= 4 and hp_is_low(70))
+        return (you.corrosion() >= 3 + base_corrosion and hp_is_low(50)
+            or you.corrosion() >= 4 + base_corrosion and hp_is_low(70))
     end
 end
 
@@ -8406,6 +8409,7 @@ function update_stuff()
             end
         end
         where = you.where()
+        base_corrosion = where:find("Dis") and 2 or 0
         if cur_branch() and not util.contains(c_persist.branches_entered,
                 cur_branch()) then
             say("Entered " .. cur_branch() .. ".")
