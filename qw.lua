@@ -360,8 +360,7 @@ function intrinsic_resist(str)
         end
         return val
     elseif str == "Will" then
-        return you.mutation("strong-willed") + ((you.god() == "Trog")
-               and 1 or 0)
+        return you.mutation("strong-willed") + (you.god() == "Trog" and 1 or 0)
     elseif str == "rCorr" then
         return 0
     elseif str == "SInv" then
@@ -371,7 +370,7 @@ function intrinsic_resist(str)
             return 0
         end
     elseif str == "Spirit" then
-        return ((you.race() == "Vine Stalker") and 1 or 0)
+        return you.race() == "Vine Stalker" and 1 or 0
     end
     return 0
 end
@@ -400,7 +399,7 @@ function player_resist(str, it)
     if str == "rF" or str == "rC" or str == "rN" or str == "Will" then
         return other_res
     else
-        return ((other_res > 0) and 1 or 0)
+        return other_res > 0 and 1 or 0
     end
 end
 
@@ -463,7 +462,7 @@ function absolute_resist_value(str, n)
     elseif str == "rElec" then
         return 75
     elseif str == "rPois" then
-        return ((easy_runes() < 2) and 225 or 75)
+        return easy_runes() < 2 and 225 or 75
     elseif str == "rN" then
         return 25 * n
     elseif str == "Will" then
@@ -473,7 +472,7 @@ function absolute_resist_value(str, n)
             return 200
         end
     elseif str == "rCorr" then
-        return (slime_soon() and 1200 or 50)
+        return slime_soon() and 1200 or 50
     elseif str == "SInv" then
         return 200
     elseif str == "Spirit" then
@@ -507,23 +506,23 @@ function max_resist_value(str, d)
         end
         return val
     elseif str == "rElec" then
-        return ((ires < 1) and 75 or 0)
+        return ires < 1 and 75 or 0
     elseif str == "rPois" then
-        return ((ires < 1) and ((easy_runes() < 2) and 225 or 75) or 0)
+        return ires < 1 and (easy_runes() < 2 and 225 or 75) or 0
     elseif str == "rN" then
-        return ((ires < 3) and 25 * d or 0)
+        return ires < 3 and 25 * d or 0
     elseif str == "Will" then
         return 75 * d
     elseif str == "rCorr" then
-        return (ires < 1 and (SLIMY_RUNE and 1200 or 50) or 0)
+        return ires < 1 and (SLIMY_RUNE and 1200 or 50) or 0
     elseif str == "SInv" then
-        return ((ires < 1) and 200 or 0)
+        return ires < 1 and 200 or 0
     elseif str == "Spirit" then
-        return ((ires < 1) and 100 or 0)
+        return ires < 1 and 100 or 0
     elseif str == "Acrobat" then
-        return ((ires < 1) and 100 or 0)
+        return ires < 1 and 100 or 0
     elseif str == "Reflect" then
-        return ((ires < 1) and 20 or 0)
+        return ires < 1 and 20 or 0
     end
     return 0
 end
@@ -535,7 +534,7 @@ function min_resist_value(str, d)
     if str == "rF" then
         return -375
     elseif str == "rC" then
-        return (SLIMY_RUNE and -225 or -150)
+        return SLIMY_RUNE and -225 or -150
     elseif str == "Will" then
         return 75 * d
     end
@@ -2732,10 +2731,10 @@ function get_monster_info(dx, dy)
         elseif you.caught() or you.confused() then info.attack_type = 0
         else info.attack_type = view.can_reach(dx, dy) and 1 or 0 end
     end
-    info.can_attack = (info.attack_type > 0) and 1 or 0
+    info.can_attack = info.attack_type > 0 and 1 or 0
     info.safe = m:is_safe() and -1 or 0
     info.constricting_you = m:is_constricting_you() and 1 or 0
-    info.very_stabbable = (m:stabbability() >= 1) and 1 or 0
+    info.very_stabbable = m:stabbability() >= 1 and 1 or 0
     -- info.stabbable = m:is(0) and 1 or 0
     info.injury = m:damage_level()
     info.threat = m:threat()
@@ -3355,8 +3354,9 @@ function reason_to_rest(percentage)
     return you.confused()
         or transformed()
         or hp_is_low(percentage)
-        and (you.god() ~= "the Shining One" or hp_is_low(75)
-            or count_divine_warrior(2) == 0)
+            and (you.god() ~= "the Shining One"
+                or hp_is_low(75)
+                or count_divine_warrior(2) == 0)
         or you.slowed()
         or you.exhausted()
         or you.teleporting()
@@ -3973,10 +3973,12 @@ function step_reason(a1, a2)
         return false
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
         return false
-    elseif (not a1.near_ally)
-            and a2.stair_closer < 10000 and a1.stair_closer > 0
+    elseif not a1.near_ally
+            and a2.stair_closer < 10000
+            and a1.stair_closer > 0
             and a1.enemy_distance < 10
-            and reason_to_rest(90) and not buffed()
+            and reason_to_rest(90)
+            and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
         return "fleeing"
     elseif not a1.near_ally and a2.ranged == 0 and a2.adjacent == 0
@@ -4753,7 +4755,7 @@ function plan_abyss_rest()
     local hp, mhp = you.hp()
     if you.confused() or you.slowed() or
          you.berserk() or you.teleporting() or you.silencing() or
-         transformed() or (hp < mhp) and you.regenerating() then
+         transformed() or hp < mhp and you.regenerating() then
         rest()
         return true
     end
@@ -4994,9 +4996,9 @@ function body_armour_is_great(arm)
     elseif ap == "large" then
         return name:find("dragon scales")
     elseif ap == "dodgy" then
-        return (arm.encumbrance <= 11 and name:find("dragon scales"))
+        return arm.encumbrance <= 11 and name:find("dragon scales")
     else
-        return (name:find("dragon scales") or name:find("robe of resistance"))
+        return name:find("dragon scales") or name:find("robe of resistance")
     end
 end
 
@@ -5090,8 +5092,12 @@ function plan_use_good_consumables()
                                 return true
                             end
                         end
-                        if slotname == "Boots" and it2 and it2.name():find("barding")
-                             and not it2.artefact and it2.plus < 4 and it2.plus >= 0 then
+                        if slotname == "Boots"
+                                and it2
+                                and it2.name():find("barding")
+                                and not it2.artefact
+                                and it2.plus < 4
+                                and it2.plus >= 0 then
                             oldname = it2.name()
                             if read2(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
@@ -6327,10 +6333,15 @@ function plan_new_travel()
         travel_destination = "D"
     end
     if where == "D:15" then
-        if easy_runes() == 1 and not util.contains(c_persist.branches_entered, "V")
-             or easy_runes() == 2 and util.contains(c_persist.branches_entered, "U") and not you.have_rune("silver") then
+        if easy_runes() == 1
+                    and not util.contains(c_persist.branches_entered, "V")
+                or easy_runes() == 2
+                    and util.contains(c_persist.branches_entered, "U")
+                    and not you.have_rune("silver") then
             travel_destination = "V"
-        elseif easy_runes() >= 1 and not util.contains(c_persist.branches_entered, "U") and not (EARLY_SECOND_RUNE and easy_runes() == 1) then
+        elseif easy_runes() >= 1
+                and not util.contains(c_persist.branches_entered, "U")
+                and not (EARLY_SECOND_RUNE and easy_runes() == 1) then
             travel_destination = "U"
         elseif you.have_rune("silver") then
             if game_status == "slime" then
@@ -6692,9 +6703,15 @@ function plan_continue_flee()
     if you.turns() >= last_flee_turn + 10 or not target_stair then
         return false
     end
-    if danger or not reason_to_rest(90) or you.transform() == "tree"
-         or count_bia(3) > 0 or count_sgd(3) > 0 or count_divine_warrior(3) > 0
-         or you.status("spiked") or you.confused() or buffed() then
+    if danger
+            or not reason_to_rest(90)
+            or you.transform() == "tree"
+            or count_bia(3) > 0
+            or count_sgd(3) > 0
+            or count_divine_warrior(3) > 0
+            or you.status("spiked")
+            or you.confused()
+            or buffed() then
         return false
     end
     local num = waypoint_parity
@@ -7406,7 +7423,9 @@ end
 
 function attack_melee(x, y)
     if you.confused() then
-        if count_bia(1) > 0 or count_sgd(1) > 0 or count_divine_warrior(1) > 0 then
+        if count_bia(1) > 0
+                or count_sgd(1) > 0
+                or count_divine_warrior(1) > 0 then
             magic("s")
             return
         elseif you.transform() == "tree" then
