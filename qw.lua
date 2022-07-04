@@ -2077,6 +2077,17 @@ function found_branch(br)
     return false
 end
 
+function in_hells()
+    local hell_branches = {"Coc", "Dis", "Geh", "Tar"}
+    for _, br in ipairs(hell_branches) do
+        if where:find("^" .. br) then
+            return true
+        end
+    end
+
+    return false
+end
+
 function in_branch(br)
     for _, value in ipairs(branch_data) do
         if value[1] == br then
@@ -4375,7 +4386,7 @@ function want_resistance()
 end
 
 function want_magic_points()
-    return (you.where() == "Tomb:2" or you.where() == "Tomb:3")
+    return (in_hells() or you.where():find("Tomb"))
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
                 and want_to_cleansing_flame()
@@ -5967,12 +5978,9 @@ function plan_go_to_pan_exit()
 end
 
 function plan_dive()
-    if (in_branch("M") and where ~= "Slime:5" or game_status == "hells" and
-            (in_branch("I") and where ~= "Dis:7"
-             or in_branch("G") and where ~= "Geh:7"
-             or in_branch("X") and where ~= "Coc:7"
-             or in_branch("Y") and where ~= "Tar:7"))
-         and not travel_destination then
+    if (in_branch("M") and where ~= "Slime:5"
+                or game_status == "hells" and in_hells() and you.depth() < 7)
+            and not travel_destination then
         expect_new_location = true
         magic("G>")
         return true
