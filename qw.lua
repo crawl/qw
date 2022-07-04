@@ -1378,7 +1378,7 @@ end
 
 function slow_berserk(lev)
     return function (m)
-        return (you.xl() < lev and count_nearby(0, 0, 1) > 0)
+        return (you.xl() < lev and count_monsters_near(0, 0, 1) > 0)
     end
 end
 
@@ -1399,8 +1399,11 @@ end
 
 function hydra_check_flaming(lev)
     return function (m)
-        return (you.xl() < lev and m:desc():find("hydra")
-            and hydra_weapon_status(items.equipped_at("Weapon")) ~= 1)
+        return you.xl() < lev
+            and m:desc():find("hydra")
+            and not contains_string_in(m:name(),
+                {"skeleton", "zombie", "simulacrum", "spectral"})
+            and hydra_weapon_status(items.equipped_at("Weapon")) ~= 1
     end
 end
 
@@ -2456,32 +2459,31 @@ function update_monster_array()
     end
 end
 
-function check_monsters(r, mlist, filter)
+function mons_in_list(m, mlist)
+    local entry = mlist[m:name()]
+    if type(entry) == "number" and you.xl() < entry then
+        return true
+    elseif type(entry) == "function" and entry(m) then
+        return true
+    end
+
+    for _, entry in ipairs(mlist["*"]) do
+        if entry(m) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function check_monster_list(r, mlist, filter)
     local e
-    local xl = you.xl()
     for _, e in ipairs(enemy_list) do
         if you.see_cell_no_trans(e.x, e.y)
                 and supdist(e.x, e.y) <= r
-                and (not filter or filter(e.m)) then
-            if not contains_string_in(e.m:name(), {"skeleton", "zombie",
-                 "simulacrum", "spectral"}) then
-                local name = e.m:name()
-                local entry = mlist[name]
-                if type(entry) == "number" then
-                    if xl < entry then
-                        return true
-                    end
-                elseif type(entry) == "function" then
-                    if entry(e.m) then
-                        return true
-                    end
-                end
-                for _, entry in ipairs(mlist["*"]) do
-                    if entry(e.m) then
-                        return true
-                    end
-                end
-            end
+                and (not filter or filter(e.m))
+                and mons_in_list(e.m, mlist) then
+            return true
         end
     end
 
@@ -2570,78 +2572,58 @@ function count_divine_warrior(r)
     return i
 end
 
-function count_hostile_sgd(r)
-    if you.god() ~= "Makhleb" then
-        return 0
-    end
-    local x, y
-    local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            local m = monster_array[x][y]
-            if m and not m:is_safe() and m:is("summoned")
-                    and mons_is_greater_demon(m) then
-                i = i + 1
-            end
-        end
-    end
-    return i
-end
-
-function count_big_slimes(r)
-    local x, y
-    local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            m = monster_array[x][y]
-            if m and not m:is_safe() and contains_string_in(m:name(),
-                    {"enormous slime creature", "titanic slime creature"}) then
-                i = i + 1
-            end
-        end
-    end
-    return i
-end
-
-function count_hellions(r)
-    local x, y
-    local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            m = monster_array[x][y]
-            if m and not m:is_safe()
-             and m:name() == "hellion" then
-                i = i + 1
-            end
-        end
-    end
-    return i
-end
-
-function count_daevas(r)
-    local x, y
-    local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            m = monster_array[x][y]
-            if m and not m:is_safe()
-             and m:name() == "daeva" then
-                i = i + 1
-            end
-        end
-    end
-    return i
-end
-
-function count_pan_lords(r)
+function count_monsters_near(cx, cy, r, filter)
     local e
     local i = 0
     for _, e in ipairs(enemy_list) do
-        if e.m:type() == ENUM_MONS_PANDEMONIUM_LORD then
+        if supdist(cx - e.x, cy - e.y) <= r
+                and (not filter or filter(e.m)) then
             i = i + 1
         end
     end
     return i
+end
+
+function count_monsters_near_by_name(cx, cy, r, name)
+    return count_monsters_near(cx, cy, r,
+        function(m) return m:name() == name end)
+end
+
+function count_monsters(r, filter)
+    return count_monsters_near(0, 0, r, filter)
+end
+
+function count_monster_list(r, mlist, filter)
+    return count_monsters(r,
+        function(m)
+            return (not filter or filter(m)) and mons_in_list(m, mlist)
+        end)
+end
+
+function count_monster_by_name(r, name)
+    return count_monsters(r, function(m) return m:name() == name end)
+end
+
+function count_hostile_sgd(r)
+    if you.god() ~= "Makhleb" then
+        return 0
+    end
+
+    return count_monsters(r,
+        function(m) return m:is("summoned") and mons_is_greater_demon(m) end)
+end
+
+function count_big_slimes(r)
+    return count_monsters(r,
+        function(m)
+            return contains_string_in(m:name(),
+                {"enormous slime creature", "titanic slime creature"})
+        end)
+end
+
+function count_pan_lords(r)
+    return count_monsters(r,
+        function(m) return m:type() == ENUM_MONS_PANDEMONIUM_LORD end)
 end
 
 -- should only be called for adjacent squares
@@ -2846,58 +2828,9 @@ function estimate_slouch_damage()
     return count
 end
 
-function count_drainable()
-    local e
-    local count = 0
-    for _, e in ipairs(enemy_list) do
-        if e.m:res_draining() == 0 then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 function mons_is_holy_vulnerable(m)
     local holiness = m:holiness()
     return holiness == "undead" or holiness == "demonic"
-end
-
-function count_holy_vulnerable(r)
-    local e
-    local count = 0
-    for _, e in ipairs(enemy_list) do
-        if supdist(e.x, e.y) <= r and mons_is_holy_vulnerable(e.m)  then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-function count_tso_restore_hp(r)
-    local e
-    local count = 0
-    for _, e in ipairs(enemy_list) do
-        local holiness = e.m:holiness()
-        if supdist(e.x, e.y) <= r
-                and not e.m:desc():find("summoned")
-                and (holiness == "undead"
-                    or holiness == "demonic"
-                    or holiness == "evil") then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-function count_nearby(cx, cy, r)
-    local e
-    local i = 0
-    for _, e in ipairs(enemy_list) do
-        if supdist(cx - e.x, cy - e.y) <= r then
-            i = i + 1
-        end
-    end
-    return i
 end
 
 function mons_liquid_bound(m)
@@ -4202,7 +4135,7 @@ function plan_zig_fog()
     if not where:find("Zig")
          or you.berserk() or you.teleporting() or you.confused()
          or not danger or not hp_is_low(70)
-         or count_nearby(0, 0, LOS) - count_nearby(0, 0, 2) < 15
+         or count_monsters_near(0, 0, LOS) - count_monsters_near(0, 0, 2) < 15
          or view.cloud_at(0, 0) ~= nil then
         return false
     end
@@ -4237,22 +4170,28 @@ function want_to_bia()
     if not danger then
         return false
     end
-    if check_monsters(LOS, bia_necessary_monsters) or you.piety_rank() > 4 and
-         ((want_to_berserk() and not can_berserk()) or
-         check_monsters(LOS, nasty_monsters)) then
-        if count_bia(4) == 0 and not you.teleporting() then
-            return true
-        end
+
+    -- Always BiA this list of monsters.
+    if (check_monster_list(LOS, bia_necessary_monsters)
+                -- If piety as high, we can also use BiA as a fallback for when
+                -- we'd like to berserk, but can't, or if when we see nasty
+                -- monsters.
+                or you.piety_rank() > 4
+                    and (want_to_berserk() and not can_berserk()
+                        or check_monster_list(LOS, nasty_monsters)))
+            and count_bia(4) == 0
+            and not you.teleporting() then
+        return true
     end
     return false
 end
 
 function want_to_finesse()
     if danger and where:find("Zig") and hp_is_low(80)
-            and count_nearby(0, 0, LOS) >= 5 then
+            and count_monsters_near(0, 0, LOS) >= 5 then
         return true
     end
-    if danger and check_monsters(LOS, nasty_monsters)
+    if danger and check_monster_list(LOS, nasty_monsters)
             and not you.teleporting() then
         return true
     end
@@ -4271,12 +4210,12 @@ function want_to_drain_life()
     if not danger then
         return false
     end
-    return count_drainable() >= 8
+    return count_monsters(LOS, function(m) return m:res_draining() == 0 end)
 end
 
 function want_to_sgd()
     if you.skill("Invocations") >= 12
-            and (check_monsters(LOS, nasty_monsters)
+            and (check_monster_list(LOS, nasty_monsters)
                 or hp_is_low(50) and immediate_danger) then
         if count_sgd(4) == 0 and not you.teleporting() then
             return true
@@ -4286,15 +4225,22 @@ function want_to_sgd()
 end
 
 function want_to_cleansing_flame()
-    if not check_monsters(1, scary_monsters, mons_is_holy_vulnerable)
-            and check_monsters(2, scary_monsters, mons_is_holy_vulnerable)
-        or count_holy_vulnerable(2) > 8 then
+    if not check_monster_list(1, scary_monsters, mons_is_holy_vulnerable)
+            and check_monster_list(2, scary_monsters, mons_is_holy_vulnerable)
+        or count_monsters(2, mons_is_holy_vulnerable) > 8 then
         return true
     end
 
+    local filter = function(m)
+        local holiness = m:holiness()
+        return not m:desc():find("summoned")
+            and (holiness == "undead"
+                or holiness == "demonic"
+                or holiness == "evil")
+    end
     if hp_is_low(50) and immediate_danger then
-        local flame_restore_count = count_tso_restore_hp(2)
-        return flame_restore_count > count_tso_restore_hp(1)
+        local flame_restore_count = count_monsters(2, filter)
+        return flame_restore_count > count_monsters(1, filter)
             and flame_restore_count >= 4
     end
 
@@ -4303,7 +4249,7 @@ end
 
 function want_to_divine_warrior()
     return you.skill("Invocations") >= 8
-        and (check_monsters(LOS, nasty_monsters)
+        and (check_monster_list(LOS, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warrior(4) == 0
         and not you.teleporting()
@@ -4328,10 +4274,10 @@ end
 
 function want_to_apocalypse()
     local dlevel = drain_level()
-    return dlevel == 0 and check_monsters(LOS, scary_monsters)
+    return dlevel == 0 and check_monster_list(LOS, scary_monsters)
         or dlevel <= 2
             and (danger and hp_is_low(50)
-                or check_monsters(LOS, nasty_monsters))
+                or check_monster_list(LOS, nasty_monsters))
 end
 
 function bad_corrosion()
@@ -4354,28 +4300,26 @@ function want_to_teleport()
         return true
     end
     if where == "Pan"
-            and (count_hellions(LOS) >= 3 or count_daevas(LOS) >= 3) then
+            and (count_monster_by_name(LOS, "hellion") >= 3
+                or count_monster_by_name(LOS, "daeva") >= 3) then
         dislike_pan_level = true
         return true
     end
     if you.xl() <= 17 and not can_berserk() and count_big_slimes(LOS) > 0 then
         return true
     end
-    return (immediate_danger and bad_corrosion()
+    return immediate_danger and bad_corrosion()
             or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
             or you.god() == "Trog"
-                and you.slowed() and want_to_berserk() and not can_berserk())
-        and count_bia(4) == 0
+                and you.slowed()
+                and want_to_berserk()
+                and not can_berserk()
+                and count_bia(4) == 0
+            or count_nasty_hell_monsters(LOS) >= 9
 end
 
 function want_to_orbrun_teleport()
-    return (hp_is_low(33) and sense_danger(2))
-end
-
-function need_to_wait_for_ely_healing()
-    local mp, mmp = you.mp()
-    return (you.god() == "Elyvilon" and you.piety_rank() >= 4 and mmp >= 2
-                    and mp < 2)
+    return hp_is_low(33) and sense_danger(2)
 end
 
 function want_to_heal_wounds()
@@ -4388,20 +4332,20 @@ end
 
 function want_to_orbrun_heal_wounds()
     if danger then
-        return (hp_is_low(25) or hp_is_low(50) and you.teleporting())
+        return hp_is_low(25) or hp_is_low(50) and you.teleporting()
     else
-        return (hp_is_low(50))
+        return hp_is_low(50)
     end
 end
 
 function want_to_orbrun_buff()
-    return ((count_pan_lords(LOS) > 0) or check_monsters(LOS, scary_monsters))
+    return count_pan_lords(LOS) > 0 or check_monster_list(LOS, scary_monsters)
 end
 
 function want_to_serious_buff()
     if danger and where:find("Zig")
             and hp_is_low(50)
-            and count_nearby(0, 0, LOS) >= 5 then
+            and count_monsters_near(0, 0, LOS) >= 5 then
         return true
     end
     if you.god() == "Okawaru" or you.god() == "Trog" then
@@ -4413,20 +4357,20 @@ function want_to_serious_buff()
     if you.teleporting() then
         return false -- don't waste a potion if we are already leaving
     end
-    return (check_monsters(LOS, ridiculous_uniques))
+    return check_monster_list(LOS, ridiculous_uniques)
 end
 
 function want_resistance()
-    return check_monsters(LOS, fire_resistance_monsters)
+    return check_monster_list(LOS, fire_resistance_monsters)
             and you.res_fire() < 3
-        or check_monsters(LOS, cold_resistance_monsters)
+        or check_monster_list(LOS, cold_resistance_monsters)
             and you.res_cold() < 3
-        or check_monsters(LOS, elec_resistance_monsters)
+        or check_monster_list(LOS, elec_resistance_monsters)
             and you.res_shock() < 1
-        or check_monsters(LOS, pois_resistance_monsters)
+        or check_monster_list(LOS, pois_resistance_monsters)
             and you.res_poison() < 1
         or where:find("Zig")
-            and check_monsters(LOS, acid_resistance_monsters)
+            and check_monster_list(LOS, acid_resistance_monsters)
             and not you.res_corr()
 end
 
@@ -4441,20 +4385,20 @@ function want_magic_points()
 end
 
 function want_to_hand()
-    return check_monsters(LOS, hand_monsters)
+    return check_monster_list(LOS, hand_monsters)
 end
 
 function want_to_berserk()
     return (hp_is_low(50) and sense_danger(2, true)
-        or check_monsters(2, scary_monsters)
+        or check_monster_list(2, scary_monsters)
         or (invisi_sigmund and not options.autopick_on))
 end
 
 function want_to_heroism()
     return danger
         and (hp_is_low(70)
-            or check_monsters(LOS, scary_monsters)
-            or count_nearby(0, 0, LOS) >= 4)
+            or check_monster_list(LOS, scary_monsters)
+            or count_monsters_near(0, 0, LOS) >= 4)
 end
 
 function want_to_recall()
@@ -6609,7 +6553,9 @@ function update_dist_map(dist_map, queue)
         val = dist_map[x][y] + 1
         for dx = -1, 1 do
             for dy = -1, 1 do
-                if (dx ~= 0 or dy ~= 0) and level_map[waypoint_parity][x + dx][y + dy] == "." then
+                if (dx ~= 0 or dy ~= 0)
+                        and level_map[waypoint_parity][x + dx][y + dy]
+                            == "." then
                     oldval = dist_map[x + dx][y + dy]
                     if oldval == nil or oldval > val then
                         dist_map[x + dx][y + dy] = val
