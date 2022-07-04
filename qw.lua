@@ -4353,6 +4353,23 @@ function want_to_orbrun_buff()
     return count_pan_lords(LOS) > 0 or check_monster_list(LOS, scary_monsters)
 end
 
+function count_nasty_hell_monsters(r)
+    if game_status ~= "hells" then
+        return 0
+    end
+
+    -- We're most concerned with hell monsters that aren't vulnerable to any
+    -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
+    -- brand).
+    local have_holy_wrath = you.god() == "the Shining One"
+        or items.equipped_at("weapon")
+            and items.equipped_at("weapon").ego() == "holy wrath"
+    local filter = function(m)
+        return not (have_holy_wrath and mons_is_holy_vulnerable(m))
+    end
+    return count_monster_list(r, nasty_monsters, filter)
+end
+
 function want_to_serious_buff()
     if danger and where:find("Zig")
             and hp_is_low(50)
@@ -4368,7 +4385,13 @@ function want_to_serious_buff()
     if you.teleporting() then
         return false -- don't waste a potion if we are already leaving
     end
-    return check_monster_list(LOS, ridiculous_uniques)
+    if check_monster_list(LOS, ridiculous_uniques) then
+        return true
+    end
+    if count_nasty_hell_monsters(LOS) >= 5 then
+        return true
+    end
+    return false
 end
 
 function want_resistance()
