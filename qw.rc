@@ -29,15 +29,16 @@
 # by the code in qw.lua.
 ###############################################################################
 
-##############
-### Online ###
-##############
+#################
+### Interface ###
+#################
 
 # Default username.
 name = qw
 
 # Make sure this is true when playing online.
 : DELAYED = true
+
 # Delay per action in milliseconds. Set this to at least 125 or so when playing
 # on a public server.
 : DELAY_TIME = 125
@@ -45,6 +46,11 @@ name = qw
 # Whether to start playing immediately when a new game is started.
 # Unfortunately this doesn't work if the game starts with a -more-.
 : AUTO_START = false
+
+# The version of qw for logging purposes. Run the make-qw-rc.sh script in this
+# repository to set this variable automatically, or manually change it to a
+# custom version string.
+: QW_VERSION = "%VERSION%"
 
 ################
 ### Gameplay ###
@@ -118,10 +124,6 @@ combo = GrBe.handaxe
 
 # Quit after this number of turns while stuck
 : QUIT_TURNS = 1000
-
-# The version of qw for logging purposes. Either run make-qw-rc.sh to set this
-# automatically, or change this variable to a custom version string.
-: QW_VERSION = "%VERSION%"
 
 #############################
 ### Miscellaneous options ###
@@ -224,5 +226,5 @@ autopickup_exceptions =
 :     LOS = 8
 : end
 
-# See notes at the top on qw.lua.
+# See notes at the top of this file on qw.lua.
 # include = qw.lua

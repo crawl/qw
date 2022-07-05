@@ -8,24 +8,47 @@ issues on the official crawl qw repository:
 
 https://github.com/crawl/qw/issues/new
 
-The current version of qw can play most species and background combinations in
-a melee-focused way and has some basic grasp of how many gods work (see qw.rc
-for configuration details). Note though that most spells and racial abilities
-aren't used, and qw is not very good! It can win games with 3 runes for combos
-like GrBe, and we try to maintain qw so it can continue to play and win the
-current version. See `??qw` in the LearnDB for a list of its current and past
-achievements as well as its limitations.
+qw can play most species and background combinations in a melee-focused way and
+has some basic grasp of how many gods work. Note though that most spells and
+racial abilities aren't used, and qw is not very good! It has won games with 3
+and 15 runes, and we try to maintain qw so it can continue to play and win the
+current version. See [accomplishments.md](accomplishments.md) for current and
+past achievements.
 
-## Running on remote DCSS server
-* Please make sure you have permission to run a bot on your server of choice!
-  Misconfigured (or even well-configured) bots can eat up server CPU from
-  actual players.
+## Running locally
+It's best to run qw either locally or on your own server. You set up [Sequell]
+(https://github.com/crawl/sequell) either locally or on your server to track
+its statistics.
+
+* Clone this repo.
+* You may want to edit some of the configuration lines near the top of `qw.rc`.
+  For example, edit the various COMBO variables to choose which combos qw will
+  play. See the comments in the *Gameplay* section for details.
+* Run crawl locally with command like `./crawl -rc qw/qw.rc -rcdir qw`, where
+  here the repo is in a directory named `qw`. The `-rcdir` option is necessary
+  for `crawl` to find the `qw.lua` file. Alternately you can put the contents
+  of `qw.lua` directly in `qw.rc` per the instructions below for online play.
+* Enter a name if necessary and start game. If you didn't change the
+  `AUTO_START` variable, press "Tab".
+* Enjoy!
+
+The file qw.exp is a simple expect script that automates running qw for many
+games in a row. The `AUTO_START` variable should be left at false when when
+using this. (With minor modifications, this can also be used to run games on a
+remote server over ssh.)
+
+## Running on a WebTiles server
+Please don't run qw on an official server unless you have permission from the
+server admin. Misconfigured (or even well-configured) bots can eat up server
+CPU from actual players.  If you do have permission to run qw on an official
+server please add the name of the account that you are using for qw to the
+Sequell "bot" nick with `!nick bot <accountname>` so that games on the account
+can be easily filtered out of queries. Also, please don't run qw on the same
+account that you use for your own personal games.
+
 * In a text editor, open the `qw.rc` file from this repo.
-* On the lines with `: DELAYED = false` and `: AUTO_START = false`, change
-  `false` to `true`
-* You may also want to edit some of the configuration lines near the top
-  of qw.rc. For example, edit the various COMBO variables to choose which
-  combos qw will play. See the comments in this section for details.
+* In the *Interface* section, on the lines with `: DELAYED = false` and `:
+  AUTO_START = false`, change `false` to `true`
 * At the end of the contents of `qw.rc`, put the contents of the `qw.lua` file
   from this repository. Note that first line of `qw.lua` with `{` and the last
   line with `}` must also be included, otherwise the Lua code won't execute.
@@ -39,35 +62,19 @@ achievements as well as its limitations.
 * Enjoy!
 
 Since clua works on the server side, WebTiles drawing can lag behind things
-actually happening, so the IRC bot [Sequell](https://github.com/crawl/sequell)
-may tell you your character killed Sigmund or died to him before you see that
-with your own eyes. To see more current events just refresh the page and press
+actually happening. To see more current events just refresh the page and press
 "Tab". Alternatively, run or watch the bot in console (via ssh).
-
-If you are familiar with Sequell, please add the name of the account that
-you are using for qw to the "bot" nick with `!nick bot <accountname>` so
-that games on the account can be easily filtered out of queries. Also, please
-don't run qw on the same account that you use for your own personal games!
-
-## Running locally
-* Clone this repo.
-* Run crawl locally with command like `./crawl -rc qw/qw.rc -rcdir qw`, where
-  here the repo is in a directory named `qw`. The `-rcdir` option is necessary
-  for `crawl` to find the `qw.lua` file. Alternately you can put the contents of
-  `qw.lua` directly in `qw.rc` per the instructions above for online play.
-* Enter name if necessary and start game. If you didn't change the
-  `AUTO_START` variable, press "Tab".
-* Enjoy!
-
-The file qw.exp is a simple expect script that automates running qw for many
-games in a row. The `AUTO_START` variable should be left at false when when
-using this. (With minor modifications, this can also be used to run games on a
-remote server over ssh.)
 
 ## Miscellaneous tips for coding/testing qw
 * Run qw locally with the DCSS command-line option -seed <n> to use a seeded
   RNG for (mostly) reproducible testing
-* Uncomment the "say(plandata[2])" line in the cascade function to track what
-  the bot is doing (very spammy)
+* See the Debugging section of qw.rc for variables to enable for debugging
+  purposes.
 * Put code you want to test in the "ttt()" funtion on the bottom; make it run
   by macroing some key to "===ttt"
+* Use the included `make-qw-rc.sh` script to assemble a full qw rcfile from a
+  base rcfile you've made from qw.rc and your modified qw.lua. This script also
+  sets a custom version string based on the latest git annotated tag and commit.
+* qw outputs its configuration as well as its current version as notes at the
+  start of every game. These can be viewed from the in-progress game dump and
+  the final game morgue.
