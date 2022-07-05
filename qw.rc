@@ -208,8 +208,12 @@ autopickup_exceptions =
 
 # Set to true to enable debug output. Generates a lot of output.
 : DEBUG_MODE = false
+
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false
+
+# Enable to allow death in Wizard mode.
+: WIZMODE_DEATH = false
 
 #################
 ### Constants ###

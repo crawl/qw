@@ -8539,7 +8539,7 @@ end
 
 function c_answer_prompt(prompt)
     if prompt == "Die?" then
-        return false
+        return WIZMODE_DEATH
     end
     if prompt:find("Have to go through") then
         return offlevel_travel
