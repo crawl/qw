@@ -33,6 +33,8 @@ https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220629-192016.txt
 https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220704-105022.txt
 
 ## Past Results
+Historically qw's best 3-rune winrate was 15% with DDFi^Makhleb. For 15 runes
+before the 0.28 hell rework, its winrate was about 1% with GrFi^TSO.
 
 ### Online wins
 CeFi^O DDBe DDFi^C DDFi^O DDFi^Q DDFi^Y DDGl^M DDGl^R DrFi^O
