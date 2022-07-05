@@ -5975,7 +5975,7 @@ function plan_open_runed_doors()
     end
     for x = -1, 1 do
         for y = -1, 1 do
-            if view.feature_at(x, y) == "runed_door" then
+            if view.feature_at(x, y) == "runed_clear_door" then
                 magic(delta_to_vi(x, y) .. "Y")
                 return true
             end
@@ -6851,7 +6851,7 @@ function plan_flail_at_invis()
         tries = tries + 1
         if (x ~= 0 or y ~= 0) and is_traversable(x, y)
              and view.feature_at(x, y) ~= "closed_door"
-             and view.feature_at(x, y) ~= "runed_door" then
+             and not view.feature_at(x, y):find("runed") then
             success = true
         end
     end
