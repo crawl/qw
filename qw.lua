@@ -1744,6 +1744,7 @@ local ridiculous_uniques = {
     ["Antaeus"] = 100,
     ["Asmodeus"] = 100,
     ["Lom Lobon"] = 100,
+    ["Cerebov"] = 100,
 } -- hack
 
 -- Trog's Hand these.
