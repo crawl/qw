@@ -47,11 +47,6 @@ name = qw
 # Unfortunately this doesn't work if the game starts with a -more-.
 : AUTO_START = false
 
-# The version of qw for logging purposes. Run the make-qw-rc.sh script in this
-# repository to set this variable automatically, or manually change it to a
-# custom version string.
-: QW_VERSION = "%VERSION%"
-
 ################
 ### Gameplay ###
 ################
@@ -86,6 +81,7 @@ combo = GrBe.handaxe
 # Gods who have been at least partially implemented: BCHLMOQRTUXY1
 # Gods who are actually pretty decent on qw: CMORT
 : GOD_LIST = { "Trog", "Okawaru", "Makhleb"}
+
 # Use faded altar, abandoning if we don't get one of the gods in GOD_LIST
 : FADED_ALTAR = false
 
@@ -113,6 +109,7 @@ combo = GrBe.handaxe
 :     ["all"]    = "tso,tomb,pan,slime,hells,abyss,zig,zot",
 :     ["zig"]    = "tso,tomb,pan,slime,zig,zot",
 : }
+
 # The default plan.
 : ENDGAME_PLAN = "3runes"
 

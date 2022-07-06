@@ -45,8 +45,8 @@ fi
 set -e
 
 rc_text=$(cat $rc_file)
-rc_text="${rc_text/\%VERSION\%/$version}"
 lua_text=$(cat $lua_files)
+lua_text="${lua_text/\%VERSION\%/$version}"
 printf "%s\n" "${rc_text/$lua_marker/$lua_text}" > "$out_file"
 
 rc_nlines=$(echo "$rc_text" | wc -l)

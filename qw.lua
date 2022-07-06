@@ -1,5 +1,10 @@
 {
--- some global variables:
+-- Some global variables:
+
+-- The version of qw for logging purposes. Run the make-qw-rc.sh script to set
+-- this variable automatically based on the latest annotate git tag and commit,
+-- or change it here to a custom version string.
+local qw_version = "%VERSION%"
 
 local initialized = false
 local time_passed
@@ -96,15 +101,15 @@ local good_stair_list
 local target_stair
 local last_flee_turn = -100
 
-local ABYSSAL_RUNE = false
-local SLIMY_RUNE = false
-local PAN_RUNE = false
-local HELL_RUNE = false
-local GOLDEN_RUNE = false
-local TSO_CONVERSION = false
-local LUGONU_CONVERSION = false
-local WILL_ZIG = false
-local MIGHT_BE_GOOD = false
+local abyssal_rune = false
+local slimy_rune = false
+local pan_rune = false
+local hell_rune = false
+local golden_rune = false
+local tso_conversion = false
+local lugonu_conversion = false
+local will_zig = false
+local might_be_good = false
 local endgame_plan_list = {}
 local which_endgame_plan = 1
 local dislike_pan_level = false
@@ -113,8 +118,8 @@ local prev_hatch_dist = 1000
 local prev_hatch_x
 local prev_hatch_y
 
--- options to set while qw is running
--- maybe should add more mutes for watchability
+-- Options to set while qw is running. Maybe should add more mutes for
+-- watchability.
 
 function set_options()
     crawl.setopt("pickup_mode = multi")
@@ -170,7 +175,7 @@ end
 -- if it2, pretend we aren't equipping it2
 -- if sit = "hydra", assume we are fighting a hydra at lowish XL
 --        = "extended", assume we are in (or about to enter) Pan if
---                      TSO_CONVERSION, we need this weapon to be TSO-friendly
+--                      tso_conversion, we need this weapon to be TSO-friendly
 --        = "bless", assume we want to bless the weapon with TSO eventually
 function equip_value(it, cur, it2, sit)
     if not it then
@@ -502,7 +507,7 @@ function max_resist_value(str, d)
         end
         if str == "rF" then
             val = val * 2.5
-        elseif str == "rC" and SLIMY_RUNE then
+        elseif str == "rC" and slimy_rune then
             val = val * 1.5
         end
         return val
@@ -515,7 +520,7 @@ function max_resist_value(str, d)
     elseif str == "Will" then
         return 75 * d
     elseif str == "rCorr" then
-        return ires < 1 and (SLIMY_RUNE and 1200 or 50) or 0
+        return ires < 1 and (slimy_rune and 1200 or 50) or 0
     elseif str == "SInv" then
         return ires < 1 and 200 or 0
     elseif str == "Spirit" then
@@ -535,7 +540,7 @@ function min_resist_value(str, d)
     if str == "rF" then
         return -375
     elseif str == "rC" then
-        return SLIMY_RUNE and -225 or -150
+        return slimy_rune and -225 or -150
     elseif str == "Will" then
         return 75 * d
     end
@@ -630,9 +635,9 @@ function resist_dominated(it, it2)
 end
 
 function rune_goal()
-    return 3 + (ABYSSAL_RUNE and 1 or 0) + (SLIMY_RUNE and 1 or 0)
-        + (PAN_RUNE and 5 or 0) + (HELL_RUNE and 4 or 0)
-        + (GOLDEN_RUNE and 1 or 0)
+    return 3 + (abyssal_rune and 1 or 0) + (slimy_rune and 1 or 0)
+        + (pan_rune and 5 or 0) + (hell_rune and 4 or 0)
+        + (golden_rune and 1 or 0)
 end
 
 function easy_runes()
@@ -808,10 +813,10 @@ function weapon_value(it, cur, it2, sit)
     local hydra_swap = sit == "hydra"
     local extended = sit == "extended"
     local tso = you.god() == "the Shining One"
-        or extended and TSO_CONVERSION
+        or extended and tso_conversion
         or you.god() == "Elyvilon"
         or you.god() == "Zin"
-        or you.god() == "No God" and MIGHT_BE_GOOD
+        or you.god() == "No God" and might_be_good
     local name = it.name()
     local value = 1000
     local weap = items.equipped_at("Weapon")
@@ -1143,7 +1148,7 @@ function want_potion(it)
     wanted = { "curing", "heal wounds", "haste", "resistance",
         "experience", "might", "mutation", "cancellation" }
 
-    if TSO_CONVERSION and (PAN_RUNE or HELL_RUNE or GOLDEN_RUNE) then
+    if tso_conversion and (pan_rune or hell_rune or golden_rune) then
         table.insert(wanted, "magic")
         table.insert(wanted, "attraction")
     end
@@ -1160,7 +1165,7 @@ function want_scroll(it)
     wanted = { "acquirement", "brand weapon", "enchant armour",
         "enchant weapon", "identify", "teleportation"}
 
-    if WILL_ZIG then
+    if will_zig then
         table.insert(wanted, "blinking")
         table.insert(wanted, "fog")
     end
@@ -1195,13 +1200,13 @@ function item_is_dominated(it)
     if slotname == "Weapon" and you.xl() < 18
          and not item_is_sit_dominated(it, "hydra") then
         return false
-    elseif (PAN_RUNE or HELL_RUNE or GOLDEN_RUNE) and slotname == "Weapon"
+    elseif (pan_rune or hell_rune or golden_rune) and slotname == "Weapon"
                  and not item_is_sit_dominated(it, "extended") then
         return false
     elseif slotname == "Weapon"
             and (you.god() == "the Shining One"
                 and not you.one_time_ability_used()
-                or you.god() ~= "the Shining One" and TSO_CONVERSION)
+                or you.god() ~= "the Shining One" and tso_conversion)
             and not item_is_sit_dominated(it, "bless") then
         return false
     end
@@ -4788,7 +4793,7 @@ function plan_find_conversion_altar()
     end
     if game_status == "tso" and you.god() ~= "the Shining One" then
         str = "altar of the Shining One"
-    elseif LUGONU_CONVERSION and you.xl() == 12 and you.god() == "Lugonu" then
+    elseif lugonu_conversion and you.xl() == 12 and you.god() == "Lugonu" then
         str = "altar of Makhleb"
     else
         return false
@@ -4840,7 +4845,7 @@ end
 function plan_convert()
     if (game_status ~= "tso" or you.god() == "the Shining One"
             or view.feature_at(0, 0) ~= "altar_the_shining_one") and
-         ((not LUGONU_CONVERSION) or you.god() ~= "Lugonu"
+         ((not lugonu_conversion) or you.god() ~= "Lugonu"
             or view.feature_at(0, 0) ~= "altar_makhleb") then
         return false
     end
@@ -5016,8 +5021,8 @@ function brand_is_great(brand)
     elseif brand == "electrocution" then
         return where ~= "Zot:5"
     elseif brand == "holy wrath" then
-        return where == "Zot:5" or you.have_orb() or PAN_RUNE or HELL_RUNE
-        or GOLDEN_RUNE
+        return where == "Zot:5" or you.have_orb() or pan_rune or hell_rune
+        or golden_rune
     else
         return false
     end
@@ -5831,7 +5836,7 @@ function plan_go_to_temple()
         return false
     end
     if found_branch("T")
-            and (want_altar() or TSO_CONVERSION or LUGONU_CONVERSION)
+            and (want_altar() or tso_conversion or lugonu_conversion)
             and not util.contains(c_persist.branches_entered, "T")
             and in_branch("D") then
         expect_new_location = true
@@ -5971,7 +5976,7 @@ function plan_dive_go_to_pan_downstairs()
 end
 
 function plan_open_runed_doors()
-    if where ~= "Pan" and (where ~= "Depths:3" or not PAN_RUNE) then
+    if where ~= "Pan" and (where ~= "Depths:3" or not pan_rune) then
         return false
     end
     for x = -1, 1 do
@@ -8101,19 +8106,19 @@ function make_endgame_plans()
     endgame_plan_list = split(endgame_plan_options(), ", ")
     for _, pl in ipairs(endgame_plan_list) do
         if pl == "slime" then
-            SLIMY_RUNE = true
+            slimy_rune = true
         elseif pl == "pan" then
-            PAN_RUNE = true
+            pan_rune = true
         elseif pl == "abyss" then
-            ABYSSAL_RUNE = true
+            abyssal_rune = true
         elseif pl == "hells" then
-            HELL_RUNE = true
+            hell_rune = true
         elseif pl == "tomb" then
-            GOLDEN_RUNE = true
+            golden_rune = true
         elseif pl == "tso" then
-            TSO_CONVERSION = true
+            tso_conversion = true
         elseif pl == "zig" then
-            WILL_ZIG = true
+            will_zig = true
         end
     end
     if endgame_plan_list[#endgame_plan_list] ~= "zot" then
@@ -8149,7 +8154,7 @@ function initialize()
     end
     for _, god in ipairs(god_options()) do
         if god == "the Shining One" or god == "Elyvilon" or god == "Zin" then
-            MIGHT_BE_GOOD = true
+            might_be_good = true
         end
     end
     initialized = true
@@ -8195,7 +8200,7 @@ function bool_string(x)
 end
 
 function note_qw_data()
-    note("qw: Version: " .. QW_VERSION)
+    note("qw: Version: " .. qw_version)
     note("qw: Game counter: " .. c_persist.record.counter)
     note("qw: Always use a shield: " .. bool_string(SHIELD_CRAZY))
     if not util.contains(god_options(), you.god()) then
