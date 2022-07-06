@@ -16,10 +16,11 @@ current version. See [accomplishments.md](accomplishments.md) for current and
 past achievements.
 
 ## Running locally
-It's best to run qw either locally or on your own server. You set up [Sequell]
-(https://github.com/crawl/sequell) either locally or on your server to track
-its statistics.
+It's best to run qw either locally or on your own server. You can set up
+[Sequell](https://github.com/crawl/sequell) or the DCSS
+[scoring](https://github.com/crawl/scoring) scripts to track its statistics.
 
+Steps:
 * Clone this repo.
 * You may want to edit some of the configuration lines near the top of `qw.rc`.
   For example, edit the various COMBO variables to choose which combos qw will
@@ -40,19 +41,20 @@ remote server over ssh.)
 ## Running on a WebTiles server
 Please don't run qw on an official server unless you have permission from the
 server admin. Misconfigured (or even well-configured) bots can eat up server
-CPU from actual players.  If you do have permission to run qw on an official
+CPU from actual players.  If you do have permission from your server admin,
 server please add the name of the account that you are using for qw to the
 Sequell "bot" nick with `!nick bot <accountname>` so that games on the account
 can be easily filtered out of queries. Also, please don't run qw on the same
 account that you use for your own personal games.
 
+Steps:
 * In a text editor, open the `qw.rc` file from this repo.
 * In the *Interface* section, on the lines with `: DELAYED = false` and `:
   AUTO_START = false`, change `false` to `true`
 * At the end of the contents of `qw.rc`, put the contents of the `qw.lua` file
   from this repository. Note that first line of `qw.lua` with `{` and the last
   line with `}` must also be included, otherwise the Lua code won't execute.
-* Copy the final contents of your modified `qw.rc` file. It's wise to also save
+* Copy the full contents of your modified `qw.rc` file. It's wise to also save
   this to a new file for ease of future modifications.
 * Go to your WebTiles server lobby.
 * Click the "(edit rc)" link for DCSS trunk, paste the contents of the modified

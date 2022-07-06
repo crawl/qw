@@ -46,7 +46,7 @@ local target_memory_y
 
 local last_wait = 0
 local wait_count = 0
-local old_turn_count = you.turns()-1
+local old_turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
 local travel_destination = nil
@@ -8600,7 +8600,7 @@ function c_choose_acquirement()
 
     for _, c in ipairs(wanted) do
         local ind = item_ind[c]
-        if item_ind[c] > 0 then
+        if ind > 0 then
             local item = acq_items[ind]
             if autopickup(item, item.name()) then
                 say("ACQUIRING " .. item.name())
