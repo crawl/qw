@@ -496,7 +496,7 @@ function absolute_resist_value(str, n)
     elseif str == "SInv" then
         return 200
     elseif str == "Spirit" then
-        return 100
+        return god_uses_mp() and -150 or 100
     elseif str == "Acrobat" then
         return 100
     elseif str == "Reflect" then
@@ -770,6 +770,13 @@ function armour_value(it, cur, it2)
         end
         if ap and ap["Harm"] then
             return -1, -1
+        end
+        if it.name():find("Mad Mage's Maulers") then
+            if god_uses_mp() then
+                return -1, -1
+            else
+                value = value + 200
+            end
         end
     elseif name:find("runed") or name:find("glowing") or name:find("dyed")
             or name:find("embroidered") or name:find("shiny") then
@@ -4449,13 +4456,16 @@ function want_resistance()
             and you.res_shock() < 1
         or check_monster_list(LOS, pois_resistance_monsters)
             and you.res_poison() < 1
-        or where:find("Zig")
+        or in_branch("Zig")
             and check_monster_list(LOS, acid_resistance_monsters)
             and not you.res_corr()
 end
 
 function want_magic_points()
-    return (in_hells() or you.where():find("Tomb"))
+    -- No point trying to restore MP with ghost moths around.
+    return count_monster_by_name(LOS, "ghost moth") == 0
+            and (hp_is_low(50) or you.have_orb() or in_extended())
+        -- We want and can use these abilities
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
                 and want_to_cleansing_flame()
@@ -7934,18 +7944,39 @@ function skill_value(sk)
     end
 end
 
-function god_wants_invocations()
-    return you.god() == "Makhleb"
+function god_uses_mp()
+    return you.god() == "Beogh"
         or you.god() == "Cheibriados"
+        or you.god() == "Dithmenos"
+        or you.god() == "Elyvilon"
+        or you.god() == "Kikubaaqudgha"
+        or you.god() == "Hepliaklqana"
+        or you.god() == "Lugonu"
+        or you.god() == "Nemelex Xobeh"
         or you.god() == "Okawaru"
-        or you.god() == "Yredelemnul"
-        or you.god() == "Beogh"
         or you.god() == "Qazlal"
         or you.god() == "the Shining One"
-        or you.god() == "Lugonu"
-        or you.god() == "Hepliaklqana"
+        or you.god() == "Sif Muna"
         or you.god() == "Uskayaw"
+        or you.god() == "Yredelemnul"
+        or you.god() == "Zin"
+end
+
+function god_wants_invocations()
+    return you.god() == "Beogh"
+        or you.god() == "Cheibriados"
+        or you.god() == "Dithmenos"
         or you.god() == "Elyvilon"
+        or you.god() == "Hepliaklqana"
+        or you.god() == "Lugonu"
+        or you.god() == "Nemelex Xobeh"
+        or you.god() == "Makhleb"
+        or you.god() == "Okawaru"
+        or you.god() == "Qazlal"
+        or you.god() == "the Shining One"
+        or you.god() == "Sif Muna"
+        or you.god() == "Uskayaw"
+        or you.god() == "Yredelemnul"
         or you.god() == "Zin"
 end
 
