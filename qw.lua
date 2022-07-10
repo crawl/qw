@@ -933,9 +933,15 @@ function weapon_value(it, cur, it2, sit)
             return -1, -1
         end
         if name:find("obsidian axe") then
-            value = value + 300
             if tso then
                 return -1, -1
+            -- This is much less good when it can't make friendly demons.
+            elseif you.mutation("hated by all") or you.god() == "Okawaru" then
+                value = value - 200
+            -- XXX: De-value this on certain levels or give qw better strats
+            -- while mesmerized.
+            else
+                value = value + 200
             end
         end
     end
@@ -965,20 +971,24 @@ function weapon_value(it, cur, it2, sit)
                 value = value + 500
             end
         elseif ego == "vampirism" then
-            value = value + 500 -- this is what we want
             if tso then
                 return -1, -1
             end
             if extended then
                 value = value - 400
             end
+             -- This is what we want.
+            value = value + 500
         elseif ego == "speed" then
-            value = value + 300 -- this is good too
             if you.god() == "Cheibriados" then
                 return -1, -1
             end
-        elseif ego == "electrocution" or ego == "spectralizing" then
-            value = value + 150 -- not bad
+            -- This is good too
+            value = value + 300
+        elseif ego == "spectralizing" then
+            value = value + 200
+        elseif ego == "electrocution" then
+            value = value + 150
         elseif ego == "draining" then
             if not extended then
                 value = value + 75
@@ -3250,8 +3260,9 @@ end
 
 function can_swap(equip_slot)
     local it = items.equipped_at(equip_slot)
-    if it and (it.cursed or it.name():find("+14 obsidian axe")
-                and you.status("mesmerised")) then
+    if it and (it.cursed
+                or it.name():find("obsidian axe")
+                    and you.status("mesmerised")) then
         return false
     end
     if it and it.ego() == "flying" and
