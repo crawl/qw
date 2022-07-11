@@ -202,7 +202,7 @@ function equip_value(it, cur, it2, sit)
     return -1, -1
 end
 
--- Returns the amount of an artprop granted by an item - not all artprops are
+-- Returns the amount of an artprop granted by an item. Not all artprops are
 -- currently handled here.
 function item_resist(str, it)
     if not it then
@@ -217,10 +217,11 @@ function item_resist(str, it)
         if str == "rF" then
             if name:find("fire dragon") then
                 return 2
-            elseif ego == "fire resistance" or ego == "resistance"
-                         or subtype == "ring of protection from fire"
-                         or name:find("gold dragon")
-                         or subtype == "ring of fire" then
+            elseif ego == "fire resistance"
+                    or ego == "resistance"
+                    or subtype == "ring of protection from fire"
+                    or name:find("gold dragon")
+                    or subtype == "ring of fire" then
                 return 1
             elseif name:find("ice dragon") or subtype == "ring of ice" then
                 return -1
@@ -256,15 +257,17 @@ function item_resist(str, it)
                 return 0
             end
         elseif str == "rN" then
-            if ego == "positive energy" or subtype == "ring of positive energy"
-                 or name:find("pearl dragon") then
+            if ego == "positive energy"
+                    or subtype == "ring of positive energy"
+                    or name:find("pearl dragon") then
                 return 1
             else
                 return 0
             end
         elseif str == "Will" then
-            if ego == "willpower" or subtype == "ring of willpower"
-                 or name:find("quicksilver dragon") then
+            if ego == "willpower"
+                    or subtype == "ring of willpower"
+                    or name:find("quicksilver dragon") then
                 return 1
             else
                 return 0
@@ -5060,18 +5063,17 @@ function body_armour_is_good(arm)
     elseif ap == "dodgy" then
         return (name:find("ring mail") or name:find("robe of resistance"))
     else
-        return name:find("robe of fire resistance")
+        return name:find("robe of resistance")
+            or name:find("robe of fire resistance")
     end
 end
 
 -- do we want to keep this brand?
 function brand_is_great(brand)
-    if brand == "speed" then
+    if brand == "speed" or brand == "spectralizing" then
         return true
     elseif brand == "vampirism" then
         return not you.have_orb()
-    elseif brand == "spectralizing" then
-        return true
     elseif brand == "electrocution" then
         return where ~= "Zot:5"
     elseif brand == "holy wrath" then
@@ -5119,9 +5121,11 @@ function plan_use_good_consumables()
             elseif it.name():find("enchant armour") then
                 body = items.equipped_at("Body Armour")
                 ac = armour_ac()
-                if body and not body.artefact and body.plus < ac
-                         and body_armour_is_great(body)
-                         and not body.name():find("quicksilver dragon") then
+                if body
+                        and not body.artefact
+                        and body.plus < ac
+                        and body_armour_is_great(body)
+                        and not body.name():find("quicksilver") then
                     oldname = body.name()
                     if read2(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
@@ -5154,9 +5158,11 @@ function plan_use_good_consumables()
                         end
                     end
                 end
-                if body and not body.artefact and body.plus < ac
-                     and body_armour_is_good(body)
-                     and not body.name():find("quicksilver dragon scales") then
+                if body
+                        and not body.artefact
+                        and body.plus < ac
+                        and body_armour_is_good(body)
+                        and not body.name():find("quicksilver") then
                     oldname = body.name()
                     if read2(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
@@ -5172,7 +5178,8 @@ function plan_use_good_consumables()
                 if base_mutation("inhibited regeneration") > 0
                             and you.race() ~= "Ghoul"
                         or base_mutation("teleportitis") > 0
-                        or base_mutation("inability to read while threatened") > 0
+                        or base_mutation(
+                            "inability to read while threatened") > 0
                         or base_mutation("deformed body") > 0
                             and you.race() ~= "Naga"
                             and you.race() ~= "Palentonga"
