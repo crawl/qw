@@ -489,11 +489,9 @@ function absolute_resist_value(str, n)
     elseif str == "rN" then
         return 25 * n
     elseif str == "Will" then
-        if n <= 2 then
-            return 75 * n
-        else
-            return 200
-        end
+        local branch_factor = in_branch("Vaults") and 1.5 or 1
+        val = 100 * branch_factor * n
+        return min(val, 300 * branch_factor)
     elseif str == "rCorr" then
         return slime_soon() and 1200 or 50
     elseif str == "SInv" then
