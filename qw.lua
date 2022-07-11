@@ -3172,26 +3172,18 @@ function body_size()
     end
 end
 
-function target_shield_skill()
+function shield_skill_utility()
     local shield = items.equipped_at("Shield")
     if not shield then
         return 0
     end
-    if shield.encumbrance == 0 and not want_buckler()
-         or shield.encumbrance ~= 0 and not want_shield() then
-        return 0
-    end
-    enc = shield.encumbrance > 0 and shield.encumbrance or 0.8
-    local size_factor = 5 - 2 * body_size()
-    if you.race() == "Formicid" then
-        size_factor = size_factor - 2
-    end
-    return enc * size_factor
-end
 
-function at_target_shield_skill()
-    return you.base_skill("Shields") >= min(27,
-        target_shield_skill() + (you.god() == "Ru" and 1 or 0))
+    local shield_factor = you.mutation("four strong arms") > 0 and -2
+        or 2 * body_size()
+    local shield_penalty = 2 * shield.encumbrance * shield.encumbrance
+        * (27 - you.base_skill("Shields"))
+        / (5 * (20 - 3 * shield_factor)) / 27
+    return 0.25 + 0.3 * shield_penalty
 end
 
 function min_delay_skill()
@@ -7931,11 +7923,7 @@ function skill_value(sk)
     elseif sk == "Fighting" then
         return 0.75
     elseif sk == "Shields" then
-        local shield = items.equipped_at("Shield")
-        if not shield then
-            return 0
-        end
-        return at_target_shield_skill() and 0.2 or 0.75
+        return shield_skill_utility()
     elseif sk == "Throwing" then
         local rating
         rating, _ = best_missile()
