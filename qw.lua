@@ -3184,7 +3184,7 @@ function shield_skill_utility()
     local shield_penalty = 2 * shield.encumbrance * shield.encumbrance
         * (27 - you.base_skill("Shields"))
         / (5 * (20 - 3 * shield_factor)) / 27
-    return 0.25 + 0.3 * shield_penalty
+    return 0.25 + 0.5 * shield_penalty
 end
 
 function min_delay_skill()
@@ -7932,7 +7932,7 @@ function skill_value(sk)
     elseif sk == "Throwing" then
         local rating
         rating, _ = best_missile()
-        return 0.3 * rating
+        return 0.2 * rating
     elseif sk == "Invocations" then
         if you.god() == "the Shining One" then
             return in_extended() and 1.5 or 0.5
