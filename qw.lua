@@ -6,6 +6,16 @@
 -- or change it here to a custom version string.
 local qw_version = "%VERSION%"
 
+-- Enum values :/
+local enum_mons_pan_lord = 344
+local enum_att_friendly = 4
+local enum_att_neutral = 1
+
+local los_radius = 7
+if you.race() == "Barachi" then
+    los_radius = 8
+end
+
 local initialized = false
 local time_passed
 local update_coroutine
@@ -20,7 +30,6 @@ local where
 local where_branch
 local where_depth
 local where_shafted_from = nil
-local expect_new_location
 local expect_portal
 local base_corrosion
 
@@ -56,7 +65,8 @@ local wait_count = 0
 local old_turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
-local travel_destination = nil
+local travel_branch = nil
+local travel_depth = nil
 local game_status = "normal"
 
 local have_message = false
@@ -112,17 +122,15 @@ local tso_conversion = false
 local lugonu_conversion = false
 local will_zig = false
 local might_be_good = false
-local endgame_plan_list = {}
-local which_endgame_plan = 1
+local plan_list = {}
+local which_plan = 1
 local dislike_pan_level = false
 
 local prev_hatch_dist = 1000
 local prev_hatch_x
 local prev_hatch_y
 
-local hell_branches = {
-    "Coc", "Dis", "Geh", "Tar"
-} -- hack
+local hell_branches = { "Coc", "Dis", "Geh", "Tar" }
 
 -- Options to set while qw is running. Maybe should add more mutes for
 -- watchability.
@@ -471,11 +479,11 @@ function absolute_resist_value(str, n)
         if str == "rF" then
             if zot_soon() then
                 val = val * 2.5
-            elseif game_status == "gehenna" then
+            elseif game_status == "Geh" then
                 val = val * 1.5
             end
         elseif str == "rC" then
-            if game_status == "cocytus" then
+            if game_status == "Coc" then
                 val = val * 2.5
             elseif slime_soon() then
                 val = val * 1.5
@@ -662,75 +670,165 @@ function easy_runes()
 end
 
 function update_game_status()
-    if you.have_orb() then
-        game_status = "orbrun"
-        return
+    local current_plan = plan_list[which_plan]
+    local normal_complete = false
+
+    if current_plan == "Normal" then
+        local early_vaults = make_level_range("Vaults", 1, -1)
+        if not explored_level_range("D:1-11") then
+            -- We head to Lair early, before having explored through D:11, if
+            -- we feel we're ready.
+            if found_branch("Lair")
+                    and not explored_level_range("Lair")
+                    and ready_for_lair() then
+                game_status = "Lair"
+            else
+                game_status = "D:1-11"
+            end
+        -- D:1-11 explored, but not Lair.
+        elseif not explored_level_range("Lair") then
+            -- We'll keep exploring Dungeon until we're ready or we don't have
+            -- any Dungeon left.
+            if ready_for_lair() or explored_level_range("D") then
+                game_status = "Lair"
+            else
+                game_status = "D"
+            end
+        -- D:1-11 and Lair explored, but not D:12.
+        elseif not explored_level_range("D:12") then
+            if LATE_ORC then
+                game_status = "D"
+            else
+                game_status = "D:12"
+            end
+        -- D:1-12 and Lair explored, but not all of D.
+        elseif not explored_level_range("D") then
+            if not LATE_ORC
+                    and found_branch("Orc")
+                    and not explored_level_range("Orc") then
+                game_status = "Orc"
+            else
+                game_status = "D"
+            end
+        -- D and Lair explored, but not Orc.
+        elseif not explored_level_range("Orc") then
+            game_status = "Orc"
+        -- D, Lair, and Orc explored, but no Lair branch runes.
+        elseif easy_runes() == 0 then
+            -- We do levels all levels except the rune level for both Lair
+            -- branches before we go for the first rune.
+            local first_br = next_branch(lair_branch_order())
+            local second_br = next_branch(lair_branch_order(), 1)
+            local first_range = make_level_range(first_br, 1, -1)
+            local second_range = make_level_range(second_br, 1, -1)
+            if not explored_level_range(first_range) then
+                game_status = first_range
+            elseif not explored_level_range(second_range) then
+                game_status = second_range
+            else
+                game_status = first_br
+            end
+        -- D, Lair, Orc, and at least one Lair branch explored, but not early
+        -- Vaults.
+        elseif not explored_level_range(early_vaults) then
+            game_status = early_vaults
+        -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
+        -- second Lair branch not explored.
+        elseif easy_runes() == 1 then
+            if not explored_level_range("Depths")
+                    and not EARLY_SECOND_RUNE then
+                game_status = "Depths"
+            else
+                game_status = next_branch(lair_branch_order())
+            end
+        -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
+        -- Depths.
+        elseif not explored_level_range("Depths") then
+            game_status = "Depths"
+        -- D, Lair, Orc, both Lair branches, early Vaults, and Depths explored,
+        -- but no silver rune.
+        elseif not explored_level_range("Vaults") then
+            game_status = "Vaults"
+        -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and
+        -- it's time to shop.
+        elseif not c_persist.done_shopping then
+            game_status = "Shopping"
+        -- After shopping, mark the normal plan as complete. The normal plan
+        -- progression below will take over and process the plan list from now
+        -- on, including making sure we get to Zot and the ORB.
+        else
+            normal_complete = true
+        end
     end
 
-    if game_status == "normal"
-            and you.have_rune("silver")
-            and not in_branch("Vaults")
-            and not in_branch("Abyss") then
-        game_status = "shopping"
+    local need_plan = true
+    while need_plan and which_plan <= #plan_list do
+        local branch = parse_level_range(current_plan)
+        if current_plan == "Normal" and normal_complete
+                or branch and not branch_exists(branch)
+                or branch and explored_level_range(current_plan)
+                or current_plan == "Shopping" and c_persist.done_shopping
+                or current_plan == "TSO" and you.god() == "the Shining One"
+                or current_plan == "Abyss"
+                    and have_branch_runes("Abyss")
+                or current_plan == "Pan" and have_branch_runes("Pan")
+                or current_plan == "Zig"
+                    and c_persist.entered_zig
+                    and not in_branch("Zig") then
+            which_plan = which_plan + 1
+            current_plan = plan_list[which_plan]
+        else
+            need_plan = false
+        end
     end
 
-    if game_status == "shopping" and c_persist.done_shopping then
-        game_status = endgame_plan_list[1]
+    -- We're out of plans, so we make our final task be either be exploring Zot
+    -- or, if we've found the ORB, getting it and winning.
+    if need_plan then
+        if not explored_level_range("Zot") then
+            current_plan = "Zot"
+        else
+            current_plan = "Orb"
+        end
     end
 
-    while (game_status == "crypt"
-               and found_branch("Tomb")
-               and not in_branch("Crypt")
-            or game_status == "tso" and you.god() == "the Shining One"
-            or game_status == "slime"
-                and you.have_rune("slimy")
-                and not in_branch("Slime")
-            or game_status == "pan"
-                and have_pan_runes()
-                and not in_branch("Pan")
-                and not in_branch("Abyss")
-            or game_status == "abyss"
-                and you.have_rune("abyssal")
-                and not in_branch("Abyss"))
-            or game_status == "cocytus"
-                and you.have_rune("icy")
-                and not in_branch("Coc")
-            or game_status == "dis"
-                and you.have_rune("iron")
-                and not in_branch("Dis")
-            or game_status == "gehenna"
-                and you.have_rune("obsidian")
-                and not in_branch("Geh")
-            or game_status == "tartarus"
-                and you.have_rune("bone")
-                and not in_branch("Tar")
-            or game_status == "tomb"
-                and you.have_rune("golden")
-                and not in_branch("Tomb")
-                and not in_branch("Abyss")
-            or game_status == "zig"
-                and c_persist.entered_zig
-                and not in_branch("Zig") do
-        which_endgame_plan = which_endgame_plan + 1
-        game_status = endgame_plan_list[which_endgame_plan]
+    -- If our current plan is Normal, it's not yet complete, and the
+    -- game_status was already updated above.
+    if current_plan ~= "Normal" then
+        game_status = current_plan
+    end
+
+    -- XXX Ideally we'd be robust enough in our searching to never miss branch
+    -- entrances/runes/the orb, so these would be sanity checks for things that
+    -- couldn't happen in a normal game.
+    local branch = parse_level_range(game_status)
+    if branch and not found_branch(branch) then
+        error("Can't find the " .. branch .. " branch!")
+    elseif (branch == "Zot" or game_status == "Orb")
+            and you.num_runes() < 3 then
+        error("Couldn't get three runes of Zot!")
+    elseif status == "Orb" and not found_branch("Zot") then
+        error("Can't find the Zot branch!")
+    elseif status == "Orb" and not c_persist.found_orb then
+        error("Can't find the Orb of Zot!")
     end
 end
 
 function zot_soon()
-    return game_status == "zot"
+    return game_status == "Zot"
 end
 
 function slime_soon()
-    return game_status == "slime"
+    return game_status == "Slime"
 end
 
 function in_extended()
-    return game_status == "pan"
-        or game_status == "cocytus"
-        or game_status == "dis"
-        or game_status == "gehenna"
-        or game_status == "tartarus"
-        or game_status == "tomb"
+    return game_status == "Pan"
+        or game_status == "Coc"
+        or game_status == "Dis"
+        or game_status == "Geh"
+        or game_status == "Tar"
+        or game_status == "Tomb"
 end
 
 -- A list of armour slots, this is used to normalize names for them and also to
@@ -1191,7 +1289,7 @@ function want_wand(it)
             end
         end
     elseif sub == "digging" then
-        return (count_charges("digging", it) < 18)
+        return count_charges("digging", it) < 18
     end
     return true
 end
@@ -1339,9 +1437,11 @@ function want_missile(it)
 end
 
 function autopickup(it, name)
-    if name:find("of Zot") then
+    if name:find("rune of Zot")
+            or (game_status == "Orb" and name:find("Orb of Zot")) then
         return true
     end
+
     if it.is_useless then
         return false
     end
@@ -1372,52 +1472,97 @@ add_autopickup_func(autopickup)
 ------------------------------
 -- some tables with hardcoded data about branches/portals/monsters:
 
--- branch data: where name, interlevel travel code, rune name
-local branch_data = {
-    {"Temple", "T"},
-    {"Orc", "O"},
-    {"Elf", "E"},
-    {"Lair", "L"},
-    {"Swamp", "S", "decaying"},
-    {"Shoals", "A", "barnacled"},
-    {"Snake", "P", "serpentine"},
-    {"Spider", "N", "gossamer"},
-    {"Slime", "M", "slimy"},
-    {"Vaults", "V", "silver"},
-    {"Crypt", "C"},
-    {"Tomb", "W", "golden"},
-    {"D", "D"},
-    {"Depths", "U"},
-    {"Hell", "H"},
-    {"Dis", "I", "iron"},
-    {"Geh", "G", "obsidian"},
-    {"Coc", "X", "icy"},
-    {"Tar", "Y", "bone"},
-    {"Zot", "Z"},
+-- branch data: where name, interlevel travel code, max depth, parent branch,
+-- rune name(s). This gets loaded into the branch_data table, which is keyed by
+-- the branch name. Use the helper functions branch_travel(), branch_depth(),
+-- parent_branch(), and have_branch_runes() to access this data.
+local branch_data_values = {
+    {"D", "D", 15},
+    {"Temple", "T", 1, "D"},
+    {"Orc", "O", 2, "D"},
+    {"Elf", "E", 3, "Orc"},
+    {"Lair", "L", 5, "D"},
+    {"Swamp", "S", 4, "Lair", "decaying"},
+    {"Shoals", "A", 4, "Lair", "barnacled"},
+    {"Snake", "P", 4, "Lair", "serpentine"},
+    {"Spider", "N", 4, "Lair", "gossamer"},
+    {"Slime", "M", 5, "Lair", "slimy"},
+    {"Vaults", "V", 5, "D", "silver"},
+    {"Crypt", "C", 3, "Vaults"},
+    {"Tomb", "W", 3, "Crypt", "golden"},
+    {"Depths", "U", 4, "D"},
+    {"Zot", "Z", 5, "Depths"},
+    {"Pan", nil, 1, "Depths",
+        {"dark", "demonic", "fiery", "glowing", "magical"}},
+    {"Abyss", nil, 7, "Depths", "abyssal"},
+    {"Hell", "H", 1, "Depths"},
+    {"Dis", "I", 7, "Hell", "iron"},
+    {"Geh", "G", 7, "Hell", "obsidian"},
+    {"Coc", "X", 7, "Hell", "icy"},
+    {"Tar", "Y", 7, "Hell", "bone"},
 } -- hack
 
-function branch_travel(br)
-    for _, entry in ipairs(branch_data) do
-        if entry[1] == br then
-            return entry[2]
-        end
+local branch_data = {}
+
+function initialize_branch_data()
+    for _, entry in ipairs(branch_data_values) do
+        local br = entry[1]
+        branch_data[br] = {}
+        branch_data[br]["travel"] = entry[2]
+        branch_data[br]["depth"] = entry[3]
+        branch_data[br]["parent"] = entry[4]
+        branch_data[br]["rune"] = entry[5]
     end
 end
 
-function travel_code_to_branch(c)
-    for _, entry in ipairs(branch_data) do
-        if entry[2] == c then
-            return entry[1]
-        end
+function branch_travel(br)
+    if not branch_data[br] then
+        error("Unknown branch: " .. tostring(br))
     end
+
+    return branch_data[br].travel
+end
+
+function parent_branch(br)
+    if not branch_data[br] then
+        error("Unknown branch: " .. tostring(br))
+    end
+
+    return branch_data[br].parent
+end
+
+function branch_depth(br)
+    if not branch_data[br] then
+        error("Unknown branch: " .. tostring(br))
+    end
+
+    return branch_data[br].depth
+end
+
+function have_branch_runes(br)
+    local rune = branch_rune(br)
+    if not rune then
+        return true
+    elseif type(rune) == "table" then
+        local r
+        for _, r in ipairs(rune) do
+            if not you.have_rune(r) then
+                return false
+            end
+        end
+
+        return true
+    end
+
+    return you.have_rune(rune)
 end
 
 function branch_rune(br)
-    for _, entry in ipairs(branch_data) do
-        if entry[1] == br then
-            return entry[3]
-        end
+    if not branch_data[br] then
+        error("Unknown branch: " .. tostring(br))
     end
+
+    return branch_data[br].rune
 end
 
 -- portal data: where name, full name, feature name
@@ -1442,7 +1587,7 @@ end
 
 function pan_lord(lev)
     return function (m)
-        return (you.xl() < lev and m:type() == ENUM_MONS_PANDEMONIUM_LORD)
+        return you.xl() < lev and m:type() == enum_mons_pan_lord
     end
 end
 
@@ -2141,10 +2286,140 @@ function get_feat_name(where_name)
     end
 end
 
+-- Make a level range for the given branch and ranges, e.g. D:1-11. The
+-- returned string is normalized so it's as simple as possible. Invalid level
+-- ranges raise an error.
+-- @string      branch The branch.
+-- @number      first  The first level in the range.
+-- @number[opt] last   The last level in the range, defaulting to the branch end.
+--                     If negative, the range stops that many levels from the
+--                     end of the end of the branch
+-- @treturn string The level range.
+function make_level_range(branch, first, last)
+    local max_depth = branch_depth(branch)
+    if not last then
+        last = max_depth
+    elseif last < 0 then
+        last = max_depth + last
+    end
+
+    if first <= 0
+            or first > max_depth
+            or last <= 0
+            or last > max_depth
+            or first > last then
+        error("Invalid level level range for " .. tostring(branch)
+            ..": " .. tostring(first) .. ", " .. tostring(last))
+    end
+
+    if first == 1 and last == max_depth then
+        return branch
+    elseif first == last then
+        return branch .. ":" .. first
+    else
+        return branch .. ":" .. first .. "-" .. last
+    end
+end
+
+-- Make a level range for a single level, e.g. D:1.
+-- @string branch The branch.
+-- @int    first  The level.
+-- @treturn string The level range.
+function make_level(branch, depth)
+    return make_level_range(branch, depth, depth)
+end
+
+-- Parse components of a level range.
+-- @string      range The level range.
+-- @treturn string The branch. Will be nil if the level is invalid.
+-- @treturn int    The starting level.
+-- @treturn int    The ending level.
+function parse_level_range(range)
+    local terms = split(range, ":")
+    local br = terms[1]
+
+    if not branch_data[br] then
+        return
+    end
+
+    local br_depth = branch_depth(br)
+    local min_level, max_level
+    -- A branch name with no level range.
+    if #terms == 1 then
+        min_level = 1
+        max_level = br_depth
+    else
+        local level_terms = split(terms[2], "-")
+        min_level = tonumber(level_terms[1])
+        if not min_level
+                or math.floor(min_level) ~= min_level
+                or min_level < 1
+                or min_level > br_depth then
+            return
+        end
+
+        if #level_terms == 1 then
+            max_level = min_level
+        else
+            max_level = tonumber(level_terms[2])
+            if not max_level
+                    or math.floor(max_level) ~= max_level
+                    or max_level < min_level
+                    or max_level > br_depth then
+                return
+            end
+        end
+    end
+
+    return br, min_level, max_level
+end
+
+function autoexplored_level(branch, depth)
+    return c_persist.autoexplored_levels[make_level(branch, depth)]
+end
+
+function explored_level(branch, depth)
+    if branch == "Abyss" or branch == "Pan" then
+        return have_branch_runes(branch)
+    end
+
+    local max_depth = branch_depth(branch)
+    return autoexplored_level(branch, depth)
+        and have_all_downstairs(branch, depth, feat_seen)
+        and have_all_upstairs(branch, depth, feat_seen)
+        and (depth < max_depth or have_branch_runes(branch))
+end
+
+function explored_level_range(range)
+    local br, min_level, max_level
+    br, min_level, max_level = parse_level_range(range)
+    if not br then
+        error("Invalid level range " .. tostring(range))
+    end
+
+    local l
+    for l = min_level, max_level do
+        if not explored_level(br, l) then
+            return false
+        end
+    end
+
+    return true
+end
+
+function branch_exists(br)
+    return not (br == "Snake" and found_branch("Spider")
+        or br == "Spider" and found_branch("Snake")
+        or br == "Shoals" and found_branch("Swamp")
+        or br == "Swamp" and found_branch("Shoals")
+        or not branch_data[br])
+end
+
 function found_branch(br)
     if br == "D" then
         return true
     end
+
     return travel.find_deepest_explored(br) > 0
 end
 
@@ -2500,7 +2775,7 @@ end
 function initialize_monster_array()
     monster_array = {}
     local x
-    for x = -LOS, LOS do
+    for x = -los_radius, los_radius do
         monster_array[x] = {}
     end
 end
@@ -2509,8 +2784,8 @@ function update_monster_array()
     local x, y
     enemy_list = {}
     --c_persist.mlist = {}
-    for x = -LOS, LOS do
-        for y = -LOS, LOS do
+    for x = -los_radius, los_radius do
+        for y = -los_radius, los_radius do
             if you.see_cell_no_trans(x, y) then
                 monster_array[x][y] = monster.get_monster_at(x, y)
                 if is_candidate_for_attack(x, y) then
@@ -2692,14 +2967,14 @@ end
 
 function count_pan_lords(r)
     return count_monsters(r,
-        function(m) return m:type() == ENUM_MONS_PANDEMONIUM_LORD end)
+        function(m) return m:type() == enum_mons_pan_lord end)
 end
 
 -- should only be called for adjacent squares
 function monster_in_way(dx, dy)
     local m = monster_array[dx][dy]
-    return m and (m:attitude() <= ATT_NEUTRAL and not lair_step_mode
-        or m:attitude() > ATT_NEUTRAL
+    return m and (m:attitude() <= enum_att_neutral and not lair_step_mode
+        or m:attitude() > enum_att_neutral
             and (m:is_constricted() or m:is_caught() or m:status("petrified")
                 or m:status("paralysed") or m:desc():find("sleeping")
                 or view.feature_at(0, 0) == "deep_water"
@@ -2740,7 +3015,7 @@ function will_tab(cx, cy, ex, ey, square_func)
     end
     local function attempt_move(fx, fy)
         if fx == 0 and fy == 0 then return end
-        if supdist(cx + fx, cy + fy) > LOS then return end
+        if supdist(cx + fx, cy + fy) > los_radius then return end
         if square_func(cx + fx, cy + fy) then
             return will_tab(cx + fx, cy + fy, ex, ey, square_func)
         end
@@ -2822,11 +3097,11 @@ function compare_monster_info(m1, m2, flag_order, flag_reversed)
 end
 
 function is_candidate_for_attack(x, y, no_untabbable)
-    if supdist(x, y) > LOS then
+    if supdist(x, y) > los_radius then
         return false
     end
     local m = monster_array[x][y]
-    if not m or m:attitude() > ATT_NEUTRAL then
+    if not m or m:attitude() > enum_att_neutral then
         return false
     end
     if m:is_firewood() or m:name() == "butterfly"
@@ -3396,8 +3671,8 @@ function should_ally_rest()
     for x = -3, 3 do
         for y = -3, 3 do
             m = monster_array[x][y]
-            if m and m:attitude() == ATT_FRIENDLY and m:damage_level() > 0 then
-                dsay("Waiting for " .. m:name() .. " to heal.")
+            if m and m:attitude() == enum_att_friendly
+                    and m:damage_level() > 0 then
                 return true
             end
         end
@@ -3737,8 +4012,8 @@ function plan_blinking()
     if cur_count >= 2 then
         return false
     end
-    for x = -LOS, LOS do
-        for y = -LOS, LOS do
+    for x = -los_radius, los_radius do
+        for y = -los_radius, los_radius do
             if is_traversable(x, y)
                     and not is_solid(x, y)
                     and monster_array[x][y] == nil
@@ -3748,7 +4023,7 @@ function plan_blinking()
                 count = 0
                 for dx = -1, 1 do
                     for dy = -1, 1 do
-                        if abs(x + dx) <= LOS and abs(y + dy) <= LOS then
+                        if abs(x + dx) <= los_radius and abs(y + dy) <= los_radius then
                             m = monster_array[x + dx][y + dy]
                             if m and m:name() == "floating eye" then
                                 count = count + 3
@@ -4200,7 +4475,7 @@ function plan_zig_fog()
             or you.confused()
             or not danger
             or not hp_is_low(70)
-            or count_monsters_near(0, 0, LOS)
+            or count_monsters_near(0, 0, los_radius)
                 - count_monsters_near(0, 0, 2) < 15
             or view.cloud_at(0, 0) ~= nil then
         return false
@@ -4238,13 +4513,13 @@ function want_to_bia()
     end
 
     -- Always BiA this list of monsters.
-    if (check_monster_list(LOS, bia_necessary_monsters)
+    if (check_monster_list(los_radius, bia_necessary_monsters)
                 -- If piety as high, we can also use BiA as a fallback for when
                 -- we'd like to berserk, but can't, or if when we see nasty
                 -- monsters.
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
-                        or check_monster_list(LOS, nasty_monsters)))
+                        or check_monster_list(los_radius, nasty_monsters)))
             and count_bia(4) == 0
             and not you.teleporting() then
         return true
@@ -4256,10 +4531,10 @@ function want_to_finesse()
     if danger
             and in_branch("Zig")
             and hp_is_low(80)
-            and count_monsters_near(0, 0, LOS) >= 5 then
+            and count_monsters_near(0, 0, los_radius) >= 5 then
         return true
     end
-    if danger and check_monster_list(LOS, nasty_monsters)
+    if danger and check_monster_list(los_radius, nasty_monsters)
             and not you.teleporting() then
         return true
     end
@@ -4278,12 +4553,12 @@ function want_to_drain_life()
     if not danger then
         return false
     end
-    return count_monsters(LOS, function(m) return m:res_draining() == 0 end)
+    return count_monsters(los_radius, function(m) return m:res_draining() == 0 end)
 end
 
 function want_to_sgd()
     if you.skill("Invocations") >= 12
-            and (check_monster_list(LOS, nasty_monsters)
+            and (check_monster_list(los_radius, nasty_monsters)
                 or hp_is_low(50) and immediate_danger) then
         if count_sgd(4) == 0 and not you.teleporting() then
             return true
@@ -4317,14 +4592,14 @@ end
 
 function want_to_divine_warrior()
     return you.skill("Invocations") >= 8
-        and (check_monster_list(LOS, nasty_monsters)
+        and (check_monster_list(los_radius, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warrior(4) == 0
         and not you.teleporting()
 end
 
 function want_to_orbrun_divine_warrior()
-    return danger and count_pan_lords(LOS) > 0
+    return danger and count_pan_lords(los_radius) > 0
         and count_divine_warrior(4) == 0 and not you.teleporting()
 end
 
@@ -4342,10 +4617,10 @@ end
 
 function want_to_apocalypse()
     local dlevel = drain_level()
-    return dlevel == 0 and check_monster_list(LOS, scary_monsters)
+    return dlevel == 0 and check_monster_list(los_radius, scary_monsters)
         or dlevel <= 2
             and (danger and hp_is_low(50)
-                or check_monster_list(LOS, nasty_monsters))
+                or check_monster_list(los_radius, nasty_monsters))
 end
 
 function bad_corrosion()
@@ -4363,17 +4638,17 @@ function want_to_teleport()
     if in_branch("Zig") then
         return false
     end
-    if count_hostile_sgd(LOS) > 0 and you.xl() < 21 then
+    if count_hostile_sgd(los_radius) > 0 and you.xl() < 21 then
         sgd_timer = you.turns()
         return true
     end
     if in_branch("Pan")
-            and (count_monster_by_name(LOS, "hellion") >= 3
-                or count_monster_by_name(LOS, "daeva") >= 3) then
+            and (count_monster_by_name(los_radius, "hellion") >= 3
+                or count_monster_by_name(los_radius, "daeva") >= 3) then
         dislike_pan_level = true
         return true
     end
-    if you.xl() <= 17 and not can_berserk() and count_big_slimes(LOS) > 0 then
+    if you.xl() <= 17 and not can_berserk() and count_big_slimes(los_radius) > 0 then
         return true
     end
     return immediate_danger and bad_corrosion()
@@ -4383,7 +4658,7 @@ function want_to_teleport()
                 and want_to_berserk()
                 and not can_berserk()
                 and count_bia(4) == 0
-            or count_nasty_hell_monsters(LOS) >= 9
+            or count_nasty_hell_monsters(los_radius) >= 9
 end
 
 function want_to_orbrun_teleport()
@@ -4407,7 +4682,7 @@ function want_to_orbrun_heal_wounds()
 end
 
 function want_to_orbrun_buff()
-    return count_pan_lords(LOS) > 0 or check_monster_list(LOS, scary_monsters)
+    return count_pan_lords(los_radius) > 0 or check_monster_list(los_radius, scary_monsters)
 end
 
 function count_nasty_hell_monsters(r)
@@ -4430,7 +4705,7 @@ end
 function want_to_serious_buff()
     if danger and in_branch("Zig")
             and hp_is_low(50)
-            and count_monsters_near(0, 0, LOS) >= 5 then
+            and count_monsters_near(0, 0, los_radius) >= 5 then
         return true
     end
     if you.god() == "Okawaru" or you.god() == "Trog" then
@@ -4442,32 +4717,32 @@ function want_to_serious_buff()
     if you.teleporting() then
         return false -- don't waste a potion if we are already leaving
     end
-    if check_monster_list(LOS, ridiculous_uniques) then
+    if check_monster_list(los_radius, ridiculous_uniques) then
         return true
     end
-    if count_nasty_hell_monsters(LOS) >= 5 then
+    if count_nasty_hell_monsters(los_radius) >= 5 then
         return true
     end
     return false
 end
 
 function want_resistance()
-    return check_monster_list(LOS, fire_resistance_monsters)
+    return check_monster_list(los_radius, fire_resistance_monsters)
             and you.res_fire() < 3
-        or check_monster_list(LOS, cold_resistance_monsters)
+        or check_monster_list(los_radius, cold_resistance_monsters)
             and you.res_cold() < 3
-        or check_monster_list(LOS, elec_resistance_monsters)
+        or check_monster_list(los_radius, elec_resistance_monsters)
             and you.res_shock() < 1
-        or check_monster_list(LOS, pois_resistance_monsters)
+        or check_monster_list(los_radius, pois_resistance_monsters)
             and you.res_poison() < 1
         or in_branch("Zig")
-            and check_monster_list(LOS, acid_resistance_monsters)
+            and check_monster_list(los_radius, acid_resistance_monsters)
             and not you.res_corr()
 end
 
 function want_magic_points()
     -- No point trying to restore MP with ghost moths around.
-    return count_monster_by_name(LOS, "ghost moth") == 0
+    return count_monster_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or you.have_orb() or in_extended())
         -- We want and can use these abilities
         and (can_cleansing_flame(true)
@@ -4479,57 +4754,53 @@ function want_magic_points()
 end
 
 function want_to_hand()
-    return check_monster_list(LOS, hand_monsters)
+    return check_monster_list(los_radius, hand_monsters)
 end
 
 function want_to_berserk()
     return (hp_is_low(50) and sense_danger(2, true)
         or check_monster_list(2, scary_monsters)
-        or (invisi_sigmund and not options.autopick_on))
+        or invisi_sigmund and not options.autopick_on)
 end
 
 function want_to_heroism()
     return danger
         and (hp_is_low(70)
-            or check_monster_list(LOS, scary_monsters)
-            or count_monsters_near(0, 0, LOS) >= 4)
+            or check_monster_list(los_radius, scary_monsters)
+            or count_monsters_near(0, 0, los_radius) >= 4)
 end
 
 function want_to_recall()
     if immediate_danger and hp_is_low(66) then
         return false
     end
+
     local mp, mmp = you.mp()
-    return (mp == mmp)
+    return mp == mmp
 end
 
 function want_to_recall_ancestor()
-    return (count_elliptic(LOS) == 0)
+    return count_elliptic(los_radius) == 0
 end
 
 function want_to_stay_in_abyss()
-    return game_status == "abyss"
-        and not you.have_rune("abyssal")
+    return game_status == "Abyss"
+        and not have_branch_runes("Abyss")
         and not hp_is_low(50)
 end
 
-function have_pan_runes()
-    return you.have_rune("demonic")
-        and you.have_rune("fiery")
-        and you.have_rune("dark")
-        and you.have_rune("magical")
-        and you.have_rune("glowing")
-end
-
 function have_hell_runes()
-    return you.have_rune("iron")
-        and you.have_rune("obsidian")
-        and you.have_rune("icy")
-        and you.have_rune("bone")
+    for _,branch in ipairs(hell_branches) do
+        if not have_branch_runes(branch) then
+            return false
+        end
+    end
+
+    return true
 end
 
 function want_to_be_in_pan()
-    return (game_status == "pan" and not have_pan_runes())
+    return game_status == "Pan" and not have_branch_runes("Pan")
 end
 
 function plan_wait_for_melee()
@@ -4539,9 +4810,9 @@ function plan_wait_for_melee()
             or not options.autopick_on
             or you.berserk()
             or you.have_orb()
-            or count_bia(LOS) > 0
-            or count_sgd(LOS) > 0
-            or count_divine_warrior(LOS) > 0
+            or count_bia(los_radius) > 0
+            or count_sgd(los_radius) > 0
+            or count_divine_warrior(los_radius) > 0
             or not view.is_safe_square(0, 0)
             or view.feature_at(0, 0) == "shallow_water" and not you.flying()
             or in_branch("Abyss") then
@@ -4655,7 +4926,7 @@ end
 
 function spell_range(sp)
     if sp == "Summon Small Mammal" then
-        return LOS
+        return los_radius
     elseif sp == "Beastly Appendage" then
         return 4
     elseif sp == "Sandblast" then
@@ -4673,10 +4944,10 @@ function spell_castable(sp)
     elseif sp == "Summon Small Mammal" then
         local x, y
         local count = 0
-        for x = -LOS, LOS do
-            for y = -LOS, LOS do
+        for x = -los_radius, los_radius do
+            for y = -los_radius, los_radius do
                 m = monster_array[x][y]
-                if m and m:attitude() == ATT_FRIENDLY then
+                if m and m:attitude() == enum_att_friendly then
                     count = count + 1
                 end
             end
@@ -4822,9 +5093,9 @@ function god_options()
     return c_persist.cur_god_list or GOD_LIST
 end
 
-function endgame_plan_options()
-    local plan = c_persist.cur_endgame_plan or ENDGAME_PLAN
-    return ENDGAME_PLANS[plan]
+function plan_options()
+    local plan = c_persist.cur_plan or PLAN
+    return GAME_PLANS[plan]
 end
 
 function plan_find_altar()
@@ -4845,14 +5116,15 @@ function plan_find_conversion_altar()
     if unshafting() then
         return false
     end
-    if game_status == "tso" and you.god() ~= "the Shining One" then
+
+    if game_status == "TSO" and you.god() ~= "the Shining One" then
         str = "altar of the Shining One"
     elseif lugonu_conversion and you.xl() == 12 and you.god() == "Lugonu" then
         str = "altar of Makhleb"
     else
         return false
     end
-    expect_new_location = true
+
     magicfind(str)
     -- Currently broken.
 --  if tried_find_altar_turn ~= you.turns() then
@@ -4897,7 +5169,7 @@ function plan_join_beogh()
 end
 
 function plan_convert()
-    if (game_status ~= "tso" or you.god() == "the Shining One"
+    if (game_status ~= "TSO" or you.god() == "the Shining One"
             or view.feature_at(0, 0) ~= "altar_the_shining_one") and
          ((not lugonu_conversion) or you.god() ~= "Lugonu"
             or view.feature_at(0, 0) ~= "altar_makhleb") then
@@ -4906,15 +5178,9 @@ function plan_convert()
     if you.silenced() then
         rest()
     else
-        if view.feature_at(0, 0) == "altar_makhleb" then
-            for i, br in ipairs(c_persist.branches_entered) do
-                if br == "Lair" then
-                    table.remove(c_persist.branches_entered, i)
-                end
-            end
-        end
         magic("<JY")
     end
+
     return true
 end
 
@@ -5514,18 +5780,23 @@ function plan_upgrade_armour()
             elseif should_drop(it) then
                 drop = true
             end
-            if good_slots[st] == "Helmet" and it.ac == 1 and (you.mutation("horns") > 0
-                 or you.mutation("beak") > 0 or you.mutation("antennae") > 0) then
+            if good_slots[st] == "Helmet"
+                        and it.ac == 1
+                        and (you.mutation("horns") > 0
+                    or you.mutation("beak") > 0
+                    or you.mutation("antennae") > 0) then
                 equip = false
                 drop = true
             end
-            if good_slots[st] == "Helmet" and
-                 (you.mutation("horns") >= 3 or you.mutation("antennae") >= 3) then
+            if good_slots[st] == "Helmet"
+                    and (you.mutation("horns") >= 3
+                        or you.mutation("antennae") >= 3) then
                 equip = false
                 drop = true
             end
-            if it.name():find("boots") and
-                 (you.mutation("talons") >= 3 or you.mutation("hooves") >= 3) then
+            if it.name():find("boots")
+                    and (you.mutation("talons") >= 3
+                        or you.mutation("hooves") >= 3) then
                 equip = false
                 drop = true
             end
@@ -5574,17 +5845,17 @@ function plan_go_up()
         if you.mesmerised() then
             return false
         end
-        expect_new_location = true
+
         magic("<")
         return true
     end
+
     return false
 end
 
 function plan_go_down()
     local feat = view.feature_at(0, 0)
     if feat:find("stone_stairs_down") then
-        expect_new_location = true
         magic(">")
         return true
     end
@@ -5592,35 +5863,39 @@ function plan_go_down()
 end
 
 function ready_for_lair()
-    if you.god() == "Trog"
-            or you.god() == "Cheibriados"
-            or you.god() == "Okawaru"
-            or you.god() == "Qazlal"
-            or you.god() == "the Shining One"
-            or you.god() == "Lugonu"
-            or you.god() == "Uskayaw"
-            or you.god() == "Xom"
-            or you.god() == "Zin"
-            or (you.god() == "Beogh"
-                or you.god() == "Makhleb"
-                or you.god() == "Yredelemnul") and you.piety_rank() >= 4
-            or (you.god() == "Ru" or you.god() == "Elyvilon")
-                and you.piety_rank() >= 3
-            or you.god() == "Hepliaklqana" and you.piety_rank() >= 2 then
-        return true
-    end
-    return false
+    return you.god() == "Trog"
+        or you.god() == "Cheibriados"
+        or you.god() == "Okawaru"
+        or you.god() == "Qazlal"
+        or you.god() == "the Shining One"
+        or you.god() == "Lugonu"
+        or you.god() == "Uskayaw"
+        or you.god() == "Xom"
+        or you.god() == "Zin"
+        or (you.god() == "Beogh"
+            or you.god() == "Makhleb"
+            or you.god() == "Yredelemnul") and you.piety_rank() >= 4
+        or (you.god() == "Ru" or you.god() == "Elyvilon")
+            and you.piety_rank() >= 3
+        or you.god() == "Hepliaklqana" and you.piety_rank() >= 2
 end
 
 function feat_is_upstairs(feat)
-    return (feat:find("stone_stairs_up") or
-                    feat:find("exit_") and (feat == "exit_hell" or feat == "exit_vaults"
-                    or feat == "exit_zot" or feat == "exit_slime_pits"
-                    or feat == "exit_orcish_mines" or feat == "exit_lair"
-                    or feat == "exit_crypt" or feat == "exit_snake_pit"
-                    or feat == "exit_elven_halls" or feat == "exit_tomb"
-                    or feat == "exit_swamp" or feat == "exit_shoals"
-                    or feat == "exit_spider_nest" or feat == "exit_depths"))
+    return feat:find("stone_stairs_up")
+        or feat == "exit_hell"
+        or feat == "exit_vaults"
+        or feat == "exit_zot"
+        or feat == "exit_slime_pits"
+        or feat == "exit_orcish_mines"
+        or feat == "exit_lair"
+        or feat == "exit_crypt"
+        or feat == "exit_snake_pit"
+        or feat == "exit_elven_halls"
+        or feat == "exit_tomb"
+        or feat == "exit_swamp"
+        or feat == "exit_shoals"
+        or feat == "exit_spider_nest"
+        or feat == "exit_depths"
 end
 
 function want_to_stairdance_up()
@@ -5697,12 +5972,6 @@ end
 
 function plan_stairdance_up()
     if want_to_stairdance_up() then
-        expect_new_location = true
-        -- Set travel_destination to the current location in case we leave the
-        -- branch while stairdancing.
-        if not travel_destination then
-            travel_destination = where_branch
-        end
         say("STAIRDANCE")
         if you.status("spiked") then
             magic("<Y")
@@ -5809,25 +6078,22 @@ function plan_shop()
 end
 
 function plan_shopping_spree()
-    if game_status ~= "shopping" then
+    if game_status ~= "Shopping" then
         return false
     end
+
     which_item = can_afford_any_shoplist_item()
     if not which_item then
         -- Remove everything on shoplist
         clear_out_shopping_list()
-        -- Set travel_destination if necessary so that we will return to D.
-        if not in_branch("D") then
-            travel_destination = "D"
-        end
         -- record that we are done shopping this game
         c_persist.done_shopping = true
         update_game_status()
         return false
     end
+
     say("SHOPPING SPREE")
     magic("$" .. letter(which_item - 1))
-    expect_new_location = true
     return true
 end
 
@@ -5868,25 +6134,6 @@ function clear_out_shopping_list()
     return false
 end
 
-function plan_simple_go_down()
-    if travel_destination or unshafting() then
-        return false
-    end
-    if (found_branch("Lair") and ready_for_lair() or where == "D:11") and not
-         util.contains(c_persist.branches_entered, "Lair") then
-        return false
-    end
-    if where == "Vaults:4" and easy_runes() < 2 then
-        return false
-    end
-    if in_branch("Tomb") then
-        return false
-    end
-    expect_new_location = true
-    magic("G>")
-    return true
-end
-
 function want_altar()
     return you.race() ~= "Demigod" and you.num_runes() == 0
         and not util.contains(god_options(), you.god())
@@ -5897,37 +6144,26 @@ function plan_go_to_temple()
     if c and c >= 100 then
         return false
     end
+
     if found_branch("Temple")
             and (want_altar() or tso_conversion or lugonu_conversion)
-            and not util.contains(c_persist.branches_entered, "Temple")
-            and in_branch("D") then
-        expect_new_location = true
-        magic("GTY")
+            and not explored_level_range("Temple") then
+        send_travel("Temple")
         return true
     end
+
     return false
 end
 
-function plan_enter_branch()
-    local br
-    if found_branch("Lair")
-            and ready_for_lair()
-            and not util.contains(c_persist.branches_entered, "Lair")
-            and in_branch("D") then
-        br = "Lair"
-    elseif found_branch("Orc")
-            and not LATE_ORC
-            and not util.contains(c_persist.branches_entered, "Orc")
-            and in_branch("D")
-            and util.contains(c_persist.branches_entered, "Lair") then
-        br = "Orc"
+function send_travel(branch, depth)
+    local depth_str
+    if depth == nil or branch_depth(branch) == 1 then
+        depth_str = ""
+    else
+        depth_str = depth
     end
-    if br then
-        expect_new_location = true
-        magic("G" .. branch_travel(br) .. "\rY")
-        return true
-    end
-    return false
+
+    magic("G" .. branch_travel(branch) .. depth_str .. "\rY")
 end
 
 function plan_go_to_portal_entrance()
@@ -5944,11 +6180,10 @@ end
 
 function plan_go_to_zig()
     if not in_branch("Depths")
-            or game_status ~= "zig"
+            or game_status ~= "Zig"
             or c_persist.entered_zig then
         return false
     else
-        expect_new_location = true
         magicfind("gateway to a ziggurat")
         return true
     end
@@ -5956,14 +6191,13 @@ end
 
 function plan_go_to_zig_dig()
     if not in_branch("Depths")
-            or game_status ~= "zig"
+            or game_status ~= "Zig"
             or c_persist.entered_zig
             or view.feature_at(0, 0) == "enter_ziggurat"
             or view.feature_at(3, 1) == "enter_ziggurat"
             or count_charges("digging") == 0 then
         return false
     else
-        expect_new_location = true
         off_level_travel = false
         magic(control('f') .. "gateway to a ziggurat" .. "\rayby\r")
         return true
@@ -5972,7 +6206,7 @@ end
 
 function plan_zig_dig()
     if not in_branch("Depths")
-            or game_status ~= "zig"
+            or game_status ~= "Zig"
             or c_persist.entered_zig
             or view.feature_at(3, 1) ~= "enter_ziggurat" then
         return false
@@ -5996,20 +6230,18 @@ function plan_go_to_portal_exit()
 end
 
 function plan_go_to_abyss_portal()
-    if not in_branch("Depths") or not want_to_stay_in_abyss() then
+    if not want_to_stay_in_abyss() then
         return false
-    else
-        expect_new_location = true
-        magicfind("one-way gate to the infinite horrors of the Abyss")
-        return true
     end
+
+    magicfind("one-way gate to the infinite horrors of the Abyss")
+    return true
 end
 
 function plan_go_to_pan_portal()
     if not in_branch("Depths") or not want_to_be_in_pan() then
         return false
     else
-        expect_new_location = true
         magicfind("halls of Pandemonium")
         return true
     end
@@ -6037,7 +6269,7 @@ local pan_failed_rune_count = -1
 function want_to_dive_pan()
     return in_branch("Pan")
         and you.num_runes() > pan_failed_rune_count
-        and (you.have_rune("demonic") and not have_pan_runes()
+        and (you.have_rune("demonic") and not have_branch_runes("Pan")
             or dislike_pan_level)
 end
 
@@ -6083,35 +6315,20 @@ end
 function plan_dive()
     if (in_branch("Slime") and where_depth < 5
                 or in_hells() and where_depth < 7)
-            and not travel_destination then
-        expect_new_location = true
+            and not travel_branch then
         magic("G>")
         return true
     end
     return false
 end
 
-function plan_early_new_travel()
-
-    if not travel_destination
-            and (where == "Dis:7" and you.have_rune("iron")
-                or where == "Geh:7" and you.have_rune("obsidian")
-                or where == "Coc:7" and you.have_rune("icy")
-                or where == "Tar:7" and you.have_rune("bone")) then
-        travel_destination = "Hell"
-        return plan_continue_travel()
-    end
-    return false
-end
-
 function plan_enter_zig()
     if not in_branch("Depths")
-            or game_status ~= "zig"
+            or game_status ~= "Zig"
             or c_persist.entered_zig then
         return false
     end
     if view.feature_at(0, 0) == "enter_ziggurat" then
-        expect_new_location = true
         c_persist.entered_zig = true
         magic(">Y")
         return true
@@ -6123,7 +6340,6 @@ function plan_enter_portal()
     for _, por in ipairs(c_persist.portals_found) do
         if view.feature_at(0, 0):find("enter_" .. get_feat_name(por)) then
             expect_portal = true
-            expect_new_location = true
             magic(">")
             return true
         end
@@ -6137,7 +6353,6 @@ function plan_exit_portal()
         return false
     end
     if view.feature_at(0, 0):find("exit_" .. get_feat_name(where)) then
-        expect_new_location = true
         magic("<")
         return true
     end
@@ -6147,7 +6362,6 @@ end
 function plan_enter_abyss()
     if view.feature_at(0, 0) == "enter_abyss"
             and want_to_stay_in_abyss() then
-        expect_new_location = true
         magic(">Y")
         return true
     end
@@ -6157,7 +6371,6 @@ end
 function plan_enter_pan()
     if view.feature_at(0, 0) == "enter_pandemonium"
             and want_to_be_in_pan() then
-        expect_new_location = true
         magic(">Y")
         return true
     end
@@ -6168,7 +6381,6 @@ function plan_go_down_abyss()
     if view.feature_at(0, 0) == "abyssal_stair"
             and want_to_stay_in_abyss()
             and where_depth < 3 then
-        expect_new_location = true
         magic(">")
         return true
     end
@@ -6183,7 +6395,6 @@ function plan_go_down_pan()
             magic("X" .. control('f'))
             return true
         end
-        expect_new_location = true
         pan_stair_turn = you.turns()
         magic(">Y")
         return nil -- in case we are trying to leave a rune level
@@ -6201,7 +6412,6 @@ function plan_dive_pan()
             pan_failed_rune_count = you.num_runes()
             return false
         end
-        expect_new_location = true
         pan_stair_turn = you.turns()
         dislike_pan_level = false
         magic(">Y")
@@ -6215,15 +6425,13 @@ function plan_zig_leave_level()
     if not in_branch("Zig") then
         return false
     end
-    if where_depth == tostring(ZIG_DIVE) then
+    if where_depth == ZIG_DIVE then
         if view.feature_at(0, 0) == "exit_ziggurat" then
             magic("<Y")
-            expect_new_location = true
             return true
         end
     elseif string.find(view.feature_at(0, 0), "stone_stairs_down") then
         magic(">")
-        expect_new_location = true
         return true
     end
     return false
@@ -6237,7 +6445,6 @@ function plan_lugonu_exit_abyss()
                     or you.piety_rank() < 1 or cmp() < 1) then
         return false
     end
-    expect_new_location = true
     use_ability("Depart the Abyss")
     return true
 end
@@ -6247,7 +6454,6 @@ function plan_exit_abyss()
             and not want_to_stay_in_abyss()
             and not you.mesmerised()
             and you.transform() ~= "tree" then
-        expect_new_location = true
         magic("<")
         return true
     end
@@ -6259,7 +6465,6 @@ function plan_exit_pan()
             and not want_to_be_in_pan()
             and not you.mesmerised()
             and you.transform() ~= "tree" then
-        expect_new_location = true
         magic("<")
         return true
     end
@@ -6275,8 +6480,8 @@ function plan_step_towards_branch()
                     or not found_branch("Tomb")) then
         return false
     end
-    for x = -LOS, LOS do
-        for y = -LOS, LOS do
+    for x = -los_radius, los_radius do
+        for y = -los_radius, los_radius do
             feat = view.feature_at(x, y)
             if (feat == "enter_lair" or feat == "enter_tomb")
                  and you.see_cell_no_trans(x, y) then
@@ -6300,20 +6505,55 @@ function plan_step_towards_branch()
 end
 
 function plan_continue_travel()
-    if travel_destination then
-        if where_branch == travel_destination
-                or not found_branch(travel_destination) then
-            travel_destination = nil
-            return false
-        end
-        expect_new_location = true
-        magic("G" .. branch_travel(travel_destination) .. "\rY")
-        return true
+    if not travel_branch then
+        return false
     end
-    return false
+
+    if where_branch == travel_branch
+                and (not travel_depth or where_depth == travel_depth)
+            or not found_branch(travel_branch) then
+        travel_branch = nil
+        travel_depth = nil
+        return false
+    end
+
+    send_travel(travel_branch, travel_depth)
+    return true
 end
 
-function choose_lair_rune_branch()
+
+-- Return the next existing and unexplored level range in a list.
+-- @param[opt=0] skip A number giving how many valid level ranges to skip.
+-- @tparam options A list of level ranges.
+-- @treturn string The next level range.
+function next_branch(options, skip)
+    if not skip then
+        skip = 0
+    end
+
+    local level
+    local skipped = 0
+    for _, level in ipairs(options) do
+        local branch = parse_level_range(level)
+        -- We reject any levels already explored or those in branchs that
+        -- couldn't exist given the branches we've found already.
+        if branch and branch_exists(branch)
+                and not explored_level_range(branch) then
+            if skipped < skip then
+                skipped = skipped + 1
+            else
+                return branch
+            end
+        end
+    end
+end
+
+function lair_branch_order()
+    if c_persist.lair_branch_order then
+        return c_persist.lair_branch_order
+    end
+
+    local branch_options
     if RUNE_PREFERENCE == "smart" then
         if crawl.random2(2) == 0 then
             branch_options = { "Spider", "Snake", "Swamp", "Shoals" }
@@ -6337,131 +6577,31 @@ function choose_lair_rune_branch()
         end
     end
 
-    local br
-    for _, br in ipairs(branch_options) do
-        if found_branch(br)
-                and not util.contains(c_persist.branches_entered, br) then
-            return br
-        end
-    end
+    c_persist.lair_branch_order = branch_options
+    return branch_options
 end
 
-local depths_loop_count = 0
 function plan_new_travel()
     if cloudy then
         return false
     end
-    local back_to_D_places = { "Temple", "Orc:2", "Vaults:4"}
-    if util.contains(back_to_D_places, where) then
-        travel_destination = "D"
+
+    local branch, min_level, max_level
+    branch, min_level, max_level = parse_level_range(game_status)
+    if branch == nil then
+        return false
     end
-    if where == "D:11"
-            and not util.contains(c_persist.branches_entered, "Lair") then
-        travel_destination = "Lair"
-    end
-    if where == "Lair:6" then
-        if travel.find_deepest_explored("D") == 15 and easy_runes() < 2 then
-            travel_destination = choose_lair_rune_branch()
-        elseif game_status == "slime" then
-            travel_destination = "Slime"
-        else
-            travel_destination = "D"
+
+    -- Prioritize autoexploring every level in our range.
+    for l = min_level, max_level do
+        if not autoexplored_level(branch, l) then
+            travel_branch = branch
+            travel_depth = l
+            return plan_continue_travel()
         end
     end
-    if where == "Snake:4" and you.have_rune("serpentine") then
-        travel_destination = "D"
-    end
-    if where == "Swamp:4" and you.have_rune("decaying") then
-        travel_destination = "D"
-    end
-    if where == "Spider:4" and you.have_rune("gossamer") then
-        travel_destination = "D"
-    end
-    if where == "Shoals:4" and you.have_rune("barnacled") then
-        travel_destination = "D"
-    end
-    if where == "Vaults:5" and you.have_rune("silver") then
-        if game_status == "tomb" then
-            travel_destination = "Crypt"
-        else
-            travel_destination = "D"
-        end
-    end
-    if where == "Slime:5" and you.have_rune("slimy") then
-        travel_destination = "D"
-    end
-    if where == "D:15" then
-        if easy_runes() == 1
-                    and not util.contains(c_persist.branches_entered, "Vaults")
-                or easy_runes() == 2
-                    and util.contains(c_persist.branches_entered, "Depths")
-                    and not you.have_rune("silver") then
-            travel_destination = "Vaults"
-        elseif easy_runes() >= 1
-                and not util.contains(c_persist.branches_entered, "Depths")
-                and not (EARLY_SECOND_RUNE and easy_runes() == 1) then
-            travel_destination = "Depths"
-        elseif you.have_rune("silver") then
-            if game_status == "slime" then
-                travel_destination = "Lair"
-            elseif game_status == "tomb" then
-                travel_destination = "Vaults"
-            else
-                travel_destination = "Depths"
-            end
-        elseif LATE_ORC and found_branch("Orc") and not
-                     util.contains(c_persist.branches_entered, "Orc") then
-            travel_destination = "Orc"
-        else
-            travel_destination = "Lair"
-        end
-    end
-    if where == "Depths:4" then
-        if game_status == "zot" then
-            travel_destination = "Zot"
-        elseif game_status == "cocytus"
-                or game_status == "dis"
-                or game_status == "gehenna"
-                or game_status == "tartarus" then
-            travel_destination = "Hell"
-        else
-            if game_status == "shopping" then
-                c_persist.done_shopping = true
-            end
-            if depths_loop_count < 20 then
-                travel_destination = "D"
-                depths_loop_count = depths_loop_count + 1
-            else
-                game_status = "zot"
-                travel_destination = "Zot"
-            end
-        end
-    end
-    -- Travel back from hell ends is handled in plan_early_new_travel().
-    if in_branch("Hell") then
-        if game_status == "cocytus" then
-            travel_destination = "Coc"
-        elseif game_status == "dis" then
-            travel_destination = "Dis"
-        elseif game_status == "gehenna" then
-            travel_destination = "Geh"
-        elseif game_status == "tartarus" then
-            travel_destination = "Tar"
-        else
-            travel_destination = "Depths"
-        end
-    end
-    if where == "Crypt:3" then
-        if game_status == "tomb" then
-            travel_destination = "Tomb"
-        else
-            travel_destination = "Vaults"
-        end
-    end
-    if where == "Tomb:3" and you.have_rune("golden") then
-        travel_destination = "Crypt"
-    end
-    return plan_continue_travel()
+
+    return false
 end
 
 local did_ancestor_identity = false
@@ -6531,7 +6671,6 @@ function plan_find_upstairs()
 end
 
 function plan_gd1()
-    expect_new_location = true
     magic("GD1\rY")
     return true
 end
@@ -6540,7 +6679,7 @@ function plan_zig_go_to_stairs()
     if not in_branch("Zig") then
         return false
     end
-    if where_depth == tostring(ZIG_DIVE) then
+    if where_depth == ZIG_DIVE then
         magic("X<\r")
     else
         magic("X>\r")
@@ -6589,8 +6728,8 @@ function update_level_map(num)
     for j = 1, staircount do
         distqueue[j] = {}
     end
-    for x = -LOS, LOS do
-        for y = -LOS, LOS do
+    for x = -los_radius, los_radius do
+        for y = -los_radius, los_radius do
             table.insert(mapqueue, {x + dx, y + dy})
         end
     end
@@ -6655,6 +6794,7 @@ function update_level_map(num)
             end
         end
     end
+
     for j = 1, newcount do
         update_dist_map(stair_dists[num][j], distqueue[j])
     end
@@ -6828,17 +6968,17 @@ end
 
 function unshafting()
     return where_shafted_from
-        and where_shafted_from ~= you.where()
         and not in_branch("Slime")
+        and not in_hells()
 end
 
 function plan_unshaft()
-    if unshafting() and not in_branch("Temple") then
+    if unshafting() then
         dsay("Trying to unshaft to " .. where_shafted_from .. ".")
-        expect_new_location = true
         magic("G<")
         return true
     end
+
     return false
 end
 
@@ -7019,7 +7159,6 @@ function plan_tomb_use_hatch()
     if (where == "Tomb:2" and not you.have_rune("golden")
             or where == "Tomb:1")
          and view.feature_at(0, 0) == "escape_hatch_down" then
-        expect_new_location = true
         prev_hatch_dist = 1000
         magic(">")
         return true
@@ -7027,7 +7166,6 @@ function plan_tomb_use_hatch()
     if (where == "Tomb:3" and you.have_rune("golden")
             or where == "Tomb:2")
          and view.feature_at(0, 0) == "escape_hatch_up" then
-        expect_new_location = true
         prev_hatch_dist = 1000
         magic("<")
         return true
@@ -7138,8 +7276,8 @@ function plan_swamp_clouds_hack()
             if supdist(x, y) > 0 and view.is_safe_square(x, y)
                  and not view.withheld(x, y) and not monster_in_way(x, y) then
                 dist = 11
-                for x2 = -LOS, LOS do
-                    for y2 = -LOS, LOS do
+                for x2 = -los_radius, los_radius do
+                    for y2 = -los_radius, los_radius do
                         if (view.cloud_at(x2, y2) == "freezing vapour"
                                 or view.cloud_at(x2, y2) == "foul pestilence")
                              and you.see_cell_no_trans(x2, y2)
@@ -7163,8 +7301,8 @@ function plan_swamp_clouds_hack()
         magic(delta_to_vi(bestx, besty) .. "Y")
         return true
     end
-    for x = -LOS, LOS do
-        for y = -LOS, LOS do
+    for x = -los_radius, los_radius do
+        for y = -los_radius, los_radius do
             if (view.cloud_at(x, y) == "freezing vapour"
                     or view.cloud_at(x, y) == "foul pestilence")
                  and you.see_cell_no_trans(x, y) then
@@ -7207,7 +7345,7 @@ function plan_dig_grate()
                 for dy = -1, 1 do
                     gx = e.x + dx
                     gy = e.y + dy
-                    if supdist(gx, gy) <= LOS
+                    if supdist(gx, gy) <= los_radius
                             and view.feature_at(gx, gy) == "iron_grate" then
                         grate_count = grate_count + 1
                         if abs(gx) + abs(gy) < closest_grate
@@ -7237,8 +7375,8 @@ function plan_stuck_dig_grate()
     local dx, dy
     local closest_grate = 20
     local cx, cy
-    for dx = -LOS, LOS do
-        for dy = -LOS, LOS do
+    for dx = -los_radius, los_radius do
+        for dy = -los_radius, los_radius do
             if view.feature_at(dx, dy) == "iron_grate" then
                 if abs(dx) + abs(dy) < closest_grate
                         and you.see_cell_solid_see(dx, dy) then
@@ -7508,7 +7646,7 @@ function attack_melee(x, y)
             return
         end
     end
-    if monster_array[x][y]:attitude() == ATT_NEUTRAL then
+    if monster_array[x][y]:attitude() == enum_att_neutral then
         if you.god() == "the Shining One" or you.god() == "Elyvilon"
              or you.god() == "Zin" then
             magic("s")
@@ -7564,35 +7702,7 @@ function record_portal_found(por)
     end
 end
 
-function check_messages()
-    local recent_messages = crawl.messages(20)
-    local very_recent_messages = crawl.messages(5)
-    if very_recent_messages:find("Sigmund flickers and vanishes") then
-        invisi_sigmund = true
-    end
-    if very_recent_messages:find("Your surroundings suddenly seem different") then
-        invisi_sigmund = false
-    end
-    str1 = "Your pager goes off"
-    str2 = "qwqwqw"
-    if recent_messages:find(str1) then
-        a = recent_messages:reverse():find(str1:reverse())
-        b = recent_messages:reverse():find(str2:reverse())
-        if (not b) or a < b then
-            have_message = true
-        end
-    end
-    if in_portal() then
-        return false
-    end
-    if recent_messages:find("Found") then
-        for _, value in ipairs(portal_data) do
-            if recent_messages:find(value[2]) then
-                record_portal_found(value[1])
-            end
-        end
-    end
-end
+-- these few functions are called directly from ready()
 
 function plan_message()
     if read_message then
@@ -7615,13 +7725,15 @@ function cascade(plans)
     local plan_turns = {}
     local plan_result = {}
     return function ()
+        local i, plandata
         for i, plandata in ipairs(plans) do
-            plan = plandata[1]
+            local plan = plandata[1]
             if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
-                result = plan()
+                local result = plan()
                 if not automatic then
                     return true
                 end
+
                 plan_turns[plan] = you.turns()
                 plan_result[plan] = result
                 if result == nil or result == true then
@@ -7629,13 +7741,14 @@ function cascade(plans)
                         crawl.delay(next_delay)
                     end
                     next_delay = DELAY_TIME
-                    return nil
+                    return
                 end
             elseif plan_turns[plan] and plan_result[plan] == true then
                 if not plandata[2]:find("^try") then
                     panic(plandata[2] .. " failed despite returning true.")
                 end
-                fail_count = c_persist.plan_fail_count[plandata[2]]
+
+                local fail_count = c_persist.plan_fail_count[plandata[2]]
                 if not fail_count then
                     fail_count = 0
                 end
@@ -7643,6 +7756,7 @@ function cascade(plans)
                 c_persist.plan_fail_count[plandata[2]] = fail_count
             end
         end
+
         return false
     end
 end
@@ -7769,7 +7883,6 @@ plan_explore = cascade {
     {plan_dive, "try_dive"},
     {plan_dive_pan, "dive_pan"},
     {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
-    {plan_early_new_travel, "try_early_new_travel"},
     {plan_autoexplore, "try_autoexplore"},
 } -- hack
 
@@ -7783,9 +7896,7 @@ plan_explore2 = cascade {
     {plan_go_to_pan_exit, "try_go_to_pan_exit"},
     {plan_go_down_pan, "try_go_down_pan"},
     {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
-    {plan_enter_branch, "try_enter_branch"},
     {plan_shopping_spree, "try_shopping_spree"},
-    {plan_simple_go_down, "try_simple_go_down"},
     {plan_new_travel, "try_new_travel"},
 } -- hack
 
@@ -8124,6 +8235,16 @@ function split(str, del)
     return res
 end
 
+function capitalize(str)
+    local lower = str:lower()
+    return lower:sub(1, 1):upper() .. lower:sub(2)
+end
+
+-- Remove leading and trailing whitespace.
+function trim(str)
+    return str:gsub("^%s+", ""):gsub("%s+$", "")
+end
+
 function control(c)
     return string.char(string.byte(c) - string.byte('a') + 1)
 end
@@ -8204,74 +8325,93 @@ end
 ---------------------------------------------
 -- initialization/control/saving
 
-function make_endgame_plans()
-    local plans = split(endgame_plan_options(), ", ")
-    endgame_plan_list = {}
+function make_plans()
+    local plans = split(plan_options(), ",")
+    plan_list = {}
+    local plan
     for _, pl in ipairs(plans) do
-        if pl == "slime" then
+        -- Normalize the plans taken from configuration so we always make
+        -- accurate comparisons.
+        plan = trim(pl)
+        if plan:upper() == "TSO" then
+            plan = "TSO"
+        else
+            plan = capitalize(plan)
+        end
+
+        if plan == "Slime" then
             slimy_rune = true
-        elseif pl == "pan" then
+        elseif plan == "Pan" then
             pan_rune = true
-        elseif pl == "abyss" then
+        elseif plan == "Abyss" then
             abyssal_rune = true
-        -- We turn this plan into a sequence of plans for each hell branch in
-        -- random order.
-        elseif pl == "hells" then
+        -- We turn this planan into a sequence of planans for each hell branch
+        -- in random order.
+        elseif plan == "Hells" then
             -- Save our selection so it can be recreated across save/resume.
             if not c_persist.hell_branches then
                 c_persist.hell_branches = util.random_subset(hell_branches,
                     #hell_branches)
             end
             for _, br in ipairs(c_persist.hell_branches) do
-                table.insert(endgame_plan_list, br:lower())
+                table.insert(plan_list, br)
             end
-        elseif pl == "cocytus"
-            or pl == "dis"
-            or pl == "gehenna"
-            or pl == "tartarus" then
+        elseif plan == "Coc"
+            or plan == "Dis"
+            or plan == "Geh"
+            or plan == "Tar" then
             hell_runes = hell_runes + 1
-        elseif pl == "tomb" then
+        elseif plan == "Tomb" then
             golden_rune = true
-        elseif pl == "tso" then
+        elseif plan == "TSO" then
             tso_conversion = true
-        elseif pl == "zig" then
+        elseif plan == "Zig" then
             will_zig = true
         end
 
-        if pl ~= "hells" then
-            table.insert(endgame_plan_list, pl)
+        if plan ~= "Hells" then
+            table.insert(plan_list, plan)
+        end
+
+        -- Branch will be nil if any component of a level range is invalid.
+        local branch = parse_level_range(plan)
+        if plan == "Temple"
+                or not branch
+                    and not (plan == "Normal"
+                        or plan == "Shopping"
+                        or plan == "TSO"
+                        or plan == "Zig"
+                        or plan == "Orb") then
+            error("Invalid plan type: " .. tostring(plan))
         end
     end
 
-    if hell_runes > #hell_branches then
-        error("Duplicate hell branches in endgame plans.")
-    end
-
-    if endgame_plan_list[#endgame_plan_list] ~= "zot" then
-        table.insert(endgame_plan_list, "zot")
-    end
+    hell_runes = min(hell_runes, 4)
 end
 
 function initialize()
+    initialize_branch_data()
+    initialize_monster_array()
+
     if you.turns() == 0 then
         first_turn_initialize()
     end
-    make_endgame_plans()
+
+    make_plans()
     where = "nowhere"
     where_branch = "nowhere"
-    where_depth = 0
-    expect_new_location = true
-    if c_persist.branches_entered == nil then
-        c_persist.branches_entered = { "D" }
-    end
+    where_depth = nil
+
     if c_persist.portals_found == nil then
         c_persist.portals_found = { }
     end
     if c_persist.plan_fail_count == nil then
         c_persist.plan_fail_count = { }
     end
-    set_options()
-    initialize_monster_array()
+    if c_persist.autoexplored_levels == nil then
+        c_persist.autoexplored_levels = { }
+    end
+
     if not level_map then
         level_map = {}
         stair_dists = {}
@@ -8280,11 +8420,14 @@ function initialize()
         waypoint_parity = 1
         prev_where = "nowhere"
     end
+
     for _, god in ipairs(god_options()) do
         if god == "the Shining One" or god == "Elyvilon" or god == "Zin" then
             might_be_good = true
         end
     end
+
+    set_options()
     initialized = true
 end
 
@@ -8340,9 +8483,9 @@ function note_qw_data()
         bool_string(EARLY_SECOND_RUNE))
     note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
 
-    local plans = endgame_plan_options()
-    note("qw: Endgame plans: " .. plans)
-    if plans:find("zig") then
+    local plans = plan_options()
+    note("qw: Plans: " .. plans)
+    if plans:find("Zig") then
         note("qw: Max Zig depth: " .. ZIG_DIVE)
     end
 end
@@ -8364,22 +8507,8 @@ function first_turn_initialize()
     end
     c_persist.record.counter = counter
 
-    --if not c_persist.mlist then
-    --    c_persist.mlist = {}
-    --end
-    --if not c_persist.record.mlist then
-    --    c_persist.record.mlist = {}
-    --end
-    --for _, mname in ipairs(c_persist.mlist) do
-    --    if not c_persist.record.mlist[mname] then
-    --        c_persist.record.mlist[mname] = 1
-    --    else
-    --        c_persist.record.mlist[mname] = c_persist.record.mlist[mname] + 1
-    --    end
-    --end
-
     local god_list = c_persist.next_god_list
-    local plan = c_persist.next_endgame_plan
+    local plan = c_persist.next_plan
     for key, _ in pairs(c_persist) do
         if key ~= "record" then
             c_persist[key] = nil
@@ -8387,13 +8516,14 @@ function first_turn_initialize()
     end
 
     c_persist.cur_god_list = god_list
-    c_persist.cur_endgame_plan = plan
+    c_persist.cur_plan = plan
     note_qw_data()
 
     if COMBO_CYCLE then
-        local combo_string_list = split(COMBO_CYCLE_LIST, ", ")
+        local combo_string_list = split(COMBO_CYCLE_LIST, ",")
         local combo_string = combo_string_list[
             1 + (c_persist.record.counter % (#combo_string_list))]
+        combo_string = trim(combo_string)
         local combo_parts = split(combo_string, "^")
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
@@ -8403,11 +8533,11 @@ function first_turn_initialize()
                 table.insert(c_persist.next_god_list, fullgodname(g))
             end
             if #plan_parts > 1 then
-                if not ENDGAME_PLANS[plan_parts[2]] then
+                if not GAME_PLANS[plan_parts[2]] then
                     error("Unknown plan name '" .. plan_parts[2] .. "'" ..
                     " given in combo spec '" .. combo_string .. "'")
                 end
-                c_persist.next_endgame_plan = plan_parts[2]
+                c_persist.next_plan = plan_parts[2]
             end
         end
     end
@@ -8451,12 +8581,14 @@ end
 
 function run_update()
     if update_coroutine == nil then
-        update_coroutine = coroutine.create(update_stuff)
+        update_coroutine = coroutine.create(turn_update)
     end
+
     local okay, err = coroutine.resume(update_coroutine)
     if not okay then
         error("Error in coroutine: " .. err)
     end
+
     if coroutine.status(update_coroutine) == "dead" then
         update_coroutine = nil
         do_dummy_action = false
@@ -8466,42 +8598,50 @@ function run_update()
 end
 
 -- We want to call this exactly once each turn.
-function update_stuff()
+function turn_update()
     if not initialized then
         initialize()
     end
+
     if you.turns() == old_turn_count then
         time_passed = false
         return
     end
+
     time_passed = true
     old_turn_count = you.turns()
     if you.turns() >= dump_count then
         dump_count = dump_count + 100
         crawl.dump_char()
     end
+
     if you.turns() >= skill_count then
         skill_count = skill_count + 5
         handle_skills()
     end
+
     if did_move then
         move_count = move_count + 1
     else
         move_count = 0
     end
+
     did_move = false
     if did_move_towards_monster > 0 then
         did_move_towards_monster = did_move_towards_monster - 1
     end
+
     if you.where() ~= where then
         if (where == "nowhere" or is_waypointable(where))
                 and is_waypointable(you.where()) then
             waypoint_parity = 3 - waypoint_parity
+
             if you.where() ~= prev_where or in_branch("Tomb") then
                 clear_level_map(waypoint_parity)
                 set_waypoint()
                 coroutine.yield()
             end
+
             cur_where = you.where()
             prev_where = where
         elseif is_waypointable(you.where()) and you.where() ~= cur_where then
@@ -8510,57 +8650,51 @@ function update_stuff()
             coroutine.yield()
             cur_where = you.where()
         end
-        clear_ignores()
-        target_stair = nil
-        if expect_new_location then
-            if where_shafted_from == you.where() then
-                say("Successfully unshafted to " .. you.where() .. ".")
-                where_shafted_from = nil
-            end
-        elseif automatic and not you.branch() == "Abyss" then
-            say("Shafted from " .. where .. " to " .. you.where() .. ".")
-            if not where_shafted_from then
-                where_shafted_from = where
-            end
-        end
+
         where = you.where()
         where_branch = you.branch()
         where_depth = you.depth()
-        base_corrosion = in_branch("Dis") and 2 or 0
-        if where_branch ~= "D"
-                and not util.contains(c_persist.branches_entered,
-                    where_branch) then
-            dsay("Entered " .. where_branch .. ".")
-            table.insert(c_persist.branches_entered, where_branch)
+
+        if where_shafted_from == you.where() then
+            say("Successfully unshafted to " .. where .. ".")
+            where_shafted_from = nil
         end
+
+        clear_ignores()
+        target_stair = nil
+        base_corrosion = in_branch("Dis") and 2 or 0
+
         if expect_portal and in_portal() then
             dsay("Entered " .. where .. ".")
         end
         c_persist.portals_found = { }
+
         if where == "Vaults:5" and not v5_entry_turn then
             v5_entry_turn = you.turns()
         elseif where == "Tomb:2" and not tomb2_entry_turn then
-            dsay("Tomb:2 arrival")
             tomb2_entry_turn = you.turns()
         elseif where == "Tomb:3" and not tomb3_entry_turn then
-            dsay("Tomb:3 arrival")
             tomb3_entry_turn = you.turns()
         end
     end
+
+    expect_portal = false
+
     if is_waypointable(where) then
         update_level_map(waypoint_parity)
     end
+
     update_game_status()
-    expect_new_location = false
-    expect_portal = false
-    check_messages()
+
     update_monster_array()
-    danger = sense_danger(LOS)
+    danger = sense_danger(los_radius)
     immediate_danger = sense_immediate_danger()
+    sense_sigmund()
+
     find_good_stairs()
     cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
-    sense_sigmund()
     choose_tactical_step()
+
     if collectgarbage("count") > 7000 then
         collectgarbage()
     end
@@ -8603,8 +8737,8 @@ end
 --------------------------------
 -- a function to test various things conveniently
 function ttt()
-    for i = -7, 7 do
-        for j = -7, 7 do
+    for i = -los_radius, los_radius do
+        for j = -los_radius, los_radius do
             m = monster.get_monster_at(i, j)
             if m then
                 crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name() .. ", desc = " .. m:desc() .. ".")
@@ -8750,5 +8884,40 @@ function c_choose_acquirement()
     -- If somehow we didn't find anything, pick the first item and move on.
     say("GAVE UP ACQUIRING")
     return 1
+end
+
+function record_portal_found(por)
+    if not util.contains(c_persist.portals_found, por) then
+        dsay("Found " .. por .. ".")
+        table.insert(c_persist.portals_found, por)
+    end
+end
+
+function c_message(text, channel)
+    if text:find("Sigmund flickers and vanishes") then
+        invisi_sigmund = true
+    elseif text:find("Your surroundings suddenly seem different") then
+        invisi_sigmund = false
+    elseif text:find("Your pager goes off") then
+        have_message = true
+    elseif text:find("Done exploring")
+            or text:find("Could not explore")
+            or text:find("Partly explored") then
+        c_persist.autoexplored_levels[where] = true
+    elseif text:find("Found") then
+        if text:find("Orb of Zot") then
+            c_persist.found_orb = true
+        end
+
+        for _, entry in ipairs(portal_data) do
+            if text:find(entry[2]) then
+                record_portal_found(entry[1])
+                return
+            end
+        end
+    elseif text:find("You are sucked into a shaft")
+            or text:find("You fall into a shaft") then
+        where_shafted_from = where
+    end
 end
 }
