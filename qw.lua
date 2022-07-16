@@ -4409,7 +4409,7 @@ function plan_coward_step()
         if tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end
-        dsay("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
         magic(tactical_step .. "Y")
         return true
     end
@@ -4418,7 +4418,7 @@ end
 
 function plan_flee_step()
     if tactical_reason == "fleeing" then
-        dsay("FLEEEEING.")
+        say("FLEEEEING.")
         set_stair_target(tactical_step)
         last_flee_turn = you.turns()
         magic(tactical_step .. "Y")
@@ -7682,23 +7682,18 @@ function note(x)
     crawl.take_note(you.turns() .. " ||| " .. x)
 end
 
-function say(x, debug)
+function say(x)
     crawl.mpr(you.turns() .. " ||| " .. x)
     note(x)
 end
 
-function dsay(x)
-    if DEBUG_MODE then
-        crawl.mpr(you.turns() .. " ||| " .. x)
+function dsay(x, channel)
+    if not channel then
+        channel = "main"
     end
-end
 
--- these few functions are called directly from ready()
-
-function record_portal_found(por)
-    if not util.contains(c_persist.portals_found, por) then
-        say("Found " .. por .. ".")
-        table.insert(c_persist.portals_found, por)
+    if DEBUG_MODE and util.contains(DEBUG_CHANNELS, channel) then
+        crawl.mpr(you.turns() .. " ||| " .. x)
     end
 end
 
@@ -7736,6 +7731,8 @@ function cascade(plans)
 
                 plan_turns[plan] = you.turns()
                 plan_result[plan] = result
+                dsay(plandata[2] .. ": " .. tostring(result),
+                    "plans")
                 if result == nil or result == true then
                     if DELAYED and result == true then
                         crawl.delay(next_delay)
@@ -8116,7 +8113,8 @@ function choose_skills()
         end
     end
     if best_utility > 0 then
-        dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility)
+        dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility,
+            "skills")
         table.insert(skills, best_sk)
     end
 

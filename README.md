@@ -133,11 +133,20 @@ of:
 
 These plan names are not case-sensitive.
 
-## Miscellaneous tips for coding/testing qw
+## Debugging
+Set `DEBUG_CHANNELS` to `true` to enable debug output. Then put the message
+channels you want to see in the list `DEBUG_CHANNELS`. The available channels
+are "main", the default for debug messages, "plans", which shows all plan
+execution and results (very spammy), and "skills", which shows information
+about skill selection.
+
+Also see the options `SINGLE_STEP` to have qw take one action at a time with
+the Tab key, and `WIZMODE_DEATH` to control whether it chooses to die in Wizard
+mode.
+
+### Miscellaneous tips for coding and testing
 * Run qw locally with the DCSS command-line option -seed <n> to use a seeded
   RNG for (mostly) reproducible testing
-* See the Debugging section of qw.rc for variables to enable for debugging
-  purposes.
 * Put code you want to test in the `ttt()` funtion on the bottom; make it run
   by macroing some key to `===ttt`
 * Use the included `make-qw-rc.sh` script to assemble a full qw rcfile from a
