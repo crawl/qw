@@ -32,6 +32,7 @@ local where_depth
 local where_shafted_from = nil
 local expect_portal
 local base_corrosion
+local stairs_search
 
 local automatic = false
 
@@ -112,6 +113,10 @@ local did_waypoint = false
 local good_stair_list
 local target_stair
 local last_flee_turn = -100
+local map_search
+local map_search_key
+local map_search_pos
+local map_search_count
 
 local abyssal_rune = false
 local slimy_rune = false
@@ -131,6 +136,12 @@ local prev_hatch_x
 local prev_hatch_y
 
 local hell_branches = { "Coc", "Dis", "Geh", "Tar" }
+
+local feat_none = 0
+local feat_seen = 1
+local feat_diggable = 2
+local feat_reachable = 3
+local feat_explored = 4
 
 -- Options to set while qw is running. Maybe should add more mutes for
 -- watchability.
@@ -5211,9 +5222,13 @@ function plan_join_god()
 end
 
 function plan_autoexplore()
-    if free_inventory_slots() == 0 then
+    -- Autoexplore will try to take us near any runed doors. We don't even
+    -- attempt it if doing a stairs search, since it would move us off our map
+    -- travel destination.
+    if stairs_search or free_inventory_slots() == 0 then
         return false
     end
+
     magic("o")
     return true
 end
@@ -5898,6 +5913,21 @@ function feat_is_upstairs(feat)
         or feat == "exit_depths"
 end
 
+function feat_uses_map_key(key, feat)
+    if key == ">" then
+        return feat:find("stone_stairs_down")
+            or feat:find("enter_")
+            or feat == "transporter"
+            or feat == "escape_hatch_down"
+    elseif key == "<" then
+        return feat:find("stone_stairs_up")
+            or feat:find("exit_")
+            or feat == "escape_hatch_up"
+    else
+        return false
+    end
+end
+
 function want_to_stairdance_up()
     if not feat_is_upstairs(view.feature_at(0, 0)) then
         return false
@@ -6132,6 +6162,16 @@ function clear_out_shopping_list()
     end
     magic(clear_shoplist_magic)
     return false
+end
+
+function plan_take_unexplored_stairs()
+    if not stairs_search then
+        return false
+    end
+
+    local dir = stone_stair_type(stairs_search)
+    magic("G" .. (dir == "down" and ">" or "<"))
+    return true
 end
 
 function want_altar()
@@ -6581,6 +6621,68 @@ function lair_branch_order()
     return branch_options
 end
 
+function stone_stair_type(feat)
+    local dir
+    if feat:find("stone_stairs_down") then
+        dir = "down"
+    elseif feat:find("stone_stairs_up") then
+        dir = "up"
+    else
+        return
+    end
+
+    return dir, feat:gsub("stone_stairs_" .. dir .. "_", "")
+end
+
+function plan_go_to_unexplored_stairs()
+    local branch, min_level, max_level
+    branch, min_level, max_level = parse_level_range(game_status)
+    if stairs_search
+            or not is_waypointable(where)
+            or not branch
+            or branch ~= where_branch then
+        return false
+    end
+
+    -- If the levels above or below are in our current status range, determine
+    -- if we need to explore stairs from this level to those levels.
+    local down_depth = where_depth + 1
+    local up_depth = where_depth - 1
+    local depth, dir, key, state_func
+    if down_depth >= min_level
+            and down_depth <= max_level
+            and not explored_level(branch, down_depth)
+            and autoexplored_level(branch, down_depth)
+            and not have_all_upstairs(branch, down_depth, feat_seen) then
+        search_key = ">"
+    elseif up_depth >= min_level
+            and up_depth <= max_level
+            and not explored_level(branch, up_depth)
+            and autoexplored_level(branch, up_depth)
+            and not have_all_downstairs(branch, up_depth, feat_seen) then
+        search_key = "<"
+    else
+        return false
+    end
+
+    local dx, dy
+    dx, dy = travel.waypoint_delta(waypoint_parity)
+    local search_pos = 100 * dx + dy
+    local map = map_search[waypoint_parity]
+    local search_count = 1
+    while map[search_key]
+            and map[search_key][search_pos]
+            and map[search_key][search_pos][search_count] do
+        search_count = search_count + 1
+    end
+
+    map_search_key = search_key
+    map_search_pos = search_pos
+    map_search_count = search_count
+    magic("X" .. search_key:rep(search_count) .. "\r")
+    return true
+end
+
 function plan_new_travel()
     if cloudy then
         return false
@@ -6597,6 +6699,21 @@ function plan_new_travel()
         if not autoexplored_level(branch, l) then
             travel_branch = branch
             travel_depth = l
+            return plan_continue_travel()
+        end
+    end
+
+    -- If all levels are at least autoexplored, check the stairs from levels
+    -- above/below.
+    local max_depth = branch_depth(where_branch)
+    for l = min_level, max_level do
+        if not have_all_upstairs(branch, l, feat_seen) then
+            travel_branch = branch
+            travel_depth = l - 1
+            return plan_continue_travel()
+        elseif not have_all_downstairs(branch, l, feat_seen) then
+            travel_branch = branch
+            travel_depth = l + 1
             return plan_continue_travel()
         end
     end
@@ -6716,6 +6833,152 @@ function clear_level_map(num)
         level_map[num][i] = {}
     end
     stair_dists[num] = {}
+    map_search[num] = {}
+end
+
+function record_stair(branch, depth, feat, state)
+    local dir, num
+    dir, num = stone_stair_type(feat)
+    local data = dir == "down" and c_persist.downstairs
+        or c_persist.upstairs
+
+    local level = make_level(branch, depth)
+    if not data[level] then
+        data[level] = {}
+    end
+    local old_state = not data[level][num] and 0 or data[level][num]
+    if old_state  < state then
+        dsay("Updating " .. level .. " stair " .. feat .. " from "
+            .. old_state .. " to " .. state, "explore")
+        data[level][num] = state
+    end
+end
+
+function check_stairs_search(feat)
+    local dir, num
+    dir, num = stone_stair_type(feat)
+    if not dir then
+        return
+    end
+
+    local state_func = dir == "down" and downstairs_state or upstairs_state
+    if state_func(where_branch, where_depth, num, feat_explored) then
+        stairs_search = feat
+    end
+end
+
+function downstairs_state(branch, depth, num)
+    local level = make_level(branch, depth)
+    if not c_persist.downstairs[level]
+            or not c_persist.downstairs[level][num] then
+        return feat_none
+    end
+
+    return c_persist.downstairs[level][num]
+end
+
+function num_required_downstairs(branch, depth)
+    if branch_depth(branch) == depth
+            or is_portal_location()
+            or branch == "Tomb"
+            or branch == "Abyss" then
+        return 0
+    end
+
+    if util.contains(hell_branches, branch) then
+        return 1
+    end
+
+    return 3
+end
+
+function have_all_downstairs(branch, depth, state)
+    local num_required = num_required_downstairs(branch, depth)
+    if num_required == 0 then
+        return true
+    end
+
+    local i, num
+    for i = 1, num_required do
+        num = "i"
+        num = num:rep(i)
+        if downstairs_state(branch, depth, num) < state then
+            return false
+        end
+    end
+
+    return true
+end
+
+function upstairs_state(branch, depth, num)
+    local level = make_level(branch, depth)
+    if not c_persist.upstairs[level]
+            or not c_persist.upstairs[level][num] then
+        return feat_none
+    end
+
+    return c_persist.upstairs[level][num]
+end
+
+function num_required_upstairs(branch, depth)
+    if depth == 1
+            or branch_depth(branch) == 1
+            or is_portal_location()
+            or branch == "Tomb"
+            or branch == "Abyss"
+            or util.contains(hell_branches, branch) then
+        return 0
+    end
+
+    return 3
+end
+
+function count_upstairs(branch, depth, state)
+    local num_required = num_required_upstairs(branch, depth)
+    if num_required == 0 then
+        return 0
+    end
+
+    local i, num
+    local count = 0
+    for i = 1, num_required do
+        num = "i"
+        num = num:rep(i)
+        if upstairs_state(branch, depth, num) >= state then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function have_all_upstairs(branch, depth, state)
+    local num_required = num_required_upstairs(branch, depth)
+    if num_required == 0 then
+        return true
+    end
+
+    local i, num
+    for i = 1, num_required do
+        num = "i"
+        num = num:rep(i)
+        if upstairs_state(branch, depth, num) < state then
+            return false
+        end
+    end
+
+    return true
+end
+
+function record_map_search(parity, key, start_pos, count, end_pos)
+    if not map_search[parity][key] then
+        map_search[parity][key] = {}
+    end
+
+    if not map_search[parity][key][start_pos] then
+        map_search[parity][key][start_pos]  = {}
+    end
+
+    map_search[parity][key][start_pos][count] = end_pos
 end
 
 function update_level_map(num)
@@ -6730,6 +6993,13 @@ function update_level_map(num)
     end
     for x = -los_radius, los_radius do
         for y = -los_radius, los_radius do
+            local feat = view.feature_at(x, y)
+            if feat:find("stone_stairs") then
+                local state = you.see_cell_solid_see(x, y) and feat_reachable
+                    or (you.see_cell_no_trans(x, y) and feat_diggable
+                        or feat_seen)
+                record_stair(where_branch, where_depth, feat, state)
+            end
             table.insert(mapqueue, {x + dx, y + dy})
         end
     end
@@ -6797,6 +7067,20 @@ function update_level_map(num)
 
     for j = 1, newcount do
         update_dist_map(stair_dists[num][j], distqueue[j])
+    end
+
+    if map_search_key then
+        local feat = view.feature_at(0, 0)
+        -- We assume we landed on the next feature in our current "X<key>"
+        -- cycle, because it can be found with that key in map mode.
+        if feat_uses_map_key(map_search_key, feat) then
+            record_map_search(num, map_search_key, map_search_pos,
+                map_search_count, 100 * dx + dy)
+            check_stairs_search(feat)
+        end
+        map_search_key = nil
+        map_search_pos = nil
+        map_search_count = nil
     end
 end
 
@@ -6973,8 +7257,10 @@ function unshafting()
 end
 
 function plan_unshaft()
-    if unshafting() then
-        dsay("Trying to unshaft to " .. where_shafted_from .. ".")
+    if unshafting()
+            and count_upstairs(where_branch, where_depth,
+                feat_reachable) > 0 then
+        say("Trying to unshaft to " .. where_shafted_from .. ".")
         magic("G<")
         return true
     end
@@ -7894,6 +8180,8 @@ plan_explore2 = cascade {
     {plan_go_down_pan, "try_go_down_pan"},
     {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
     {plan_shopping_spree, "try_shopping_spree"},
+    {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
+    {plan_take_unexplored_stairs, "try_take_unexplored_stairs"},
     {plan_new_travel, "try_new_travel"},
 } -- hack
 
@@ -8409,10 +8697,17 @@ function initialize()
     if c_persist.autoexplored_levels == nil then
         c_persist.autoexplored_levels = { }
     end
+    if c_persist.upstairs == nil then
+        c_persist.upstairs = { }
+    end
+    if c_persist.downstairs == nil then
+        c_persist.downstairs = { }
+    end
 
     if not level_map then
         level_map = {}
         stair_dists = {}
+        map_search = {}
         clear_level_map(1)
         clear_level_map(2)
         waypoint_parity = 1
@@ -8674,9 +8969,34 @@ function turn_update()
         elseif where == "Tomb:3" and not tomb3_entry_turn then
             tomb3_entry_turn = you.turns()
         end
+
+        local feat = view.feature_at(0, 0)
+        -- We changed levels from last turn and arrived on stairs.
+        if feat:find("stone_stairs") then
+            -- XXX: In theory, we might be interrupted taking a stair, trigger
+            -- an exploration teleport trap and land exactly on different
+            -- stairs.
+            record_stair(where_branch, where_depth, feat, feat_explored)
+
+            -- Taking a stair due to a stair search initiated by
+            -- plan_go_to_unexplored_stairs().
+            if stairs_search then
+                local dir, num, search_dir, search_num
+                dir, num = stone_stair_type(feat)
+                search_dir, search_num = stone_stair_type(stairs_search)
+                if search_dir
+                        and (search_dir == "down" and dir == "up"
+                            or search_dir == "up" and dir == "down") then
+                    record_stair(where_branch,
+                        where_depth + (search_dir == "down" and -1 or 1),
+                        stairs_search, feat_explored)
+                end
+            end
+        end
     end
 
     expect_portal = false
+    stairs_search = nil
 
     if is_waypointable(where) then
         update_level_map(waypoint_parity)

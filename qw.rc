@@ -182,7 +182,7 @@ autopickup_exceptions =
 : DEBUG_MODE = false
 
 # Which debug message channels to output.
-: DEBUG_CHANNELS = {"main", "plans", "skills"}
+: DEBUG_CHANNELS = {"main", "explore", "plans", "skills"}
 
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false
