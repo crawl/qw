@@ -43,7 +43,7 @@ local next_delay = 100
 
 local sigmund_dx = 0
 local sigmund_dy = 0
-local invisi_sigmund = false
+local invis_sigmund = false
 
 local sgd_timer = -200
 
@@ -221,8 +221,7 @@ function equip_value(it, cur, it2, sit)
     return -1, -1
 end
 
--- Returns the amount of an artprop granted by an item. Not all artprops are
--- currently handled here.
+-- Returns the amount of an artprop granted by an item.
 function item_resist(str, it)
     if not it then
         return 0
@@ -680,11 +679,6 @@ function resist_dominated(it, it2)
         end
     end
     return diff >= 0
-end
-
-function rune_goal()
-    return 3 + (abyssal_rune and 1 or 0) + (slimy_rune and 1 or 0)
-        + (pan_rune and 5 or 0) + hell_runes + (golden_rune and 1 or 0)
 end
 
 function easy_runes()
@@ -1198,7 +1192,7 @@ function want_potion(it)
     wanted = { "curing", "heal wounds", "haste", "resistance",
         "experience", "might", "mutation", "cancellation" }
 
-    if tso_conversion and (pan_rune or hell_runes > 0 or golden_rune) then
+    if god_uses_mp() or tso_conversion then
         table.insert(wanted, "magic")
         table.insert(wanted, "attraction")
     end
@@ -1643,6 +1637,7 @@ local scary_monsters = {
     ["sun demon"] = 17,
     ["white ugly thing"] = check_resist(17, "rC", 1),
     ["white very ugly thing"] = check_resist(17, "rC", 1),
+    ["shock serpent"] = check_resist(17, "rElec", 1),
 
     ["merfolk impaler"] = 20,
     ["water nymph"] = 20,
@@ -1657,11 +1652,12 @@ local scary_monsters = {
     ["nagaraja"] = 20,
     ["naga sharpshooter"] = 20,
     ["salamander tyrant"] = 20,
-    ["shock serpent"] = check_resist(17, "rElec", 1),
     ["sun moth"] = 20,
     ["broodmother"] = 20,
     ["radroach"] = 20,
     ["emperor scorpion"] = 20,
+    ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
+    ["ironbound frostheart"] = check_resist(20, "rC", 1),
     ["Donald"] = 20,
     ["Rupert"] = 20,
     ["Aizul"] = 20,
@@ -1680,8 +1676,6 @@ local scary_monsters = {
     ["Asterion"] = 20,
     ["deep troll shaman"] = 20,
     ["Xtahua"] = 20,
-    ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
-    ["ironbound frostheart"] = check_resist(20, "rC", 1),
     ["ettin"] = 20,
     ["Polyphemus"] = 20,
     ["Bai Suzhen"] = 20,
@@ -4666,7 +4660,7 @@ end
 function want_to_berserk()
     return (hp_is_low(50) and sense_danger(2, true)
         or check_monster_list(2, scary_monsters)
-        or invisi_sigmund and not options.autopick_on)
+        or invis_sigmund and not options.autopick_on)
 end
 
 function want_to_heroism()
@@ -4695,16 +4689,6 @@ function want_to_stay_in_abyss()
         and not hp_is_low(50)
 end
 
-function have_hell_runes()
-    for _,branch in ipairs(hell_branches) do
-        if not have_branch_runes(branch) then
-            return false
-        end
-    end
-
-    return true
-end
-
 function want_to_be_in_pan()
     return game_status == "Pan" and not have_branch_runes("Pan")
 end
@@ -4727,10 +4711,12 @@ function plan_wait_for_melee()
         wait_count = 0
         return false
     end
+
     if you.turns() >= last_wait + 10 then
         wait_count = 0
     end
-    if (not danger) or wait_count >= 10 then
+
+    if not danger or wait_count >= 10 then
         return false
     end
     -- hack to make us wait when we enter v5 so we don't move off stairs
@@ -4738,6 +4724,7 @@ function plan_wait_for_melee()
         is_waiting = true
         return false
     end
+
     count = 0
     sleeping_count = 0
     local e
@@ -4766,7 +4753,7 @@ function plan_wait_for_melee()
     if count == 0 then
         return false
     end
-    -- say "Waiting for monsters to approach."
+
     if sleeping_count == 0 then
         wait_count = wait_count + 1
     end
@@ -4774,7 +4761,8 @@ function plan_wait_for_melee()
     if plan_cure_poison() then
         return true
     end
-    -- don't actually wait yet, because we might use a ranged attack instead
+
+    -- Don't actually wait yet, because we might use a ranged attack instead.
     is_waiting = true
     return false
 end
@@ -7180,6 +7168,7 @@ function random_step(reason)
         magic("s")
         return true
     end
+
     local i, j
     local dx, dy
     local count = 0
@@ -7224,13 +7213,13 @@ end
 function plan_flail_at_invis()
     if options.autopick_on then
         invisi_count = 0
-        invisi_sigmund = false
+        invis_sigmund = false
         return false
     end
     if invisi_count > 100 then
         say("Invisible monster not found???")
         invisi_count = 0
-        invisi_sigmund = false
+        invis_sigmund = false
         magic(control('a'))
         return true
     end
@@ -7246,7 +7235,7 @@ function plan_flail_at_invis()
         end
     end
 
-    if invisi_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
+    if invis_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
         x = sigmund_dx
         y = sigmund_dy
         if adjacent(x, y) and is_traversable(x, y) then
@@ -8422,6 +8411,10 @@ function split(str, del)
     return res
 end
 
+function bool_string(x)
+    return x and "true" or "false"
+end
+
 function capitalize(str)
     local lower = str:lower()
     return lower:sub(1, 1):upper() .. lower:sub(2)
@@ -8512,7 +8505,7 @@ end
 ---------------------------------------------
 -- initialization/control/saving
 
-function make_plans()
+function make_initial_plans()
     local plans = split(plan_options(), ",")
     plan_list = {}
     local plan
@@ -8584,7 +8577,7 @@ function initialize()
         first_turn_initialize()
     end
 
-    make_plans()
+    make_initial_plans()
     where = "nowhere"
     where_branch = "nowhere"
     where_depth = nil
@@ -8660,10 +8653,6 @@ function set_counter()
     note("Game counter set to " .. c_persist.record.counter)
 end
 
-function bool_string(x)
-    return x and "true" or "false"
-end
-
 function note_qw_data()
     note("qw: Version: " .. qw_version)
     note("qw: Game counter: " .. c_persist.record.counter)
@@ -8672,7 +8661,8 @@ function note_qw_data()
         note("qw: God list: " .. table.concat(god_options(), ", "))
         note("qw: Allow faded altars: " .. bool_string(FADED_ALTAR))
     end
-    note("qw: Do Orc after D:15: " .. bool_string(LATE_ORC))
+    note("qw: Do Orc after D:" .. branch_depth("D") .. " "
+        .. bool_string(LATE_ORC))
     note("qw: Do second Lair branch before Depths: " ..
         bool_string(EARLY_SECOND_RUNE))
     note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
@@ -9114,9 +9104,9 @@ end
 
 function c_message(text, channel)
     if text:find("Sigmund flickers and vanishes") then
-        invisi_sigmund = true
+        invis_sigmund = true
     elseif text:find("Your surroundings suddenly seem different") then
-        invisi_sigmund = false
+        invis_sigmund = false
     elseif text:find("Your pager goes off") then
         have_message = true
     elseif text:find("Done exploring")
