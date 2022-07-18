@@ -251,9 +251,9 @@ function item_resist(str, it)
             if name:find("ice dragon") then
                 return 2
             elseif ego == "cold resistance" or ego == "resistance"
-                         or subtype == "ring of protection from cold"
-                         or name:find("gold dragon")
-                         or subtype == "ring of ice" then
+                     or subtype == "ring of protection from cold"
+                     or name:find("gold dragon")
+                     or subtype == "ring of ice" then
                 return 1
             elseif name:find("fire dragon") or subtype == "ring of fire" then
                 return -1
@@ -261,76 +261,37 @@ function item_resist(str, it)
                 return 0
             end
         elseif str == "rElec" then
-            if name:find("storm dragon") then
-                return 1
-            else
-                return 0
-            end
+            return name:find("storm dragon") and 1 or 0
         elseif str == "rPois" then
-            if ego == "poison resistance"
-                    or subtype == "ring of poison resistance"
-                    or name:find("swamp dragon")
-                    or name:find("gold dragon") then
-                return 1
-            else
-                return 0
-            end
+            return (ego == "poison resistance"
+                or subtype == "ring of poison resistance"
+                or name:find("swamp dragon")
+                or name:find("gold dragon")) and 1 or 0
         elseif str == "rN" then
-            if ego == "positive energy"
-                    or subtype == "ring of positive energy"
-                    or name:find("pearl dragon") then
-                return 1
-            else
-                return 0
-            end
+            return (ego == "positive energy"
+                or subtype == "ring of positive energy"
+                or name:find("pearl dragon")) and 1 or 0
         elseif str == "Will" then
-            if ego == "willpower"
-                    or subtype == "ring of willpower"
-                    or name:find("quicksilver dragon") then
-                return 1
-            else
-                return 0
-            end
+            return (ego == "willpower"
+                or subtype == "ring of willpower"
+                or name:find("quicksilver dragon")) and 1 or 0
         elseif str == "rCorr" then
-            if subtype == "ring of resist corrosion"
-                    or name:find("acid dragon") then
-                return 1
-            else
-                return 0
-            end
+            return (subtype == "ring of resist corrosion"
+                or name:find("acid dragon")) and 1 or 0
         elseif str == "SInv" then
-            if ego == "see invisible"
-                    or subtype == "ring of see invisible" then
-                return 1
-            else
-                return 0
-            end
+            return (ego == "see invisible"
+                or subtype == "ring of see invisible") and 1 or 0
         elseif str == "Spirit" then
-            if ego == "spirit shield"
-                    or subtype == "amulet of guardian spirit" then
-                return 1
-            else
-                return 0
-            end
+            return (ego == "spirit shield"
+                    or subtype == "amulet of guardian spirit") and 1 or 0
         elseif str == "Regen" then
-             if name:find("troll leather")
-                     or subtype == "amulet of regeneration" then
-                 return 1
-             else
-                 return 0
-             end
+             return (name:find("troll leather")
+                     or subtype == "amulet of regeneration") and 1 or 0
         elseif str == "Acrobat" then
-             if subtype == "amulet of the acrobat" then
-                 return 1
-             else
-                 return 0
-             end
+             return subtype == "amulet of the acrobat" and 1 or 0
         elseif str == "Reflect" then
-             if ego == "reflection" or subtype == "amulet of reflection" then
-                 return 1
-             else
-                 return 0
-             end
+             return (ego == "reflection" or subtype == "amulet of reflection")
+                 and 1 or 0
         elseif str == "Str" then
             if subtype == "ring of strength" then
                 return it.plus or 0
@@ -350,9 +311,7 @@ function item_resist(str, it)
                 return 3
             end
         elseif str == "Slay" then
-            if subtype == "ring of slaying" then
-                return it.plus or 0
-            end
+            return subtype == "ring of slaying" and it.plus or 0
         elseif str == "AC" then
             if subtype == "ring of protection" then
                 return it.plus or 0
@@ -361,15 +320,12 @@ function item_resist(str, it)
                 return 3
             end
         elseif str == "EV" then
-            if subtype == "ring of evasion" then
-                return it.plus or 0
-            end
+            return subtype == "ring of evasion"  and it.plus or 0
         elseif str == "SH" then
-            if subtype == "amulet of reflection" then
-                return 5
-            end
+            return subtype == "amulet of reflection" and 5 or 0
         end
     end
+
     return 0
 end
 
@@ -529,6 +485,7 @@ function max_resist_value(str, d)
     if d <= 0 then
         return 0
     end
+
     local val = 0
     local ires = intrinsic_resist(str)
     if str == "rF" or str == "rC" then
@@ -608,6 +565,7 @@ function linear_resist_value(str)
     elseif str == "Dex" then
         return 20
     end
+
     return 0
 end
 
@@ -616,9 +574,11 @@ function total_resist_value(it, cur, it2)
                    "Spirit", "Acrobat", "Reflect", "Str", "Dex", "Int" }
     linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
     local val = 0
+    local str
     for _, str in ipairs(linearlist) do
         val = val + item_resist(str, it) * linear_resist_value(str)
     end
+
     local val1, val2 = val, val
     if not only_linear_resists then
         for _, str in ipairs(resistlist) do
@@ -648,8 +608,8 @@ function base_equip_value(it)
     return val1, val2
 end
 
--- complicated check:
--- is it going to be worse than it2 no matter what other resists we have?
+-- Is the first item going to be worse than the second item no matter what
+-- other resists we have?
 function resist_dominated(it, it2)
     local bmin, bmax = base_equip_value(it)
     local bmin2, bmax2 = base_equip_value(it2)
@@ -657,6 +617,7 @@ function resist_dominated(it, it2)
     if diff < 0 then
         return false
     end
+
     local vec = resist_vec(it)
     local vec2 = resist_vec(it2)
     local l = #vec
@@ -665,7 +626,7 @@ function resist_dominated(it, it2)
             diff = diff - (vec[i] - vec2[i])
         end
     end
-    return (diff >= 0)
+    return diff >= 0
 end
 
 function rune_goal()
@@ -993,9 +954,11 @@ function weapon_value(it, cur, it2, sit)
                             and wskill() == "Long Blades")) then
         return -1, -1
     end
+
     if it.hands == 2 and want_buckler() then
         return -1, -1
     end
+
     if sit == "bless" then
         local val1, val2 = 0, 0
         if it.artefact then
@@ -1016,6 +979,7 @@ function weapon_value(it, cur, it2, sit)
         value = value + 1200 * it.damage / delay_estimate
         return value + val1, value + val2
     end
+
     if tso and name:find("demon") and not name:find("eudemon") then
         return -1, -1
     end
@@ -1055,13 +1019,15 @@ function weapon_value(it, cur, it2, sit)
             end
         end
     end
+
     local val1, val2 = total_resist_value(it, cur, it2)
-    if it.artefact and not it.fully_identified or name:find("runed")
+    if it.artefact and not it.fully_identified
+            or name:find("runed")
             or name:find("glowing") then
         val2 = val2 + 500
         val1 = val1 + (cur and 500 or -250)
     end
-    local ego = it.ego()
+
     if hydra_swap then
         local hydra_quality = hydra_weapon_status(it)
         if hydra_quality == -1 then
@@ -1070,6 +1036,8 @@ function weapon_value(it, cur, it2, sit)
             value = value + 500
         end
     end
+
+    local ego = it.ego()
     if ego then -- names are mostly in weapon_brands_verbose[]
         if ego == "distortion" then
             return -1, -1
@@ -1077,6 +1045,7 @@ function weapon_value(it, cur, it2, sit)
             if intrinsic_evil() or you.god() == "Yredelemnul" then
                 return -1, -1
             end
+
             if extended then
                 value = value + 500
             end
@@ -1084,15 +1053,18 @@ function weapon_value(it, cur, it2, sit)
             if tso then
                 return -1, -1
             end
+
             if extended then
                 value = value - 400
             end
+
              -- This is what we want.
             value = value + 500
         elseif ego == "speed" then
             if you.god() == "Cheibriados" then
                 return -1, -1
             end
+
             -- This is good too
             value = value + 300
         elseif ego == "spectralizing" then
@@ -1100,11 +1072,12 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "electrocution" then
             value = value + 150
         elseif ego == "draining" then
-            if not extended then
-                value = value + 75
-            end
             if tso then
                 return -1, -1
+            end
+
+            if not extended then
+                value = value + 75
             end
         elseif ego == "flaming" or ego == "freezing" or ego == "vorpal" then
             value = value + 75
@@ -1124,147 +1097,72 @@ function weapon_value(it, cur, it2, sit)
             return -1, -1
         end
     end
+
     if it.plus then
         value = value + 30 * it.plus
     end
+
     delay_estimate = min(7, math.floor(it.delay / 2))
     if it.weap_skill == "Short Blades" and delay_estimate > 5 then
         delay_estimate = 5
     end
-    -- we might be delayed by a shield or not yet at min delay, so add a little
+    -- We might be delayed by a shield or not yet at min delay, so add a little.
     delay_estimate = delay_estimate + 1
     value = value + 1200 * it.damage / delay_estimate
-    -- subtract a bit for very slow weapons because of how much skill they
-    -- require to reach min delay
+
+    -- Subtract a bit for very slow weapons because of how much skill they
+    -- require to reach min delay.
     if it.delay > 17 then
         value = value - 120 * (it.delay - 17)
     end
+
     if it.weap_skill ~= wskill() then
         value = value / 10
         val1 = val1 / 10
         val2 = val2 / 10
     end
+
     return value + val1, value + val2
 end
 
 function amulet_value(it, cur, it2)
     local name = it.name()
-    local subtype = it.subtype()
-    local value = 0
-    if it.artefact then
-        ap = it.artprops
-        if ap and (ap["-Tele"] or ap["*Tele"])
-                and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if ap and ap["*Rage"] and you.race() ~= "Mummy"
-             and you.race() ~= "Ghoul" and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if name:find("macabre finger necklace") then
-            return -1, -1
-        end
-        if ap and ap["Fragile"] then
-            return -1, -1
-        end
-        if ap and ap["*Slow"] and you.race() ~= "Formicid" then
-            value = value - 100
-        end
-        if ap and ap["*Corrode"] then
-            value = value - 100
-        end
+    if name:find("macabre finger necklace") then
+        return -1, -1
     end
-    if subtype == "amulet of faith" then
-        -- we don't use piety much on these gods at the moment
-        if you.god() == "Cheibriados" or you.god() == "Beogh"
-                or you.god() == "Qazlal" or you.god() == "Hepliaklqana" then
-            return -1, -1
-        -- fixed value so we don't unequip for a randart one
-        elseif you.god() ~= "Ru" and you.god() ~= "Xom" then
-            return 1000, 1000
-         end
-    end
-    if it.artefact and not it.fully_identified
-            or not (it.artefact or name:find("amulet of")) then
+
+    if not it.fully_identified then
         if cur then
             return 800, 800
         else
             return -1, 1000
         end
     end
+
     local val1, val2 = total_resist_value(it, cur, it2)
-    return value + val1, value + val2
+    return val1, val2
 end
 
 function ring_value(it, cur, it2)
-    local name = it.name()
-    local subtype = it.subtype()
-    local value = 0
-    if it.artefact then
-        ap = it.artprops
-        if ap and (ap["-Tele"] or ap["*Tele"])
-                and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if ap and ap["*Rage"] and you.race() ~= "Mummy"
-             and you.race() ~= "Ghoul" and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if ap and ap["Fragile"] then
-            return -1, -1
-        end
-        if ap and ap["*Slow"] and you.race() ~= "Formicid" then
-            value = value - 100
-        end
-        if ap and ap["*Corrode"] then
-            value = value - 100
-        end
-    end
-    if subtype == "ring of teleportation" and you.race() ~= "Formicid" then
-        return -1, -1
-    end
-    if it.artefact and not it.fully_identified
-            or not (it.artefact or name:find("ring of")) then
+    if not it.fully_identified then
         if cur then
             return 5000, 5000
         else
             return -1, 5000
         end
     end
+
     local val1, val2 = total_resist_value(it, cur, it2)
-    if not it.artefact and not it.plus then
-        local linval = 0
-        if subtype == "ring of slaying" or subtype == "ring of protection"
-         or subtype == "ring of evasion" then
-            linval = 50
-        elseif subtype == "ring of strength" then
-            linval = 30
-        elseif subtype == "ring of dexterity" then
-            linval = 20
-        end
-        value = value + 6 * linval
-        if not cur then
-            val1 = val1 - 12 * linval
-        end
-    end
-    return value + val1, value + val2
+    return val1, val2
 end
 
 function count_charges(wand_type, ignore_it)
-    count = 0
+    local count = 0
     for it in inventory() do
         if it.class(true) == "wand"
-             and (ignore_it == nil or slot(it) ~= slot(ignore_it))
-             and it.subtype() == wand_type then
-            if it.plus then
-                count = count + it.plus
-            elseif it.plus == nil and not it.name():find("empty") then
-                if it.name():find("zapped") then
-                    count = count + 3
-                else
-                    count = count + 6
-                end
-            end
+                and (not ignore_it or slot(it) ~= slot(ignore_it))
+                and it.subtype() == wand_type then
+            count = count + it.plus
         end
     end
     return count
@@ -1275,34 +1173,11 @@ function want_wand(it)
         return false
     end
 
-    only_wand = true
-    for it2 in inventory() do
-        if only_wand and it2.class(true) == "wand"
-                and slot(it2) ~= slot(it) then
-            only_wand = false
-        end
-    end
-    if only_wand then
-        return true -- for Evo training
-    end
-    sub = it.subtype()
-    if sub == nil then
-        return true
-    end
-    if sub ~= "digging" then
+    local sub = it.subtype()
+    if not sub or sub ~= "digging" then
         return false
     end
-    if it.name():find("empty") or it.plus == 0 then
-        for it2 in inventory() do
-            if it2.class(true) == "wand" and slot(it2) ~= slot(it) and
-                 it2.subtype() == sub then
-                return false
-            end
-        end
-    elseif sub == "digging" then
-        return count_charges("digging", it) < 18
-    end
-    return true
+    return count_charges("digging", it) < 18
 end
 
 function want_potion(it)
@@ -2134,8 +2009,7 @@ function intrinsic_evil()
 end
 
 function intrinsic_undead()
-    return (you.race() == "Ghoul" or you.race() == "Mummy"
-                    or you.race() == "Vampire")
+    return you.race() == "Ghoul" or you.race() == "Mummy"
 end
 
 -- We group all species into four categories:
@@ -2981,7 +2855,7 @@ function count_pan_lords(r)
         function(m) return m:type() == enum_mons_pan_lord end)
 end
 
--- should only be called for adjacent squares
+-- Should only be called for adjacent squares.
 function monster_in_way(dx, dy)
     local m = monster_array[dx][dy]
     return m and (m:attitude() <= enum_att_neutral and not lair_step_mode
@@ -5377,35 +5251,34 @@ function plan_use_good_consumables()
                     end
                 end
             elseif it.name():find("enchant weapon") then
-                weapon = items.equipped_at("weapon")
+                local weapon = items.equipped_at("weapon")
                 if weapon and weapon.class(true) == "weapon"
                         and not weapon.artefact and weapon.plus < 9 then
-                    oldname = weapon.name()
+                    local oldname = weapon.name()
                     if read2(it, letter(weapon)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
                 end
             elseif it.name():find("brand weapon") then
-                weapon = items.equipped_at("weapon")
+                local weapon = items.equipped_at("weapon")
                 if weapon and weapon.class(true) == "weapon"
                         and not weapon.artefact
                         and not brand_is_great(weapon.ego()) then
-                    oldname = weapon.name()
+                    local oldname = weapon.name()
                     if read2(it, letter(weapon)) then
                         say("BRANDING " .. oldname .. ".")
                         return true
                     end
                 end
             elseif it.name():find("enchant armour") then
-                body = items.equipped_at("Body Armour")
-                ac = armour_ac()
-                if body
-                        and not body.artefact
+                local body = items.equipped_at("Body Armour")
+                local ac = armour_ac()
+                if body and not body.artefact
                         and body.plus < ac
                         and body_armour_is_great(body)
                         and not body.name():find("quicksilver") then
-                    oldname = body.name()
+                    local oldname = body.name()
                     if read2(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
@@ -5413,11 +5286,12 @@ function plan_use_good_consumables()
                 end
                 for _, slotname in pairs(good_slots) do
                     if slotname ~= "Body Armour" and slotname ~= "Shield" then
-                        it2 = items.equipped_at(slotname)
-                        if it2 and not it2.artefact and it2.plus < 2
-                            and it2.plus >= 0
-                            and not it2.name():find("scarf") then
-                            oldname = it2.name()
+                        local it2 = items.equipped_at(slotname)
+                        if it2 and not it2.artefact
+                                and it2.plus < 2
+                                and it2.plus >= 0
+                                and not it2.name():find("scarf") then
+                            local oldname = it2.name()
                             if read2(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
@@ -5429,7 +5303,7 @@ function plan_use_good_consumables()
                                 and not it2.artefact
                                 and it2.plus < 4
                                 and it2.plus >= 0 then
-                            oldname = it2.name()
+                            local oldname = it2.name()
                             if read2(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
@@ -5437,12 +5311,11 @@ function plan_use_good_consumables()
                         end
                     end
                 end
-                if body
-                        and not body.artefact
+                if body and not body.artefact
                         and body.plus < ac
                         and body_armour_is_good(body)
                         and not body.name():find("quicksilver") then
-                    oldname = body.name()
+                    local oldname = body.name()
                     if read2(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
@@ -5480,6 +5353,7 @@ function plan_use_good_consumables()
             end
         end
     end
+
     return false
 end
 
@@ -5524,6 +5398,7 @@ function plan_swap_weapon()
             or not items.equipped_at("Weapon") then
         return false
     end
+
     local sit, e
     if you.xl() < 18 then
         for _, e in ipairs(enemy_list) do
@@ -5534,18 +5409,22 @@ function plan_swap_weapon()
             end
         end
     end
+
     if in_extended() then
         sit = "extended"
     end
+
     twohands = true
     if items.equipped_at("Shield") and you.race() ~= "Formicid" then
         twohands = false
     end
+
     it_old = items.equipped_at("Weapon")
     swappable = can_swap("Weapon")
     if not swappable then
         return false
     end
+
     cur_val = weapon_value(it_old, true, it_old, sit)
     max_val = cur_val
     max_it = nil
@@ -5565,8 +5444,9 @@ function plan_swap_weapon()
         say("SWAPPING to " .. max_it.name() .. ".")
         magic("w" .. l .. "YY")
         -- this might have a 0-turn fail because of unIDed holy
-        return nil
+        return
     end
+
     return false
 end
 
@@ -5712,7 +5592,7 @@ end
 
 function plan_upgrade_rings()
     local it_rings = ring_list()
-    local empty = (empty_ring_slots() > 0)
+    local empty = empty_ring_slots() > 0
     for it in inventory() do
         if it and equip_slot(it) == "Ring" and not it.equipped then
             local equip = false
