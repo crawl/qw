@@ -283,6 +283,8 @@ function item_resist(str, it)
                 or subtype == "ring of see invisible") and 1 or 0
         elseif str == "Fly" then
             return ego == "flying" and 1 or 0
+        elseif str == "Faith" then
+            return subtype == "amulet of faith"
         elseif str == "Spirit" then
             return (ego == "spirit shield"
                     or subtype == "amulet of guardian spirit") and 1 or 0
@@ -294,6 +296,12 @@ function item_resist(str, it)
         elseif str == "Reflect" then
              return (ego == "reflection" or subtype == "amulet of reflection")
                  and 1 or 0
+        elseif str == "Repulsion" then
+             return ego == "repulsion" and 1 or 0
+        elseif str == "Ponderous" then
+             return ego == "ponderous" and 1 or 0
+        elseif str == "Harm" then
+             return ego == "harm" and 1 or 0
         elseif str == "Str" then
             if subtype == "ring of strength" then
                 return it.plus or 0
@@ -466,7 +474,7 @@ function absolute_resist_value(str, n)
     elseif str == "rPois" then
         return easy_runes() < 2 and 225 or 75
     elseif str == "rN" then
-        return 25 * n
+        return 25 * min(n, 3)
     elseif str == "Will" then
         local branch_factor = in_branch("Vaults") and 1.5 or 1
         val = 100 * branch_factor * n
@@ -477,12 +485,36 @@ function absolute_resist_value(str, n)
         return 200
     elseif str == "Fly" then
         return 200
+    elseif str == "Faith" then
+        -- We either don't use invocations much for these gods
+        if you.god() == "Cheibriados"
+                or you.god() == "Beogh"
+                or you.god() == "Qazlal"
+                or you.god() == "Hepliaklqana"
+                or you.god() ~= "Ru"
+                or you.god() ~= "Xom" then
+            return 0
+        -- Otherwise, we like Faith a lot.
+        else
+            return 1000
+         end
     elseif str == "Spirit" then
         return god_uses_mp() and -150 or 100
     elseif str == "Acrobat" then
         return 100
     elseif str == "Reflect" then
         return 20
+    elseif str == "Repulsion" then
+        return 200
+    -- Begin properties we always assign a nonpositive value.
+    elseif str == "Harm" then
+        return -500
+    elseif str == "Pondering" then
+        return -300
+    elseif str == "Fragile" then
+        return -10000
+    elseif str == "-Tele" then
+        return you.race() == "Formicid" and 0 or -10000
     end
     return 0
 end
@@ -570,15 +602,29 @@ function linear_resist_value(str)
         return 30
     elseif str == "Dex" then
         return 20
+    -- Begin negative properties.
+    elseif str == "*Tele" then
+        return you.race() == "Formicid" and 0 or -300
+    elseif str == "*Rage" then
+        return (intrinsic_undead() or you.race() == "Formicid")
+            and 0 or -300
+    elseif str == "*Slow" then
+        return you.race() == "Formicid" and 0 or -100
+    elseif str == "*Corrode" then
+        return -100
     end
 
     return 0
 end
 
 function total_resist_value(it, cur, it2)
+    -- The Str/Dex/Int in resistlist can only recieve negative penalties, which
+    -- happens when they reduce those stats to dangerous levels.
     local resistlist = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois", "rN",
-        "Will", "rCorr", "SInv", "Fly", "Spirit", "Acrobat",  "Reflect" }
-    local linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
+        "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit", "Acrobat",
+        "Reflect", "Repulsion" "-Tele", "Ponderous", "Harm" }
+    local linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
+        "*Slow", "*Corrode", "*Tele", "*Rage"}
     local val = 0
     local str
     for _, str in ipairs(linearlist) do
@@ -598,7 +644,8 @@ end
 
 function resist_vec(it)
     local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
-                         "SInv", "Fly", "Spirit", "Acrobat", "Reflect" }
+                         "SInv", "Fly", "Faith", "Spirit", "Acrobat",
+                         "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm" }
     local vec = { }
     for _, str in ipairs(resistlist) do
         local a, b = resist_value(str, it)
@@ -824,28 +871,9 @@ function armour_value(it, cur, it2)
             val2 = val2 + 400
             val1 = val1 + (cur and 400 or -400)
         end
-        ap = it.artprops
-        if ap and (ap["-Tele"] or ap["*Tele"])
-                and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if ap and ap["*Rage"] and you.race() ~= "Mummy"
-             and you.race() ~= "Ghoul" and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if name:find("Pondering") or name:find("hauberk") then
-            return -1, -1
-        end
-        if ap and ap["Fragile"] then
-            return -1, -1
-        end
-        if ap and ap["*Slow"] and you.race() ~= "Formicid" then
-            value = value - 100
-        end
-        if ap and ap["*Corrode"] then
-            value = value - 100
-        end
-        if ap and ap["Harm"] then
+
+        -- Unrands
+        if name:find("hauberk") then
             return -1, -1
         end
         if it.name():find("Mad Mage's Maulers") then
@@ -854,22 +882,17 @@ function armour_value(it, cur, it2)
             else
                 value = value + 200
             end
+        elseif it.name():find("lightning scales") then
+            if you.god() == "Cheibriados" then
+                return -1, -1
+            else
+                value = value + 100
+            end
         end
     elseif name:find("runed") or name:find("glowing") or name:find("dyed")
             or name:find("embroidered") or name:find("shiny") then
         val2 = val2 + 400
         val1 = val1 + (cur and 400 or -200)
-    elseif ego then -- names in armour_ego_name()
-        if ego == "running" then
-            value = value + 25
-            if you.god() == "Cheibriados" then
-                return -1, -1
-            end
-        elseif ego == "ponderousness" or ego == "harm" then
-            return -1, -1
-        elseif ego == "repulsion" then
-            value = value + 200
-        end
     end
 
     value = value + 50 * expected_armour_multiplier() * it.ac
@@ -987,40 +1010,22 @@ function weapon_value(it, cur, it2, sit)
     if tso and name:find("demon") and not name:find("eudemon") then
         return -1, -1
     end
-    if it.artefact then
-        ap = it.artprops
-        if ap and (ap["-Tele"] or ap["*Tele"])
-                and you.race() ~= "Formicid" then
+
+    if (intrinsic_evil() or you.god() == "Yredelemnul")
+            and name:find("holy") then
+        return -1, -1
+    end
+
+    if name:find("obsidian axe") then
+        if tso then
             return -1, -1
-        end
-        if ap and ap["*Rage"] and you.race() ~= "Mummy"
-             and you.race() ~= "Ghoul" and you.race() ~= "Formicid" then
-            return -1, -1
-        end
-        if ap and ap["Fragile"] then
-            return -1, -1
-        end
-        if ap and ap["*Slow"] and you.race() ~= "Formicid" then
-            value = value - 100
-        end
-        if ap and ap["*Corrode"] then
-            value = value - 100
-        end
-        if (intrinsic_evil()
-                or you.god() == "Yredelemnul") and name:find("holy") then
-            return -1, -1
-        end
-        if name:find("obsidian axe") then
-            if tso then
-                return -1, -1
-            -- This is much less good when it can't make friendly demons.
-            elseif you.mutation("hated by all") or you.god() == "Okawaru" then
-                value = value - 200
-            -- XXX: De-value this on certain levels or give qw better strats
-            -- while mesmerized.
-            else
-                value = value + 200
-            end
+        -- This is much less good when it can't make friendly demons.
+        elseif you.mutation("hated by all") or you.god() == "Okawaru" then
+            value = value - 200
+        -- XXX: De-value this on certain levels or give qw better strats
+        -- while mesmerized.
+        else
+            value = value + 200
         end
     end
 
@@ -1296,7 +1301,8 @@ function should_upgrade(it, old_it, sit)
             return true
         end
 
-        return old_it.subtype() ~= "amulet of faith"
+        -- Don't like to swap Faith.
+        return item_resist("Faith", old_it) == 0
     end
 
     return equip_value(it, true, old_it, sit)
