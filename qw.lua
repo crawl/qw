@@ -89,7 +89,7 @@ local did_first_turn = false
 
 local stairdance_count = {}
 local clear_exclusion_count = {}
-local v5_entry_turn
+local vaults_end_entry_turn
 local tomb2_entry_turn
 local tomb3_entry_turn
 
@@ -118,11 +118,6 @@ local map_search_key
 local map_search_pos
 local map_search_count
 
-local abyssal_rune = false
-local slimy_rune = false
-local pan_rune = false
-local hell_runes = 0
-local golden_rune = false
 local tso_conversion = false
 local lugonu_conversion = false
 local will_zig = false
@@ -438,9 +433,13 @@ function absolute_resist_value(str, n)
     if n == 0 then
         return 0
     end
-    if slime_soon()
-       and (str == "rF" or str == "rElec" or str == "rPois"
-            or str == "rN" or str == "Will" or str == "SInv") then
+    if branch_soon("Slime")
+            and (str == "rF"
+                or str == "rElec"
+                or str == "rPois"
+                or str == "rN"
+                or str == "Will"
+                or str == "SInv") then
         return 0
     end
     local val = 0
@@ -455,15 +454,15 @@ function absolute_resist_value(str, n)
             val = 250
         end
         if str == "rF" then
-            if zot_soon() then
+            if branch_soon("Zot") then
                 val = val * 2.5
-            elseif game_status == "Geh" then
+            elseif branch_soon("Geh") then
                 val = val * 1.5
             end
         elseif str == "rC" then
-            if game_status == "Coc" then
+            if branch_soon("Coc") then
                 val = val * 2.5
-            elseif slime_soon() then
+            elseif branch_soon("Slime") then
                 val = val * 1.5
             end
         end
@@ -475,11 +474,10 @@ function absolute_resist_value(str, n)
     elseif str == "rN" then
         return 25 * min(n, 3)
     elseif str == "Will" then
-        local branch_factor = in_branch("Vaults") and 1.5 or 1
-        val = 100 * branch_factor * n
-        return min(val, 300 * branch_factor)
+        local branch_factor = branch_soon("Vaults") and 1.5 or 1
+        return min(100 * branch_factor * n, 300 * branch_factor)
     elseif str == "rCorr" then
-        return slime_soon() and 1200 or 50
+        return branch_soon("Slime") and 1200 or 50
     elseif str == "SInv" then
         return 200
     elseif str == "Fly" then
@@ -688,133 +686,129 @@ function easy_runes()
                  + (you.have_rune("gossamer") and 1 or 0)
 end
 
-function update_game_status()
-    local current_plan = plan_list[which_plan]
-    local normal_complete = false
-
-    if current_plan == "Normal" then
-        local early_vaults = make_level_range("Vaults", 1, -1)
-        if not explored_level_range("D:1-11") then
-            -- We head to Lair early, before having explored through D:11, if
-            -- we feel we're ready.
-            if found_branch("Lair")
-                    and not explored_level_range("Lair")
-                    and ready_for_lair() then
-                game_status = "Lair"
-            else
-                game_status = "D:1-11"
-            end
-        -- D:1-11 explored, but not Lair.
-        elseif not explored_level_range("Lair") then
-            -- We'll keep exploring Dungeon until we're ready or we don't have
-            -- any Dungeon left.
-            if ready_for_lair() or explored_level_range("D") then
-                game_status = "Lair"
-            else
-                game_status = "D"
-            end
-        -- D:1-11 and Lair explored, but not D:12.
-        elseif not explored_level_range("D:12") then
-            if LATE_ORC then
-                game_status = "D"
-            else
-                game_status = "D:12"
-            end
-        -- D:1-12 and Lair explored, but not all of D.
-        elseif not explored_level_range("D") then
-            if not LATE_ORC
-                    and found_branch("Orc")
-                    and not explored_level_range("Orc") then
-                game_status = "Orc"
-            else
-                game_status = "D"
-            end
-        -- D and Lair explored, but not Orc.
-        elseif not explored_level_range("Orc") then
-            game_status = "Orc"
-        -- D, Lair, and Orc explored, but no Lair branch runes.
-        elseif easy_runes() == 0 then
-            -- We do levels all levels except the rune level for both Lair
-            -- branches before we go for the first rune.
-            local first_br = next_branch(lair_branch_order())
-            local second_br = next_branch(lair_branch_order(), 1)
-            local first_range = make_level_range(first_br, 1, -1)
-            local second_range = make_level_range(second_br, 1, -1)
-            if not explored_level_range(first_range) then
-                game_status = first_range
-            elseif not explored_level_range(second_range) then
-                game_status = second_range
-            else
-                game_status = first_br
-            end
-        -- D, Lair, Orc, and at least one Lair branch explored, but not early
-        -- Vaults.
-        elseif not explored_level_range(early_vaults) then
-            game_status = early_vaults
-        -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
-        -- second Lair branch not explored.
-        elseif easy_runes() == 1 then
-            if not explored_level_range("Depths")
-                    and not EARLY_SECOND_RUNE then
-                game_status = "Depths"
-            else
-                game_status = next_branch(lair_branch_order())
-            end
-        -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
-        -- Depths.
-        elseif not explored_level_range("Depths") then
-            game_status = "Depths"
-        -- D, Lair, Orc, both Lair branches, early Vaults, and Depths explored,
-        -- but no silver rune.
-        elseif not explored_level_range("Vaults") then
-            game_status = "Vaults"
-        -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and
-        -- it's time to shop.
-        elseif not c_persist.done_shopping then
-            game_status = "Shopping"
-        -- After shopping, mark the normal plan as complete. The normal plan
-        -- progression below will take over and process the plan list from now
-        -- on, including making sure we get to Zot and the ORB.
+function plan_normal_next()
+    local status
+    local early_vaults = make_level_range("Vaults", 1, -1)
+    if not explored_level_range("D:1-11") then
+        -- We head to Lair early, before having explored through D:11, if
+        -- we feel we're ready.
+        if found_branch("Lair")
+                and not explored_level_range("Lair")
+                and ready_for_lair() then
+            status = "Lair"
         else
-            normal_complete = true
+            status = "D:1-11"
         end
+    -- D:1-11 explored, but not Lair.
+    elseif not explored_level_range("Lair") then
+        -- We'll keep exploring Dungeon until we're ready or we don't have
+        -- any Dungeon left.
+        if ready_for_lair() or explored_level_range("D") then
+            status = "Lair"
+        else
+            status = "D"
+        end
+    -- D:1-11 and Lair explored, but not D:12.
+    elseif not explored_level_range("D:12") then
+        if LATE_ORC then
+            status = "D"
+        else
+            status = "D:12"
+        end
+    -- D:1-12 and Lair explored, but not all of D.
+    elseif not explored_level_range("D") then
+        if not LATE_ORC
+                and found_branch("Orc")
+                and not explored_level_range("Orc") then
+            status = "Orc"
+        else
+            status = "D"
+        end
+    -- D and Lair explored, but not Orc.
+    elseif not explored_level_range("Orc") then
+        status = "Orc"
+    -- D, Lair, and Orc explored, but no Lair branch runes.
+    elseif easy_runes() == 0 then
+        -- We do levels all levels except the rune level for both Lair
+        -- branches before we go for the first rune.
+        local first_br = next_branch(lair_branch_order())
+        local second_br = next_branch(lair_branch_order(), 1)
+        local first_range = make_level_range(first_br, 1, -1)
+        local second_range = make_level_range(second_br, 1, -1)
+        if not explored_level_range(first_range) then
+            status = first_range
+        elseif not explored_level_range(second_range) then
+            status = second_range
+        else
+            status = first_br
+        end
+    -- D, Lair, Orc, and at least one Lair branch explored, but not early
+    -- Vaults.
+    elseif not explored_level_range(early_vaults) then
+        status = early_vaults
+    -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
+    -- second Lair branch not explored.
+    elseif easy_runes() == 1 then
+        if not explored_level_range("Depths")
+                and not EARLY_SECOND_RUNE then
+            status = "Depths"
+        else
+            status = next_branch(lair_branch_order())
+        end
+    -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
+    -- Depths.
+    elseif not explored_level_range("Depths") then
+        status = "Depths"
+    -- D, Lair, Orc, both Lair branches, early Vaults, and Depths explored,
+    -- but no silver rune.
+    elseif not explored_level_range("Vaults") then
+        status = "Vaults"
+    -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and it's
+    -- time to shop. After shopping, we're done with the Normal plan.
+    elseif not c_persist.done_shopping then
+        status = "Shopping"
     end
 
-    local need_plan = true
-    while need_plan and which_plan <= #plan_list do
-        local branch = parse_level_range(current_plan)
-        if current_plan == "Normal" and normal_complete
-                or branch and not branch_exists(branch)
-                or branch and explored_level_range(current_plan)
-                or current_plan == "Shopping" and c_persist.done_shopping
-                or current_plan == "TSO" and you.god() == "the Shining One"
-                or current_plan == "Abyss"
-                    and have_branch_runes("Abyss")
-                or current_plan == "Pan" and have_branch_runes("Pan")
-                or current_plan == "Zig"
-                    and c_persist.entered_zig
-                    and not in_branch("Zig") then
+    return status
+end
+
+function plan_complete(plan)
+    local branch = parse_level_range(plan)
+    return plan == "Normal" and not plan_normal_next()
+        or branch and not branch_exists(branch)
+        or branch and explored_level_range(plan)
+        or plan == "Shopping" and c_persist.done_shopping
+        or plan == "TSO" and you.god() == "the Shining One"
+        or plan == "Abyss"
+            and have_branch_runes("Abyss")
+        or plan == "Pan" and have_branch_runes("Pan")
+        or plan == "Zig" and c_persist.entered_zig and not in_branch("Zig")
+end
+
+function update_game_status()
+    local current_plan = plan_list[which_plan]
+    game_status = nil
+    while not game_status and which_plan <= #plan_list do
+        if current_plan == "Normal" then
+            game_status = plan_normal_next()
+        elseif not plan_complete(current_plan) then
+            game_status = current_plan
+        end
+
+        if not game_status then
             which_plan = which_plan + 1
             current_plan = plan_list[which_plan]
-        else
-            need_plan = false
         end
     end
 
     -- We're out of plans, so we make our final task be either be exploring Zot
     -- or, if we've found the ORB, getting it and winning.
-    if need_plan then
+    if not game_status then
         if not explored_level_range("Zot") then
-            current_plan = "Zot"
+            game_status = "Zot"
         else
-            current_plan = "Orb"
+            game_status = "Orb"
         end
-    end
-
-    -- If our current plan is Normal, it's not yet complete, and the
-    -- game_status was already updated above.
-    if current_plan ~= "Normal" then
-        game_status = current_plan
     end
 
     -- XXX Ideally we'd be robust enough in our searching to never miss branch
@@ -833,12 +827,8 @@ function update_game_status()
     end
 end
 
-function zot_soon()
-    return game_status == "Zot"
-end
-
-function slime_soon()
-    return game_status == "Slime"
+function branch_soon(branch)
+    return range_contains(branch, game_status)
 end
 
 function in_extended()
@@ -1244,7 +1234,7 @@ function item_is_dominated(it)
     if slotname == "Weapon" and you.xl() < 18
          and not item_is_sit_dominated(it, "hydra") then
         return false
-    elseif (pan_rune or hell_runes > 0 or golden_rune)
+    elseif planning_undead_demon_branches() then
             and slotname == "Weapon"
             and not item_is_sit_dominated(it, "extended") then
         return false
@@ -1427,6 +1417,14 @@ function branch_depth(br)
     end
 
     return branch_data[br].depth
+end
+
+function branch_rune_depth(branch)
+    if branch == "Abyss" then
+        return 3
+    else
+        return branch_depth(branch)
+    end
 end
 
 function have_branch_runes(br)
@@ -2175,6 +2173,35 @@ function get_feat_name(where_name)
     end
 end
 
+function range_contains(parent, child)
+    local parent_br, parent_min, parent_max = parse_level_range(parent)
+    local child_br, child_min, child_max = parse_level_range(child)
+    return parent_br and child_br
+        and child_br == parent_br
+        and child_min >= parent_min
+        and child_max <= parent_max
+end
+
+function plans_visit_branch(branch)
+    for i = which_plan, #plan_list do
+        local plan_br = parse_level_range(plan_list[i])
+        if range_contains(branch, plan_list[i])
+                and not explored_level_range(plan_list[i]) then
+            return true
+        end
+    end
+end
+
+function planning_undead_demon_branches()
+    for _, br in ipairs(hell_branches) do
+        if plans_visit_branch(br) then
+            return true
+        end
+    end
+
+    return plans_visit_branch("Pan") or plans_visit_branch("Tomb")
+end
+
 -- Make a level range for the given branch and ranges, e.g. D:1-11. The
 -- returned string is normalized so it's as simple as possible. Invalid level
 -- ranges raise an error.
@@ -2270,20 +2297,27 @@ end
 function explored_level(branch, depth)
     if branch == "Abyss" or branch == "Pan" then
         return have_branch_runes(branch)
+    -- For Hells, having the rune means all levels are considered explored, and
+    -- for levels before the branch end, finding the downstairs is also enough.
+    elseif util.contains(hell_branches, branch) then
+        if have_branch_runes(branch) then
+            return true
+        elseif depth < branch_rune_depth(branch) then
+            return have_all_downstairs(branch, depth, feat_reachable)
+        end
     end
 
-    local max_depth = branch_depth(branch)
     return autoexplored_level(branch, depth)
-        and have_all_downstairs(branch, depth, feat_seen)
-        and have_all_upstairs(branch, depth, feat_seen)
-        and (depth < max_depth or have_branch_runes(branch))
+        and have_all_downstairs(branch, depth, feat_reachable)
+        and have_all_upstairs(branch, depth, feat_reachable)
+        and (depth < branch_rune_depth(branch) or have_branch_runes(branch))
 end
 
 function explored_level_range(range)
     local br, min_level, max_level
     br, min_level, max_level = parse_level_range(range)
     if not br then
-        error("Invalid level range " .. tostring(range))
+        return false
     end
 
     local l
@@ -2316,11 +2350,16 @@ function in_branch(br)
     return where_branch == br
 end
 
+function at_branch_end(branch)
+    if not branch then
+        branch = where_branch
+    end
+
+    return where_branch == branch and where_depth == branch_depth(branch)
+end
+
 function in_hells()
-    return in_branch("Coc")
-        or in_branch("Dis")
-        or in_branch("Geh")
-        or in_branch("Tar")
+    return util.contains(hell_branches, where_branch)
 end
 
 function is_traversable(x, y)
@@ -4719,8 +4758,9 @@ function plan_wait_for_melee()
     if not danger or wait_count >= 10 then
         return false
     end
-    -- hack to make us wait when we enter v5 so we don't move off stairs
-    if v5_entry_turn and you.turns() <= v5_entry_turn + 2 then
+
+    -- Hack to wait when we enter the Vaults end, so we don't move off stairs.
+    if vaults_end_entry_turn and you.turns() <= vaults_end_entry_turn + 2 then
         is_waiting = true
         return false
     end
@@ -5239,13 +5279,11 @@ function brand_is_great(brand)
     elseif brand == "vampirism" then
         return not you.have_orb()
     elseif brand == "electrocution" then
-        return where ~= "Zot:5"
+        return at_branch_end("Zot")
     elseif brand == "holy wrath" then
-        return where == "Zot:5"
+        return at_branch_end("Zot")
+            or planning_undead_demon_branches()
             or you.have_orb()
-            or pan_rune
-            or hell_runes > 0
-            or golden_rune
     else
         return false
     end
@@ -5981,7 +6019,7 @@ function plan_shop()
             -- Should in theory also work in Bazaar, but doesn't make much sense
             -- (since we won't really return or acquire money and travel back here)
             elseif not on_list
-                 and not in_branch("Bazaar") and not zot_soon() then
+                 and not in_branch("Bazaar") and not branch_soon("Zot") then
                 say("SHOPLISTING " .. it.name() .. " (" .. price .. " gold"
                  .. ", have " .. wealth .. ").")
                 magic("<//" .. string.upper(letter(n - 1)))
@@ -6211,9 +6249,11 @@ function plan_dive_go_to_pan_downstairs()
 end
 
 function plan_open_runed_doors()
-    if not in_branch("Pan") and (where ~= "Depths:3" or not pan_rune) then
+    if not in_branch("Pan")
+            and (where ~= "Depths:3" or not plans_visit_branch("Pan")) then
         return false
     end
+
     for x = -1, 1 do
         for y = -1, 1 do
             if view.feature_at(x, y) == "runed_clear_door" then
@@ -6242,8 +6282,8 @@ function plan_go_to_pan_exit()
 end
 
 function plan_dive()
-    if (in_branch("Slime") and where_depth < 5
-                or in_hells() and where_depth < 7)
+    if (in_branch("Slime") and where_depth < branch_depth("Slime")
+                or in_hells() and where_depth < branch_depth(where_branch))
             and not travel_branch then
         magic("G>")
         return true
@@ -7332,14 +7372,14 @@ function plan_orbrun_teleport()
 end
 
 function plan_tomb_use_hatch()
-    if (where == "Tomb:2" and not you.have_rune("golden")
+    if (where == "Tomb:2" and not have_branch_runes("Tomb")
             or where == "Tomb:1")
          and view.feature_at(0, 0) == "escape_hatch_down" then
         prev_hatch_dist = 1000
         magic(">")
         return true
     end
-    if (where == "Tomb:3" and you.have_rune("golden")
+    if (where == "Tomb:3" and have_branch_runes("Tomb")
             or where == "Tomb:2")
          and view.feature_at(0, 0) == "escape_hatch_up" then
         prev_hatch_dist = 1000
@@ -7350,7 +7390,7 @@ function plan_tomb_use_hatch()
 end
 
 function plan_tomb_go_to_final_hatch()
-    if where == "Tomb:2" and not you.have_rune("golden")
+    if where == "Tomb:2" and not have_branch_runes("Tomb")
          and view.feature_at(0, 0) ~= "escape_hatch_down" then
         magic("X>\r")
         return true
@@ -7412,7 +7452,7 @@ function plan_stuck_clear_exclusions()
 end
 
 function plan_swamp_clear_exclusions()
-    if where ~= "Swamp:4" then
+    if not at_branch_end("Swamp") then
         return false
     end
     magic("X" .. control('e'))
@@ -7420,10 +7460,12 @@ function plan_swamp_clear_exclusions()
 end
 
 function plan_swamp_go_to_rune()
-    if where ~= "Swamp:4" or you.have_rune("decaying") then
+    if not at_branch_end("Swamp") or have_branch_runes("Swamp") then
         return false
     end
-    if last_swamp_fail_count == c_persist.plan_fail_count.try_swamp_go_to_rune then
+
+    if last_swamp_fail_count
+            == c_persist.plan_fail_count.try_swamp_go_to_rune then
         swamp_rune_reachable = true
     end
     last_swamp_fail_count = c_persist.plan_fail_count.try_swamp_go_to_rune
@@ -7432,17 +7474,20 @@ function plan_swamp_go_to_rune()
 end
 
 function plan_swamp_clouds_hack()
-    if where ~= "Swamp:4" then
+    if not at_branch_end("Swamp") then
         return false
     end
-    if you.have_rune("decaying") and can_teleport() and teleport() then
+
+    if have_branch_runes("Swamp") and can_teleport() and teleport() then
         return true
     end
+
     if swamp_rune_reachable then
         say("Waiting for clouds to move.")
         magic("s")
         return true
     end
+
     local x, y
     local bestx, besty
     local dist
@@ -7482,7 +7527,7 @@ function plan_swamp_clouds_hack()
             if (view.cloud_at(x, y) == "freezing vapour"
                     or view.cloud_at(x, y) == "foul pestilence")
                  and you.see_cell_no_trans(x, y) then
-                return random_step("Swamp:4")
+                return random_step(where)
             end
         end
     end
@@ -7494,12 +7539,12 @@ function plan_dig_grate()
     local grate_count_needed = 3
     if in_branch("Zot") then
         grate_mon_list = {"draconian stormcaller", "draconian scorcher"}
-    elseif where == "Depths:4" then
+    elseif in_branch("Depths") and at_branch_end() then
         grate_mon_list = {"draconian stormcaller", "draconian scorcher",
             "angel", "daeva", "lich", "eye"}
     elseif in_branch("Depths") then
         grate_mon_list = {"angel", "daeva", "lich", "eye"}
-    elseif in_branch("Pan") or where == "Geh:7" then
+    elseif in_branch("Pan") or at_branch_end("Geh") then
         grate_mon_list = {"smoke demon"}
         grate_count_needed = 1
     elseif in_branch("Zig") then
@@ -7579,8 +7624,8 @@ end
 function plan_stuck_forget_map()
     if not cloudy
             and not danger
-            and (where == "Slime:5" and not you.have_rune("slimy")
-                or where == "Geh:7" and not you.have_rune("obsidian")) then
+            and (at_branch_end("Slime") and not have_branch_runes("Slime")
+                or at_branch_end("Geh") and not have_branch_runes("Geh")) then
         magic("X" .. control('f'))
         return true
     end
@@ -8519,12 +8564,17 @@ function make_initial_plans()
             plan = capitalize(plan)
         end
 
-        if plan == "Slime" then
-            slimy_rune = true
-        elseif plan == "Pan" then
-            pan_rune = true
-        elseif plan == "Abyss" then
-            abyssal_rune = true
+        local branch, min_level, max_level = parse_level_range(plan)
+        if branch then
+            -- Could silently ignore, but better to tell users.
+            if plan == "Temple" then
+                error("Invalid plan 'Temple'; this branch is always explored"
+                    .. "when necessary.")
+            end
+
+            if branch_rune[branch] and not explored_level_range(plan) then
+                add_branch_plan(branch, plan)
+            end
         -- We turn this planan into a sequence of planans for each hell branch
         -- in random order.
         elseif plan == "Hells" then
@@ -8534,39 +8584,24 @@ function make_initial_plans()
                     #hell_branches)
             end
             for _, br in ipairs(c_persist.hell_branches) do
-                table.insert(plan_list, br)
+                if not explored_level_range(br) then
+                    table.insert(plan_list, plan)
+                end
             end
-        elseif plan == "Coc"
-            or plan == "Dis"
-            or plan == "Geh"
-            or plan == "Tar" then
-            hell_runes = hell_runes + 1
-        elseif plan == "Tomb" then
-            golden_rune = true
         elseif plan == "TSO" then
             tso_conversion = true
         elseif plan == "Zig" then
             will_zig = true
+        elseif not (plan == "Normal"
+                or plan == "Shopping"
+                or plan == "Orb") then
+            error("Invalid plan '" .. tostring(plan) .. "'.")
         end
 
         if plan ~= "Hells" then
             table.insert(plan_list, plan)
         end
-
-        -- Branch will be nil if any component of a level range is invalid.
-        local branch = parse_level_range(plan)
-        if plan == "Temple"
-                or not branch
-                    and not (plan == "Normal"
-                        or plan == "Shopping"
-                        or plan == "TSO"
-                        or plan == "Zig"
-                        or plan == "Orb") then
-            error("Invalid plan type: " .. tostring(plan))
-        end
     end
-
-    hell_runes = min(hell_runes, 4)
 end
 
 function initialize()
@@ -8853,8 +8888,8 @@ function turn_update()
         end
         c_persist.portals_found = { }
 
-        if where == "Vaults:5" and not v5_entry_turn then
-            v5_entry_turn = you.turns()
+        if at_branch_end("Vaults") and not vaults_end_entry_turn then
+            vaults_end_entry_turn = you.turns()
         elseif where == "Tomb:2" and not tomb2_entry_turn then
             tomb2_entry_turn = you.turns()
         elseif where == "Tomb:3" and not tomb3_entry_turn then
