@@ -278,7 +278,7 @@ function item_resist(str, it)
         elseif str == "Fly" then
             return ego == "flying" and 1 or 0
         elseif str == "Faith" then
-            return subtype == "amulet of faith"
+            return subtype == "amulet of faith" and 1 or 0
         elseif str == "Spirit" then
             return (ego == "spirit shield"
                     or subtype == "amulet of guardian spirit") and 1 or 0
@@ -342,7 +342,7 @@ function intrinsic_resist(str)
     elseif str == "rElec" then
         return you.mutation("electricity resistance")
     elseif str == "rPois" then
-        if intrinsic_rpois() or (you.mutation("poison resistance") > 0) then
+        if intrinsic_rpois() or you.mutation("poison resistance") > 0 then
             return 1
         else
             return 0
@@ -358,7 +358,7 @@ function intrinsic_resist(str)
     elseif str == "rCorr" then
         return 0
     elseif str == "SInv" then
-        if intrinsic_sinv() or (you.mutation("see invisible") > 0) then
+        if intrinsic_sinv() or you.mutation("see invisible") > 0 then
             return 1
         else
             return 0
@@ -368,6 +368,7 @@ function intrinsic_resist(str)
     elseif str == "Spirit" then
         return you.race() == "Vine Stalker" and 1 or 0
     end
+
     return 0
 end
 
@@ -376,6 +377,7 @@ end
 -- it is unequipped. Does not include some temporary effects.
 function player_resist(str, it)
     local it_res = it and it.equipped and item_resist(str, it) or 0
+    local stat
     if str == "Str" then
         stat, _ = you.strength()
         return stat - it_res
@@ -494,7 +496,7 @@ function absolute_resist_value(str, n)
         -- Otherwise, we like Faith a lot.
         else
             return 1000
-         end
+        end
     elseif str == "Spirit" then
         return god_uses_mp() and -150 or 100
     elseif str == "Acrobat" then
@@ -525,16 +527,21 @@ function max_resist_value(str, d)
     local ires = intrinsic_resist(str)
     if str == "rF" or str == "rC" then
         if d == 1 then
-            val = 150
+            val = 125
         elseif d == 2 then
-            val = 275
+            val = 200
         elseif d == 3 then
-            val = 350
+            val = 250
         end
+
         if str == "rF" then
             val = val * 2.5
-        elseif str == "rC" and slimy_rune then
-            val = val * 1.5
+        elseif str == "rC" then
+            if plans_visit_branch("Coc") then
+                val = val * 2.5
+            elseif plans_visit_branch("Slime") then
+                val = val * 1.5
+            end
         end
         return val
     elseif str == "rElec" then
@@ -544,32 +551,61 @@ function max_resist_value(str, d)
     elseif str == "rN" then
         return ires < 3 and 25 * d or 0
     elseif str == "Will" then
-        return 75 * d
+        local branch_factor = plans_visit_branch("Vaults") and 1.5 or 1
+        return min(100 * branch_factor * d, 300 * branch_factor)
     elseif str == "rCorr" then
-        return ires < 1 and (slimy_rune and 1200 or 50) or 0
+        return ires < 1 and (plans_visit_branch("Slime") and 1200 or 50) or 0
     elseif str == "SInv" then
         return ires < 1 and 200 or 0
+    elseif str == "Fly" then
+        return ires < 1 and 200 or 0
+    elseif str == "Faith" then
+        if you.god() == "Cheibriados"
+                or you.god() == "Beogh"
+                or you.god() == "Qazlal"
+                or you.god() == "Hepliaklqana"
+                or you.god() ~= "Ru"
+                or you.god() ~= "Xom" then
+            return 0
+        else
+            return 1000
+        end
     elseif str == "Spirit" then
-        return ires < 1 and 100 or 0
+        return ires < 1 and not god_uses_mp() and 100 or 0
     elseif str == "Acrobat" then
-        return ires < 1 and 100 or 0
+        return 100
     elseif str == "Reflect" then
-        return ires < 1 and 20 or 0
+        return 20
+    elseif str == "Repulsion" then
+        return 200
     end
+
     return 0
 end
 
 function min_resist_value(str, d)
-    if d >= 0 then
-        return 0
+    if d < 0 then
+        if str == "rF" then
+            return -450
+        elseif str == "rC" then
+            return plans_visit_branch("Coc") and -450
+                or (plans_visit_branch("Slime") and -225 or -150)
+        elseif str == "Will" then
+            return 75 * d
+        end
+    -- Begin properties that are always bad.
+    elseif d > 0 then
+        if str == "Harm" then
+            return -500
+        elseif str == "Pondering" then
+            return -300
+        elseif str == "Fragile" then
+            return -10000
+        elseif str == "-Tele" then
+            return you.race() == "Formicid" and 0 or -10000
+        end
     end
-    if str == "rF" then
-        return -375
-    elseif str == "rC" then
-        return slimy_rune and -225 or -150
-    elseif str == "Will" then
-        return 75 * d
-    end
+
     return 0
 end
 
@@ -614,23 +650,27 @@ function linear_resist_value(str)
     return 0
 end
 
+-- Resistances and properties that don't have a linear progression of value at
+-- different levels. The Str/Dex/Int in nonlinear_resists can only recieve
+-- negative utility, which happens when they are reduced to dangerous levels.
+local nonlinear_resists = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois",
+    "rN", "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit", "Acrobat",
+    "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm", "Fragile" }
+-- These properties always provide the same benefit (or detriment) with each
+-- point/pip/instance of the property.
+local linear_resists = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
+    "*Slow", "*Corrode", "*Tele", "*Rage" }
+
 function total_resist_value(it, cur, it2)
-    -- The Str/Dex/Int in resistlist can only recieve negative penalties, which
-    -- happens when they reduce those stats to dangerous levels.
-    local resistlist = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois", "rN",
-        "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit", "Acrobat",
-        "Reflect", "Repulsion" "-Tele", "Ponderous", "Harm" }
-    local linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
-        "*Slow", "*Corrode", "*Tele", "*Rage"}
     local val = 0
     local str
-    for _, str in ipairs(linearlist) do
+    for _, str in ipairs(linear_resists) do
         val = val + item_resist(str, it) * linear_resist_value(str)
     end
 
     local val1, val2 = val, val
     if not only_linear_resists then
-        for _, str in ipairs(resistlist) do
+        for _, str in ipairs(nonlinear_resists) do
             local a, b = resist_value(str, it, cur, it2)
             val1 = val1 + a
             val2 = val2 + b
@@ -640,11 +680,8 @@ function total_resist_value(it, cur, it2)
 end
 
 function resist_vec(it)
-    local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
-                         "SInv", "Fly", "Faith", "Spirit", "Acrobat",
-                         "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm" }
     local vec = { }
-    for _, str in ipairs(resistlist) do
+    for _, str in ipairs(nonlinear_resists) do
         local a, b = resist_value(str, it)
         table.insert(vec, b > 0 and b or a)
     end
@@ -670,8 +707,7 @@ function resist_dominated(it, it2)
 
     local vec = resist_vec(it)
     local vec2 = resist_vec(it2)
-    local l = #vec
-    for i = 1, l do
+    for i = 1, #vec do
         if vec[i] > vec2[i] then
             diff = diff - (vec[i] - vec2[i])
         end
@@ -1232,17 +1268,17 @@ end
 function item_is_dominated(it)
     local slotname = equip_slot(it)
     if slotname == "Weapon" and you.xl() < 18
-         and not item_is_sit_dominated(it, "hydra") then
+            and not item_is_sit_dominated(it, "hydra") then
         return false
-    elseif planning_undead_demon_branches() then
+    elseif planning_undead_demon_branches()
             and slotname == "Weapon"
             and not item_is_sit_dominated(it, "extended") then
         return false
     elseif slotname == "Weapon"
-            and (you.god() == "the Shining One"
-                and not you.one_time_ability_used()
-                or you.god() ~= "the Shining One" and tso_conversion)
-            and not item_is_sit_dominated(it, "bless") then
+                and (you.god() == "the Shining One"
+                        and not you.one_time_ability_used()
+                    or you.god() ~= "the Shining One" and tso_conversion)
+                and not item_is_sit_dominated(it, "bless") then
         return false
     end
     local minv, maxv = equip_value(it)
