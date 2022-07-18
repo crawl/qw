@@ -281,6 +281,8 @@ function item_resist(str, it)
         elseif str == "SInv" then
             return (ego == "see invisible"
                 or subtype == "ring of see invisible") and 1 or 0
+        elseif str == "Fly" then
+            return ego == "flying" and 1 or 0
         elseif str == "Spirit" then
             return (ego == "spirit shield"
                     or subtype == "amulet of guardian spirit") and 1 or 0
@@ -359,6 +361,8 @@ function intrinsic_resist(str)
         else
             return 0
         end
+    elseif str == "Fly" then
+        return intrinsic_flight() and 1 or 0
     elseif str == "Spirit" then
         return you.race() == "Vine Stalker" and 1 or 0
     end
@@ -471,6 +475,8 @@ function absolute_resist_value(str, n)
         return slime_soon() and 1200 or 50
     elseif str == "SInv" then
         return 200
+    elseif str == "Fly" then
+        return 200
     elseif str == "Spirit" then
         return god_uses_mp() and -150 or 100
     elseif str == "Acrobat" then
@@ -570,9 +576,9 @@ function linear_resist_value(str)
 end
 
 function total_resist_value(it, cur, it2)
-    resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr", "SInv",
-                   "Spirit", "Acrobat", "Reflect", "Str", "Dex", "Int" }
-    linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
+    local resistlist = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois", "rN",
+        "Will", "rCorr", "SInv", "Fly", "Spirit", "Acrobat",  "Reflect" }
+    local linearlist = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen" }
     local val = 0
     local str
     for _, str in ipairs(linearlist) do
@@ -592,7 +598,7 @@ end
 
 function resist_vec(it)
     local resistlist = { "rF", "rC", "rElec", "rPois", "rN", "Will", "rCorr",
-                         "SInv", "Spirit", "Acrobat", "Reflect" }
+                         "SInv", "Fly", "Spirit", "Acrobat", "Reflect" }
     local vec = { }
     for _, str in ipairs(resistlist) do
         local a, b = resist_value(str, it)
@@ -859,8 +865,6 @@ function armour_value(it, cur, it2)
             if you.god() == "Cheibriados" then
                 return -1, -1
             end
-        elseif ego == "flying" and not intrinsic_amphibious_or_flight() then
-            value = value + 200
         elseif ego == "ponderousness" or ego == "harm" then
             return -1, -1
         elseif ego == "repulsion" then
@@ -1974,29 +1978,29 @@ function intrinsic_sinv()
     return false
 end
 
-function intrinsic_amphibious_or_flight()
+function intrinsic_flight()
     local sp = you.race()
-    if (sp == "Gargoyle" or sp == "Black Draconian") and you.xl() >= 14
-            or sp == "Tengu" and you.xl() >= 5
-            or sp == "Merfolk"
-            or sp == "Octopode"
-            or sp == "Barachi" then
-        return true
-    end
-    return false
+    return (sp == "Gargoyle" or sp == "Black Draconian") and you.xl() >= 14
+        or sp == "Tengu" and you.xl() >= 5
+end
+
+function intrinsic_amphibious()
+    local sp = you.race()
+    return sp == "Merfolk" or sp == "Octopode" or sp == "Barachi"
+end
+
+function intrinsic_amphibious_or_flight()
+    return intrinsic_amphibious() or intrinsic_flight()
 end
 
 function intrinsic_fumble()
     local sp = you.race()
-    if intrinsic_amphibious_or_flight()
-            or sp == "Grey Draconian"
-            or sp == "Palentonga"
-            or sp == "Naga"
-            or sp == "Troll"
-            or sp == "Ogre" then
-        return false
-    end
-    return true
+    return not (intrinsic_amphibious_or_flight()
+        or sp == "Grey Draconian"
+        or sp == "Palentonga"
+        or sp == "Naga"
+        or sp == "Troll"
+        or sp == "Ogre")
 end
 
 function intrinsic_evil()
@@ -2858,13 +2862,13 @@ end
 -- Should only be called for adjacent squares.
 function monster_in_way(dx, dy)
     local m = monster_array[dx][dy]
+    local feat = view.feature_at(0, 0)
     return m and (m:attitude() <= enum_att_neutral and not lair_step_mode
         or m:attitude() > enum_att_neutral
             and (m:is_constricted() or m:is_caught() or m:status("petrified")
                 or m:status("paralysed") or m:desc():find("sleeping")
-                or view.feature_at(0, 0) == "deep_water"
-                or view.feature_at(0, 0) == "lava"
-                or view.feature_at(0, 0) == "trap_zot"))
+                or feat_is_deep_water_or_lava(feat)
+                or feat  == "trap_zot"))
 end
 
 function tabbable_square(x, y)
@@ -2877,9 +2881,16 @@ function tabbable_square(x, y)
     return false
 end
 
+function feat_is_deep_water_or_lava(feat)
+    return feat == "deep_water" or feat == "lava"
+end
+
+function deep_water_or_lava(x, y)
+    return feat_is_deep_water_or_lava(view.feature_at(x, y))
+end
+
 function mons_tabbable_square(x, y)
-    local feat = view.feature_at(x, y)
-    return feat ~= "deep_water" and feat ~= "lava" and not is_solid(x, y)
+    return not deep_water_or_lava(x, y) and not is_solid(x, y)
 end
 
 function try_move(dx, dy)
@@ -3418,11 +3429,15 @@ function can_swap(equip_slot)
                     and you.status("mesmerised")) then
         return false
     end
-    if it and it.ego() == "flying" and
-         (view.feature_at(0, 0) == "deep_water" or
-            view.feature_at(0, 0) == "lava") then
+
+    local feat = view.feature_at(0, 0)
+    if you.flying()
+            and (feat == "deep_water" and not intrinsic_amphibious()
+                or feat == "lava" and not intrinsic_flight())
+            and player_resist("Fly", items.equipped_at("Weapon")) == 0 then
         return false
     end
+
     return true
 end
 
@@ -4699,7 +4714,9 @@ function plan_wait_for_melee()
             or count_sgd(los_radius) > 0
             or count_divine_warrior(los_radius) > 0
             or not view.is_safe_square(0, 0)
-            or view.feature_at(0, 0) == "shallow_water" and not you.flying()
+            or view.feature_at(0, 0) == "shallow_water"
+                and intrinsic_fumble()
+                and not you.flying()
             or in_branch("Abyss") then
         wait_count = 0
         return false
@@ -5243,12 +5260,10 @@ end
 function plan_use_good_consumables()
     for it in inventory() do
         if it.class(true) == "scroll" and can_read() then
-            if it.name():find("acquirement") then
-                if view.feature_at(0, 0) ~= "deep_water"
-                        and view.feature_at(0, 0) ~= "lava" then
-                    if read(it) then
-                        return true
-                    end
+            if it.name():find("acquirement")
+                    and not deep_water_or_lava(0, 0) then
+                if read(it) then
+                    return true
                 end
             elseif it.name():find("enchant weapon") then
                 local weapon = items.equipped_at("weapon")
@@ -8188,7 +8203,7 @@ function skill_value(sk)
         else
             penalty_factor = 1 - evp_adj / (2 * str)
         end
-        if you.race() == "Tengu" and intrinsic_amphibious_or_flight() then
+        if you.race() == "Tengu" and intrinsic_flight() then
             penalty_factor = penalty_factor * 1.2 -- flying EV mult
         end
         return 18 * math.log(1 + dex / 18)
