@@ -663,7 +663,6 @@ local linear_resists = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
 
 function total_resist_value(it, cur, it2)
     local val = 0
-    local str
     for _, str in ipairs(linear_resists) do
         val = val + item_resist(str, it) * linear_resist_value(str)
     end
@@ -1468,7 +1467,6 @@ function have_branch_runes(br)
     if not rune then
         return true
     elseif type(rune) == "table" then
-        local r
         for _, r in ipairs(rune) do
             if not you.have_rune(r) then
                 return false
@@ -2356,7 +2354,6 @@ function explored_level_range(range)
         return false
     end
 
-    local l
     for l = min_level, max_level do
         if not explored_level(br, l) then
             return false
@@ -2698,7 +2695,6 @@ function is_ranged(m)
 end
 
 function sense_immediate_danger()
-    local e
     for _, e in ipairs(enemy_list) do
         local dist = supdist(e.x, e.y)
         if dist <= 2 then
@@ -2714,7 +2710,6 @@ function sense_immediate_danger()
 end
 
 function sense_danger(r, moveable)
-    local e
     for _, e in ipairs(enemy_list) do
         if (moveable and you.see_cell_solid_see(e.x, e.y) or not moveable)
                 and supdist(e.x, e.y) <= r then
@@ -2726,7 +2721,6 @@ function sense_danger(r, moveable)
 end
 
 function sense_sigmund()
-    local e
     for _, e in ipairs(enemy_list) do
         if e.m:name() == "Sigmund" then
             sigmund_dx = e.x
@@ -2738,14 +2732,12 @@ end
 
 function initialize_monster_array()
     monster_array = {}
-    local x
     for x = -los_radius, los_radius do
         monster_array[x] = {}
     end
 end
 
 function update_monster_array()
-    local x, y
     enemy_list = {}
     --c_persist.mlist = {}
     for x = -los_radius, los_radius do
@@ -2785,7 +2777,6 @@ function mons_in_list(m, mlist)
 end
 
 function check_monster_list(r, mlist, filter)
-    local e
     for _, e in ipairs(enemy_list) do
         if you.see_cell_no_trans(e.x, e.y)
                 and supdist(e.x, e.y) <= r
@@ -2803,7 +2794,6 @@ function count_bia(r)
         return 0
     end
 
-    local x, y
     local i = 0
     for x = -r, r do
         for y = -r, r do
@@ -2847,7 +2837,6 @@ function count_sgd(r)
         return 0
     end
 
-    local x, y
     local i = 0
     for x = -r, r do
         for y = -r, r do
@@ -2866,7 +2855,6 @@ function count_divine_warrior(r)
         return 0
     end
 
-    local x, y
     local i = 0
     for x = -r, r do
         for y = -r, r do
@@ -2881,7 +2869,6 @@ function count_divine_warrior(r)
 end
 
 function count_monsters_near(cx, cy, r, filter)
-    local e
     local i = 0
     for _, e in ipairs(enemy_list) do
         if supdist(cx - e.x, cy - e.y) <= r
@@ -3091,7 +3078,6 @@ function is_candidate_for_attack(x, y, no_untabbable)
 end
 
 function count_ranged(cx, cy, r)
-    local e
     local i = 0
     for _, e in ipairs(enemy_list) do
         local dist = supdist(cx - e.x, cy - e.y)
@@ -3107,7 +3093,6 @@ function count_ranged(cx, cy, r)
 end
 
 function count_shortranged(cx, cy, r)
-    local e
     local i = 0
     for _, e in ipairs(enemy_list) do
         if supdist(cx - e.x, cy - e.y) <= r and is_ranged(e.m) then
@@ -3118,7 +3103,6 @@ function count_shortranged(cx, cy, r)
 end
 
 function estimate_slouch_damage()
-    local e
     local count = 0
     local s, v
     for _, e in ipairs(enemy_list) do
@@ -3157,8 +3141,6 @@ end
 
 function assess_square_monsters(a, cx, cy)
     local best_dist = 10
-    local e
-
     a.enemy_distance = 0
     a.followers_to_land = false
     a.adjacent = 0
@@ -3227,7 +3209,6 @@ end
 
 function distance_to_enemy(cx, cy)
     local best_dist = 10
-    local e
     for _, e in ipairs(enemy_list) do
         local dist = supdist(cx - e.x, cy - e.y)
         if dist < best_dist then
@@ -3239,7 +3220,6 @@ end
 
 function distance_to_tabbable_enemy(cx, cy)
     local best_dist = 10
-    local e
     for _, e in ipairs(enemy_list) do
         local dist = supdist(cx - e.x, cy - e.y)
         if dist < best_dist then
@@ -3549,7 +3529,7 @@ end
 --       of loops... this is poorly tested)
 
 function get_target()
-    local e, bestx, besty, best_info, new_info
+    local bestx, besty, best_info, new_info
     bestx = 0
     besty = 0
     best_info = nil
@@ -3636,13 +3616,11 @@ function buffed()
 end
 
 function should_ally_rest()
-    if you.god() ~= "Yredelemnul" and you.god() ~= "Beogh" then
+    if (you.god() ~= "Yredelemnul" and you.god() ~= "Beogh")
+            or dangerous_to_rest() then
         return false
     end
-    if dangerous_to_rest() then
-        return false
-    end
-    local x, y
+
     for x = -3, 3 do
         for y = -3, 3 do
             m = monster_array[x][y]
@@ -3652,6 +3630,7 @@ function should_ally_rest()
             end
         end
     end
+
     return false
 end
 
@@ -3808,7 +3787,7 @@ function plan_grand_finale()
     if invo < 10 or you.piety_rank() < 6 and invo < 15 then
         return false
     end
-    local e, bestx, besty, best_info, new_info
+    local bestx, besty, best_info, new_info
     local flag_order = {"threat", "injury", "distance"}
     local flag_reversed = {false, true, true}
     best_info = nil
@@ -3850,7 +3829,6 @@ function plan_hydra_destruction()
         return false
     end
 
-    local e
     for _, e in ipairs(enemy_list) do
         if supdist(e.x, e.y) <= 5 and string.find(e.m:desc(), "hydra") then
             say("INVOKING MAJOR DESTRUCTION")
@@ -3957,7 +3935,6 @@ function plan_blinking()
         return false
     end
     local para_danger = false
-    local e
     for _, e in ipairs(enemy_list) do
         if e.m:name() == "floating eye" or e.m:name() == "starcursed mass" then
             para_danger = true
@@ -3969,7 +3946,7 @@ function plan_blinking()
     if count_item("scroll", "of blinking") == 0 then
         return false
     end
-    local x, y, dx, dy, m
+    local m
     local cur_count = 0
     local best_count = 0
     local count
@@ -3998,7 +3975,8 @@ function plan_blinking()
                 count = 0
                 for dx = -1, 1 do
                     for dy = -1, 1 do
-                        if abs(x + dx) <= los_radius and abs(y + dy) <= los_radius then
+                        if abs(x + dx) <= los_radius
+                                and abs(y + dy) <= los_radius then
                             m = monster_array[x + dx][y + dy]
                             if m and m:name() == "floating eye" then
                                 count = count + 3
@@ -4803,7 +4781,6 @@ function plan_wait_for_melee()
 
     count = 0
     sleeping_count = 0
-    local e
     for _, e in ipairs(enemy_list) do
         if is_ranged(e.m) then
             wait_count = 0
@@ -4858,7 +4835,6 @@ function plan_wait_spit()
     end
     local best_dist = 10
     local cur_e = none
-    local e
     for _, e in ipairs(enemy_list) do
         local dist = supdist(e.x, e.y)
         if dist < best_dist and e.m:res_poison() < 1 then
@@ -4914,7 +4890,6 @@ function spell_castable(sp)
             return false
         end
     elseif sp == "Summon Small Mammal" then
-        local x, y
         local count = 0
         for x = -los_radius, los_radius do
             for y = -los_radius, los_radius do
@@ -5482,7 +5457,7 @@ function plan_swap_weapon()
         return false
     end
 
-    local sit, e
+    local sit
     if you.xl() < 18 then
         for _, e in ipairs(enemy_list) do
             if supdist(e.x, e.y) <= 3
@@ -5687,7 +5662,9 @@ function plan_upgrade_rings()
                 end
             else
                 for _, it_old in ipairs(it_rings) do
-                    if not equip and not it_old.cursed and should_upgrade(it, it_old) then
+                    if not equip
+                            and not it_old.cursed
+                            and should_upgrade(it, it_old) then
                         equip = true
                         swap = it_old.slot
                     end
@@ -5916,7 +5893,6 @@ function want_to_stairdance_up()
     local only_when_safe = you.berserk() or hp_is_low(33)
     local follow_count = 0
     local other_count = 0
-    local e
     for _, e in ipairs(enemy_list) do
         if supdist(e.x, e.y) == 1
                 and e.m:stabbability() == 0
@@ -6477,7 +6453,6 @@ function plan_exit_pan()
 end
 
 function plan_step_towards_branch()
-    local x, y, feat
     if (stepped_on_lair
             or not found_branch("Lair"))
                 and (where ~= "Crypt:3"
@@ -6485,9 +6460,10 @@ function plan_step_towards_branch()
                     or not found_branch("Tomb")) then
         return false
     end
+
     for x = -los_radius, los_radius do
         for y = -los_radius, los_radius do
-            feat = view.feature_at(x, y)
+            local feat = view.feature_at(x, y)
             if (feat == "enter_lair" or feat == "enter_tomb")
                  and you.see_cell_no_trans(x, y) then
                 if x == 0 and y == 0 then
@@ -6506,6 +6482,7 @@ function plan_step_towards_branch()
             end
         end
     end
+
     return false
 end
 
@@ -6536,7 +6513,6 @@ function next_branch(options, skip)
         skip = 0
     end
 
-    local level
     local skipped = 0
     for _, level in ipairs(options) do
         local branch = parse_level_range(level)
@@ -6769,23 +6745,6 @@ function plan_zig_go_to_stairs()
     return true
 end
 
-function plan_find_downstairs()
-    -- try to avoid branch entrances by going to a random > from them
-    local feat = view.feature_at(0, 0)
-    if feat:find("enter_") or feat == "escape_hatch_down" then
-        local i, j
-        local c = "X"
-        j = crawl.roll_dice(1, 12)
-        for i = 1, j do
-            c = (c .. ">")
-        end
-        magic(c .. "\r")
-        return true
-    end
-    magic("X>\r")
-    return true
-end
-
 function set_waypoint()
     magic(control('w') .. waypoint_parity)
     did_waypoint = true
@@ -6863,7 +6822,7 @@ function have_all_downstairs(branch, depth, state)
         return true
     end
 
-    local i, num
+    local num
     for i = 1, num_required do
         num = "i"
         num = num:rep(i)
@@ -6904,7 +6863,7 @@ function count_upstairs(branch, depth, state)
         return 0
     end
 
-    local i, num
+    local num
     local count = 0
     for i = 1, num_required do
         num = "i"
@@ -6922,7 +6881,7 @@ function have_all_upstairs(branch, depth, state)
         return true
     end
 
-    local i, num
+    local num
     for i = 1, num_required do
         num = "i"
         num = num:rep(i)
@@ -7096,7 +7055,6 @@ function find_good_stairs()
             pdist = 10000
         end
         minmdist = 1000
-        local e
         for _, e in ipairs(enemy_list) do
             mdist = stair_dists[num][i][dx + e.x][dy + e.y]
             if mdist == nil then
@@ -7245,7 +7203,6 @@ function random_step(reason)
         return true
     end
 
-    local i, j
     local dx, dy
     local count = 0
     for i = -1, 1 do
@@ -7299,9 +7256,8 @@ function plan_flail_at_invis()
         magic(control('a'))
         return true
     end
-    invisi_count = invisi_count + 1
-    local x, y
 
+    invisi_count = invisi_count + 1
     for x = -1, 1 do
         for y = -1, 1 do
             if supdist(x, y) > 0 and view.invisible_monster(x, y) then
@@ -7524,7 +7480,6 @@ function plan_swamp_clouds_hack()
         return true
     end
 
-    local x, y
     local bestx, besty
     local dist
     local bestdist = 11
@@ -7589,13 +7544,12 @@ function plan_dig_grate()
     else
         return false
     end
-    local e
+
     for _, e in ipairs(enemy_list) do
         local name = e.m:name()
         if contains_string_in(name, grate_mon_list)
              and not will_tab(0, 0, e.x, e.y, tabbable_square) then
             local grate_count = 0
-            local dx, dy
             local closest_grate = 20
             local gx, gy, cgx, cgy
             for dx = -1, 1 do
@@ -7625,11 +7579,11 @@ function plan_dig_grate()
             end
         end
     end
+
     return false
 end
 
 function plan_stuck_dig_grate()
-    local dx, dy
     local closest_grate = 20
     local cx, cy
     for dx = -los_radius, los_radius do
@@ -7876,7 +7830,6 @@ end
 function clear_ignores()
     local size = #ignore_list
     local mname
-    local i
     if size > 0 then
         for i = 1, size do
             mname = table.remove(ignore_list)
@@ -7977,7 +7930,6 @@ function cascade(plans)
     local plan_turns = {}
     local plan_result = {}
     return function ()
-        local i, plandata
         for i, plandata in ipairs(plans) do
             local plan = plandata[1]
             if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
@@ -8530,7 +8482,6 @@ function vi_to_delta(c)
         [0]    = { [-1] = 'k',                        [1] = 'j'},
         [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
     } -- hack
-    local x, y
     for x = -1, 1 do
         for y = -1, 1 do
             if supdist(x, y) > 0 and d2v[x][y] == c then
@@ -9044,7 +8995,6 @@ end
 function print_level_map()
     local num = waypoint_parity
     local dx, dy = travel.waypoint_delta(num)
-    local x, y
     local str
     for y = -20, 20 do
         str = ""
@@ -9062,8 +9012,6 @@ end
 function print_stair_dists()
     local num = waypoint_parity
     local dx, dy = travel.waypoint_delta(num)
-    local x, y
-    local i
     local str
     for i = 1, #stair_dists[num] do
     say("---------------------------------------")
