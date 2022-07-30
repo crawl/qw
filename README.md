@@ -16,6 +16,7 @@ current version. See [accomplishments.md](accomplishments.md) for current and
 past achievements.
 
 ## Running locally
+
 It's best to run qw either locally or on your own server. You can set up
 [Sequell](https://github.com/crawl/sequell) or the DCSS
 [scoring](https://github.com/crawl/scoring) scripts to track its statistics.
@@ -40,6 +41,7 @@ when using this. (With minor modifications, this can also be used to run games
 on a remote server over ssh.)
 
 ## Running on a WebTiles server
+
 Please don't run qw on an official server unless you have permission from the
 server admin. Misconfigured (or even well-configured) bots can eat up server
 CPU from actual players. If you do have permission from your server admin,
@@ -69,6 +71,7 @@ actually happening. To see more current events just refresh the page and press
 "Tab". Alternatively, run or watch the bot in console (via ssh).
 
 ## Configuration
+
  Most qw variables are straightforward and are described in in comments in
 qw.rc. Some important and more complicated variables are described here. Note
 that lines in qw.rc beginning with `:` define Lua variables and must be valid
@@ -80,9 +83,10 @@ guide](https://github.com/crawl/crawl/blob/master/crawl-ref/docs/options_guide.t
 The simplest way to change the combo qw plays is with the `combo` rcfile
 option. Change this to your desired combos, then change `GOD_LIST` to the set
 of gods for qw is allowed to worship. It will worship the first of these it
-finds. Each entry in `GOD_LIST must be the full god name. Gods who have been at
-least partially implemented: `BCHLMOQRTUXY1`. Gods who are actually pretty
-decent on qw: `CMORT`.
+finds, entering Temple if it needs to. Each entry in `GOD_LIST` must be the
+full god name. Gods who have been at least partially implemented:
+`BCHLMOQRTUXY1`. Gods who are good enough to get a win in a reasonable number
+of attempts: `CMORT1`.
 
 To have qw cycle through a set of combos, set `COMBO_CYCLE` to `true` and edit
 `COMBO_CYCLE_LIST`. This list uses the same syntax as the `combo` option, but
@@ -97,61 +101,175 @@ has qw cycle through GrBe, MiFi of either Okawaru or Makhleb, and GrFi of
 Okawaru attempting the 15 runes plan.
 
 ### Game plans
-The `GAME_PLANS` variable defines a table of possible plans for qw to follow in
-a game. Each key is a descriptive string that can be used in the PLAN variable
-or in the `COMBO_CYCLE_LIST` variable above. Each entry is a string of
-comma-separated plans that qw will follow in the given order. A plan can be any
-of:
 
-* A level range, which can be a branch name like `D`, `Lair`, `Depths`, etc.,
-  or a range like `D:1-11`, `Vaults:1-4`. qw will fully explore this level
-  range, also trying to get all relevant runes. For the randomized Lair
-  branches, specify all four of them in your preferred order, and qw will skip
-  any that don't generate. Don't specify Temple, which qw visits automatically
-  as necessary or any portal other than `Zig`.
+The `GAME_PLANS` variable defines a table of possible game plans for qw to
+follow in a game. Each key in this table is a descriptive string that can be
+used in the PLAN variable or in the `COMBO_CYCLE_LIST` variable above to have
+qw execute that set of gameplans. Each entry in `GAME_PLANS` is a
+case-insensitive, comma-separated string of game plans that qw will follow in
+sequence.
 
-  If the final plan entry includes Zot:5 in its range (e.g. `Zot`), qw picks up
-  the Orb as soon as possible and tries to go win without fully exploring
-  Zot:5. Otherwise it will fully explore Zot:5 but not pick up the Orb until it
-  reaches the `Orb` plan.
+A game plan entry can be any of:
 
-* `Normal`, which proceeds through qw's default (3-rune) route. This is:
+* `<branch>`
 
-  D:1-11 -> Lair -> D:12-D:15 -> Orc -> random Lair branch -> Vaults:1-4 ->
-  other Lair Branch -> Depths -> Vaults:5 -> Shopping -> Zot -> Win
+  Fully explore all levels in sequence in that branch as well as get any branch
+  runes. The branch name must be the abbreviation for that branch shown in the
+  HUD or by `you.where()`. This is the best type of game plan to use for fully
+  clearing the branches qw visits.
+
+  Examples: `D`, `Lair`, `Vaults`
+
+* `<branch>:<range>`
+
+  The <range> can be a single level or a range of levels separated with a dash.
+  The levels are fully explored in sequence, although qw will potentially explore
+  just outside of the level range to find all stairs for levels in the range.
+  See notes below about exploration.
+
+  Examples: `D:1-11`, `Swamp:1-3`, `Vaults:5`
+
+* `Rune:<branch>`
+
+  Go directly to the branch end level and explore until the rune is found.
+
+  Examples: `Rune:Swamp`, `Rune:Vaults`, `Rune:Geh`
+
+* `Shopping`
+
+  Try to buy the items on qw's shopping list.
+
+* `God:<god>`
+
+  Abandon any current god and convert to `<god>`. This is useful for attempting
+  extented branches where a different god would be sufficiently better that it's
+  worth the risk of dying to god wrath. The name `<god>` can be the full god
+  name as reported by `you.god()` or the abbrevation made by the first 1, 3, or
+  4 letters of the god's name with any whitespace removed. For the Shining One,
+  `1` and `TSO` are valid abbreviations.
+
+  Examples: `God:Okawaru`, `God:Oka`, `God:O`; `God:TSO`, `God:Chei`
+
+* `Orb`
+
+  Pick up the Orb of Zot, go to D:1, and win. Note that qw will dive through
+  any unexplored levels of Zot to do this, so preceed this plan with one like
+  `Zot:1-4` or simply `Zot` if you want to explore more of that branch.
+
+* `Zig`, or `Zig:<num>`
+
+  Enter a ziggurat, clear it through level `<num>`, and exit. If `<num>` is not
+  specified, qw will clear the entire ziggurat.
+
+* `Normal`, which proceeds through qw's default 3-rune route. This is
+  mostly equivalent to the following game plan list:
+
+  `"D:1-11, Lair, D:12-D:15, Orc, 1stLairBranch:1-3, 2ndLairBranch:1-3,
+  1stLairBranch:4, Vaults:1-4, 2ndLairBranch:4, Depths, Vaults:5, Shopping,
+  Zot:1-4, Orb"`
+
+  The differences between this and `Normal` are that qw enters Lair as soon as
+  it has sufficent piety for its god and that this route is subject to the
+  variables `LATE_ORC` and `EARLY_SECOND_RUNE`.
 
   If `Normal` is followed by another plan, qw will proceed to that plan after
   its Shopping plan is complete. Note that this route is subject to the
-  `LATE_ORC` and `EARLY_SECOND_RUNE` variables.
 
-* `Shopping`, which has qw try to buy the items it hasput on its shopping list.
+#### Exploration
 
-* `TSO`, which has qw convert to the Shining One.
+qw considers a level explored if it's been autoexplored to completion at least
+once, all its required stone upstairs and downstairs are reachable, and any
+rune on the level has been obtained. Other types of unreachable areas,
+transporters, and runed doors don't prevent qw from considering a level
+autoexplored. If qw must travel through unexplored levels that aren't part of
+its current game plan, it will explore only as much as necessary to find the
+necessary stairs and then take them. This behaviour includes situations like
+being shafted.
 
-* `Orb`, which should only be used if you want qw to explore some or all of Zot
-  and then do something other than win.
-
-These plan names are not case-sensitive.
+For Hell branches, game plans like `Rune:Geh`, `Rune:Tar`, etc. are good
+choices, since they have qw dive to and get the rune while exploring as little
+as possible of the final level. For a branch like Slime, a game plan of
+`Slime:5` is better, since it makes qw dive through Slime but explore Slime:5
+fully to obtain the loot after the Royal Jelly is dead.
 
 ## Debugging
-Set `DEBUG_CHANNELS` to `true` to enable debug output. Then put the message
-channels you want to see in the list `DEBUG_CHANNELS`. The available channels
-are "main", the default for debug messages, "plans", which shows all plan
-execution and results (very spammy), and "skills", which shows information
-about skill selection.
 
-Also see the options `SINGLE_STEP` to have qw take one action at a time with
-the Tab key, and `WIZMODE_DEATH` to control whether it chooses to die in Wizard
-mode.
+qw has some basic debug output functionality.
+
+### Debugging variables
+
+* `DEBUG_MODE`
+
+  Set to `true` to enable debugging output.
+
+* `DEBUG_CHANNELS`
+
+  A list of debug channel names to output. The available channels are "main",
+  the default for debug messages, "plans", which shows all plan execution and
+  results (very spammy), "explore", which shows game plan, travel, and
+  exploration info, and "skills", which shows information about skill
+  selection.
+
+* `SINGLE_STEP`
+
+  Set to `true` to have qw take one action at a time with the *Tab* key.
+
+* `WIZMODE_DEATH`
+
+  Set to `true` to have qw accept death if it loses all HP in Wizard Mode. By
+  default it keeps playing.
+
+### Debugging functions
+
+Useful when logging into your qw account to diagnose problems. These can be
+executed from the clua console.
+
+* `dsay(str, channel)`
+
+  Say `str` in debug channel `channel` (default "main") if debug mode is
+  enabled. When adding permanent debugging statements, for permormance reasons,
+  any code involving complicated string creation or additional calculations
+  that would execute every turn should be conditional on `DEBUG_MODE`, for
+  performance reasons:
+
+  ```lua
+  if DEBUG_MODE then
+      ...
+      dsay(...)
+  end
+  ```
+
+  Note that not doing this can impact performance even with debug mode
+  disabled, since any code in the argument to `dsay()` is executed regardless.
+
+* `toggle_debug()`
+
+  Enable debug mode (i.e. toggle the `DEBUG_MODE` variable).
+
+* `toggle_debug_channel(channel)`
+
+  Toggle the output for the channel name in the `channel` string argument.
+
+* `reset_stairs(level, dir)`
+
+  Have qw forget stairs on `level` of the type in `dir`, with `1` meaning
+  downstairs, `-1` meaning upstairs, and `0` meaning both. If `level` is `nil`,
+  assume the current level. Can be necessary to prevent qw from thinking a level
+  is fully explored.
 
 ### Miscellaneous tips for coding and testing
+
 * Run qw locally with the DCSS command-line option -seed <n> to use a seeded
-  RNG for (mostly) reproducible testing
-* Put code you want to test in the `ttt()` funtion on the bottom; make it run
-  by macroing some key to `===ttt`
+  RNG for (mostly) reproducible testing.
+
+* Put code you want to test in the `ttt()` function on the bottom; make it run
+  by macroing some key to `===ttt`.
+
 * Use the included `make-qw-rc.sh` script to assemble a full qw rcfile from a
-  base rcfile you've made from qw.rc and your modified qw.lua. This script also
-  sets a custom version string based on the latest git annotated tag and commit.
-* qw outputs its configuration as well as its current version as notes at the
-  start of every game. These can be viewed from the in-progress game dump and
-  the final game morgue.
+  base rcfile you've made from qw.rc with your desired settings and your qw.lua
+  file. This script sets a custom version string variable based on the latest
+  git annotated tag and commit.
+
+* qw outputs its version string and current configuration as notes at the start
+  of every game. These can be viewed from the in-progress game dump and the
+  final game morgue.
