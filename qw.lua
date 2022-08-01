@@ -44,6 +44,19 @@ local automatic = false
 local update_coroutine
 local do_dummy_action
 
+local branch_data = {}
+local portal_data = {}
+local god_data = {}
+
+local early_first_lair
+local first_lair_end
+local early_second_lair
+local second_lair_end
+local early_vaults
+local vaults_end
+local early_zot
+local zot_end
+
 local gameplan_list
 local override_gameplans
 local which_gameplan = 1
@@ -765,12 +778,7 @@ function easy_runes()
 end
 
 function gameplan_normal_next(final)
-    local status
-    local early_vaults = make_level_range("Vaults", 1, -1)
-    local first_br = next_branch(lair_branch_order())
-    local second_br = next_branch(lair_branch_order(), 1)
-    local first_range = make_level_range(first_br, 1, -1)
-    local second_range = make_level_range(second_br, 1, -1)
+    local gameplan
 
     if not explored_level_range("D:1-11") then
         -- We head to Lair early, before having explored through D:11, if we
@@ -778,79 +786,79 @@ function gameplan_normal_next(final)
         if branch_found("Lair")
                 and not explored_level_range("Lair")
                 and ready_for_lair() then
-            status = "Lair"
+            gameplan = "Lair"
         else
-            status = "D:1-11"
+            gameplan = "D:1-11"
         end
     -- D:1-11 explored, but not Lair.
     elseif not explored_level_range("Lair") then
         -- We'll keep exploring Dungeon until we're ready or we don't have
         -- any Dungeon left.
         if ready_for_lair() or explored_level_range("D") then
-            status = "Lair"
+            gameplan = "Lair"
         else
-            status = "D"
+            gameplan = "D"
         end
     -- D:1-11 and Lair explored, but not D:12.
     elseif not explored_level_range("D:12") then
         if LATE_ORC then
-            status = "D"
+            gameplan = "D"
         else
-            status = "D:12"
+            gameplan = "D:12"
         end
     -- D:1-12 and Lair explored, but not all of D.
     elseif not explored_level_range("D") then
         if not LATE_ORC
                 and branch_found("Orc")
                 and not explored_level_range("Orc") then
-            status = "Orc"
+            gameplan = "Orc"
         else
-            status = "D"
+            gameplan = "D"
         end
     -- D and Lair explored, but not Orc.
     elseif not explored_level_range("Orc") then
-        status = "Orc"
+        gameplan = "Orc"
     -- D, Lair, and Orc explored, but no Lair branch.
-    elseif not explored_level_range(first_range) then
-        status = first_range
+    elseif not explored_level_range(early_first_lair) then
+        gameplan = early_first_lair
     -- D, Lair, and Orc explored, levels 1-3 of the first Lair branch.
-    elseif not explored_level_range(second_range) then
-        status = second_range
+    elseif not explored_level_range(early_second_lair) then
+        gameplan = early_second_lair
     -- D, Lair, and Orc explored, levels 1-3 of both Lair branches.
-    elseif not explored_level_range(first_br) then
-        status = first_br
+    elseif not explored_level_range(first_lair_end) then
+        gameplan = first_lair_end
     -- D, Lair, Orc, and at least one Lair branch explored, but not early
     -- Vaults.
     elseif not explored_level_range(early_vaults) then
-        status = early_vaults
+        gameplan = early_vaults
     -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
     -- second Lair branch not fully explored.
-    elseif not explored_level_range(second_br) then
+    elseif not explored_level_range(second_lair_end) then
         if not explored_level_range("Depths")
                 and not EARLY_SECOND_RUNE then
-            status = "Depths"
+            gameplan = "Depths"
         else
-            status = second_br
+            gameplan = second_lair_end
         end
     -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
     -- Depths.
     elseif not explored_level_range("Depths") then
-        status = "Depths"
+        gameplan = "Depths"
     -- D, Lair, Orc, both Lair branches, early Vaults, and Depths explored,
     -- but no Vaults rune.
-    elseif not explored_level_range("Vaults") then
-        status = "Vaults"
+    elseif not explored_level_range(vaults_end) then
+        gameplan = vaults_end
     -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and it's
     -- time to shop. After shopping, we're done with the Normal plan.
     elseif not c_persist.done_shopping then
-        status = "Shopping"
-    elseif final and not explored_level_range("Zot:1-4") then
-        status = "Zot:1-4"
+        gameplan = "Shopping"
+    elseif final and not explored_level_range(early_zot) then
+        gameplan = early_zot
     elseif final then
-        status = "Orb"
+        gameplan = "Orb"
     end
 
-    return status
+    return gameplan
 end
 
 function gameplan_complete(plan, final)
@@ -1605,7 +1613,7 @@ local branch_data_values = {
 } -- hack
 
 -- Portal name, enabled, description, max timeout in turns.
-portal_data_values = {
+local portal_data_values = {
     { "Ossuary", true, "sand-covered staircase", 800 },
     { "Sewer", true, "glowing drain", 800 },
     { "Bailey", false, "flagged portal", 800 },
@@ -1617,9 +1625,6 @@ portal_data_values = {
     { "Desolation", false, "crumbling gateway", 800 },
     { "Zig", true, "one-way gate to a zigguart", },
 } -- hack
-
-local branch_data = {}
-local portal_data = {}
 
 function initialize_branch_data()
     for _, entry in ipairs(branch_data_values) do
@@ -1672,6 +1677,19 @@ function initialize_branch_data()
             portal_data[br] = data
         end
     end
+
+    local first_br = next_branch(lair_branch_order())
+    early_first_lair = make_level_range(first_br, 1, -1)
+    first_lair_end = branch_end(first_br)
+
+    local second_br = next_branch(lair_branch_order(), 1)
+    early_second_lair = make_level_range(second_br, 1, -1)
+    second_lair_end = branch_end(second_br)
+
+    early_vaults = make_level_range("Vaults", 1, -1)
+    vaults_end = branch_end("Vaults")
+
+    early_zot = make_level_range("Zot", 1, -1)
 end
 
 function branch_travel(branch)
@@ -2688,9 +2706,9 @@ function make_level_range(branch, first, last)
         last = max_depth + last
     end
 
-    if first <= 0
+    if first < 1
             or first > max_depth
-            or last <= 0
+            or last < 1
             or last > max_depth
             or first > last then
         error("Invalid level level range for " .. tostring(branch)
@@ -7381,10 +7399,8 @@ function plan_take_unexplored_stairs()
 end
 
 -- Backtrack to the previous level if we've hit our travel destination yet
--- we're still not able to travel further. We require autoexplore to be
--- enabled as an indicator that we have some form of travel that we're
--- interested in doing but that has failed so that . We also require a travel
--- search direction to know the direction we should backtrack.
+-- we're still not able to travel further. We require a travel search direction
+-- to know whether to attempt this and the direction we should backtrack.
 function plan_go_command_backtrack()
     if cloudy or not travel_dir then
         return false
