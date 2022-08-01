@@ -48,10 +48,10 @@ local branch_data = {}
 local portal_data = {}
 local god_data = {}
 
-local early_first_lair
-local first_lair_end
-local early_second_lair
-local second_lair_end
+local early_first_lair_branch
+local first_lair_branch_end
+local early_second_lair_branch
+local second_lair_branch_end
 local early_vaults
 local vaults_end
 local early_zot
@@ -818,27 +818,44 @@ function gameplan_normal_next(final)
     -- D and Lair explored, but not Orc.
     elseif not explored_level_range("Orc") then
         gameplan = "Orc"
+    end
+
+    if gameplan then
+        return gameplan
+    end
+
+    -- At this point we're sure we've found Lair branches.
+    if not early_first_lair_branch then
+        local first_br = next_branch(lair_branch_order())
+        early_first_lair_branch = make_level_range(first_br, 1, -1)
+        first_lair_branch_end = branch_end(first_br)
+
+        local second_br = next_branch(lair_branch_order(), 1)
+        early_second_lair_branch = make_level_range(second_br, 1, -1)
+        second_lair_branch_end = branch_end(second_br)
+    end
+
     -- D, Lair, and Orc explored, but no Lair branch.
-    elseif not explored_level_range(early_first_lair) then
-        gameplan = early_first_lair
+    if not explored_level_range(early_first_lair_branch) then
+        gameplan = early_first_lair_branch
     -- D, Lair, and Orc explored, levels 1-3 of the first Lair branch.
-    elseif not explored_level_range(early_second_lair) then
-        gameplan = early_second_lair
+    elseif not explored_level_range(early_second_lair_branch) then
+        gameplan = early_second_lair_branch
     -- D, Lair, and Orc explored, levels 1-3 of both Lair branches.
-    elseif not explored_level_range(first_lair_end) then
-        gameplan = first_lair_end
+    elseif not explored_level_range(first_lair_branch_end) then
+        gameplan = first_lair_branch_end
     -- D, Lair, Orc, and at least one Lair branch explored, but not early
     -- Vaults.
     elseif not explored_level_range(early_vaults) then
         gameplan = early_vaults
     -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
     -- second Lair branch not fully explored.
-    elseif not explored_level_range(second_lair_end) then
+    elseif not explored_level_range(second_lair_branch_end) then
         if not explored_level_range("Depths")
                 and not EARLY_SECOND_RUNE then
             gameplan = "Depths"
         else
-            gameplan = second_lair_end
+            gameplan = second_lair_branch_end
         end
     -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
     -- Depths.
@@ -1677,14 +1694,6 @@ function initialize_branch_data()
             portal_data[br] = data
         end
     end
-
-    local first_br = next_branch(lair_branch_order())
-    early_first_lair = make_level_range(first_br, 1, -1)
-    first_lair_end = branch_end(first_br)
-
-    local second_br = next_branch(lair_branch_order(), 1)
-    early_second_lair = make_level_range(second_br, 1, -1)
-    second_lair_end = branch_end(second_br)
 
     early_vaults = make_level_range("Vaults", 1, -1)
     vaults_end = branch_end("Vaults")
