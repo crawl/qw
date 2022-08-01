@@ -21,14 +21,14 @@ function enum(tbl)
 end
 
 -- Exploration state enum
-local explore = enum {
+local AUTOEXP = enum {
     "NEEDED",
     "PARTIAL",
     "FULL",
 } --hack
 
 -- Feature LOS state enum
-local feat_los = enum {
+local FEAT_LOS = enum {
     "NONE",
     "SEEN",
     "DIGGABLE",
@@ -2787,7 +2787,7 @@ end
 
 function autoexplored_level(branch, depth)
     local state = c_persist.autoexplored_levels[make_level(branch, depth)]
-    return state and state > explore.NEEDED
+    return state and state > AUTOEXP.NEEDED
 end
 
 function explored_level(branch, depth)
@@ -2796,8 +2796,8 @@ function explored_level(branch, depth)
     end
 
     return autoexplored_level(branch, depth)
-        and have_all_downstairs(branch, depth, feat_los.REACHABLE)
-        and have_all_upstairs(branch, depth, feat_los.REACHABLE)
+        and have_all_downstairs(branch, depth, FEAT_LOS.REACHABLE)
+        and have_all_upstairs(branch, depth, FEAT_LOS.REACHABLE)
         and (depth < branch_rune_depth(branch) or have_branch_runes(branch))
 end
 
@@ -7025,10 +7025,10 @@ function explore_next_depth(branch, min_depth, max_depth)
         if not autoexplored_level(branch, d) then
             return d
         elseif d > 1
-                and not have_all_upstairs(branch, d, feat_los.REACHABLE) then
+                and not have_all_upstairs(branch, d, FEAT_LOS.REACHABLE) then
             return d - 1, 1
         elseif d < branch_max
-                and not have_all_downstairs(branch, d, feat_los.REACHABLE) then
+                and not have_all_downstairs(branch, d, FEAT_LOS.REACHABLE) then
             return d + 1, -1
         end
     end
@@ -7098,7 +7098,7 @@ function travel_branch_levels(branch, start_depth, dest_depth)
     local depth = start_depth
     local count_func = dir == 1 and count_downstairs or count_upstairs
     while depth ~= dest_depth do
-        if not (count_func(branch, depth, feat_los.SEEN) > 0) then
+        if not (count_func(branch, depth, FEAT_LOS.SEEN) > 0) then
             return depth
         end
 
@@ -7532,7 +7532,7 @@ function record_stairs(branch, depth, feat, state, force)
     if not data[level] then
         data[level] = {}
     end
-    local old_state = not data[level][num] and feat_los.NONE
+    local old_state = not data[level][num] and FEAT_LOS.NONE
         or data[level][num]
     if old_state < state or force then
         if DEBUG_MODE then
@@ -7552,7 +7552,7 @@ function check_stairs_search(feat)
     end
 
     local state_func = dir == 1 and downstairs_state or upstairs_state
-    if state_func(where_branch, where_depth, num) < feat_los.EXPLORED then
+    if state_func(where_branch, where_depth, num) < FEAT_LOS.EXPLORED then
         stairs_search = feat
     end
 end
@@ -7561,7 +7561,7 @@ function downstairs_state(branch, depth, num)
     local level = make_level(branch, depth)
     if not c_persist.downstairs[level]
             or not c_persist.downstairs[level][num] then
-        return feat_los.NONE
+        return FEAT_LOS.NONE
     end
 
     return c_persist.downstairs[level][num]
@@ -7604,7 +7604,7 @@ function upstairs_state(branch, depth, num)
     local level = make_level(branch, depth)
     if not c_persist.upstairs[level]
             or not c_persist.upstairs[level][num] then
-        return feat_los.NONE
+        return FEAT_LOS.NONE
     end
 
     return c_persist.upstairs[level][num]
@@ -7614,7 +7614,7 @@ function branch_entry_state(branch, entry_branch, entry_depth)
     local level = make_level(entry_branch, entry_depth)
     if not c_persist.branches[branch]
             or not c_persist.branches[branch][level] then
-        return feat_los.NONE
+        return FEAT_LOS.NONE
     end
 
     return c_persist.branches[branch][level]
@@ -10013,11 +10013,11 @@ end
 
 function los_state(x, y)
     if you.see_cell_solid_see(x, y) then
-        return feat_los.REACHABLE
+        return FEAT_LOS.REACHABLE
     elseif you.see_cell_no_trans(x, y) then
-        return feat_los.DIGGABLE
+        return FEAT_LOS.DIGGABLE
     end
-    return feat_los.SEEN
+    return FEAT_LOS.SEEN
 end
 
 -- A hook for incoming game messages. Note that this is executed for every new
@@ -10036,9 +10036,9 @@ function c_message(text, channel)
             or text:find("Could not explore")
             or text:find("Partly explored") then
         if text:find("Done exploring") then
-            c_persist.autoexplored_levels[you.where()] = explore.FULL
+            c_persist.autoexplored_levels[you.where()] = AUTOEXP.FULL
         else
-            c_persist.autoexplored_levels[you.where()] = explore.PARTIAL
+            c_persist.autoexplored_levels[you.where()] = AUTOEXP.PARTIAL
         end
 
         want_gameplan_update = true
@@ -10060,9 +10060,9 @@ function c_message(text, channel)
             if travel_dir and dir and travel_dir == -dir
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
-                record_stairs(branch, depth, feat, feat_los.EXPLORED)
+                record_stairs(branch, depth, feat, FEAT_LOS.EXPLORED)
                 record_stairs(branch, depth + dir, stairs_travel,
-                    feat_los.EXPLORED)
+                    FEAT_LOS.EXPLORED)
             end
         end
 
