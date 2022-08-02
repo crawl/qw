@@ -77,7 +77,7 @@ combo = GrBe.handaxe
 # * dsmart - Swamp/Spider > Snake > Shoals (DsBe data)
 : RUNE_PREFERENCE = "random"
 
-# A table of possible game plans.
+# A table of possible gameplans.
 : GAME_PLANS = {
 :     ["3 Runes"]  = "Normal",
 :     ["15 Runes"] = "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss"
@@ -87,7 +87,7 @@ combo = GrBe.handaxe
 :               .. ", Zig, Orb",
 : }
 
-# The default game plan.
+# The default gameplan.
 : PLAN = "3 Runes"
 
 # Panic (stop) at full inventory.

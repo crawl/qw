@@ -92,7 +92,7 @@ To have qw cycle through a set of combos, set `COMBO_CYCLE` to `true` and edit
 `COMBO_CYCLE_LIST`. This list uses the same syntax as the `combo` option, but
 with an optional `^<god initials>` suffix. The set of letters in `<god
 initials>` gives the set of gods qw is allowed to worship for that combo.
-Additionally, after this god list, you can specify a game plan name from
+Additionally, after this god list, you can specify a gameplan name from
 `GAME_PLANS` with a `!<plan>` suffix. For example, the default list:
 ```lua
 COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
@@ -102,20 +102,20 @@ Okawaru attempting the 15 runes plan.
 
 ### Game plans
 
-The `GAME_PLANS` variable defines a table of possible game plans for qw to
+The `GAME_PLANS` variable defines a table of possible gameplans for qw to
 follow in a game. Each key in this table is a descriptive string that can be
 used in the PLAN variable or in the `COMBO_CYCLE_LIST` variable above to have
 qw execute that set of gameplans. Each entry in `GAME_PLANS` is a
-case-insensitive, comma-separated string of game plans that qw will follow in
+case-insensitive, comma-separated string of gameplans that qw will follow in
 sequence.
 
-A game plan entry can be any of:
+A gameplan entry can be any of:
 
 * `<branch>`
 
   Fully explore all levels in sequence in that branch as well as get any branch
   runes. The branch name must be the abbreviation for that branch shown in the
-  HUD or by `you.where()`. This is the best type of game plan to use for fully
+  HUD or by `you.where()`. This is the best type of gameplan to use for fully
   clearing the branches qw visits.
 
   Examples: `D`, `Lair`, `Vaults`
@@ -152,28 +152,42 @@ A game plan entry can be any of:
 
 * `Orb`
 
-  Pick up the Orb of Zot, go to D:1, and win. Note that qw will dive through
-  any unexplored levels of Zot to do this, so preceed this plan with one like
-  `Zot:1-4` or simply `Zot` if you want to explore more of that branch.
+  Pick up the Orb of Zot, go to D:1, and win. qw always switches to this plan
+  when it completes all entries in its gameplan list. Note that while `Orb` is
+  the gameplan, qw will dive through all levels of Zot to look for the orb on
+  Zot:5. Preceed this plan with one like `Zot:1-4` or `Zot` if you want to
+  explore more or all of that branch.
 
 * `Zig`, or `Zig:<num>`
 
   Enter a ziggurat, clear it through level `<num>`, and exit. If `<num>` is not
-  specified, qw will clear the entire ziggurat.
+  specified, qw clears the entire ziggurat.
+
+* `Hells`
+
+  Do Hell and the 4 Hell branches in random order.
 
 * `Normal`, which proceeds through qw's default 3-rune route. This is
-  mostly equivalent to the following game plan list:
+  mostly equivalent to the following gameplan list:
 
-  `"D:1-11, Lair, D:12-D:15, Orc, 1stLairBranch:1-3, 2ndLairBranch:1-3,
+  ```
+  "D:1-11, Lair, D:12-D:15, Orc, 1stLairBranch:1-3, 2ndLairBranch:1-3,
   1stLairBranch:4, Vaults:1-4, 2ndLairBranch:4, Depths, Vaults:5, Shopping,
-  Zot:1-4, Orb"`
+  Zot:1-4, Orb"
+  ```
 
   The differences between this and `Normal` are that qw enters Lair as soon as
-  it has sufficent piety for its god and that this route is subject to the
-  variables `LATE_ORC` and `EARLY_SECOND_RUNE`.
+  it has sufficent piety for its god (see `ready_for_lair()` in [qw.lua](qw.lua))
+  and that this route is subject to the rcfile variables `LATE_ORC` and
+  `EARLY_SECOND_RUNE`.
 
-  If `Normal` is followed by another plan, qw will proceed to that plan after
-  its Shopping plan is complete. Note that this route is subject to the
+  If `Normal` is followed by additional gameplans, qw will proceed to those
+  after its Shopping plan is complete. Hence a viable 15 Rune route for a
+  character worshiping Okawaru could be expressed as:
+
+  ```
+  "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss, Zot"
+  ```
 
 #### Exploration
 
@@ -182,13 +196,13 @@ once, all its required stone upstairs and downstairs are reachable, and any
 rune on the level has been obtained. Other types of unreachable areas,
 transporters, and runed doors don't prevent qw from considering a level
 autoexplored. If qw must travel through unexplored levels that aren't part of
-its current game plan, it will explore only as much as necessary to find the
+its current gameplan, it will explore only as much as necessary to find the
 necessary stairs and then take them. This behaviour includes situations like
 being shafted.
 
-For Hell branches, game plans like `Rune:Geh`, `Rune:Tar`, etc. are good
+For Hell branches, gameplans like `Rune:Geh`, `Rune:Tar`, etc. are good
 choices, since they have qw dive to and get the rune while exploring as little
-as possible of the final level. For a branch like Slime, a game plan of
+as possible of the final level. For a branch like Slime, a gameplan of
 `Slime:5` is better, since it makes qw dive through Slime but explore Slime:5
 fully to obtain the loot after the Royal Jelly is dead.
 
@@ -206,7 +220,7 @@ qw has some basic debug output functionality.
 
   A list of debug channel names to output. The available channels are "main",
   the default for debug messages, "plans", which shows all plan execution and
-  results (very spammy), "explore", which shows game plan, travel, and
+  results (very spammy), "explore", which shows gameplan, travel, and
   exploration info, and "skills", which shows information about skill
   selection.
 
