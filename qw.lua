@@ -1643,9 +1643,9 @@ local portal_data_values = {
     { "Bailey", false, "flagged portal", 800 },
     { "Volcano", false, "dark tunnel", 800 },
     { "IceCv", false, "frozen_archway", 800 },
-    { "Gauntlet", false, "gate leading to a gauntlet", 800 },
+    { "Gauntlet", true, "gate leading to a gauntlet", 800 },
     { "Bazaar", true, "gateway to a bazaar", 1300 },
-    { "WizLab", false, "magical portal", 800 },
+    { "WizLab", true, "magical portal", 800 },
     { "Desolation", false, "crumbling gateway", 800 },
     { "Zig", true, "one-way gate to a zigguart", },
 } -- hack
@@ -2063,6 +2063,7 @@ local scary_monsters = {
     ["Erica"] = 15,
     ["Erolcha"] = 15,
 
+    ["minotaur"] = 17,
     ["fire dragon"] = 17,
     ["ice dragon"] = 17,
     ["storm dragon"] = 17,
@@ -2217,6 +2218,7 @@ local nasty_monsters = {
         pan_lord(100),
     },
 
+    ["minotaur"] = 15,
     ["fire dragon"] = 15,
     ["ice dragon"] = 15,
     ["Snorg"] = 15,
@@ -7400,10 +7402,26 @@ function plan_go_to_transporter()
         return false
     end
 
-    local search_count = 1
-    while zone_counts[transp_zone]
-            and zone_counts[transp_zone][search_count] do
-        search_count = search_count + 1
+    local search_count
+    if where_branch == "Gauntlet" then
+        -- Choose a random starting portal. This way, for maps with
+        -- functionally different types of transporter routes, if we always
+        -- start near a portal of one kind, we'll sometimes take the other
+        -- portals. Currently no maps offer more than 3 starting portals.
+        if transp_zone == 0 then
+            search_count = crawl.roll_dice(1, 4)
+        -- After the first portal, always take the closest one. This is
+        -- important for gammafunk_gauntlet_77_escape_option so we don't take
+        -- the early exit after each portal.
+        else
+            search_count = 1
+        end
+    else
+        search_count = 1
+        while zone_counts[transp_zone]
+                and zone_counts[transp_zone][search_count] do
+            search_count = search_count + 1
+        end
     end
 
     map_search_zone = transp_zone
