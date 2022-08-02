@@ -2786,7 +2786,7 @@ function parse_level_range(range)
 end
 
 function autoexplored_level(branch, depth)
-    local state = c_persist.autoexplored_levels[make_level(branch, depth)]
+    local state = c_persist.autoexplore[make_level(branch, depth)]
     return state and state > AUTOEXP.NEEDED
 end
 
@@ -7399,7 +7399,7 @@ function plan_take_unexplored_stairs()
     -- have completed autoexplore at least once, we may immediately leave once
     -- we see we've found the last missing staircase.
     local level = make_level(where_branch, where_depth + dir)
-    c_persist.autoexplored_levels[level] = AUTOEXP.NEEDED
+    c_persist.autoexplore[level] = AUTOEXP.NEEDED
 
     magic("G" .. (dir == 1 and ">" or "<"))
     return true
@@ -9519,8 +9519,8 @@ function initialize_c_persist()
     if not c_persist.branches then
         c_persist.branches = { }
     end
-    if not c_persist.autoexplored_levels then
-        c_persist.autoexplored_levels = { }
+    if not c_persist.autoexplore then
+        c_persist.autoexplore = { }
     end
     if not c_persist.upstairs then
         c_persist.upstairs = { }
@@ -10068,9 +10068,9 @@ function c_message(text, channel)
             or text:find("Could not explore")
             or text:find("Partly explored") then
         if text:find("Done exploring") then
-            c_persist.autoexplored_levels[you.where()] = AUTOEXP.FULL
+            c_persist.autoexplore[you.where()] = AUTOEXP.FULL
         else
-            c_persist.autoexplored_levels[you.where()] = AUTOEXP.PARTIAL
+            c_persist.autoexplore[you.where()] = AUTOEXP.PARTIAL
         end
 
         want_gameplan_update = true
