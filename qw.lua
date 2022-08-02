@@ -24,6 +24,8 @@ end
 local AUTOEXP = enum {
     "NEEDED",
     "PARTIAL",
+    "TRANSPORTER",
+    "RUNED_DOOR",
     "FULL",
 } --hack
 
@@ -96,6 +98,10 @@ local can_waypoint
 local base_corrosion
 local stairs_search
 local stairs_travel
+
+local transp_search
+local transp_zone
+local zone_counts = {}
 
 local ignore_list = { }
 local failed_move = { }
@@ -171,6 +177,7 @@ local last_flee_turn = -100
 local map_search
 local map_search_key
 local map_search_pos
+local map_search_zone
 local map_search_count
 
 local will_zig = false
@@ -6729,7 +6736,7 @@ end
 -- Open runed doors in Pan to get to the pan lord vault and open them on levels
 -- that are known to contain entrances to Pan if we intend to visit Pan.
 function plan_open_runed_doors()
-    if not in_branch("Pan") then
+    if not in_branch("Pan") and not in_branch("Abyss") and not in_portal() then
         local br, min_depth, max_depth = parent_branch("Pan")
         if where_branch ~= parent_branch("Pan")
                 or where_depth < min_depth
@@ -6825,6 +6832,15 @@ function plan_enter_pan()
     end
 
     return false
+end
+
+function plan_enter_transporter()
+    if not transp_search or view.feature_at(0, 0) ~= "transporter" then
+        return false
+    end
+
+    magic(">")
+    return true
 end
 
 function plan_go_down_abyss()
@@ -7371,6 +7387,37 @@ function plan_go_to_unexplored_stairs()
     map_search_pos = search_pos
     map_search_count = search_count
     magic("X" .. search_key:rep(search_count) .. "\r")
+    return true
+end
+
+function can_use_transporters()
+    return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
+        and (where_branch == "Temple" or in_portal())
+end
+
+function plan_go_to_transporter()
+    if not can_use_transporters() or transp_search then
+        return false
+    end
+
+    local search_count = 1
+    while zone_counts[transp_zone]
+            and zone_counts[transp_zone][search_count] do
+        search_count = search_count + 1
+    end
+
+    map_search_zone = transp_zone
+    map_search_count = search_count
+    magic("X" .. (">"):rep(search_count) .. "\r")
+    return true
+end
+
+function plan_transporter_orient_exit()
+    if not can_use_transporters() or not transp_orient then
+        return false
+    end
+
+    magic("X<\r")
     return true
 end
 
@@ -8953,6 +9000,7 @@ plan_explore = cascade {
     {plan_enter_portal, "enter_portal"},
     {plan_enter_abyss, "enter_abyss"},
     {plan_enter_pan, "enter_pan"},
+    {plan_enter_transporter, "enter_transporter"},
     {plan_zig_dig, "zig_dig"},
     {plan_dive_pan, "dive_pan"},
     {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
@@ -8960,6 +9008,8 @@ plan_explore = cascade {
 } -- hack
 
 plan_explore2 = cascade {
+    {plan_transporter_orient_exit, "try_transporter_orient_exit"},
+    {plan_go_to_transporter, "try_go_to_transporter"},
     {plan_zig_leave_level, "zig_leave_level"},
     {plan_zig_go_to_stairs, "try_zig_go_to_stairs"},
     {plan_exit_portal, "exit_portal"},
@@ -9790,6 +9840,9 @@ function turn_update()
         target_stair = nil
         base_corrosion = in_branch("Dis") and 2 or 0
 
+        transp_zone = 0
+        zone_counts = {}
+
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
             vaults_end_entry_turn = you.turns()
         elseif where == "Tomb:2" and not tomb2_entry_turn then
@@ -9800,6 +9853,25 @@ function turn_update()
     end
 
     stairs_search = nil
+
+    transp_search = nil
+    if can_use_transporters() then
+        local feat = view.feature_at(0, 0)
+        if feat_uses_map_key(">", feat) and map_search_zone then
+            if not zone_counts[map_search_zone] then
+                zone_counts[map_search_zone] = {}
+            end
+            zone_counts[map_search_zone][map_search_count] = transp_zone
+            map_search_zone = nil
+            map_search_count = nil
+            if feat == "transporter" then
+                transp_search = transp_zone
+            end
+        elseif feat == "exit_" .. where_branch:lower() then
+            transp_zone = 0
+            transp_orient = false
+        end
+    end
 
     can_waypoint = is_waypointable(where)
     if can_waypoint then
@@ -10064,15 +10136,18 @@ function c_message(text, channel)
         invis_sigmund = false
     elseif text:find("Your pager goes off") then
         have_message = true
-    elseif text:find("Done exploring")
-            or text:find("Could not explore")
-            or text:find("Partly explored") then
-        if text:find("Done exploring") then
-            c_persist.autoexplore[you.where()] = AUTOEXP.FULL
+    elseif text:find("Done exploring") then
+        c_persist.autoexplore[you.where()] = AUTOEXP.FULL
+        want_gameplan_update = true
+    elseif text:find("Partly explored") then
+        if text:find("transporter") then
+            c_persist.autoexplore[you.where()] = AUTOEXP.TRANSPORTER
         else
             c_persist.autoexplore[you.where()] = AUTOEXP.PARTIAL
         end
-
+        want_gameplan_update = true
+    elseif text:find("Could not explore") then
+        c_persist.autoexplore[you.where()] = AUTOEXP.RUNED_DOOR
         want_gameplan_update = true
     -- Track which stairs we've fully explored by watching pairs of messages
     -- corresponding to standing on stairs and then taking them. The climbing
@@ -10097,7 +10172,6 @@ function c_message(text, channel)
                     FEAT_LOS.EXPLORED)
             end
         end
-
         stairs_travel = nil
     elseif text:find("Orb of Zot") then
         c_persist.found_orb = true
@@ -10123,6 +10197,9 @@ function c_message(text, channel)
                 remove_portal(where, expired)
             end
         end
+    elseif text:find("You enter the transporter") then
+        transp_zone = transp_zone + 1
+        transp_orient = true
     end
 end
 }
