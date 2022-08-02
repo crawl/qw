@@ -6259,7 +6259,11 @@ function plan_go_down()
 end
 
 function ready_for_lair()
-    if want_altar() then
+    if want_altar()
+            or gameplan_branch
+                and gameplan_branch == "D"
+                and gameplan_depth <= 11
+                and not explored_level(gameplan_branch, gameplan_depth) then
         return false
     end
 
