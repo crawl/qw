@@ -250,12 +250,13 @@ executed from the clua console.
 
   Toggle the output for the channel name in the `channel` string argument.
 
-* `reset_stairs(level, dir)`
+* `set_stairs(branch, depth, dir, feat_los)`
 
-  Have qw forget stairs on `level` of the type in `dir`, with `1` meaning
-  downstairs, `-1` meaning upstairs, and `0` meaning both. If `level` is `nil`,
-  assume the current level. Can be necessary to prevent qw from thinking a level
-  is fully explored.
+  Set `c_persist` stair knowledge for all stairs on the level of the direction
+  given in `dir` to the LOS value in `feat_los`. For `dir`, 1 means downstairs,
+  -1 meaning upstairs, and 0 means both. For `feat_los`, 0 means the stair hasn't
+  been seen, 1 means seen but behind transparent wall, 2 means seen but behind a
+  grate, 3 means reachable, and 4 means the stair has been used at least once.
 
 ### Miscellaneous tips for coding and testing
 
