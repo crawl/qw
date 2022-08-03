@@ -38,6 +38,8 @@ local FEAT_LOS = enum {
     "EXPLORED",
 } --hack
 
+local INF_TURNS = 200000000
+
 local los_radius = you.race() == "Barachi" and 8 or 7
 
 local initialized = false
@@ -66,6 +68,7 @@ local gameplan_status
 local gameplan_branch
 local gameplan_depth
 local gameplan_stairs_dir
+local permanent_bazaar
 
 local planning_god_uses_mp
 local planning_vaults
@@ -946,42 +949,51 @@ function choose_gameplan()
 end
 
 -- Choose an active portal on this level. We only consider allowed portals, and
--- choose the oldest one.
+-- choose the oldest one. Permanent bazaars get chosen last.
 function choose_level_portal(level)
     local oldest_portal
-    local oldest_turns = 200000000
-    for portal, turns in pairs(c_persist.portals[level]) do
-        if portal_allowed(portal) and turns < oldest_turns then
-            oldest_portal = portal
-            oldest_turns = turns
+    local oldest_turns
+    for portal, turns_list in pairs(c_persist.portals[level]) do
+        if portal_allowed(portal) then
+            if #turns_list > 0
+                    and (not oldest_turns
+                        or turns_list[#turns_list] < oldest_turns) then
+                oldest_portal = portal
+                oldest_turns = turns_list[#turns_list]
+            end
         end
     end
 
     return oldest_portal, oldest_turns
 end
 
+-- If we found a viable portal on the current level, that becomes our gameplan.
 function check_portal_gameplan()
-    -- If we found a viable portal on the current level, that becomes our
-    -- gameplan.
-    local chosen_portal
-    local portal_turns = 200000000
+    local chosen_portal, chosen_level, chosen_turns
     for level, portals in pairs(c_persist.portals) do
         local portal, turns = choose_level_portal(level)
-        -- Favor portals on our current level, otherwise go for the one found
-        -- first.
-        if level == where then
+        if portal and (not chosen_turns or turns < chosen_turns) then
             chosen_portal = portal
-            break
-        elseif turns < portal_turns then
-            chosen_portal = portal
-            portal_turns = turns
+            chosen_level = level
+            chosen_turns = turns
         end
     end
 
-    return chosen_portal
+    -- We only load a portal's parent branch info when it's actually chosen,
+    -- and the parent info will be removed once the portal expires or is
+    -- completed.
+    if chosen_portal then
+        local branch, depth = parse_level_range(chosen_level)
+        branch_data[chosen_portal].parent = branch
+        branch_data[chosen_portal].parent_min_depth = depth
+        branch_data[chosen_portal].parent_max_depth = depth
+    end
+
+    return chosen_portal, chosen_turns == INF_TURNS
 end
 
 function update_gameplan()
+    permanent_bazaar = nil
     local chosen_gameplan, normal_gameplan = choose_gameplan()
     local old_status = gameplan_status
     local status = chosen_gameplan
@@ -1001,7 +1013,8 @@ function update_gameplan()
         desc = status .. " rune"
     end
 
-    local portal = check_portal_gameplan()
+    local portal
+    portal, permanent_bazaar = check_portal_gameplan()
     if portal then
         status = portal
         gameplan = portal
@@ -1677,15 +1690,6 @@ function initialize_branch_data()
                     data.parent_max_depth = depth
                     break
                 end
-            end
-        end
-
-        for level, portals in pairs(c_persist.portals) do
-            if portals[br] then
-                local branch, depth = parse_level_range(level)
-                data.parent = branch
-                data.parent_min_depth = depth
-                data.parent_max_depth = depth
             end
         end
 
@@ -6612,8 +6616,15 @@ function plan_go_to_portal_entrance()
     end
 
     if travel_fail_count == 0 then
+        local desc = portal_entrance_description(gameplan_branch)
+        -- For timed bazaars, make a search string that can' match permanent
+        -- ones.
+        if gameplan_branch == "Bazaar" and not permanent_bazaar then
+            desc = "a flickering " .. desc
+        end
+        magicfind(desc)
+
         travel_fail_count = 1
-        magicfind(portal_entrance_description(gameplan_branch))
         return
     end
 
@@ -6802,7 +6813,6 @@ function plan_enter_portal()
     end
 
     magic(">" .. (gameplan_branch == "Zig" and "Y" or ""))
-    remove_portal(where, gameplan_branch, true)
     return true
 end
 
@@ -6814,6 +6824,9 @@ function plan_exit_portal()
             or not view.feature_at(0, 0):find("exit_" .. where:lower()) then
         return false
     end
+
+    local parent, depth = parent_branch(where_branch)
+    remove_portal(make_level(parent, depth), where_branch, true)
 
     magic("<")
     return true
@@ -6899,6 +6912,7 @@ function plan_zig_leave_level()
 
     if c_persist.zig_completed
             and view.feature_at(0, 0) == "exit_ziggurat" then
+        remove_portal(make_level(parent, depth), gameplan_branch, true)
         magic("<Y")
         return true
     elseif string.find(view.feature_at(0, 0), "stone_stairs_down") then
@@ -9778,10 +9792,20 @@ function portal_allowed(portal)
 end
 
 function remove_portal(level, portal, silent)
+    if not c_persist.portals[level]
+            or not c_persist.portals[level][portal]
+            or #c_persist.portals[level][portal] == 0 then
+        return
+    end
+
+    -- This is a list because bazaars can be both permanent and timed and
+    -- potentially with both on the same level. We make the list so the timed
+    -- portal is at the end, and since we enter timed portals before the
+    -- permanent one, we always want to remove from the end.
+    table.remove(c_persist.portals[level][portal])
     branch_data[portal].parent = nil
     branch_data[portal].parent_min_depth = nil
     branch_data[portal].parent_max_depth = nil
-    c_persist.portals[level][portal] = nil
 
     if portal_allowed(portal) then
         if not silent then
@@ -9792,18 +9816,19 @@ function remove_portal(level, portal, silent)
     end
 end
 
+-- Expire any timed portals for levels we've fully explored or where they're
+-- older than their max timeout.
 function check_expired_portals()
     for level, portals in pairs(c_persist.portals) do
         local explored = explored_level_range(level)
-        for portal, turns in pairs(portals) do
+        for portal, turns_list in pairs(portals) do
             local timeout = portal_timeout(portal)
-            -- Expire any portals for levels we've fully explored.
-            if explored
-                    -- Expire any portals older than their max timeout.
-                    or (timeout
-                        and portals[portal]
-                        and you.turns() - portals[portal] > timeout) then
-                remove_portal(level, portal)
+            for _, turns in ipairs(turns_list) do
+                if turns ~= INF_TURNS
+                        and (explored
+                            or timeout and you.turns() - turns > timeout) then
+                    remove_portal(level, portal)
+                end
             end
         end
     end
@@ -10131,22 +10156,29 @@ function c_choose_acquirement()
     return 1
 end
 
-function record_portal(level, portal)
+function record_portal(level, portal, permanent)
     if not c_persist.portals[level] then
         c_persist.portals[level] = {}
     end
 
     if not c_persist.portals[level][portal] then
-        dsay("Found " .. portal .. ".", "explore")
-        c_persist.portals[level][portal] = you.turns()
-        local branch, depth = parse_level_range(level)
-        branch_data[portal].parent = branch
-        branch_data[portal].parent_min_depth = depth
-        branch_data[portal].parent_max_depth = depth
+        c_persist.portals[level][portal] = {}
+    end
 
-        if portal_allowed(portal) then
-            want_gameplan_update = true
-        end
+    -- Permanent portals go at the beginning, so they'll always be chosen last.
+    -- We can't have multiple timed portals of the same type on the same level,
+    -- so this scheme puts portals in the correct order. For timed portals,
+    -- record the turns to allow prioritizing among timed portals across
+    -- levels.
+    dsay("Found " .. portal .. ".", "explore")
+    if permanent then
+        table.insert(c_persist.portals[level][portal], 1, INF_TURNS)
+    else
+        table.insert(c_persist.portals[level][portal], you.turns())
+    end
+
+    if portal_allowed(portal) then
+        want_gameplan_update = true
     end
 end
 
@@ -10211,6 +10243,13 @@ function c_message(text, channel)
     elseif text:find("Orb of Zot") then
         c_persist.found_orb = true
         want_gameplan_update = true
+    -- Timed portals are recorded by the "Hurry and find it" message handling,
+    -- but a permanent bazaar doesn't have this. Check messages for "a gateway
+    -- to a bazaar", which happens via autoexplore. Timed bazaars are described
+    -- as "a flickering gateway to a bazaar", so by looking for the right
+    -- message, we prevent counting timed bazaars twice.
+    elseif text:find("Found a gateway to a bazaar") then
+        record_portal(you.where(), "Bazaar", true)
     elseif text:find("Hurry and find it") then
         for portal, _ in pairs(portal_data) do
             if text:lower():find(portal:lower()) then
@@ -10219,17 +10258,26 @@ function c_message(text, channel)
         end
     elseif text:find("The walls and floor vibrate strangely") then
         local where = you.where()
-        -- If there was only recorded portal on the level, we can be sure it's
+        -- If there was only one timed portal on the level, we can be sure it's
         -- the one that expired.
         if c_persist.portals[where] then
             local count = 0
-            local expired
-            for portal, _ in pairs(c_persist.portals[where]) do
-                expired = portal
-                count = count + 1
+            local expired_portal
+            for portal, turns_list in pairs(c_persist.portals[where]) do
+                for _, turns in ipairs(turns_list) do
+                    if turns ~= INF_TURNS then
+                        count = count + 1
+                        if count > 1 then
+                            expired_portal = nil
+                            break
+                        end
+
+                        expired_portal = portal
+                    end
+                end
             end
-            if count == 1 then
-                remove_portal(where, expired)
+            if expired_portal then
+                remove_portal(where, expired_portal)
             end
         end
     elseif text:find("You enter the transporter") then
