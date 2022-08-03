@@ -7377,6 +7377,13 @@ function plan_go_to_unexplored_stairs()
         return false
     end
 
+    -- No point in trying if we don't have unexplored stairs.
+    local test_func = search_dir == 1 and have_all_downstairs
+        or have_all_upstairs
+    if test_func(where_branch, where_depth, FEAT_LOS.EXPLORED) then
+        return false
+    end
+
     local search_key = search_dir == 1 and ">" or "<"
     local dx, dy = travel.waypoint_delta(waypoint_parity)
     local search_pos = 100 * dx + dy
