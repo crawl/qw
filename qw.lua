@@ -62,8 +62,6 @@ local zot_end
 local gameplan_list
 local override_gameplans
 local which_gameplan = 1
-local chosen_gameplan
-local normal_gameplan
 local gameplan_status
 local gameplan_branch
 local gameplan_depth
@@ -905,9 +903,7 @@ function gameplan_complete(plan, final)
 end
 
 function choose_gameplan()
-    local next_gameplan
-    chosen_gameplan = nil
-    normal_gameplan = nil
+    local next_gameplan, chosen_gameplan, normal_gameplan
     while not chosen_gameplan and which_gameplan <= #gameplan_list do
         chosen_gameplan = gameplan_list[which_gameplan]
         next_gameplan = gameplan_list[which_gameplan + 1]
@@ -945,6 +941,8 @@ function choose_gameplan()
     if DEBUG_MODE then
         dsay("Current gameplan: " .. chosen_gameplan, "explore")
     end
+
+    return chosen_gameplan, normal_gameplan
 end
 
 function oldest_level_portal(level)
@@ -982,6 +980,7 @@ function check_portal_gameplan()
 end
 
 function update_gameplan()
+    local chosen_gameplan, normal_gameplan = choose_gameplan()
     local old_status = gameplan_status
     local status = chosen_gameplan
     local gameplan = status
@@ -9913,7 +9912,6 @@ function turn_update()
             c_persist.zig_completed = true
         end
 
-        choose_gameplan()
         update_gameplan()
         update_travel()
 
