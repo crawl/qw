@@ -945,11 +945,13 @@ function choose_gameplan()
     return chosen_gameplan, normal_gameplan
 end
 
-function oldest_level_portal(level)
+-- Choose an active portal on this level. We only consider allowed portals, and
+-- choose the oldest one.
+function choose_level_portal(level)
     local oldest_portal
     local oldest_turns = 200000000
     for portal, turns in pairs(c_persist.portals[level]) do
-        if turns < oldest_turns then
+        if portal_allowed(portal) and turns < oldest_turns then
             oldest_portal = portal
             oldest_turns = turns
         end
@@ -964,7 +966,7 @@ function check_portal_gameplan()
     local chosen_portal
     local portal_turns = 200000000
     for level, portals in pairs(c_persist.portals) do
-        local portal, turns = oldest_level_portal(level)
+        local portal, turns = choose_level_portal(level)
         -- Favor portals on our current level, otherwise go for the one found
         -- first.
         if level == where then
@@ -1635,18 +1637,18 @@ local branch_data_values = {
     { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
 } -- hack
 
--- Portal name, enabled, description, max timeout in turns.
+-- Portal branch, entry description, max timeout in turns.
 local portal_data_values = {
-    { "Ossuary", true, "sand-covered staircase", 800 },
-    { "Sewer", true, "glowing drain", 800 },
-    { "Bailey", false, "flagged portal", 800 },
-    { "Volcano", false, "dark tunnel", 800 },
-    { "IceCv", false, "frozen_archway", 800 },
-    { "Gauntlet", true, "gate leading to a gauntlet", 800 },
-    { "Bazaar", true, "gateway to a bazaar", 1300 },
-    { "WizLab", true, "magical portal", 800 },
-    { "Desolation", false, "crumbling gateway", 800 },
-    { "Zig", true, "one-way gate to a zigguart", },
+    { "Ossuary", "sand-covered staircase", 800 },
+    { "Sewer", "glowing drain", 800 },
+    { "Bailey", "flagged portal", 800 },
+    { "Volcano", "dark tunnel", 800 },
+    { "IceCv", "frozen_archway", 800 },
+    { "Gauntlet", "gate leading to a gauntlet", 800 },
+    { "Bazaar", "gateway to a bazaar", 1300 },
+    { "WizLab", "magical portal", 800 },
+    { "Desolation", "crumbling gateway", 800 },
+    { "Zig", "one-way gate to a zigguart", },
 } -- hack
 
 function initialize_branch_data()
@@ -1692,13 +1694,11 @@ function initialize_branch_data()
     end
 
     for _, entry in ipairs(portal_data_values) do
-        if entry[2] then
-            local br = entry[1]
-            local data = {}
-            data["description"] = entry[3]
-            data["timeout"] = entry[4]
-            portal_data[br] = data
-        end
+        local br = entry[1]
+        local data = {}
+        data["description"] = entry[2]
+        data["timeout"] = entry[3]
+        portal_data[br] = data
     end
 
     early_vaults = make_level_range("Vaults", 1, -1)
@@ -7414,13 +7414,14 @@ function plan_go_to_transporter()
 
     local search_count
     if where_branch == "Gauntlet" then
-        -- Choose a random starting portal. This way, for maps with
-        -- functionally different types of transporter routes, if we always
-        -- start near a portal of one kind, we'll sometimes take the other
-        -- portals. Currently no maps offer more than 3 starting portals.
+        -- Maps can have functionally different types of transporter routes and
+        -- always start the player closest to a route of one type, so randomize
+        -- which of the starting transporters we choose. No Gauntlet map has
+        -- more than 3 starting transporters, and most have two, so use '>' 1
+        -- to 4 times to reduce bias.
         if transp_zone == 0 then
             search_count = crawl.roll_dice(1, 4)
-        -- After the first portal, always take the closest one. This is
+        -- After the first transporter, always take the closest one. This is
         -- important for gammafunk_gauntlet_77_escape_option so we don't take
         -- the early exit after each portal.
         else
@@ -9772,17 +9773,23 @@ function run_update()
     end
 end
 
+function portal_allowed(portal)
+    return util.contains(ALLOWED_PORTALS, portal)
+end
+
 function remove_portal(level, portal, silent)
     branch_data[portal].parent = nil
     branch_data[portal].parent_min_depth = nil
     branch_data[portal].parent_max_depth = nil
     c_persist.portals[level][portal] = nil
 
-    if not silent then
-        say("RIP " .. portal:upper())
-    end
+    if portal_allowed(portal) then
+        if not silent then
+            say("RIP " .. portal:upper())
+        end
 
-    want_gameplan_update = true
+        want_gameplan_update = true
+    end
 end
 
 function check_expired_portals()
@@ -9796,8 +9803,6 @@ function check_expired_portals()
                     or (timeout
                         and portals[portal]
                         and you.turns() - portals[portal] > timeout) then
-                dsay("t: " .. tostring(timeout) .. "pt: "
-                    .. tostring(portals[portal]))
                 remove_portal(level, portal)
             end
         end
@@ -10138,7 +10143,10 @@ function record_portal(level, portal)
         branch_data[portal].parent = branch
         branch_data[portal].parent_min_depth = depth
         branch_data[portal].parent_max_depth = depth
-        want_gameplan_update = true
+
+        if portal_allowed(portal) then
+            want_gameplan_update = true
+        end
     end
 end
 

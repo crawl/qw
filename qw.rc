@@ -90,6 +90,10 @@ combo = GrBe.handaxe
 # The default gameplan.
 : PLAN = "3 Runes"
 
+# Timed portals we're allowed to attempt.
+: ALLOWED_PORTALS = {"Bazaar", "Sewer", "Ossuary", "Gauntlet", "WizLab",
+:                    "Desolation"}
+
 # Panic (stop) at full inventory.
 : FULL_INVENTORY_PANIC = true
 
