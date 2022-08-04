@@ -1656,10 +1656,10 @@ local portal_data_values = {
     { "Sewer", "glowing drain", 800 },
     { "Bailey", "flagged portal", 800 },
     { "Volcano", "dark tunnel", 800 },
-    { "IceCv", "frozen_archway", 800 },
+    { "IceCv", "frozen_archway", 800, "ice cave" },
     { "Gauntlet", "gate leading to a gauntlet", 800 },
     { "Bazaar", "gateway to a bazaar", 1300 },
-    { "WizLab", "magical portal", 800 },
+    { "WizLab", "magical portal", 800, "wizard's laboratory" },
     { "Desolation", "crumbling gateway", 800 },
     { "Zig", "one-way gate to a zigguart", },
 } -- hack
@@ -1700,8 +1700,12 @@ function initialize_branch_data()
     for _, entry in ipairs(portal_data_values) do
         local br = entry[1]
         local data = {}
-        data["description"] = entry[2]
+        data["entrance_description"] = entry[2]
         data["timeout"] = entry[3]
+        data["description"] = entry[4]
+        if not data["description"] then
+            data["description"] = br:lower()
+        end
         portal_data[br] = data
     end
 
@@ -1740,7 +1744,7 @@ function portal_entrance_description(portal)
         error("Unknown portal: " .. tostring(portal))
     end
 
-    return portal_data[portal].description
+    return portal_data[portal].entrance_description
 end
 
 function portal_timeout(portal)
@@ -1749,6 +1753,14 @@ function portal_timeout(portal)
     end
 
     return portal_data[portal].timeout
+end
+
+function portal_description(portal)
+    if not portal_data[portal] then
+        error("Unknown portal: " .. tostring(portal))
+    end
+
+    return portal_data[portal].description
 end
 
 function parent_branch(branch)
@@ -9824,7 +9836,8 @@ function check_expired_portals()
         for portal, turns_list in pairs(portals) do
             local timeout = portal_timeout(portal)
             for _, turns in ipairs(turns_list) do
-                if turns ~= INF_TURNS
+                if where_branch ~= portal
+                        and turns ~= INF_TURNS
                         and (explored
                             or timeout and you.turns() - turns > timeout) then
                     remove_portal(level, portal)
@@ -10250,10 +10263,12 @@ function c_message(text, channel)
     -- message, we prevent counting timed bazaars twice.
     elseif text:find("Found a gateway to a bazaar") then
         record_portal(you.where(), "Bazaar", true)
-    elseif text:find("Hurry and find it") then
+    elseif text:find("Hurry and find it")
+            or text:find("Find the entrance") then
         for portal, _ in pairs(portal_data) do
-            if text:lower():find(portal:lower()) then
+            if text:lower():find(portal_description(portal):lower()) then
                 record_portal(you.where(), portal)
+                break
             end
         end
     elseif text:find("The walls and floor vibrate strangely") then
