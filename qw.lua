@@ -2914,7 +2914,8 @@ function can_teleport()
         and not (you.teleporting()
             or you.anchored()
             or you.transform() == "tree"
-            or you.race() == "Formicid")
+            or you.race() == "Formicid"
+            or where_branch == "Gauntlet")
 end
 
 function can_invoke()
