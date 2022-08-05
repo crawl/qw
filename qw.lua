@@ -5528,6 +5528,9 @@ end
 function plan_abandon_god()
     if you.god() ~= "No God"
             and not c_persist.joined_initial_god
+                or you.class() == "Chaos Knight"
+                    and you.god() == "Xom"
+                    and CK_ABANDON_XOM
             and not util.contains(god_options(), you.god()) then
         magic("aXYY")
         return true
@@ -9754,7 +9757,7 @@ function first_turn_initialize()
     end
 
     c_persist.current_god_list = god_list
-    c_persist.joined_initial_god = false
+    c_persist.joined_initial_god = you.god() ~= "NoGod"
     c_persist.current_gameplans = plans
     note_qw_data()
 

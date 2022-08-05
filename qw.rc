@@ -61,6 +61,9 @@ combo = GrBe.handaxe
 # Use faded altar, abandoning if we don't get one of the gods in GOD_LIST.
 : FADED_ALTAR = false
 
+# Should Chaos Knight abandon Xom on turn 0.
+: CK_ABANDON_XOM = true
+
 # Use a shield at all cost.
 : SHIELD_CRAZY = true
 
