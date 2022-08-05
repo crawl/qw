@@ -80,36 +80,48 @@ guide](https://github.com/crawl/crawl/blob/master/crawl-ref/docs/options_guide.t
 
 ### Combos and Gods
 
-The simplest way to change the combo qw plays is with the `combo` rcfile
-option. Change this to your desired combos, then change `GOD_LIST` to the set
-of gods for qw is allowed to worship. It will worship the first of these it
-finds, entering Temple if it needs to. Each entry in `GOD_LIST` must be the
-full god name. Gods who have been at least partially implemented:
-`BCHLMOQRTUXY1`. Gods who are good enough to get a win in a reasonable number
-of attempts: `CMORT1`.
+To have qw play one type of char or select randomly from a set of combos, use
+the `combo` rcfile option. See comments in the rcfile for examples. Then change
+the `GOD_LIST` variable to set the gods qw is allowed to worship. Each entry
+in `GOD_LIST` can be the full god name, as reported by `you.god()`, or the
+abbreviation made with the first 1, 3, or 4 letters of the god's name with any
+whitespace removed. For *the Shining One*, you can use the abbreviations "1" or
+"TSO". For non-zealots, qw will worship the first god in the list it finds,
+entering Temple if it needs to. To have CK abandon Xom immediately, set
+`CK_ABANDON_XOM` to `true`, otherwise all zealots will remain with their
+starting god unless told to convert explicitly by the [gameplan
+list](#game-plans).
+
+Gods who have at least partly implemented are *BCHLMOQRTUXY1*. Currently qw has
+the most success with *Okawaru*, *Trog*, and *Ru*, roughly in that order. For
+combos, GrFi, GrBe, MiFi, and MiBe are most successful.
+
+#### Combo cycles
 
 To have qw cycle through a set of combos, set `COMBO_CYCLE` to `true` and edit
 `COMBO_CYCLE_LIST`. This list uses the same syntax as the `combo` option, but
 with an optional `^<god initials>` suffix. The set of letters in `<god
 initials>` gives the set of gods qw is allowed to worship for that combo.
 Additionally, after this god list, you can specify a gameplan name from
-`GAME_PLANS` with a `!<plan>` suffix. For example, the default list:
+`GAMEPLANS` with a `!<plan>` suffix. For example, the default list:
+
 ```lua
-COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
+COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OR, GrFi.waraxe^O!15 Runes"
 ```
-has qw cycle through GrBe, MiFi of either Okawaru or Makhleb, and GrFi of
-Okawaru attempting the 15 runes plan.
 
-### Game plans
+has qw cycle through GrBe, MiFi of either Okawaru or Ru, and GrFi of Okawaru
+attempting the 15 runes plan.
 
-The `GAME_PLANS` variable defines a table of possible gameplans for qw to
-follow in a game. Each key in this table is a descriptive string that can be
-used in the PLAN variable or in the `COMBO_CYCLE_LIST` variable above to have
-qw execute that set of gameplans. Each entry in `GAME_PLANS` is a
-case-insensitive, comma-separated string of gameplans that qw will follow in
-sequence.
+### Gameplans
 
-A gameplan entry can be any of:
+The `GAMEPLANS` variable defines a table of strings defining sets of gameplans
+for qw to complete in sequence. Each key in this table is a descriptive string
+that can be used in the `DEFAULT_GAMEPLAN` variable or in the
+`COMBO_CYCLE_LIST` variable above to have qw execute that set of gameplans. The
+entries in `GAMEPLANS` are case-insensitive, comma-separated strings of
+*gameplans* that qw will follow in sequence.
+
+A gameplan can be any of:
 
 * `<branch>`
 
@@ -142,9 +154,9 @@ A gameplan entry can be any of:
 * `God:<god>`
 
   Abandon any current god and convert to `<god>`. This is useful for attempting
-  extented branches where a different god would be sufficiently better that it's
+  extended branches where a different god would be sufficiently better that it's
   worth the risk of dying to god wrath. The name `<god>` can be the full god
-  name as reported by `you.god()` or the abbrevation made by the first 1, 3, or
+  name as reported by `you.god()` or the abbreviation made by the first 1, 3, or
   4 letters of the god's name with any whitespace removed. For the Shining One,
   `1` and `TSO` are valid abbreviations.
 
@@ -155,7 +167,7 @@ A gameplan entry can be any of:
   Pick up the Orb of Zot, go to D:1, and win. qw always switches to this plan
   when it completes all entries in its gameplan list. Note that while `Orb` is
   the gameplan, qw will dive through all levels of Zot to look for the orb on
-  Zot:5. Preceed this plan with one like `Zot:1-4` or `Zot` if you want to
+  Zot:5. Proceed this plan with one like `Zot:1-4` or `Zot` if you want to
   explore more or all of that branch.
 
 * `Zig`, or `Zig:<num>`
@@ -177,9 +189,9 @@ A gameplan entry can be any of:
   ```
 
   The differences between this and `Normal` are that qw enters Lair as soon as
-  it has sufficent piety for its god (see `ready_for_lair()` in [qw.lua](qw.lua))
-  and that this route is subject to the rcfile variables `LATE_ORC` and
-  `EARLY_SECOND_RUNE`.
+  it has sufficient piety for its god (see `ready_for_lair()` in
+  [qw.lua](qw.lua)) and that this route is subject to the rcfile variables
+  `LATE_ORC` and `EARLY_SECOND_RUNE`.
 
   If `Normal` is followed by additional gameplans, qw will proceed to those
   after its Shopping plan is complete. Hence a viable 15 Rune route for a
@@ -241,7 +253,7 @@ executed from the clua console.
 * `dsay(str, channel)`
 
   Say `str` in debug channel `channel` (default "main") if debug mode is
-  enabled. When adding permanent debugging statements, for permormance reasons,
+  enabled. When adding permanent debugging statements, for performance reasons,
   any code involving complicated string creation or additional calculations
   that would execute every turn should be conditional on `DEBUG_MODE`, for
   performance reasons:

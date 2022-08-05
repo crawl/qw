@@ -5493,8 +5493,8 @@ function gameplan_options()
         return override_gameplans
     end
 
-    local plan = c_persist.current_gameplans or PLAN
-    return GAME_PLANS[plan]
+    local plan = c_persist.current_gameplans or DEFAULT_GAMEPLAN
+    return GAMEPLANS[plan]
 end
 
 function plan_find_altar()
@@ -9775,7 +9775,7 @@ function first_turn_initialize()
                 table.insert(c_persist.next_god_list, god_full_name(g))
             end
             if #plan_parts > 1 then
-                if not GAME_PLANS[plan_parts[2]] then
+                if not GAMEPLANS[plan_parts[2]] then
                     error("Unknown plan name '" .. plan_parts[2] .. "'" ..
                     " given in combo spec '" .. combo_string .. "'")
                 end

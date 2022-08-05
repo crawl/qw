@@ -81,7 +81,7 @@ combo = GrBe.handaxe
 : RUNE_PREFERENCE = "random"
 
 # A table of possible gameplans.
-: GAME_PLANS = {
+: GAMEPLANS = {
 :     ["3 Runes"]  = "Normal",
 :     ["15 Runes"] = "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss"
 :                    .. ", Zot",
@@ -91,7 +91,7 @@ combo = GrBe.handaxe
 : }
 
 # The default gameplan.
-: PLAN = "3 Runes"
+: DEFAULT_GAMEPLAN = "3 Runes"
 
 # Timed portals we're allowed to attempt.
 : ALLOWED_PORTALS = {"Bazaar", "Sewer", "Ossuary", "Gauntlet", "WizLab",
