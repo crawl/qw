@@ -121,14 +121,39 @@ that can be used in the `DEFAULT_GAMEPLAN` variable or in the
 entries in `GAMEPLANS` are case-insensitive, comma-separated strings of
 *gameplans* that qw will follow in sequence.
 
-A gameplan can be any of:
+The default gameplan is `Normal`, which is a meta gameplan that has qw proceed
+through a 3-rune route that gives qw good success. This is mostly equivalent
+to the following gameplan list:
+
+```
+"D:1-11, Lair, D:12-D:15, Orc, 1stLairBranch:1-3, 2ndLairBranch:1-3,
+1stLairBranch:4, Vaults:1-4, 2ndLairBranch:4, Depths, Vaults:5, Shopping,
+Zot:1-4, Orb"
+```
+
+The differences between this and `Normal` are that qw enters Lair as soon as
+it has sufficient piety for its god (see `ready_for_lair()` in
+[qw.lua](qw.lua)) and that this route is subject to the rcfile variables
+`LATE_ORC` and `EARLY_SECOND_RUNE`.
+
+If `Normal` is followed by additional entries in the gameplan list, qw will
+proceed to those after its Shopping gameplan is complete. Hence a viable 15
+Rune route could be expressed as:
+
+```
+"Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss, Zot"
+```
+
+qw will abandon its current god for the Shining One after shopping is complete
+before heading through Crypt, Tomb, and the other extended branches.
+
+The other types of gameplan entries are:
 
 * `<branch>`
 
-  Fully explore all levels in sequence in that branch as well as get any branch
-  runes. The branch name must be the abbreviation for that branch shown in the
-  HUD or by `you.where()`. This is the best type of gameplan to use for fully
-  clearing the branches qw visits.
+  Where `<branch>` is the branch name reported by `you.where()`. qw will fully
+  explore all levels in sequence in that branch as well as get any branch
+  runes.
 
   Examples: `D`, `Lair`, `Vaults`
 
@@ -143,7 +168,8 @@ A gameplan can be any of:
 
 * `Rune:<branch>`
 
-  Go directly to the branch end level and explore until the rune is found.
+  Go directly to the end level of `<branch>` and explore until the rune is
+  found.
 
   Examples: `Rune:Swamp`, `Rune:Vaults`, `Rune:Geh`
 
@@ -178,28 +204,6 @@ A gameplan can be any of:
 * `Hells`
 
   Do Hell and the 4 Hell branches in random order.
-
-* `Normal`, which proceeds through qw's default 3-rune route. This is
-  mostly equivalent to the following gameplan list:
-
-  ```
-  "D:1-11, Lair, D:12-D:15, Orc, 1stLairBranch:1-3, 2ndLairBranch:1-3,
-  1stLairBranch:4, Vaults:1-4, 2ndLairBranch:4, Depths, Vaults:5, Shopping,
-  Zot:1-4, Orb"
-  ```
-
-  The differences between this and `Normal` are that qw enters Lair as soon as
-  it has sufficient piety for its god (see `ready_for_lair()` in
-  [qw.lua](qw.lua)) and that this route is subject to the rcfile variables
-  `LATE_ORC` and `EARLY_SECOND_RUNE`.
-
-  If `Normal` is followed by additional gameplans, qw will proceed to those
-  after its Shopping plan is complete. Hence a viable 15 Rune route for a
-  character worshiping Okawaru could be expressed as:
-
-  ```
-  "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss, Zot"
-  ```
 
 #### Exploration
 
