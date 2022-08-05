@@ -131,10 +131,12 @@ to the following gameplan list:
 Zot:1-4, Orb"
 ```
 
-The differences between this and `Normal` are that qw enters Lair as soon as
-it has sufficient piety for its god (see `ready_for_lair()` in
-[qw.lua](qw.lua)) and that this route is subject to the rcfile variables
-`LATE_ORC` and `EARLY_SECOND_RUNE`.
+Here `1stLairBranch` and `2ndLairBranch` refer to whatever Lair branches are
+selected according to the `RUNE_PREFERENCE` rcfile variable. The other
+differences between the above list and `Normal` are that qw enters Lair as soon
+as it has sufficient piety for its god (according to the `ready_for_lair()`
+function and that this route is subject to the rcfile variables `LATE_ORC` and
+`EARLY_SECOND_RUNE`.
 
 If `Normal` is followed by additional entries in the gameplan list, qw will
 proceed to those after its Shopping gameplan is complete. Hence a viable 15
@@ -153,23 +155,24 @@ The other types of gameplan entries are:
 
   Where `<branch>` is the branch name reported by `you.where()`. qw will fully
   explore all levels in sequence in that branch as well as get any branch
-  runes.
+  runes before proceeding to the next gameplan.
 
   Examples: `D`, `Lair`, `Vaults`
 
 * `<branch>:<range>`
 
   The <range> can be a single level or a range of levels separated with a dash.
-  The levels are fully explored in sequence, although qw will potentially explore
-  just outside of the level range to find all stairs for levels in the range.
-  See notes below about exploration.
+  The levels in this range are fully explored in sequence, although qw will
+  potentially explore just outside of the level range to find all stairs for
+  levels in the range. If the range includes a level with a rune, qw will find
+  this rune before considering the gameplan complete.
 
   Examples: `D:1-11`, `Swamp:1-3`, `Vaults:5`
 
 * `Rune:<branch>`
 
   Go directly to the end level of `<branch>` and explore until the rune is
-  found.
+  obtained. This does not require full exploration of any level.
 
   Examples: `Rune:Swamp`, `Rune:Vaults`, `Rune:Geh`
 
@@ -191,10 +194,9 @@ The other types of gameplan entries are:
 * `Orb`
 
   Pick up the Orb of Zot, go to D:1, and win. qw always switches to this plan
-  when it completes all entries in its gameplan list. Note that while `Orb` is
-  the gameplan, qw will dive through all levels of Zot to look for the orb on
-  Zot:5. Proceed this plan with one like `Zot:1-4` or `Zot` if you want to
-  explore more or all of that branch.
+  when it completes all entries in its gameplan list. Note the `Orb` gameplan has
+  qw dive through all levels of Zot to look for the orb on Zot:5. Proceed this
+  plan with e.g. `Zot:1-4` or `Zot` if you want to explore more of that branch.
 
 * `Zig`, or `Zig:<num>`
 
@@ -205,7 +207,7 @@ The other types of gameplan entries are:
 
   Do Hell and the 4 Hell branches in random order.
 
-#### Exploration
+#### Some notes about exploration
 
 qw considers a level explored if it's been autoexplored to completion at least
 once, all its required stone upstairs and downstairs are reachable, and any
