@@ -348,7 +348,7 @@ function item_resist(str, it)
         elseif str == "Repulsion" then
              return ego == "repulsion" and 1 or 0
         elseif str == "Ponderous" then
-             return ego == "ponderous" and 1 or 0
+             return ego == "ponderousness" and 1 or 0
         elseif str == "Harm" then
              return ego == "harm" and 1 or 0
         elseif str == "Str" then
@@ -563,7 +563,7 @@ function absolute_resist_value(str, n)
     -- Begin properties we always assign a nonpositive value.
     elseif str == "Harm" then
         return -500
-    elseif str == "Pondering" then
+    elseif str == "Ponderous" then
         return -300
     elseif str == "Fragile" then
         return -10000
@@ -657,7 +657,7 @@ function min_resist_value(str, d)
     elseif d > 0 then
         if str == "Harm" then
             return -500
-        elseif str == "Pondering" then
+        elseif str == "Ponderous" then
             return -300
         elseif str == "Fragile" then
             return -10000
