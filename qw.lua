@@ -7556,7 +7556,7 @@ end
 
 local did_ancestor_identity = false
 function plan_ancestor_identity()
-    if you.god() ~= "Hepliaklqana" then
+    if you.god() ~= "Hepliaklqana" or not can_invoke() then
         return false
     end
     if not did_ancestor_identity then
@@ -7569,9 +7569,10 @@ function plan_ancestor_identity()
 end
 
 function plan_ancestor_life()
-    if you.god() ~= "Hepliaklqana" then
+    if you.god() ~= "Hepliaklqana" or not can_invoke() then
         return false
     end
+
     local ancestor_options = {"Knight", "Battlemage", "Hexer"}
     if use_ability("Ancestor Life: " ..
             ancestor_options[crawl.roll_dice(1, 3)], "Y") then
@@ -7581,9 +7582,10 @@ function plan_ancestor_life()
 end
 
 function plan_sacrifice()
-    if you.god() ~= "Ru" then
+    if you.god() ~= "Ru" or not can_invoke() then
         return false
     end
+
     -- Sacrifices that we won't do for now: words, drink, courage, durability,
     -- hand, resistance, purity, health
     good_sacrifices = {
