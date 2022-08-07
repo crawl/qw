@@ -800,13 +800,7 @@ function gameplan_normal_next(final)
         end
     -- D:1-11 explored, but not Lair.
     elseif not explored_level_range("Lair") then
-        -- We'll keep exploring Dungeon until we're ready or we don't have
-        -- any Dungeon left.
-        if ready_for_lair() or explored_level_range("D") then
-            gameplan = "Lair"
-        else
-            gameplan = "D"
-        end
+        gameplan = "Lair"
     -- D:1-11 and Lair explored, but not D:12.
     elseif not explored_level_range("D:12") then
         if LATE_ORC then
@@ -874,11 +868,14 @@ function gameplan_normal_next(final)
     elseif not explored_level_range(vaults_end) then
         gameplan = vaults_end
     -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and it's
-    -- time to shop. After shopping, we're done with the Normal plan.
+    -- time to shop.
     elseif not c_persist.done_shopping then
         gameplan = "Shopping"
+    -- If we have other gameplan entries, the Normal plan stops here, otherwise
+    -- early Zot.
     elseif final and not explored_level_range(early_zot) then
         gameplan = early_zot
+    -- Time to win.
     elseif final then
         gameplan = "Orb"
     end
@@ -4368,6 +4365,7 @@ function plan_cancellation()
     if not danger or not can_drink() or you.teleporting() then
         return false
     end
+
     if you.petrifying()
             or you.corrosion() >= 4 + base_corrosion
             or you.corrosion() >= 3 + base_corrosion and hp_is_low(70)
@@ -4378,6 +4376,7 @@ function plan_cancellation()
             return true
         end
     end
+
     return false
 end
 
