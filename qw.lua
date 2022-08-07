@@ -1850,6 +1850,7 @@ end
 -- name. Use the helper functions to access this data: god_full_name(),
 -- god_uses_mp(), god_uses_invocations().
 local god_data_values = {
+    { "No God", false, false },
     { "the Shining One", true, true },
     { "Ashenzari", false, false },
     { "Beogh", true, true },
@@ -1891,6 +1892,9 @@ function initialize_god_data()
         if god == "the Shining One" then
             god_lookups["1"] = god
             god_lookups["TSO"] = god
+        elseif god == "No God" then
+            god_lookups["0"] = god
+            god_lookups["None"] = god
         else
             god_lookups[god:sub(1, 1)] = god
             local name = god:sub(1, 3)
@@ -5485,7 +5489,7 @@ function magicfind(target, secondary)
 end
 
 function god_options()
-    return c_persist.current_god_list or GOD_LIST
+    return c_persist.current_god_list
 end
 
 function gameplan_options()
@@ -5526,15 +5530,15 @@ function plan_find_conversion_altar()
 end
 
 function plan_abandon_god()
-    if you.god() ~= "No God"
-            and not c_persist.joined_initial_god
-                or you.class() == "Chaos Knight"
-                    and you.god() == "Xom"
-                    and CK_ABANDON_XOM
-            and not util.contains(god_options(), you.god()) then
+    local want_god = gameplan_god(gameplan_status)
+    if want_god == "No God"
+            or you.class() == "Chaos Knight"
+                and you.god() == "Xom"
+                and CK_ABANDON_XOM then
         magic("aXYY")
         return true
     end
+
     return false
 end
 
@@ -6568,11 +6572,9 @@ function clear_out_shopping_list()
 end
 
 function want_altar()
-    local gods = god_options()
     return you.race() ~= "Demigod"
-        and not c_persist.joined_initial_god
-        and #gods > 0
-        and not util.contains(gods, you.god())
+        and you.god() == "No God"
+        and god_options()[1] ~= "No God"
 end
 
 function send_travel(branch, depth)
@@ -9756,8 +9758,31 @@ function first_turn_initialize()
         end
     end
 
+    if not god_list then
+        if GOD_LIST and #GOD_LIST > 0 then
+            god_list = GOD_LIST
+        else
+            error("No default god list defined in GOD_LIST.")
+        end
+    end
+
+    -- Check for and normalize a list with "No God"
+    local no_god = false
+    for _, god in ipairs(god_list) do
+        if god_full_name(god) == "No God" then
+            no_god = true
+            break
+        end
+    end
+    if no_god then
+        if #god_list > 1 then
+            error("God list containing 'No God' must have no other entries.")
+        else
+            god_list = {"No God"}
+        end
+    end
     c_persist.current_god_list = god_list
-    c_persist.joined_initial_god = you.god() ~= "NoGod"
+
     c_persist.current_gameplans = plans
     note_qw_data()
 
@@ -9954,12 +9979,6 @@ function turn_update()
     end
 
     if want_gameplan_update then
-        local gods = god_options()
-        if not c_persist.joined_initial_god
-                and util.contains(gods, you.god()) then
-            c_persist.joined_initial_god = true
-        end
-
         check_expired_portals()
         if in_branch("Zig")
                 and where_depth == gameplan_zig_depth(gameplan_status) then
