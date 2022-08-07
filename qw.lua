@@ -4657,6 +4657,10 @@ function step_reason(a1, a2)
             and a2.stair_closer < 10000
             and a1.stair_closer > 0
             and a1.enemy_distance < 10
+            -- Don't flee either from or to a place were we'll be opportunity
+            -- attacked.
+            and a1.adjacent == 0
+            and a2.adjacent == 0
             and reason_to_rest(90)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
