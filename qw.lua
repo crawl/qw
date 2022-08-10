@@ -7403,7 +7403,7 @@ function plan_go_to_unexplored_stairs()
         return false
     end
 
-    local search_dir
+    local dir
     -- If we want to go to the level below, but that level is autoexplored, we
     -- take unexplored stairs to try to get a new area.
     if want_go_travel
@@ -7411,38 +7411,43 @@ function plan_go_to_unexplored_stairs()
             and where_branch == travel_branch
             and where_depth + travel_dir == travel_depth
             and autoexplored_level(where_branch, travel_depth) then
-        search_dir = travel_dir
+        dir = travel_dir
     -- If we don't want to use go travel, but our travel destination is one
     -- level outside the gameplan range in the direction of
     -- gameplan_stairs_dir, it's because we need to try unexplored stairs.
     elseif not want_go_travel and gameplan_stairs_dir then
-        search_dir = gameplan_stairs_dir
+        dir = gameplan_stairs_dir
     else
         return false
     end
 
     -- No point in trying if we don't have unexplored stairs.
-    local test_func = search_dir == 1 and have_all_downstairs
-        or have_all_upstairs
+    local test_func = dir == 1 and have_all_downstairs or have_all_upstairs
     if test_func(where_branch, where_depth, FEAT_LOS.EXPLORED) then
         return false
     end
 
-    local search_key = search_dir == 1 and ">" or "<"
+    local key = dir == 1 and ">" or "<"
     local dx, dy = travel.waypoint_delta(waypoint_parity)
-    local search_pos = 100 * dx + dy
+    local pos = 100 * dx + dy
     local map = map_search[waypoint_parity]
-    local search_count = 1
-    while map[search_key]
-            and map[search_key][search_pos]
-            and map[search_key][search_pos][search_count] do
-        search_count = search_count + 1
+    local count = 1
+    while map[key] and map[key][pos] and map[key][pos][count] do
+        -- Trying to go one past this count lands us at the same destination as
+        -- the count, so there are no more accessible unexplored stairs to be
+        -- found from where we are, and we stop the search. The backtrack plan
+        -- can take over from here.
+        if map[key][pos][count] == map[key][pos][count + 1] then
+            return false
+        end
+
+        count = count + 1
     end
 
-    map_search_key = search_key
-    map_search_pos = search_pos
-    map_search_count = search_count
-    magic("X" .. search_key:rep(search_count) .. "\r")
+    map_search_key = key
+    map_search_pos = pos
+    map_search_count = count
+    magic("X" .. key:rep(count) .. "\r")
     return true
 end
 
@@ -7525,38 +7530,43 @@ function plan_take_unexplored_stairs()
     return true
 end
 
--- Backtrack to the previous level if we've hit our travel destination yet
--- we're still not able to travel further. We require a travel search direction
--- to know whether to attempt this and the direction we should backtrack.
-function plan_go_command_backtrack()
-    local next_depth
-    if travel_dir then
-        next_depth = where_depth - travel_dir
+-- Backtrack to the previous level if we're trying to explore stairs on a
+-- travel or gameplan destination level yet have no further accessible
+-- unexplored stairs. We require a travel or gameplan stairs search direction
+-- to know whether to attempt this and what direction we should backtrack.
+function plan_unexplored_stairs_backtrack()
+    local dir, next_depth
+    if gameplan_stairs_dir then
+        dir = gameplan_stairs_dir
+    elseif travel_dir then
+        dir = travel_dir
+    end
+    if dir then
+        next_depth = where_depth - dir
     end
 
-    if not travel_dir
+    if not dir
             or next_depth < 1
             or next_depth > branch_depth(where_branch)
             or cloudy then
         return false
     end
 
-    -- It's possible to have all explored stairs to the travel level from the
-    -- level before, yet no stairs found from the travel level to the next
-    -- level we'd like to reach. If autoexplore from the last explored stair on
-    -- the travel level yields nothing, we'll be stuck, since
-    -- plan_go_to_unexplored_stairs() won't have any new target stairs. Handle
-    -- this case by downgrading the state of all stairs to and from the travel
-    -- level.
-    local test_func = travel_dir == 1 and have_all_upstairs
-        or have_all_downstairs
+    -- It's possible to have all explored stairs to a travel or gameplan
+    -- destination level from the level before, yet no stairs found from the
+    -- destination level to the next level we'd like to reach. If autoexplore
+    -- from the last explored stair on the destination level yields nothing,
+    -- we'll be stuck, since plan_go_to_unexplored_stairs() won't have any new
+    -- target stairs. Handle this case by downgrading the state of all stairs
+    -- to and from the destination level.
+    local test_func = dir == 1 and have_all_upstairs or have_all_downstairs
     if test_func(where_branch, where_depth, FEAT_LOS.EXPLORED) then
-        set_stairs(where_branch, where_depth, -travel_dir, FEAT_LOS.REACHABLE)
-        set_stairs(where_branch, next_depth, travel_dir, FEAT_LOS.REACHABLE)
+        set_stairs(where_branch, where_depth, -dir, FEAT_LOS.REACHABLE)
+        set_stairs(where_branch, next_depth, dir, FEAT_LOS.REACHABLE)
         -- Also reset map key search so we're guaranteed to travel to the
         -- stairs again.
-        map_search[waypoint_parity][travel_dir == 1 and "<" or ">"] = nil
-        map_search[3 - waypoint_parity][travel_dir == 1 and ">" or "<"] = nil
+        map_search[waypoint_parity][dir == 1 and "<" or ">"] = nil
+        map_search[3 - waypoint_parity][dir == 1 and ">" or "<"] = nil
     end
 
     send_travel(where_branch, next_depth)
@@ -7993,8 +8003,8 @@ function update_level_map(num)
 
     if map_search_key then
         local feat = view.feature_at(0, 0)
-        -- We assume we landed on the next feature in our current "X<key>"
-        -- cycle, because it can be found with that key in map mode.
+        -- We assume we've landed on the next feature in our current "X<key>"
+        -- cycle because the feature at our position uses that key.
         if feat_uses_map_key(map_search_key, feat) then
             record_map_search(num, map_search_key, map_search_pos,
                 map_search_count, 100 * dx + dy)
@@ -9104,7 +9114,7 @@ plan_explore2 = cascade {
     {plan_go_to_portal_entrance, "try_go_to_portal_entrance"},
     {plan_go_command, "try_go_command"},
     {plan_autoexplore, "try_autoexplore2"},
-    {plan_go_command_backtrack, "try_go_command_backtrack"},
+    {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
 } -- hack
 
 plan_move = cascade {
