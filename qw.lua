@@ -2079,6 +2079,7 @@ local scary_monsters = {
     ["Erica"] = 15,
     ["Erolcha"] = 15,
 
+    ["death scarab"] = 17,
     ["minotaur"] = 17,
     ["fire dragon"] = 17,
     ["ice dragon"] = 17,
