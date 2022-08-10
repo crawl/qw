@@ -6203,36 +6203,43 @@ function plan_upgrade_armour()
             elseif should_drop(it) then
                 drop = true
             end
+
             if good_slots[st] == "Helmet"
-                        and it.ac == 1
-                        and (you.mutation("horns") > 0
-                    or you.mutation("beak") > 0
-                    or you.mutation("antennae") > 0) then
+                   -- Proper helmet items restricted by one level of these
+                   -- muts.
+                   and (it.ac == 1
+                           and (you.mutation("horns") > 0
+                               or you.mutation("beak") > 0
+                               or you.mutation("antennae") > 0)
+                       -- All helmet slot items restricted by level three of
+                       -- these muts.
+                       or you.mutation("horns") >= 3
+                       or you.mutation("antennae") >= 3) then
                 equip = false
                 drop = true
-            end
-            if good_slots[st] == "Helmet"
-                    and (you.mutation("horns") >= 3
-                        or you.mutation("antennae") >= 3) then
+            elseif good_slots[st] == "Cloak"
+                    and you.mutation("weakness stinger") >= 3 then
                 equip = false
                 drop = true
-            end
-            if it.name():find("boots")
-                    and (you.mutation("talons") >= 3
+            elseif good_slots[st] == "Boots"
+                    and (you.mutation("float") > 0
+                        or you.mutation("talons") >= 3
                         or you.mutation("hooves") >= 3) then
                 equip = false
                 drop = true
-            end
-            if it.name():find("boots") and you.race() == "Merfolk"
-                 and (view.feature_at(0, 0) == "shallow_water" or
-                         view.feature_at(0, 0) == "deep_water") then
+            elseif good_slots[st] == "Boots"
+                    and you.mutation("mertail") > 0
+                    and (view.feature_at(0, 0) == "shallow_water"
+                        or view.feature_at(0, 0) == "deep_water") then
                 equip = false
                 drop = false
-            end
-            if good_slots[st] == "Gloves" and you.mutation("claws") >= 3 then
+            elseif good_slots[st] == "Gloves"
+                    and (you.mutation("claws") >= 3
+                        or you.mutation("demonic touch") >= 3) then
                 equip = false
                 drop = true
             end
+
             if equip and swappable then
                 l = items.index_to_letter(it.slot)
                 say("UPGRADING to " .. it.name() .. ".")
@@ -6240,6 +6247,7 @@ function plan_upgrade_armour()
                 upgrade_phase = true
                 return true
             end
+
             if drop then
                 l = items.index_to_letter(it.slot)
                 say("DROPPING " .. it.name() .. ".")
