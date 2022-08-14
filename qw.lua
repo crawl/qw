@@ -52,6 +52,15 @@ local branch_data = {}
 local portal_data = {}
 local god_data = {}
 
+local where
+local where_branch
+local where_depth
+local can_waypoint
+local base_corrosion
+
+local dump_count = you.turns() + 100 - (you.turns() % 100)
+local skill_count = you.turns() - (you.turns() % 5)
+
 local early_first_lair_branch
 local first_lair_branch_end
 local early_second_lair_branch
@@ -87,22 +96,16 @@ local want_go_gameplan
 local disable_autoexplore
 local travel_fail_count = 0
 
-local dump_count = you.turns() + 100 - (you.turns() % 100)
-local skill_count = you.turns() - (you.turns() % 5)
-local danger
-local immediate_danger
-local cloudy
-local where
-local where_branch
-local where_depth
-local can_waypoint
-local base_corrosion
 local stairs_search
 local stairs_travel
 
 local transp_search
 local transp_zone
 local zone_counts = {}
+
+local danger
+local immediate_danger
+local cloudy
 
 local ignore_list = { }
 local failed_move = { }
@@ -121,7 +124,6 @@ local stepped_on_lair = false
 local stepped_on_tomb = false
 local branch_step_mode = false
 
--- Are these still necessary?
 local did_move = false
 local move_count = 0
 
@@ -1647,7 +1649,7 @@ local branch_data_values = {
     { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
 } -- hack
 
--- Portal branch, entry description, max timeout in turns.
+-- Portal branch, entry description, max timeout in turns, description.
 local portal_data_values = {
     { "Ossuary", "sand-covered staircase", 800 },
     { "Sewer", "glowing drain", 800 },
