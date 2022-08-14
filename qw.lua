@@ -38,6 +38,12 @@ local FEAT_LOS = enum {
     "EXPLORED",
 } --hack
 
+-- Stair direction
+local DIR = {
+    UP   = -1,
+    DOWN =  1,
+} --hack
+
 local INF_TURNS = 200000000
 
 local los_radius = you.race() == "Barachi" and 8 or 7
@@ -76,7 +82,6 @@ local which_gameplan = 1
 local gameplan_status
 local gameplan_branch
 local gameplan_depth
-local gameplan_stairs_dir
 local permanent_bazaar
 
 local planning_god_uses_mp
@@ -92,12 +97,14 @@ local travel_branch
 local travel_depth
 local want_gameplan_update
 local want_go_travel
-local want_go_gameplan
 local disable_autoexplore
-local travel_fail_count = 0
 
+local stairs_search_dir
 local stairs_search
 local stairs_travel
+
+local travel_fail_count = 0
+local backtracked_to
 
 local transp_search
 local transp_zone
@@ -2824,8 +2831,8 @@ function explored_level(branch, depth)
     end
 
     return autoexplored_level(branch, depth)
-        and have_all_downstairs(branch, depth, FEAT_LOS.REACHABLE)
-        and have_all_upstairs(branch, depth, FEAT_LOS.REACHABLE)
+        and have_all_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE)
+        and have_all_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE)
         and (depth < branch_rune_depth(branch) or have_branch_runes(branch))
 end
 
@@ -6700,7 +6707,7 @@ end
 
 -- Use the 'G' command to travel to our next destination.
 function plan_go_command()
-    if not (want_go_travel or want_go_gameplan) or cloudy then
+    if not want_go_travel or cloudy then
         return false
     end
 
@@ -6709,19 +6716,6 @@ function plan_go_command()
     if want_go_travel and travel_fail_count == 0 then
         travel_fail_count = 1
         send_travel(travel_branch, travel_depth)
-        return
-    end
-
-    -- Try to go directly to our gameplan. This may happen after having
-    -- previously tried to go to our travel destination, so we track this
-    -- accordingly.
-    local fail_count = want_go_travel and 1 or 0
-    if want_go_gameplan
-            and travel_fail_count == fail_count
-            and (travel_branch ~= gameplan_branch
-                or travel_depth ~= gameplan_depth) then
-        travel_fail_count = fail_count + 1
-        send_travel(gameplan_branch, gameplan_depth)
         return
     end
 
@@ -7079,19 +7073,134 @@ function lair_branch_order()
     return branch_options
 end
 
-function explore_next_depth(branch, min_depth, max_depth)
-    -- The earliest depth that either lacks autoexplore or is missing a
-    -- particular kind of stair.
+function dir_key(dir)
+    return dir == DIR.DOWN and ">" or "<"
+end
+
+function level_stair_reset(branch, depth, dir)
+    set_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+
+    local lev = make_level(branch, depth)
+    if lev == where then
+        map_search[waypoint_parity][dir_key(dir)] = nil
+    elseif lev == previous_where then
+        map_search[3 - waypoint_parity][dir_key(dir)] = nil
+    end
+
+    if where ~= lev then
+        c_persist.autoexplore[lev] = AUTOEXP.NEEDED
+    end
+end
+
+function final_depth_dir(branch, depth, dir, backtrack)
+    if backtrack then
+        return depth + dir, -dir
+    elseif autoexplored_level(branch, depth) then
+        return depth, dir
+    else
+        return depth
+    end
+end
+
+function finalize_exploration_depth(branch, depth)
+    if not autoexplored_level(branch, depth) then
+        return depth
+    end
+
+    -- We just backtracked from an adjacent level to this depth. We'll not try
+    -- to return to the to final search depth we calculate, but rather try to
+    -- reach that search depth via unexplored stairs from the current depth.
+    local backtrack = backtracked_to == make_level(branch, depth)
+    -- Adjust depth for any backtracking, reversing to our previous level and
+    -- searching in the opposite direction. Otherwise we only set the dir if
+    -- the level is autoexplored.
+
+    local up_depth = depth - 1
+    local up_unreach = true
+    local up_finished, up_lev
+    if up_depth >= 1 then
+        up_lev = make_level(branch, up_depth)
+        up_unreach = count_stairs(branch, depth, DIR.UP,
+            FEAT_LOS.REACHABLE) == 0
+        up_finished = autoexplored_level(branch, up_depth)
+            and count_stairs(branch, up_depth, DIR.DOWN, FEAT_LOS.REACHABLE)
+                == count_stairs(branch, up_depth, DIR.DOWN, FEAT_LOS.EXPLORED)
+    end
+
+    depth_up_finished = count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE)
+                == count_stairs(branch, depth, DIR.UP, FEAT_LOS.EXPLORED)
+    depth_down_finished = count_stairs(branch, depth,
+        DIR.DOWN, FEAT_LOS.REACHABLE)
+            == count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.EXPLORED)
+
+    local down_depth = depth + 1
+    local down_unreach = true
+    local down_finished, down_lev
+    if down_depth <= branch_depth(branch) then
+        down_depth_lev = make_level(branch, down_depth)
+        down_unreach
+            = count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) == 0
+        down_finished = autoexplored_level(branch, down_depth)
+            and count_stairs(branch, down_depth, DIR.UP, FEAT_LOS.REACHABLE)
+                == count_stairs(branch, down_depth, DIR.UP, FEAT_LOS.EXPLORED)
+    end
+
+    if up_unreach then
+        if depth_down_finished then
+            if down_unreach then
+                return depth
+            end
+
+            if down_finished then
+                level_stair_reset(branch, depth, DIR.DOWN)
+                level_stair_reset(branch, down_depth, DIR.UP)
+                return depth
+            end
+
+            return final_depth_dir(branch, down_depth, DIR.UP, backtrack)
+        end
+
+        return depth, DIR.DOWN
+    end
+
+    if up_finished then
+        if depth_up_finished then
+            if depth_down_finished then
+                if down_unreach then
+                    level_stair_reset(branch, up_depth, DIR.DOWN)
+                    level_stair_reset(branch, depth, DIR.UP)
+                    return depth
+                end
+
+                if down_finished then
+                    level_stair_reset(branch, up_depth, DIR.DOWN)
+                    level_stair_reset(branch, depth, DIR.UP)
+                    level_stair_reset(branch, depth, DIR.DOWN)
+                    level_stair_reset(branch, down_depth, DIR.UP)
+                    return depth
+                end
+            end
+
+            return final_depth_dir(branch, down_depth, DIR.UP, backtrack)
+        end
+
+        return depth, DIR.UP
+    end
+
+    return final_depth_dir(branch, up_depth, DIR.DOWN, backtrack)
+end
+
+function explore_next_range_depth(branch, min_depth, max_depth)
+    -- The earliest depth that either lacks autoexplore or doesn't have all
+    -- stairs reachable.
     local branch_max = branch_depth(branch)
     for d = min_depth, max_depth do
         if not autoexplored_level(branch, d) then
             return d
-        elseif d > 1
-                and not have_all_upstairs(branch, d, FEAT_LOS.REACHABLE) then
-            return d - 1, 1
-        elseif d < branch_max
-                and not have_all_downstairs(branch, d, FEAT_LOS.REACHABLE) then
-            return d + 1, -1
+        elseif not have_all_stairs(branch, d, DIR.UP, FEAT_LOS.REACHABLE)
+                or not have_all_stairs(branch, d, DIR.DOWN,
+                    FEAT_LOS.REACHABLE) then
+            return d
         end
     end
 
@@ -7105,7 +7214,6 @@ function update_gameplan_data(status, gameplan)
 
     gameplan_branch = nil
     gameplan_depth = nil
-    gameplan_stairs_dir = nil
     local min_depth, max_depth
     gameplan_branch, min_depth, max_depth = parse_level_range(gameplan)
 
@@ -7114,14 +7222,12 @@ function update_gameplan_data(status, gameplan)
         return
     end
 
-    gameplan_depth, gameplan_stairs_dir
-        = explore_next_depth(gameplan_branch, min_depth, max_depth)
+    gameplan_depth
+        = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
 
     if DEBUG_MODE then
         dsay("Gameplan branch: " .. tostring(gameplan_branch), "explore")
         dsay("Gameplan depth: " .. tostring(gameplan_depth), "explore")
-        dsay("Gameplan stairs dir: " .. tostring(gameplan_stairs_dir),
-            "explore")
     end
 end
 
@@ -7158,9 +7264,8 @@ end
 function travel_branch_levels(branch, start_depth, dest_depth)
     local dir = sign(dest_depth - start_depth)
     local depth = start_depth
-    local count_func = dir == 1 and count_downstairs or count_upstairs
     while depth ~= dest_depth do
-        if not (count_func(branch, depth, FEAT_LOS.SEEN) > 0) then
+        if count_stairs(branch, depth, dir, FEAT_LOS.SEEN) == 0 then
             return depth
         end
 
@@ -7332,7 +7437,7 @@ function travel_destination(dest_branch, dest_depth)
     local branch, depth, dir = travel_destination_search(dest_branch,
         dest_depth)
 
-    -- We were unable enter the branch in travel_dir, so figure out the
+    -- We were unable enter the branch in stairs_dir, so figure out the
     -- next best location to travel to in its parent branch.
     if type(dir) == "string" then
         -- We actually found this branch, but can't travel into it (e.g.
@@ -7340,24 +7445,28 @@ function travel_destination(dest_branch, dest_depth)
         -- stash search travel will happen instead.
         if branch_found(dir) then
             dir = nil
+        -- We haven't found the branch entance, so systematically explore over
+        -- the possible entry depths in the parent branch.
         else
             local parent, min_depth, max_depth = parent_branch(dir)
-            depth, dir = explore_next_depth(parent, min_depth, max_depth)
+            depth = explore_next_range_depth(parent, min_depth, max_depth)
+            depth, dir = finalize_exploration_depth(branch, depth)
         end
+    -- Get the final depth we should travel to given the state of stair
+    -- exploration at our travel destination.
+    else
+        depth, dir = finalize_exploration_depth(branch, depth)
     end
 
     return branch, depth, dir
 end
 
 function update_travel()
-    travel_branch, travel_depth, travel_dir
+    travel_branch, travel_depth, stairs_search_dir
         = travel_destination(gameplan_branch, gameplan_depth)
 
     want_go_travel = (travel_branch
             and (where_branch ~= travel_branch or where_depth ~= travel_depth))
-    want_go_gameplan = gameplan_branch
-        and branch_travel(gameplan_branch)
-        and (where_branch ~= gameplan_branch or where_depth ~= gameplan_depth)
     local want_stash_travel = not gameplan_branch
             or is_portal_branch(gameplan_branch)
                 and not in_portal()
@@ -7375,17 +7484,16 @@ function update_travel()
     -- (e.g. from dead stairdanced monsters or thrown ammo). After autoexplore
     -- finishes, it will fail on the next attempt, and the cascade will proceed
     -- to travel.
-    disable_autoexplore = (want_go_travel
-        or want_go_gameplan
+    disable_autoexplore = (stairs_search_dir
+        or want_go_travel
         or want_stash_travel)
             and not explored_level(where_branch, where_depth)
 
     if DEBUG_MODE then
         dsay("Travel branch: " .. tostring(travel_branch) .. ", depth: "
-            .. tostring(travel_depth) .. ", dir: " .. tostring(travel_dir),
-            "explore")
+            .. tostring(travel_depth) .. ", stairs search dir: "
+            .. tostring(stairs_search_dir), "explore")
         dsay("Want go travel: " .. bool_string(want_go_travel), "explore")
-        dsay("Want go gameplan: " .. bool_string(want_go_gameplan), "explore")
         dsay("Want stash travel: " .. bool_string(want_stash_travel),
             "explore")
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore),
@@ -7394,37 +7502,21 @@ function update_travel()
 end
 
 function plan_go_to_unexplored_stairs()
-    if not travel_dir and not gameplan_stairs_dir
+    if not can_waypoint
             or stairs_search
-            or not can_waypoint then
-        return false
-    end
-
-    local dir
-    -- If we want to go to the level below, but that level is autoexplored, we
-    -- take unexplored stairs to try to get a new area.
-    if want_go_travel
-            and travel_dir
-            and where_branch == travel_branch
-            and where_depth + travel_dir == travel_depth
-            and autoexplored_level(where_branch, travel_depth) then
-        dir = travel_dir
-    -- If we don't want to use go travel, but our travel destination is one
-    -- level outside the gameplan range in the direction of
-    -- gameplan_stairs_dir, it's because we need to try unexplored stairs.
-    elseif not want_go_travel and gameplan_stairs_dir then
-        dir = gameplan_stairs_dir
-    else
+            or not stairs_search_dir
+            or where_branch ~= travel_branch
+            or where_depth ~= travel_depth then
         return false
     end
 
     -- No point in trying if we don't have unexplored stairs.
-    local test_func = dir == 1 and have_all_downstairs or have_all_upstairs
-    if test_func(where_branch, where_depth, FEAT_LOS.EXPLORED) then
+    if have_all_stairs(where_branch, where_depth, stairs_search_dir,
+            FEAT_LOS.EXPLORED) then
         return false
     end
 
-    local key = dir == 1 and ">" or "<"
+    local key = dir_key(stairs_search_dir)
     local dx, dy = travel.waypoint_delta(waypoint_parity)
     local pos = 100 * dx + dy
     local map = map_search[waypoint_parity]
@@ -7499,15 +7591,15 @@ end
 function stone_stair_type(feat)
     local dir
     if feat:find("stone_stairs_down") then
-        dir = 1
+        dir = DIR.DOWN
     elseif feat:find("stone_stairs_up") then
-        dir = -1
+        dir = DIR.UP
     else
         return
     end
 
-    return dir, feat:gsub("stone_stairs_" .. (dir == 1 and "down" or "up")
-        .. "_", "")
+    return dir, feat:gsub("stone_stairs_"
+        .. (dir == DIR.DOWN and "down_" or "up_"), "")
 end
 
 function plan_take_unexplored_stairs()
@@ -7523,7 +7615,7 @@ function plan_take_unexplored_stairs()
     local level = make_level(where_branch, where_depth + dir)
     c_persist.autoexplore[level] = AUTOEXP.NEEDED
 
-    magic("G" .. (dir == 1 and ">" or "<"))
+    magic("G" .. dir_key(dir))
     return true
 end
 
@@ -7532,40 +7624,17 @@ end
 -- unexplored stairs. We require a travel or gameplan stairs search direction
 -- to know whether to attempt this and what direction we should backtrack.
 function plan_unexplored_stairs_backtrack()
-    local dir, next_depth
-    if gameplan_stairs_dir then
-        dir = gameplan_stairs_dir
-    elseif travel_dir then
-        dir = travel_dir
-    end
-    if dir then
-        next_depth = where_depth - dir
-    end
-
-    if not dir
-            or next_depth < 1
-            or next_depth > branch_depth(where_branch)
+    if not stairs_search_dir
+            or where_branch ~= travel_branch
+            or where_depth ~= travel_depth
             or cloudy then
         return false
     end
 
-    -- It's possible to have all explored stairs to a travel or gameplan
-    -- destination level from the level before, yet no stairs found from the
-    -- destination level to the next level we'd like to reach. If autoexplore
-    -- from the last explored stair on the destination level yields nothing,
-    -- we'll be stuck, since plan_go_to_unexplored_stairs() won't have any new
-    -- target stairs. Handle this case by downgrading the state of all stairs
-    -- to and from the destination level.
-    local test_func = dir == 1 and have_all_upstairs or have_all_downstairs
-    if test_func(where_branch, where_depth, FEAT_LOS.EXPLORED) then
-        set_stairs(where_branch, where_depth, -dir, FEAT_LOS.REACHABLE)
-        set_stairs(where_branch, next_depth, dir, FEAT_LOS.REACHABLE)
-        -- Also reset map key search so we're guaranteed to travel to the
-        -- stairs again.
-        map_search[waypoint_parity][dir == 1 and "<" or ">"] = nil
-        map_search[3 - waypoint_parity][dir == 1 and ">" or "<"] = nil
-    end
-
+    local next_depth = where_depth + stairs_search_dir
+    level_stair_reset(where_branch, where_depth, stairs_search_dir)
+    level_stair_reset(where_branch, next_depth, -stairs_search_dir)
+    backtracked_to = make_level(where_branch, next_depth)
     send_travel(where_branch, next_depth)
     return true
 end
@@ -7671,10 +7740,20 @@ function clear_level_map(num)
     map_search[num] = {}
 end
 
+function branch_entry_state(branch, entry_branch, entry_depth)
+    local level = make_level(entry_branch, entry_depth)
+    if not c_persist.branches[branch]
+            or not c_persist.branches[branch][level] then
+        return FEAT_LOS.NONE
+    end
+
+    return c_persist.branches[branch][level]
+end
+
 function record_stairs(branch, depth, feat, state, force)
     local dir, num
     dir, num = stone_stair_type(feat)
-    local data = dir == 1 and c_persist.downstairs or c_persist.upstairs
+    local data = dir == DIR.DOWN and c_persist.downstairs or c_persist.upstairs
 
     local level = make_level(branch, depth)
     if not data[level] then
@@ -7695,27 +7774,17 @@ function record_stairs(branch, depth, feat, state, force)
     end
 end
 
-function set_stairs(branch, depth, dir, feat_los)
+function set_stairs(branch, depth, dir, feat_los, min_feat_los)
     local level = make_level(branch, depth)
 
-    if not feat_los then
-        feat_los = FEAT_LOS.NONE
+    if not min_feat_los then
+        min_feat_los = feat_los
     end
 
-    if not dir then
-        dir = 0
-    end
-
-    if dir >= 0 then
-        for i = 1, num_required_downstairs(branch, depth) do
-            local feat = "stone_stairs_down_" .. ("i"):rep(i)
-            record_stairs(branch, depth, feat, feat_los, true)
-        end
-    end
-
-    if dir >= 0 then
-        for i = 1, num_required_upstairs(branch, depth) do
-            local feat = "stone_stairs_up_" .. ("i"):rep(i)
+    for i = 1, num_required_stairs(branch, depth, dir) do
+        if stairs_state(branch, depth, dir, num) >= min_feat_los then
+            local feat = "stone_stairs_"
+                .. (dir == DIR.DOWN and "down_" or "up_") .. ("i"):rep(i)
             record_stairs(branch, depth, feat, feat_los, true)
         end
     end
@@ -7728,90 +7797,57 @@ function check_stairs_search(feat)
         return
     end
 
-    local state_func = dir == 1 and downstairs_state or upstairs_state
-    if state_func(where_branch, where_depth, num) < FEAT_LOS.EXPLORED then
+    if stairs_state(where_branch, where_depth, dir, num) < FEAT_LOS.EXPLORED then
         stairs_search = feat
     end
 end
 
-function downstairs_state(branch, depth, num)
+function stairs_state(branch, depth, dir, num)
     local level = make_level(branch, depth)
-    if not c_persist.downstairs[level]
-            or not c_persist.downstairs[level][num] then
-        return FEAT_LOS.NONE
-    end
+    if dir == DIR.UP then
+        if not c_persist.upstairs[level]
+                or not c_persist.upstairs[level][num] then
+            return FEAT_LOS.NONE
+        end
 
-    return c_persist.downstairs[level][num]
+        return c_persist.upstairs[level][num]
+    elseif dir == DIR.DOWN then
+        if not c_persist.downstairs[level]
+                or not c_persist.downstairs[level][num] then
+            return FEAT_LOS.NONE
+        end
+
+        return c_persist.downstairs[level][num]
+    end
 end
 
-function num_required_downstairs(branch, depth)
-    if branch_depth(branch) == depth
-            or is_portal_branch(branch)
-            or branch == "Tomb"
-            or branch == "Abyss" then
-        return 0
-    end
-
-    if util.contains(hell_branches, branch) then
-        return 1
-    end
-
-    return 3
-end
-
-function have_all_downstairs(branch, depth, state)
-    local num_required = num_required_downstairs(branch, depth)
-    if num_required == 0 then
-        return true
-    end
-
-    local num
-    for i = 1, num_required do
-        num = "i"
-        num = num:rep(i)
-        if downstairs_state(branch, depth, num) < state then
-            return false
+function num_required_stairs(branch, depth, dir)
+    if dir == DIR.UP then
+        if depth == 1
+                or is_portal_branch(branch)
+                or branch == "Tomb"
+                or branch == "Abyss"
+                or util.contains(hell_branches, branch) then
+            return 0
+        else
+            return 3
+        end
+    elseif dir == DIR.DOWN then
+        if depth == branch_depth(branch)
+                    or is_portal_branch(branch)
+                    or branch == "Tomb"
+                    or branch == "Abyss" then
+            return 0
+        elseif util.contains(hell_branches, branch) then
+            return 1
+        else
+            return 3
         end
     end
-
-    return true
 end
 
-function upstairs_state(branch, depth, num)
-    local level = make_level(branch, depth)
-    if not c_persist.upstairs[level]
-            or not c_persist.upstairs[level][num] then
-        return FEAT_LOS.NONE
-    end
-
-    return c_persist.upstairs[level][num]
-end
-
-function branch_entry_state(branch, entry_branch, entry_depth)
-    local level = make_level(entry_branch, entry_depth)
-    if not c_persist.branches[branch]
-            or not c_persist.branches[branch][level] then
-        return FEAT_LOS.NONE
-    end
-
-    return c_persist.branches[branch][level]
-end
-
-function num_required_upstairs(branch, depth)
-    if depth == 1
-            or branch_depth(branch) == 1
-            or is_portal_branch(branch)
-            or branch == "Tomb"
-            or branch == "Abyss"
-            or util.contains(hell_branches, branch) then
-        return 0
-    end
-
-    return 3
-end
-
-function count_downstairs(branch, depth, state)
-    local num_required = num_required_downstairs(branch, depth)
+function count_stairs(branch, depth, dir, state)
+    local num_required = num_required_stairs(branch, depth, dir)
     if num_required == 0 then
         return 0
     end
@@ -7821,43 +7857,23 @@ function count_downstairs(branch, depth, state)
     for i = 1, num_required do
         num = "i"
         num = num:rep(i)
-        if downstairs_state(branch, depth, num) >= state then
+        if stairs_state(branch, depth, dir, num) >= state then
             count = count + 1
         end
     end
     return count
 end
 
-function count_upstairs(branch, depth, state)
-    local num_required = num_required_upstairs(branch, depth)
-    if num_required == 0 then
-        return 0
-    end
-
-    local num
-    local count = 0
-    for i = 1, num_required do
-        num = "i"
-        num = num:rep(i)
-        if upstairs_state(branch, depth, num) >= state then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-function have_all_upstairs(branch, depth, state)
-    local num_required = num_required_upstairs(branch, depth)
-    if num_required == 0 then
-        return true
-    end
-
-    local num
-    for i = 1, num_required do
-        num = "i"
-        num = num:rep(i)
-        if upstairs_state(branch, depth, num) < state then
-            return false
+function have_all_stairs(branch, depth, dir, state)
+    local num_required = num_required_stairs(branch, depth, dir)
+    if num_required > 0 then
+        local num
+        for i = 1, num_required do
+            num = "i"
+            num = num:rep(i)
+            if stairs_state(branch, depth, dir, num) < state then
+                return false
+            end
         end
     end
 
@@ -9956,6 +9972,10 @@ function turn_update()
         where_branch = you.branch()
         where_depth = you.depth()
         want_gameplan_update = true
+
+        if backtracked_to ~= where then
+            backtracked_to = nil
+        end
 
         clear_ignores()
         target_stair = nil
