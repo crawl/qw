@@ -1811,7 +1811,7 @@ function at_branch_end(branch)
     return where_branch == branch and where_depth == branch_depth(branch)
 end
 
-function in_hells()
+function in_hell_branch()
     return util.contains(hell_branches, where_branch)
 end
 
@@ -5095,7 +5095,7 @@ function want_to_orbrun_buff()
 end
 
 function count_nasty_hell_monsters(r)
-    if not in_hells() then
+    if not in_hell_branch() then
         return 0
     end
 
@@ -6321,17 +6321,7 @@ end
 
 function feat_is_upstairs(feat)
     return feat:find("stone_stairs_up")
-        or feat:find("^exit_")
-            and not feat:find("exit_dungeon")
-            and not feat:find("exit_dis")
-            and not feat:find("exit_gehenna")
-            and not feat:find("exit_cocytus")
-            and not feat:find("exit_tartarus")
-            and not feat:find("exit_through_abyss")
-            and not feat:find("exit_abyss")
-            and not feat:find("exit_pandemonium")
-            and not feat:find("exit_sewer")
-            and not feat:find("exit_ossuary")
+        or feat:find("^exit_") and not feat == "exit_dungeon"
 end
 
 function feat_uses_map_key(key, feat)
@@ -6350,7 +6340,12 @@ function feat_uses_map_key(key, feat)
 end
 
 function want_to_stairdance_up()
-    if not feat_is_upstairs(view.feature_at(0, 0)) then
+    if where == "D:1"
+            or in_portal()
+            or in_hell_branch()
+            or in_branch("Abyss")
+            or in_branch("Pan")
+            or not feat_is_upstairs(view.feature_at(0, 0)) then
         return false
     end
 
