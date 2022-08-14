@@ -1,5 +1,5 @@
-{
--- Some global variables:
+------------------------
+-- Some global variables
 
 -- The version of qw for logging purposes. Run the make-qw-rc.sh script to set
 -- this variable automatically based on the latest annotate git tag and commit,
@@ -10347,4 +10347,3 @@ function c_message(text, channel)
         transp_orient = true
     end
 end
-}
