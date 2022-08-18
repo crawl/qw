@@ -5865,8 +5865,8 @@ function plan_use_good_consumables()
                 if base_mutation("inhibited regeneration") > 0
                             and you.race() ~= "Ghoul"
                         or base_mutation("teleportitis") > 0
-                        or base_mutation(
-                            "inability to read while threatened") > 0
+                        or base_mutation("inability to drink after injury") > 0
+                        or base_mutation("inability to read after injury") > 0
                         or base_mutation("deformed body") > 0
                             and you.race() ~= "Naga"
                             and you.race() ~= "Palentonga"
