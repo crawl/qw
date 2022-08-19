@@ -5127,21 +5127,30 @@ function want_to_serious_buff()
             and count_monsters_near(0, 0, los_radius) >= 5 then
         return true
     end
+
+    -- These gods have their own buffs.
     if you.god() == "Okawaru" or you.god() == "Trog" then
-        return false -- these gods have their own buffs
+        return false
     end
+
+    -- None of these uniques exist early.
     if you.num_runes() < 3 then
-        return false -- none of these uniques exist early
+        return false
     end
+
+    -- Don't waste a potion if we are already leaving.
     if you.teleporting() then
-        return false -- don't waste a potion if we are already leaving
+        return false
     end
+
     if check_monster_list(los_radius, ridiculous_uniques) then
         return true
     end
+
     if count_nasty_hell_monsters(los_radius) >= 5 then
         return true
     end
+
     return false
 end
 
@@ -5163,7 +5172,7 @@ function want_magic_points()
     -- No point trying to restore MP with ghost moths around.
     return count_monster_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or you.have_orb() or in_extended())
-        -- We want and can use these abilities
+        -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
                 and want_to_cleansing_flame()
