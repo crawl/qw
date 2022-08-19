@@ -10252,11 +10252,11 @@ function record_portal(level, portal, permanent)
         c_persist.portals[level][portal] = {}
     end
 
-    -- This timed has already been recorded for this level.
-    local len = #c_persist.portals[levels][portal]
+    -- This timed portal has already been recorded for this level.
+    local len = #c_persist.portals[level][portal]
     if not permanent
             and len > 0
-            and c_persist.portals[levels][portal][len] ~= INF_TURNS then
+            and c_persist.portals[level][portal][len] ~= INF_TURNS then
         return
     end
 
