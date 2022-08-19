@@ -5055,26 +5055,27 @@ function want_to_teleport()
     if in_branch("Zig") then
         return false
     end
+
     if count_hostile_sgd(los_radius) > 0 and you.xl() < 21 then
         sgd_timer = you.turns()
         return true
     end
+
     if in_branch("Pan")
             and (count_monster_by_name(los_radius, "hellion") >= 3
                 or count_monster_by_name(los_radius, "daeva") >= 3) then
         dislike_pan_level = true
         return true
     end
-    if you.xl() <= 17 and not can_berserk() and count_big_slimes(los_radius) > 0 then
+
+    if you.xl() <= 17
+            and not can_berserk()
+            and count_big_slimes(los_radius) > 0 then
         return true
     end
+
     return immediate_danger and bad_corrosion()
-            or you.god() ~= "Trog" and immediate_danger and hp_is_low(25)
-            or you.god() == "Trog"
-                and you.slowed()
-                and want_to_berserk()
-                and not can_berserk()
-                and count_bia(4) == 0
+            or immediate_danger and hp_is_low(25)
             or count_nasty_hell_monsters(los_radius) >= 9
 end
 
