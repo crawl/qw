@@ -10242,6 +10242,14 @@ function record_portal(level, portal, permanent)
         c_persist.portals[level][portal] = {}
     end
 
+    -- This timed has already been recorded for this level.
+    local len = #c_persist.portals[levels][portal]
+    if not permanent
+            and len > 0
+            and c_persist.portals[levels][portal][len] ~= INF_TURNS then
+        return
+    end
+
     -- Permanent portals go at the beginning, so they'll always be chosen last.
     -- We can't have multiple timed portals of the same type on the same level,
     -- so this scheme puts portals in the correct order. For timed portals,
