@@ -86,11 +86,11 @@ the `GOD_LIST` variable to set the gods qw is allowed to worship. Each entry
 in `GOD_LIST` can be the full god name, as reported by `you.god()`, or the
 abbreviation made with the first 1, 3, or 4 letters of the god's name with any
 whitespace removed. For *the Shining One*, you can use the abbreviations "1" or
-"TSO". For non-zealots, qw will worship the first god in the list it finds,
-entering Temple if it needs to. To have CK abandon Xom immediately, set
-`CK_ABANDON_XOM` to `true`, otherwise all zealots will remain with their
-starting god unless told to convert explicitly by the [gameplan
-list](#game-plans).
+"TSO". For *No God*, you can use the abbreviations "0" or "None". For
+non-zealots, qw will worship the first god in the list it finds, entering
+Temple if it needs to. To have CK abandon Xom immediately, set `CK_ABANDON_XOM`
+to `true`, otherwise all zealots will remain with their starting god unless
+told to convert explicitly by the [gameplan list](#game-plans).
 
 Gods who have at least partly implemented are *BCHLMOQRTUXY1*. Currently qw has
 the most success with *Okawaru*, *Trog*, and *Ru*, roughly in that order. For
@@ -134,20 +134,20 @@ Zot:1-4, Orb"
 Here `1stLairBranch` and `2ndLairBranch` refer to whatever Lair branches are
 selected according to the `RUNE_PREFERENCE` rcfile variable. The other
 differences between the above list and `Normal` are that qw enters Lair as soon
-as it has sufficient piety for its god (according to the `ready_for_lair()`
-function and that this route is subject to the rcfile variables `LATE_ORC` and
+as it has sufficient piety for its god (see the `ready_for_lair()` function)
+and that this route is subject to the rcfile variables `LATE_ORC` and
 `EARLY_SECOND_RUNE`.
 
 If `Normal` is followed by additional entries in the gameplan list, qw will
-proceed to those after its Shopping gameplan is complete. Hence a viable 15
+proceed to those after its `Shopping` gameplan is complete. Hence a viable 15
 Rune route could be expressed as:
 
 ```
 "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss, Zot"
 ```
 
-qw will abandon its current god for the Shining One after shopping is complete
-before heading through Crypt, Tomb, and the other extended branches.
+This will have qw abandon its current god for the Shining One after shopping is
+complete before heading through Crypt, Tomb, and the other extended branches.
 
 The other types of gameplan entries are:
 
@@ -172,7 +172,8 @@ The other types of gameplan entries are:
 * `Rune:<branch>`
 
   Go directly to the end level of `<branch>` and explore until the rune is
-  obtained. This does not require full exploration of any level.
+  obtained. This does not require full exploration of the level containing the
+  rune.
 
   Examples: `Rune:Swamp`, `Rune:Vaults`, `Rune:Geh`
 
@@ -187,16 +188,18 @@ The other types of gameplan entries are:
   worth the risk of dying to god wrath. The name `<god>` can be the full god
   name as reported by `you.god()` or the abbreviation made by the first 1, 3, or
   4 letters of the god's name with any whitespace removed. For the Shining One,
-  `1` and `TSO` are valid abbreviations.
+  `TSO` and `1` are valid abbreviations. For No God, `No God`, `None`, and `0`
+  are valid entries.
 
-  Examples: `God:Okawaru`, `God:Oka`, `God:O`; `God:TSO`, `God:Chei`
+  Examples: `God:Okawaru`, `God:Oka`, or `God:O`; `God:TSO`, `God:Chei`
 
 * `Orb`
 
   Pick up the Orb of Zot, go to D:1, and win. qw always switches to this plan
   when it completes all entries in its gameplan list. Note the `Orb` gameplan has
   qw dive through all levels of Zot to look for the orb on Zot:5. Proceed this
-  plan with e.g. `Zot:1-4` or `Zot` if you want to explore more of that branch.
+  plan with e.g. `Zot:1-4` or `Zot` if you want to explore more of the Zot
+  branch.
 
 * `Zig`, or `Zig:<num>`
 
@@ -213,10 +216,11 @@ qw considers a level explored if it's been autoexplored to completion at least
 once, all its required stone upstairs and downstairs are reachable, and any
 rune on the level has been obtained. Other types of unreachable areas,
 transporters, and runed doors don't prevent qw from considering a level
-autoexplored. If qw must travel through unexplored levels that aren't part of
-its current gameplan, it will explore only as much as necessary to find the
-necessary stairs and then take them. This behaviour includes situations like
-being shafted.
+autoexplored. In portals, the Abyss, and Pan, qw always opens all runed doors
+and explores all transporters. If qw must travel through unexplored levels that
+aren't part of its current gameplan, it will explore only as much as necessary
+to find the necessary stairs and then take them. This behaviour includes
+situations like being shafted.
 
 For Hell branches, gameplans like `Rune:Geh`, `Rune:Tar`, etc. are good
 choices, since they have qw dive to and get the rune while exploring as little
