@@ -3732,7 +3732,7 @@ function distance_to_tabbable_enemy(cx, cy)
             end
         end
     end
-    return dist
+    return best_dist
 end
 
 -----------------------------------------
