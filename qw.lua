@@ -1796,12 +1796,24 @@ function branch_exists(branch)
         or not branch_data[branch])
 end
 
-function branch_found(branch)
+function branch_found(branch, los_state)
     if branch == "D" then
         return {"D:0"}
     end
 
-    return c_persist.branches[branch]
+    if not los_state then
+        los_state = FEAT_LOS.REACHABLE
+    end
+
+    if not c_persist.branches[branch] then
+        return
+    end
+
+    for w, s in pairs(c_persist.branches[branch]) do
+        if s >= los_state then
+            return w
+        end
+    end
 end
 
 function in_branch(branch)
@@ -7794,16 +7806,6 @@ function clear_level_map(num)
     end
     stair_dists[num] = {}
     map_search[num] = {}
-end
-
-function branch_entry_state(branch, entry_branch, entry_depth)
-    local level = make_level(entry_branch, entry_depth)
-    if not c_persist.branches[branch]
-            or not c_persist.branches[branch][level] then
-        return FEAT_LOS.NONE
-    end
-
-    return c_persist.branches[branch][level]
 end
 
 function record_stairs(branch, depth, feat, state, force)
