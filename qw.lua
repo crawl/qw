@@ -5670,7 +5670,7 @@ function plan_find_altar()
         return false
     end
 
-    str = "@altar&&<<of " .. table.concat(god_options(), "||of ")
+    str = "altar&&<<of " .. table.concat(god_options(), "||of ")
     if FADED_ALTAR then
         str = str .. "||of an unknown god"
     end
@@ -5689,7 +5689,7 @@ function plan_find_conversion_altar()
         return false
     end
 
-    magicfind("@altar&&<<of " .. god .. ">>")
+    magicfind("altar&&<<of " .. god .. ">>")
     return true
 end
 
