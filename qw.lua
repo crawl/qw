@@ -1954,6 +1954,22 @@ function god_uses_invocations(god)
     return god_data[god].uses_invocations
 end
 
+function altar_found(god, los_state)
+    if not los_state then
+        los_state = FEAT_LOS.REACHABLE
+    end
+
+    if not c_persist.altars[god] then
+        return
+    end
+
+    for w, s in pairs(c_persist.altars[god]) do
+        if s >= los_state then
+            return w
+        end
+    end
+end
+
 -- functions for use in the monster lists below
 function in_desc(lev, str)
     return function (m)
@@ -7985,6 +8001,23 @@ function record_branch(x, y)
     end
 end
 
+function record_altar(x, y)
+    local feat = view.feature_at(x, y)
+    local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
+    local state = los_state(x, y)
+    if not c_persist.altars[god] then
+        c_persist.altars[god] = {}
+    end
+
+    if c_persist.altars[god][where]
+            and c_persist.altars[god][where] >= state then
+        return
+    end
+
+    c_persist.altars[god][where] = state
+    want_gameplan_update = true
+end
+
 function update_level_map(num)
     local distqueue = {}
     local staircount = #stair_dists[num]
@@ -8001,6 +8034,8 @@ function update_level_map(num)
                 record_stairs(where_branch, where_depth, feat, los_state(x, y))
             elseif feat:find("enter_") then
                 record_branch(x, y)
+            elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
+                record_altar(x, y)
             end
             table.insert(mapqueue, {x + dx, y + dy})
         end
@@ -9724,6 +9759,9 @@ function initialize_c_persist()
     end
     if not c_persist.branches then
         c_persist.branches = { }
+    end
+    if not c_persist.altars then
+        c_persist.altars = { }
     end
     if not c_persist.autoexplore then
         c_persist.autoexplore = { }
