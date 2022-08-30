@@ -1915,7 +1915,7 @@ function initialize_god_data()
 end
 
 function god_full_name(str)
-    return god_lookups[str]
+    return god_lookups[str:upper()]
 end
 
 function god_uses_mp(god)
