@@ -1835,7 +1835,18 @@ function branch_found(branch, los_state)
     end
 
     if not los_state then
-        los_state = FEAT_LOS.REACHABLE
+        -- Hack. Temple entries sometimes restrict access when they reveal the
+        -- branch, requiring entry via stairs inside the vault. Requiring
+        -- reachable means we won't try to access temple until we've explored
+        -- these stairs and can therefore successfully travel to it. Other
+        -- branches tend to not cause travel problems yet are sometimes
+        -- initially spotted behind e.g. statues, so we allow only seeing them
+        -- to consider them found.
+        if branch == "Temple" then
+            los_state = FEAT_LOS.REACHABLE
+        else
+            los_state = FEAT_LOS.SEEN
+        end
     end
 
     if not c_persist.branches[branch] then
