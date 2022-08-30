@@ -797,6 +797,39 @@ end
 function gameplan_normal_next(final)
     local gameplan
 
+    -- Don't try to convert from Ignis too early.
+    if explored_level_range("D:1-8")
+            and you.god() == "Ignis"
+            and you.piety_rank() == 0 then
+        local found = {}
+        local gods = god_options()
+        local keep_ignis = false
+        for _, g in ipairs(gods) do
+            if g == "Ignis" then
+                keep_ignis = true
+                break
+            elseif altar_found(g) then
+                table.insert(found, g)
+            end
+        end
+
+        if not keep_ignis then
+            if #found ~= #gods
+                    and branch_found("Temple")
+                    and not explored_level_range("Temple") then
+                return "Temple"
+            end
+
+            if #found > 0 then
+                if not c_persist.chosen_god then
+                    c_persist.chosen_god = found[crawl.roll_dice(1, #found)]
+                end
+
+                return "God:" .. c_persist.chosen_god
+            end
+        end
+    end
+
     if not explored_level_range("D:1-11") then
         -- We head to Lair early, before having explored through D:11, if we
         -- feel we're ready.
@@ -3153,6 +3186,19 @@ function can_destruction()
                  and can_invoke()
 end
 
+function can_fiery_armour()
+    return you.god() == "Ignis"
+                 and you.piety_rank() >= 1
+                 and not you.status("fiery-armoured")
+                 and can_invoke()
+end
+
+function can_foxfire_swarm()
+    return you.god() == "Ignis"
+                 and you.piety_rank() >= 1
+                 and can_invoke()
+end
+
 function player_speed_num()
     local num = 3
     if you.god() == "Cheibriados" then
@@ -4376,6 +4422,10 @@ function plan_hydra_destruction()
     return false
 end
 
+function fiery_armour()
+    use_ability("Fiery Armour")
+end
+
 function plan_resistance()
     if not you.extra_resistant() and not you.teleporting()
          and want_resistance() then
@@ -4998,6 +5048,15 @@ function plan_drain_life()
     return false
 end
 
+function plan_fiery_armour()
+    if can_fiery_armour() and want_to_fiery_armour() then
+        fiery_armour()
+        return true
+    end
+
+    return false
+end
+
 function want_to_bia()
     if not danger then
         return false
@@ -5092,6 +5151,14 @@ end
 function want_to_orbrun_divine_warrior()
     return danger and count_pan_lords(los_radius) > 0
         and count_divine_warrior(4) == 0 and not you.teleporting()
+end
+
+function want_to_fiery_armour()
+    return danger
+        and (hp_is_low(50)
+            or count_monster_list(los_radius, scary_monsters) >= 2
+            or check_monster_list(los_radius, nasty_monsters)
+            or count_monsters_near(0, 0, los_radius) >= 6)
 end
 
 function drain_level()
@@ -6398,6 +6465,7 @@ function ready_for_lair()
     return you.god() == "Trog"
         or you.god() == "Cheibriados"
         or you.god() == "Okawaru"
+        or you.god() == "Ignis"
         or you.god() == "Qazlal"
         or you.god() == "the Shining One"
         or you.god() == "Lugonu"
@@ -9146,6 +9214,7 @@ plan_emergency = cascade {
     {plan_water_step, "water_step"},
     {plan_zig_fog, "zig_fog"},
     {plan_finesse, "finesse"},
+    {plan_fiery_armour, "fiery_armour"},
     {plan_dig_grate, "try_dig_grate"},
     {plan_might, "might"},
     {plan_blinking, "blinking"},
