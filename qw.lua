@@ -5689,7 +5689,7 @@ function plan_find_conversion_altar()
         return false
     end
 
-    magicfind("altar_" .. god:lower():gsub(" ", "_"))
+    magicfind("@altar&&<<of " .. god .. ">>")
     return true
 end
 
@@ -5740,7 +5740,7 @@ function plan_convert()
     end
 
     local altar = "altar_" .. god:lower():gsub(" ", "_")
-    if view.feature_at(0, 0) ~= feat then
+    if view.feature_at(0, 0) ~= altar then
         return false
     end
 
@@ -5748,6 +5748,7 @@ function plan_convert()
         rest()
     else
         magic("<JY")
+        want_gameplan_update = true
     end
 
     return true
