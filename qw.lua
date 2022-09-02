@@ -7252,10 +7252,14 @@ function level_stair_reset(branch, depth, dir)
     end
 
     if where ~= lev then
+        dsay("Resetting autoexplore of " .. lev, "explore")
         c_persist.autoexplore[lev] = AUTOEXP.NEEDED
     end
 end
 
+-- Adjust depth for any backtracking, reversing to our previous level and
+-- searching in the opposite direction. Otherwise we only set the dir if the
+-- level is autoexplored.
 function final_depth_dir(branch, depth, dir, backtrack)
     if backtrack then
         return depth + dir, -dir
@@ -7271,43 +7275,52 @@ function finalize_exploration_depth(branch, depth)
         return depth
     end
 
-    -- We just backtracked from an adjacent level to this depth. We'll not try
-    -- to return to the to final search depth we calculate, but rather try to
-    -- reach that search depth via unexplored stairs from the current depth.
+    -- We just backtracked from an adjacent level to this depth. We'll not
+    -- return to the final search depth we calculate, but rather try to reach
+    -- that search depth via unexplored stairs from the current depth.
     local backtrack = backtracked_to == make_level(branch, depth)
-    -- Adjust depth for any backtracking, reversing to our previous level and
-    -- searching in the opposite direction. Otherwise we only set the dir if
-    -- the level is autoexplored.
+
+    function all_reachable(branch, depth, dir)
+        return = count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+            == num_required_stairs(branch, depth, dir)
+    end
+
+    function all_explored(branch, depth, dir)
+        return count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+            == count_stairs(branch, depth, dir, FEAT_LOS.EXPLORED)
+    end
 
     local up_depth = depth - 1
     local up_unreach = true
-    local up_finished, up_lev
+    local  depth_up_all_reachable, up_finished, up_lev
     if up_depth >= 1 then
+        depth_up_all_reachable = all_reachable(branch, depth, DIR.UP)
         up_lev = make_level(branch, up_depth)
-        up_unreach = count_stairs(branch, depth, DIR.UP,
-            FEAT_LOS.REACHABLE) == 0
-        up_finished = autoexplored_level(branch, up_depth)
-            and count_stairs(branch, up_depth, DIR.DOWN, FEAT_LOS.REACHABLE)
-                == count_stairs(branch, up_depth, DIR.DOWN, FEAT_LOS.EXPLORED)
+        up_unreach
+            = count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE) == 0
+        up_finished = depth_up_all_reachable
+            or autoexplored_level(branch, up_depth)
+                and all_explored(branch, up_depth, DIR.DOWN)
     end
 
-    depth_up_finished = count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE)
-                == count_stairs(branch, depth, DIR.UP, FEAT_LOS.EXPLORED)
-    depth_down_finished = count_stairs(branch, depth,
-        DIR.DOWN, FEAT_LOS.REACHABLE)
-            == count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.EXPLORED)
+    depth_up_finished = depth_up_all_reachable
+        or all_explored(branch, depth, DIR.UP)
 
     local down_depth = depth + 1
     local down_unreach = true
-    local down_finished, down_lev
+    local depth_down_all_reachable, down_finished, down_lev
     if down_depth <= branch_depth(branch) then
+        depth_down_all_reachable = all_reachable(branch, depth, DIR.DOWN)
         down_depth_lev = make_level(branch, down_depth)
-        down_unreach
-            = count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) == 0
-        down_finished = autoexplored_level(branch, down_depth)
-            and count_stairs(branch, down_depth, DIR.UP, FEAT_LOS.REACHABLE)
-                == count_stairs(branch, down_depth, DIR.UP, FEAT_LOS.EXPLORED)
+        down_unreach =
+            count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) == 0
+        down_finished = depth_down_all_reachable
+            or autoexplored_level(branch, down_depth)
+                and all_explored(branch, down_depth, DIR.UP)
     end
+
+    depth_down_finished = depth_down_all_reachable
+        or all_explored(branch, depth, DIR.DOWN)
 
     if up_unreach then
         if depth_down_finished then
