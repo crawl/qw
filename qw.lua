@@ -167,8 +167,6 @@ local tomb3_entry_turn
 local last_swamp_fail_count = -1
 local swamp_rune_reachable = false
 
-local offlevel_travel = true
-
 local last_min_delay_skill = 18
 
 local only_linear_resists = false
@@ -5653,8 +5651,6 @@ function plan_abyss_rest()
 end
 
 function magicfind(target, secondary)
-    -- This will be turned on again in ready().
-    offlevel_travel = false
     if secondary then
         crawl.sendkeys(control('f') .. target .. "\r", arrowkey('d'), "\r\r" ..
             string.char(27) .. string.char(27) .. string.char(27))
@@ -7281,7 +7277,7 @@ function finalize_exploration_depth(branch, depth)
     local backtrack = backtracked_to == make_level(branch, depth)
 
     function all_reachable(branch, depth, dir)
-        return = count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+        return count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
             == num_required_stairs(branch, depth, dir)
     end
 
@@ -10241,7 +10237,6 @@ function turn_update()
 end
 
 function ready()
-    offlevel_travel = true
     run_update()
     if do_dummy_action then
         if not did_waypoint then
@@ -10349,7 +10344,7 @@ function c_answer_prompt(prompt)
         return WIZMODE_DEATH
     end
     if prompt:find("Have to go through") then
-        return offlevel_travel
+        return true
     end
     if prompt:find("transient mutations") then
         return true
