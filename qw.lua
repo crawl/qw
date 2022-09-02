@@ -4594,26 +4594,36 @@ function plan_blinking()
     return false
 end
 
+function can_drink_heal_wounds()
+    return you.mutation("no potion heal") < 2
+        and not items.equipped_at("Body Armour"):name():find("NoPotionHeal")
+end
+
 function heal_general()
     if can_ru_healing() and prefer_ru_healing() then
         ru_healing()
         return true
     end
+
     if can_ely_healing() and prefer_ely_healing() then
         ely_healing()
         return true
     end
-    if heal_wounds() then
+
+    if can_drink_heal_wounds() and drink_by_name("heal wounds") then
         return true
     end
+
     if can_ru_healing() then
         ru_healing()
         return true
     end
+
     if can_ely_healing() then
         ely_healing()
         return true
     end
+
     return false
 end
 
@@ -4621,13 +4631,15 @@ function plan_heal_wounds()
     if want_to_heal_wounds() then
         return heal_general()
     end
+
     return false
 end
 
 function plan_orbrun_heal_wounds()
-    if want_to_orbrun_heal_wounds() then
+    if can_heal_wounds() and want_to_orbrun_heal_wounds() then
         return heal_general()
     end
+
     return false
 end
 
@@ -4669,14 +4681,6 @@ end
 function plan_orbrun_finesse()
     if can_finesse() and want_to_orbrun_buff() then
         return finesse()
-    end
-    return false
-end
-
-function heal_wounds()
-    if you.mutation("no potion heal") < 2
-         and drink_by_name("heal wounds") then
-        return true
     end
     return false
 end
@@ -5234,11 +5238,13 @@ function want_to_orbrun_teleport()
 end
 
 function want_to_heal_wounds()
-    if danger and can_ely_healing() and hp_is_low(50)
+    if danger and can_ely_healing()
+            and hp_is_low(50)
             and you.piety_rank() >= 5 then
         return true
     end
-    return (danger and hp_is_low(25))
+
+    return danger and hp_is_low(25)
 end
 
 function want_to_orbrun_heal_wounds()
