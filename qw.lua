@@ -1050,6 +1050,15 @@ function update_gameplan()
         desc = status .. " rune"
     end
 
+    if status:find("^God:") then
+        local god = gameplan_god(status)
+        desc = "conversion to " .. god
+        local altar_lev = altar_found(god)
+        if altar_lev then
+            gameplan = altar_lev
+        end
+    end
+
     local portal
     portal, permanent_bazaar = check_portal_gameplan()
     if portal then
@@ -1090,9 +1099,7 @@ function update_gameplan()
 
     if old_status ~= status then
         if not desc then
-            if status:find("^God:") then
-                desc = "conversion to " .. gameplan_god(status)
-            elseif status == "Shopping" then
+            if status == "Shopping" then
                 desc = "shopping spree"
             elseif status == "Orb" then
                 desc = "orb"
@@ -7401,8 +7408,14 @@ function update_gameplan_data(status, gameplan)
         return
     end
 
-    gameplan_depth
-        = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
+    -- God gameplans always set the gameplan branch/depth to the known location
+    -- of an altar, so we don't need further exploration.
+    if status:find("^God") then
+        gameplan_depth = min_depth
+    else
+        gameplan_depth
+            = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
+    end
 
     if DEBUG_MODE then
         dsay("Gameplan branch: " .. tostring(gameplan_branch), "explore")
