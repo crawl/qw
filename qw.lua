@@ -2678,7 +2678,7 @@ function weapon_choice()
     sp = you.race()
     if sp == "Felid" or sp == "Troll" or sp == "Ghoul" then
         return "Unarmed Combat"
-    elseif sp == "Ogre" or sp == "Kobold" then
+    elseif sp == "Kobold" then
         return "Maces & Flails"
     elseif sp == "Merfolk" then
         return "Polearms"
