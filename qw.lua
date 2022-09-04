@@ -4643,7 +4643,7 @@ function plan_heal_wounds()
 end
 
 function plan_orbrun_heal_wounds()
-    if can_heal_wounds() and want_to_orbrun_heal_wounds() then
+    if want_to_orbrun_heal_wounds() then
         return heal_general()
     end
 
