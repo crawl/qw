@@ -979,10 +979,6 @@ function choose_gameplan()
         chosen_gameplan = "Orb"
     end
 
-    if DEBUG_MODE then
-        dsay("Current gameplan: " .. chosen_gameplan, "explore")
-    end
-
     return chosen_gameplan, normal_gameplan
 end
 
@@ -1030,7 +1026,7 @@ function check_portal_gameplan()
     return chosen_portal, chosen_turns == INF_TURNS
 end
 
-function update_gameplan()
+function determine_gameplan()
     permanent_bazaar = nil
     local chosen_gameplan, normal_gameplan = choose_gameplan()
     local old_status = gameplan_status
@@ -1078,8 +1074,9 @@ function update_gameplan()
         desc = status
     end
 
-    -- Until the ORB is actually found, dive to and explore the end of Zot.
-    if status == "Orb" and not c_persist.found_orb then
+    -- Dive to and explore the end of Zot. We'll start trying to pick up the
+    -- ORB via stash search travel as soon as it's found.
+    if status == "Orb" then
         gameplan = zot_end
         desc = "Orb"
     end
@@ -1111,11 +1108,7 @@ function update_gameplan()
         say("PLANNING " .. desc:upper())
     end
 
-    if DEBUG_MODE then
-        dsay("Current gameplan status: " .. status, "explore")
-    end
-
-    update_gameplan_data(status, gameplan)
+    set_gameplan(status, gameplan)
 end
 
 function branch_soon(branch)
@@ -7397,7 +7390,7 @@ function explore_next_range_depth(branch, min_depth, max_depth)
     end
 end
 
-function update_gameplan_data(status, gameplan)
+function set_gameplan(status, gameplan)
     gameplan_status = status
 
     gameplan_branch = nil
@@ -7405,16 +7398,11 @@ function update_gameplan_data(status, gameplan)
     local min_depth, max_depth
     gameplan_branch, min_depth, max_depth = parse_level_range(gameplan)
 
-    -- This status doesn't indicate a level range.
-    if not gameplan_branch then
-        return
-    end
-
     -- God gameplans always set the gameplan branch/depth to the known location
     -- of an altar, so we don't need further exploration.
     if status:find("^God") then
         gameplan_depth = min_depth
-    else
+    elseif gameplan_branch then
         gameplan_depth
             = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
 
@@ -7428,6 +7416,7 @@ function update_gameplan_data(status, gameplan)
     end
 
     if DEBUG_MODE then
+        dsay("Gameplan status: " .. gameplan_status, "explore")
         dsay("Gameplan branch: " .. tostring(gameplan_branch), "explore")
         dsay("Gameplan depth: " .. tostring(gameplan_depth), "explore")
     end
@@ -7454,7 +7443,7 @@ function parent_branch_chain(branch, check_branch, check_entries)
 
         -- Travel into the branch assuming we enter from min_depth. If this
         -- ends up being our stopping point because we haven't found the
-        -- branch, this will be handled later in update_travel().
+        -- branch, this will be handled later in update_gameplan_travel().
         entries[parent] = min_depth
         table.insert(parents, parent)
         cur_branch = parent
@@ -7663,7 +7652,7 @@ function travel_destination(dest_branch, dest_depth)
     return branch, depth, dir
 end
 
-function update_travel()
+function update_gameplan_travel()
     travel_branch, travel_depth, stairs_search_dir
         = travel_destination(gameplan_branch, gameplan_depth)
 
@@ -9192,6 +9181,12 @@ function cascade(plans)
                 end
                 fail_count = fail_count + 1
                 c_persist.plan_fail_count[plandata[2]] = fail_count
+
+                -- We haven't consumed a turn but might still need a planning
+                -- update.
+                if want_gameplan_update then
+                    update_gameplan()
+                end
             end
         end
 
@@ -10128,6 +10123,17 @@ function check_expired_portals()
     end
 end
 
+function update_gameplan()
+    check_expired_portals()
+    determine_gameplan()
+    check_future_branches()
+    check_future_gods()
+
+    update_gameplan_travel()
+
+    want_gameplan_update = false
+end
+
 -- We want to call this exactly once each turn.
 function turn_update()
     if not initialized then
@@ -10240,20 +10246,15 @@ function turn_update()
         update_level_map(waypoint_parity)
     end
 
+
+    if not c_persist.zig_completed
+            and in_branch("Zig")
+            and where_depth == gameplan_zig_depth(gameplan_status) then
+        c_persist.zig_completed = true
+    end
+
     if want_gameplan_update then
-        check_expired_portals()
-        if in_branch("Zig")
-                and where_depth == gameplan_zig_depth(gameplan_status) then
-            c_persist.zig_completed = true
-        end
-
         update_gameplan()
-        update_travel()
-
-        check_future_branches()
-        check_future_gods()
-
-        want_gameplan_update = false
     end
     travel_fail_count = 0
 
