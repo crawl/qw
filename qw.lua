@@ -104,7 +104,8 @@ local stairs_search_dir
 local stairs_search
 local stairs_travel
 
-local travel_fail_count = 0
+local go_travel_fail_count = 0
+local stash_travel_fail_count = 0
 local backtracked_to
 
 local transp_search
@@ -188,6 +189,7 @@ local map_search_key
 local map_search_pos
 local map_search_zone
 local map_search_count
+local map_search_fail_count = 0
 
 local will_zig = false
 local might_be_good = false
@@ -6777,13 +6779,13 @@ function plan_go_to_orb()
         return false
     end
 
-    if travel_fail_count == 0 then
-        travel_fail_count = 1
+    if stash_travel_fail_count == 0 then
+        stash_travel_fail_count = 1
         magicfind("orb of zot")
         return
     end
 
-    travel_fail_count = 0
+    stash_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -6798,13 +6800,13 @@ function plan_go_to_zig_dig()
         return false
     end
 
-    if travel_fail_count == 0 then
-        travel_fail_count = 1
+    if stash_stash_travel_fail_count == 0 then
+        stash_travel_fail_count = 1
         magic(control('f') .. portal_entrance_description("Zig") .. "\rayby\r")
         return
     end
 
-    travel_fail_count = 0
+    stash_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -6817,7 +6819,7 @@ function plan_go_to_portal_entrance()
         return false
     end
 
-    if travel_fail_count == 0 then
+    if stash_travel_fail_count == 0 then
         local desc = portal_entrance_description(gameplan_branch)
         -- For timed bazaars, make a search string that can' match permanent
         -- ones.
@@ -6826,11 +6828,11 @@ function plan_go_to_portal_entrance()
         end
         magicfind(desc)
 
-        travel_fail_count = 1
+        stash_travel_fail_count = 1
         return
     end
 
-    travel_fail_count = 0
+    stash_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -6843,13 +6845,13 @@ function plan_go_to_abyss_portal()
         return false
     end
 
-    if travel_fail_count == 0 then
-        travel_fail_count = 1
+    if stash_travel_fail_count == 0 then
+        stash_travel_fail_count = 1
         magicfind("one-way gate to the infinite horrors of the Abyss")
         return
     end
 
-    travel_fail_count = 0
+    stash_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -6862,13 +6864,13 @@ function plan_go_to_pan_portal()
         return false
     end
 
-    if travel_fail_count == 0 then
-        travel_fail_count = 1
+    if stash_travel_fail_count == 0 then
+        stash_travel_fail_count = 1
         magicfind("halls of Pandemonium")
         return
     end
 
-    travel_fail_count = 0
+    stash_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -6879,15 +6881,13 @@ function plan_go_command()
         return false
     end
 
-    -- Attempt to travel to our calculated location first. Return nil so we'll
-    -- retry this plan if it doesn't succeed in performing an action.
-    if want_go_travel and travel_fail_count == 0 then
-        travel_fail_count = 1
+    if go_travel_fail_count == 0 then
+        go_travel_fail_count = 1
         send_travel(travel_branch, travel_depth)
         return
     end
 
-    travel_fail_count = 0
+    go_travel_fail_count = 0
     disable_autoexplore = false
     return false
 end
@@ -7707,6 +7707,12 @@ function plan_go_to_unexplored_stairs()
         return false
     end
 
+    if map_search_fail_count == 1 then
+        disable_autoexplore = false
+        map_search_fail_count = 0
+        return false
+    end
+
     local key = dir_key(stairs_search_dir)
     local dx, dy = travel.waypoint_delta(waypoint_parity)
     local pos = 100 * dx + dy
@@ -7727,8 +7733,8 @@ function plan_go_to_unexplored_stairs()
     map_search_key = key
     map_search_pos = pos
     map_search_count = count
+    map_search_fail_count = 1
     magic("X" .. key:rep(count) .. "\r")
-    return true
 end
 
 function can_use_transporters()
@@ -10256,7 +10262,9 @@ function turn_update()
     if want_gameplan_update then
         update_gameplan()
     end
-    travel_fail_count = 0
+    go_travel_fail_count = 0
+    stash_travel_fail_count = 0
+    map_search_fail_count = 0
 
     update_monster_array()
     danger = sense_danger(los_radius)
