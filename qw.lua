@@ -2678,7 +2678,7 @@ end
 -- used for backgrounds who don't get to choose a weapon
 function weapon_choice()
     sp = you.race()
-    if sp == "Felid" or sp == "Troll" or sp == "Ghoul" then
+    if sp == "Felid" or sp == "Troll" then
         return "Unarmed Combat"
     elseif sp == "Kobold" then
         return "Maces & Flails"
