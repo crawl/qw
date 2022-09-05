@@ -83,6 +83,7 @@ local gameplan_status
 local gameplan_branch
 local gameplan_depth
 local permanent_bazaar
+local ignore_traps
 
 local planning_god_uses_mp
 local planning_vaults
@@ -1079,7 +1080,7 @@ function update_gameplan()
 
     -- Until the ORB is actually found, dive to and explore the end of Zot.
     if status == "Orb" and not c_persist.found_orb then
-        gameplan = branch_end("Zot")
+        gameplan = zot_end
         desc = "Orb"
     end
 
@@ -1757,6 +1758,7 @@ function initialize_branch_data()
     vaults_end = branch_end("Vaults")
 
     early_zot = make_level_range("Zot", 1, -1)
+    zot_end = branch_end("Zot")
 end
 
 function branch_travel(branch)
@@ -7415,6 +7417,14 @@ function update_gameplan_data(status, gameplan)
     else
         gameplan_depth
             = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
+
+        if not gameplan_depth
+                and gameplan_status == "Orb"
+                and where == zot_end then
+            ignore_traps = true
+            c_persist.autoexplore[zot_end] = AUTOEXP.NEEDED
+            gameplan_depth = branch_depth("Zot")
+        end
     end
 
     if DEBUG_MODE then
@@ -10189,6 +10199,12 @@ function turn_update()
         transp_zone = 0
         zone_counts = {}
 
+        if you.have_orb() and where == zot_end then
+            ignore_traps = true
+        else
+            ignore_traps = false
+        end
+
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
             vaults_end_entry_turn = you.turns()
         elseif where == "Tomb:2" and not tomb2_entry_turn then
@@ -10355,6 +10371,7 @@ end
 
 function c_trap_is_safe(trap)
     return you.race() == "Formicid"
+        or ignore_traps
         or trap ~= "permanent teleport" and trap ~= "dispersal"
 end
 
@@ -10574,5 +10591,8 @@ function c_message(text, channel)
     elseif text:find("You enter the transporter") then
         transp_zone = transp_zone + 1
         transp_orient = true
+    elseif text:find("You enter a dispersal trap")
+            or text:find("You enter a permanent teleport trap") then
+        ignore_traps = false
     end
 end
