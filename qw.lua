@@ -9818,7 +9818,7 @@ function make_initial_gameplans()
                 error("Unkown god: " .. name)
             end
 
-            plan = "God:" .. full_name
+            plan = "God:" .. name
             processed = true
         elseif pl:lower():find("^rune:") then
             local branch = capitalize(gameplan_rune_branch(pl))
