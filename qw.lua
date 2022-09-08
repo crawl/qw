@@ -7410,12 +7410,12 @@ function set_gameplan(status, gameplan)
         gameplan_depth
             = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
 
-        if not gameplan_depth
-                and gameplan_status == "Orb"
-                and where == zot_end then
-            ignore_traps = true
-            c_persist.autoexplore[zot_end] = AUTOEXP.NEEDED
+        if gameplan == zot_end and not gameplan_depth then
             gameplan_depth = branch_depth("Zot")
+            if where == zot_end then
+                ignore_traps = true
+                c_persist.autoexplore[zot_end] = AUTOEXP.NEEDED
+            end
         end
     end
 
