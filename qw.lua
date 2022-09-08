@@ -1665,7 +1665,6 @@ local branch_data_values = {
     { "Bazaar", nil, 1, "enter_bazaar" },
     { "WizLab", nil, 1, "enter_wizlab" },
     { "Desolation", nil, 1, "enter_desolation" },
-    { "Zig", nil, 1, "enter_ziggurat" },
     { "Temple", "T", 1, "enter_temple", "D", 4, 7 },
     { "Orc", "O", 2, "enter_orcish_mines", "D", 9, 12 },
     { "Elf", "E", 3, "enter_elven_halls", "Orc", 2, 2 },
@@ -1679,6 +1678,7 @@ local branch_data_values = {
     { "Crypt", "C", 3, "enter_crypt", "Vaults", 3, 4 },
     { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, "golden" },
     { "Depths", "U", 4, "enter_depths", "D", 15, 15 },
+    { "Zig", nil, 27, "enter_ziggurat", "Depths", 1, 4 },
     { "Zot", "Z", 5, "enter_zot", "Depths", 4, 4 },
     { "Pan", nil, 1, "enter_pandemonium", "Depths", 2, 2,
         { "dark", "demonic", "fiery", "glowing", "magical" } },
@@ -1701,7 +1701,7 @@ local portal_data_values = {
     { "Bazaar", "gateway to a bazaar", 1300 },
     { "WizLab", "magical portal", 800, "wizard's laboratory" },
     { "Desolation", "crumbling gateway", 800 },
-    { "Zig", "one-way gate to a zigguart", },
+    { "Zig", "one-way gateway to a ziggurat", },
 } -- hack
 
 function initialize_branch_data()
@@ -1734,7 +1734,6 @@ function initialize_branch_data()
         end
 
         branch_data[br] = data
-
     end
 
     for _, entry in ipairs(portal_data_values) do
@@ -2746,7 +2745,10 @@ function miasma_immune()
 end
 
 function is_waypointable(loc)
-    return not (is_portal_branch(loc) or loc:find("Abyss") or loc == "Pan")
+    local branch = parse_level_range(loc)
+    return not (is_portal_branch(branch)
+        or branch == "Abyss"
+        or branch == "Pan")
 end
 
 function is_portal_branch(branch)
@@ -7101,7 +7103,8 @@ function plan_zig_leave_level()
 
     if c_persist.zig_completed
             and view.feature_at(0, 0) == "exit_ziggurat" then
-        remove_portal(make_level(parent, depth), gameplan_branch, true)
+        local parent, depth = parent_branch(where_branch)
+        remove_portal(make_level(parent, depth), where_branch, true)
         magic("<Y")
         return true
     elseif string.find(view.feature_at(0, 0), "stone_stairs_down") then
@@ -10252,6 +10255,9 @@ function turn_update()
         update_level_map(waypoint_parity)
     end
 
+    if want_gameplan_update then
+        update_gameplan()
+    end
 
     if not c_persist.zig_completed
             and in_branch("Zig")
@@ -10259,9 +10265,6 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    if want_gameplan_update then
-        update_gameplan()
-    end
     go_travel_fail_count = 0
     stash_travel_fail_count = 0
     map_search_fail_count = 0
