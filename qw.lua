@@ -10426,6 +10426,9 @@ function c_answer_prompt(prompt)
     if prompt:find("Really rampage") then
         return true
     end
+    if prompt:find("Really drink that potion of mutation") then
+        return true
+    end
 end
 
 function ch_stash_search_annotate_item(it)
