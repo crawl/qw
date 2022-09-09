@@ -7405,6 +7405,8 @@ function set_gameplan(status, gameplan)
     -- of an altar, so we don't need further exploration.
     if status:find("^God") then
         gameplan_depth = min_depth
+    elseif in_portal() then
+        gameplan_depth = where_depth
     elseif gameplan_branch then
         gameplan_depth
             = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
@@ -7493,8 +7495,7 @@ end
 
 function travel_down_branches(dest_branch, dest_depth, parents, entries)
     local i = #parents
-    local branch, depth
-    local dir = 1
+    local branch, depth, stop_branch
     for i = #parents, 1, -1 do
         branch = parents[i]
         depth = entries[branch]
@@ -7506,7 +7507,7 @@ function travel_down_branches(dest_branch, dest_depth, parents, entries)
             if not branch_found(next_parent)
                     -- A branch we can't actually enter with travel.
                     or not branch_travel(next_parent) then
-                dir = next_parent
+                stop_branch = next_parent
                 break
             end
             branch = next_parent
@@ -7514,7 +7515,7 @@ function travel_down_branches(dest_branch, dest_depth, parents, entries)
         else
             if not branch_found(dest_branch)
                     or not branch_travel(dest_branch) then
-                dir = dest_branch
+                stop_branch = dest_branch
                 break
             end
             branch = dest_branch
@@ -7530,7 +7531,7 @@ function travel_down_branches(dest_branch, dest_depth, parents, entries)
         i = i - 1
     end
 
-    return branch, depth, dir
+    return branch, depth, stop_branch
 end
 
 -- Search branch and stair data from a starting level to a destination level,
@@ -7574,7 +7575,6 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
 
     local cur_branch = start_branch
     local cur_depth = start_depth
-    local dir = -1
     -- Travel up and out of the starting branch until we reach the common
     -- parent branch. Don't bother traveling up if the destination branch is a
     -- sub-branch of the starting branch.
@@ -7584,7 +7584,7 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
 
         -- We weren't able to travel all the way up to the common parent.
         if cur_depth ~= start_entries[common_parent] then
-            return cur_branch, cur_depth, -1
+            return cur_branch, cur_depth
         end
     end
 
@@ -7608,7 +7608,7 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
 
     -- We couldn't make it to the branch entry we need.
     if cur_depth ~= next_depth then
-        return cur_branch, cur_depth, sign(next_depth - cur_depth)
+        return cur_branch, cur_depth
     -- We already arrived at our ultimate destination.
     elseif cur_branch == dest_branch and cur_depth == dest_depth then
         return cur_branch, cur_depth
@@ -7616,39 +7616,30 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
 
     -- Travel into and down branches to reach our ultimate destination. We're
     -- always starting at the first branch entry we'll need to take.
-    local dir
-    cur_branch, cur_depth, dir = travel_down_branches(dest_branch,
+    cur_branch, cur_depth, stop_branch = travel_down_branches(dest_branch,
         dest_depth, dest_parents, dest_entries)
-    return cur_branch, cur_depth,
-        (cur_branch ~= dest_branch or cur_depth ~= dest_depth) and dir or nil
+    return cur_branch, cur_depth, stop_branch
 end
 
-function travel_destination(dest_branch, dest_depth)
+function travel_destination(dest_branch, dest_depth, stash_travel)
     if not dest_branch or in_portal() then
         return
     end
 
-    local branch, depth, dir = travel_destination_search(dest_branch,
+    local dir
+    local branch, depth, stop_branch = travel_destination_search(dest_branch,
         dest_depth)
 
-    -- We were unable enter the branch in stairs_dir, so figure out the
-    -- next best location to travel to in its parent branch.
-    if type(dir) == "string" then
-        -- We actually found this branch, but can't travel into it (e.g.
-        -- Abyss, Pan, portals), so just unset the travel direction. A
-        -- stash search travel will happen instead.
-        if branch_found(dir) then
-            dir = nil
-        -- We haven't found the branch entance, so systematically explore over
-        -- the possible entry depths in the parent branch.
-        else
-            local parent, min_depth, max_depth = parent_branch(dir)
-            depth = explore_next_range_depth(parent, min_depth, max_depth)
-            depth, dir = finalize_exploration_depth(branch, depth)
-        end
+    -- We were unable enter the branch in stop_branch, so figure out the next
+    -- best location to travel to in its parent branch.
+    if stop_branch and not branch_found(stop_branch) then
+        local parent, min_depth, max_depth = parent_branch(stop_branch)
+        depth = explore_next_range_depth(parent, min_depth, max_depth)
+        depth, dir = finalize_exploration_depth(branch, depth)
     -- Get the final depth we should travel to given the state of stair
-    -- exploration at our travel destination.
-    else
+    -- exploration at our travel destination. For stash search travel, we don't
+    -- do this, since we know what we want is on the destination level.
+    elseif not stash_travel then
         depth, dir = finalize_exploration_depth(branch, depth)
     end
 
@@ -7656,12 +7647,12 @@ function travel_destination(dest_branch, dest_depth)
 end
 
 function update_gameplan_travel()
-    travel_branch, travel_depth, stairs_search_dir
-        = travel_destination(gameplan_branch, gameplan_depth)
-
-    want_go_travel = (travel_branch
-            and (where_branch ~= travel_branch or where_depth ~= travel_depth))
-    local want_stash_travel = not gameplan_branch
+    -- We use a stash search to reach our destination, but will still do a
+    -- travel search for any given gameplan branch/depth, so we can use a go
+    -- command as a backup.
+    local stash_travel = gameplan_status == "Orb" and c_persist.found_orb
+            or not gameplan_branch
+            or gameplan_status:find("^God") and gameplan_branch ~= "Temple"
             or is_portal_branch(gameplan_branch)
                 and not in_portal()
                 and branch_found(gameplan_branch)
@@ -7672,24 +7663,26 @@ function update_gameplan_travel()
                 and where_branch ~= "Pan"
                 and branch_found("Pan")
 
+    travel_branch, travel_depth, stairs_search_dir
+        = travel_destination(gameplan_branch, gameplan_depth, stash_travel)
+    want_go_travel = (travel_branch
+            and (where_branch ~= travel_branch or where_depth ~= travel_depth))
+
     -- Don't autoexplore if we want to travel in some way. This is so we can
     -- leave our current level before it's completely explored. If the level is
     -- fully explored, always allow autexplore so we can get any nearby items
     -- (e.g. from dead stairdanced monsters or thrown ammo). After autoexplore
     -- finishes, it will fail on the next attempt, and the cascade will proceed
     -- to travel.
-    disable_autoexplore = (stairs_search_dir
-        or want_go_travel
-        or want_stash_travel)
+    disable_autoexplore = (stairs_search_dir or want_go_travel or stash_travel)
             and not explored_level(where_branch, where_depth)
 
     if DEBUG_MODE then
+        dsay("Stash travel: " .. bool_string(stash_travel), "explore")
         dsay("Travel branch: " .. tostring(travel_branch) .. ", depth: "
             .. tostring(travel_depth) .. ", stairs search dir: "
             .. tostring(stairs_search_dir), "explore")
         dsay("Want go travel: " .. bool_string(want_go_travel), "explore")
-        dsay("Want stash travel: " .. bool_string(want_stash_travel),
-            "explore")
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore),
             "explore")
     end
@@ -9311,36 +9304,41 @@ plan_orbrun_rest = cascade {
 } -- hack
 
 plan_explore = cascade {
-    {plan_enter_portal, "enter_portal"},
-    {plan_enter_abyss, "enter_abyss"},
-    {plan_enter_pan, "enter_pan"},
-    {plan_enter_transporter, "enter_transporter"},
-    {plan_zig_dig, "zig_dig"},
     {plan_dive_pan, "dive_pan"},
     {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
     {plan_autoexplore, "try_autoexplore"},
 } -- hack
 
 plan_explore2 = cascade {
-    {plan_go_to_orb, "try_go_to_orb"},
-    {plan_shopping_spree, "try_shopping_spree"},
-    {plan_go_to_pan_portal, "try_go_to_pan_portal"},
-    {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
+    {plan_abandon_god, "abandon_god"},
+    {plan_join_god, "try_join_god"},
+    {plan_find_altar, "try_find_altar"},
+    {plan_convert, "convert"},
+    {plan_find_conversion_altar, "try_find_conversion_altar"},
+    {plan_zig_dig, "zig_dig"},
     {plan_go_to_zig_dig, "try_go_to_zig_dig"},
+    {plan_enter_portal, "enter_portal"},
     {plan_go_to_portal_entrance, "try_go_to_portal_entrance"},
     {plan_open_runed_doors, "open_runed_doors"},
+    {plan_enter_transporter, "enter_transporter"},
     {plan_transporter_orient_exit, "try_transporter_orient_exit"},
     {plan_go_to_transporter, "try_go_to_transporter"},
     {plan_zig_leave_level, "zig_leave_level"},
     {plan_zig_go_to_stairs, "try_zig_go_to_stairs"},
     {plan_exit_portal, "exit_portal"},
     {plan_go_to_portal_exit, "try_go_to_portal_exit"},
+    {plan_enter_pan, "enter_pan"},
+    {plan_go_to_pan_portal, "try_go_to_pan_portal"},
     {plan_exit_pan, "exit_pan"},
     {plan_go_to_pan_exit, "try_go_to_pan_exit"},
     {plan_go_down_pan, "try_go_down_pan"},
     {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
+    {plan_enter_abyss, "enter_abyss"},
+    {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
     {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
     {plan_take_unexplored_stairs, "try_take_unexplored_stairs"},
+    {plan_shopping_spree, "try_shopping_spree"},
+    {plan_go_to_orb, "try_go_to_orb"},
     {plan_go_command, "try_go_command"},
     {plan_autoexplore, "try_autoexplore2"},
     {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
@@ -9367,13 +9365,7 @@ plan_move = cascade {
     {plan_pre_explore, "pre_explore"},
     {plan_step_towards_branch, "step_towards_branch"},
     {plan_continue_tab, "continue_tab"},
-    {plan_abandon_god, "abandon_god"},
     {plan_unwield_weapon, "unwield_weapon"},
-    {plan_convert, "convert"},
-    -- bug with faded altar not taking time
-    {plan_join_god, "try_join_god"},
-    {plan_find_conversion_altar, "try_find_conversion_altar"},
-    {plan_find_altar, "try_find_altar"},
     {plan_explore, "explore"},
     {plan_pre_explore2, "pre_explore2"},
     {plan_explore2, "explore2"},
