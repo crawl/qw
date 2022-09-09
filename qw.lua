@@ -1453,10 +1453,9 @@ function want_wand(it)
     end
 
     local sub = it.subtype()
-    if not sub or sub ~= "digging" then
-        return false
+    if sub and sub == "digging" then
+        return true
     end
-    return count_charges("digging", it) < 18
 end
 
 function want_potion(it)
