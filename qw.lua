@@ -4819,7 +4819,7 @@ function step_reason(a1, a2)
             -- attacked.
             and a1.adjacent == 0
             and a2.adjacent == 0
-            and reason_to_rest(90)
+            and (reason_to_rest(90) or you.xl() <= 8 and disable_autoexplore)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
         return "fleeing"
@@ -6564,17 +6564,22 @@ function want_to_stairdance_up()
             other_count = other_count + 1
         end
     end
+
     if only_when_safe and follow_count > 0 then
         return false
     end
+
     if follow_count == 0
-                and (reason_to_rest(90) or you.status("spiked"))
+                and (reason_to_rest(90)
+                    or you.xl() <= 8 and disable_autoexplore
+                    or you.status("spiked"))
                 and not buffed()
             or other_count > 0
                 and follow_count > 0 then
         stairdance_count[where] = n + 1
         return true
     end
+
     return false
 end
 
@@ -8352,8 +8357,10 @@ function plan_continue_flee()
     if you.turns() >= last_flee_turn + 10 or not target_stair then
         return false
     end
+
     if danger
-            or not reason_to_rest(90)
+            or not (reason_to_rest(90)
+                or you.xl() <= 8 and disable_autoexplore)
             or you.transform() == "tree"
             or count_bia(3) > 0
             or count_sgd(3) > 0
@@ -8363,14 +8370,17 @@ function plan_continue_flee()
             or buffed() then
         return false
     end
+
     local num = waypoint_parity
     local dx, dy = travel.waypoint_delta(num)
     local val
     for x = -1, 1 do
         for y = -1, 1 do
-            if is_traversable(x, y) and not is_solid(x, y)
-                 and not monster_in_way(x, y) and view.is_safe_square(x, y)
-                 and not view.withheld(x, y) then
+            if is_traversable(x, y)
+                    and not is_solid(x, y)
+                    and not monster_in_way(x, y)
+                    and view.is_safe_square(x, y)
+                    and not view.withheld(x, y) then
                 val = stair_dists[num][target_stair][dx + x][dy + y]
                 if val and val < stair_dists[num][target_stair][dx][dy] then
                     dsay("STILL FLEEEEING.")
