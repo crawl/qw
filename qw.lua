@@ -3521,8 +3521,12 @@ function monster_in_way(dx, dy)
     local feat = view.feature_at(0, 0)
     return m and (m:attitude() <= enum_att_neutral and not branch_step_mode
         or m:attitude() > enum_att_neutral
-            and (m:is_constricted() or m:is_caught() or m:status("petrified")
-                or m:status("paralysed") or m:desc():find("sleeping")
+            and (m:is_constricted()
+                or m:is_caught()
+                or m:status("petrified")
+                or m:status("paralysed")
+                or m:status("constricted by roots")
+                or m:desc():find("sleeping")
                 or feat_is_deep_water_or_lava(feat)
                 or feat  == "trap_zot"))
 end
