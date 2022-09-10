@@ -2810,6 +2810,7 @@ function check_future_branches()
     end
 
     planning_undead_demon_branches = planning_undead_demon_branches
+        or gameplans_visit_branch("Crypt")
         or gameplans_visit_branch("Pan")
         or gameplans_visit_branch("Tomb")
         or gameplans_visit_branch("Zig")
