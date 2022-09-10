@@ -93,6 +93,7 @@ local planning_pan
 local planning_undead_demon_branches
 local planning_cocytus
 local planning_gehenna
+local planning_zig
 
 local travel_branch
 local travel_depth
@@ -1605,6 +1606,16 @@ function want_missile(it)
     return false
 end
 
+function want_miscellaneous(it)
+    local st = it.subtype()
+    if st == "figurine of a ziggurat" then
+        return planning_zig
+    end
+
+    return false
+end
+
+
 function autopickup(it, name)
     if not initialized then
         return
@@ -1634,6 +1645,8 @@ function autopickup(it, name)
         return want_wand(it)
     elseif class == "missile" then
         return want_missile(it)
+    elseif class == "misc" then
+        return want_miscellaneous(it)
     else
         return false
     end
@@ -2800,6 +2813,8 @@ function gameplans_visit_branch(branch)
 end
 
 function check_future_branches()
+    planning_zig = gameplans_visit_branch("Zig")
+
     planning_undead_demon_branches = false
 
     for _, br in ipairs(hell_branches) do
@@ -2813,7 +2828,7 @@ function check_future_branches()
         or gameplans_visit_branch("Crypt")
         or gameplans_visit_branch("Pan")
         or gameplans_visit_branch("Tomb")
-        or gameplans_visit_branch("Zig")
+        or planning_zig
 
     planning_vaults = gameplans_visit_branch("Vaults")
     planning_slime = gameplans_visit_branch("Slime")
@@ -6803,6 +6818,65 @@ function plan_go_to_orb()
     return false
 end
 
+function feat_is_critical(feat)
+    return feat_uses_map_key(">", feat)
+        or feat_uses_map_key("<", feat)
+        or feat:find("shop")
+        or feat:find("altar")
+        or feat:find("transporter")
+        or feat:find("transit")
+        or feat:find("abyss")
+end
+
+function plan_move_to_zigfig_location()
+    if gameplan_branch ~= "Zig"
+            or in_portal()
+            or in_branch("Abyss")
+            or in_branch("Pan")
+            or not find_item("misc", "figurine of a ziggurat")
+            or not feat_is_critical(view.feature_at(0, 0))
+            or cloudy then
+        return false
+    end
+
+    for x = -1, 1 do
+        for y = -1, 1 do
+            if supdist(x, y) > 0
+                    and is_traversable(x, y)
+                    and not is_solid(x, y)
+                    and not monster_in_way(x, y)
+                    and view.is_safe_square(x, y)
+                    and not feat_is_critical(view.feature_at(x, y)) then
+                return move_towards(x, y)
+            end
+        end
+    end
+
+    return false
+end
+
+function plan_use_zigfig()
+    if gameplan_branch ~= "Zig"
+            or in_portal()
+            or in_branch("Abyss")
+            or in_branch("Pan")
+            or you.berserk()
+            or you.confused()
+            or feat_is_critical(view.feature_at(0, 0))
+            or cloudy then
+        return false
+    end
+
+    local c = find_item("misc", "figurine of a ziggurat")
+    if c then
+        say("MAKING ZIG")
+        magic("V" .. letter(c))
+        return true
+    end
+
+    return false
+end
+
 function plan_go_to_zig_dig()
     if gameplan_branch ~= "Zig"
             or not branch_found("Zig")
@@ -9331,6 +9405,8 @@ plan_explore2 = cascade {
     {plan_find_altar, "try_find_altar"},
     {plan_convert, "convert"},
     {plan_find_conversion_altar, "try_find_conversion_altar"},
+    {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
+    {plan_use_zigfig, "try_use_zigfig"},
     {plan_zig_dig, "zig_dig"},
     {plan_go_to_zig_dig, "try_go_to_zig_dig"},
     {plan_enter_portal, "enter_portal"},
