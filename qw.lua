@@ -4607,7 +4607,8 @@ end
 
 function can_drink_heal_wounds()
     return you.mutation("no potion heal") < 2
-        and not items.equipped_at("Body Armour"):name():find("NoPotionHeal")
+        and not (items.equipped_at("Body Armour")
+            and items.equipped_at("Body Armour"):name():find("NoPotionHeal"))
 end
 
 function heal_general()
