@@ -62,6 +62,10 @@ Steps:
   ```bash
   ./crawl -rc /path/to/qw/qw-final.rc
   ```
+
+Note that `make-qw.sh` looks for a marker in `qw.rc` to know where to insert
+the lua. This is `# include = qw.lua` by default.
+
 ### Starting qw after crawl is loaded
 
 Enter a name if necessary and start a game. If you didn't change the
@@ -336,7 +340,7 @@ executed from the clua console.
 * Put code you want to test in the `ttt()` function on the bottom; make it run
   by macroing some key to `===ttt`.
 
-* Use the included `make-qw.sh` script to assemble a full qw rcfile from a
+* The `make-qw.sh` script has the following options to change
   base rcfile you've made from qw.rc with your desired settings and your qw.lua
   file. This script sets a custom version string variable based on the latest
   git annotated tag and commit.

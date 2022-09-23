@@ -195,8 +195,6 @@ autopickup_exceptions =
 # Enable to allow death in Wizard mode.
 : WIZMODE_DEATH = false
 
-# Run make-qw.sh to produce qw.lua from the lua source files, then uncomment
-# this line and run crawl with -rcdir with the path to the repository.
-# Alternatively, run make-qw.sh with the -r argument to create an rcfile with
-# the necessary lua directly included.
+# See README.md for details on using make-qw.sh to either set up a qw.lua file
+# or include the lua from the line below.
 # include = qw.lua
