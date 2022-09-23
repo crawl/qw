@@ -83,11 +83,11 @@ combo = GrBe.handaxe
 # A table of possible gameplans.
 : GAMEPLANS = {
 :     ["3 Runes"]  = "Normal",
-:     ["15 Runes"] = "Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss"
-:                    .. ", Zot",
-:     ["Zig"] = "Normal, Zot, God:TSO, Crypt, Tomb, Pan, Slime, Zig, Orb",
-:     ["All"] = "Normal, Zot, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss"
-:               .. ", Zig, Orb",
+:     ["15 Runes"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Pan, Slime:5"
+:                    .. ", Hells, Abyss, Orb",
+:     ["Zig"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Zig, Orb",
+:     ["All"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Pan, Slime:5, Hells"
+:                    .. ", Abyss, Orb",
 : }
 
 # The default gameplan.
