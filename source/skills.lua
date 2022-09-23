@@ -8,7 +8,7 @@ local skill_list = {
     "Spellcasting", "Conjurations", "Hexes", "Summonings",
     "Necromancy", "Translocations", "Transmutations", "Fire Magic",
     "Ice Magic", "Air Magic", "Earth Magic", "Poison Magic"
-} -- hack
+}
 
 function choose_single_skill(sk)
     you.train_skill(sk, 1)
@@ -82,7 +82,7 @@ function choose_skills()
     local martial_skills = {
         wskill(), "Fighting", "Shields", "Armour", "Dodging", "Invocations",
         "Throwing"
-    } --hack
+    }
 
     local best_sk
     local best_utility = 0

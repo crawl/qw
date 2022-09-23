@@ -121,7 +121,7 @@ function plan_sacrifice()
         "Sacrifice Stealth", -- 15
         "Sacrifice Essence", -- variable
         "Reject Sacrifices",
-    } -- hack
+    }
     for _, sacrifice in ipairs(good_sacrifices) do
         if sacrifice == "Sacrifice Nimbleness" then
             for letter, abil in pairs(you.ability_table()) do

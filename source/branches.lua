@@ -45,7 +45,7 @@ local branch_data_values = {
     { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, "obsidian" },
     { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, "icy" },
     { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
-} -- hack
+}
 
 -- Portal branch, entry description, max timeout in turns, description.
 local portal_data_values = {
@@ -59,7 +59,7 @@ local portal_data_values = {
     { "WizLab", "magical portal", 800, "wizard's laboratory" },
     { "Desolation", "crumbling gateway", 800 },
     { "Zig", "one-way gateway to a ziggurat", },
-} -- hack
+}
 
 function initialize_branch_data()
     for _, entry in ipairs(branch_data_values) do

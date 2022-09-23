@@ -23,7 +23,7 @@ local res_func_table = {
     -- returns a boolean
     rCorr=(function() return you.res_corr() and 1 or 0 end),
     Will=you.willpower,
-} --hack
+}
 
 function check_resist(lev, resist, value)
     return function (m)
@@ -303,7 +303,7 @@ local scary_monsters = {
     ["Tiamat"] = 100,
     ["Tzitzimitl"] = 100,
     ["Vv"] = 100,
-} -- hack
+}
 
 -- Used for: Trog's Brothers in Arms, Okawaru's Finesse, Makhleb's Summon
 -- Greater Servant, Ru's Apocalypse, the Shining One's Summon Divine Warrior,
@@ -429,7 +429,7 @@ local nasty_monsters = {
     ["Tiamat"] = 100,
     ["Tzitzimitl"] = 100,
     ["Vv"] = 100,
-} -- hack
+}
 
 -- BiA these even at low piety.
 local bia_necessary_monsters = {
@@ -439,7 +439,7 @@ local bia_necessary_monsters = {
     },
 
     ["orb spider"] = 20,
-} -- hack
+}
 
 -- Use haste/might on these few.
 local ridiculous_uniques = {
@@ -448,7 +448,7 @@ local ridiculous_uniques = {
     ["Asmodeus"] = 100,
     ["Lom Lobon"] = 100,
     ["Cerebov"] = 100,
-} -- hack
+}
 
 -- Trog's Hand these.
 local hand_monsters = {
@@ -481,7 +481,7 @@ local hand_monsters = {
     ["vampire knight"] = 100,
     ["siren"] = 100,
     ["merfolk avatar"] = 100,
-} -- hack
+}
 
 -- Potion of resistance these.
 local fire_resistance_monsters = {
@@ -494,14 +494,14 @@ local fire_resistance_monsters = {
     ["Cerebov"] = 100,
     ["Asmodeus"] = check_resist(100, "rF", 2),
     ["Vv"] = 100,
-} -- hack
+}
 
 local cold_resistance_monsters = {
     ["*"] = {},
     ["Ice Fiend"] = 100,
     ["Antaeus"] = 100,
     ["Vv"] = 100,
-} -- hack
+}
 
 local elec_resistance_monsters = {
     ["*"] = {
@@ -512,17 +512,17 @@ local elec_resistance_monsters = {
     ["electric golem"] = 100,
     ["spark wasp"] = 100,
     ["Antaeus"] = 100,
-} -- hack
+}
 
 local pois_resistance_monsters = {
     ["*"] = {},
     ["swamp drake"] = 100,
-} -- hack
+}
 
 local acid_resistance_monsters = {
     ["*"] = {},
     ["acid blob"] = 100,
-} -- hack
+}
 
 function mon_speed_num(m)
     local sdesc = m:speed_description()

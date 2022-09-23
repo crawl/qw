@@ -33,7 +33,7 @@ local god_data_values = {
     { "Xom", false, false },
     { "Yredelemnul", true, true },
     { "Zin", true, true },
-} --hack
+}
 
 local god_data = {}
 local god_lookups = {}

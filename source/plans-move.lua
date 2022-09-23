@@ -612,5 +612,5 @@ function set_plan_move()
         {plan_stuck_forget_map, "try_stuck_forget_map"},
         {plan_stuck_teleport, "stuck_teleport"},
         {plan_stuck, "stuck"},
-    } -- hack
+    }
 end

@@ -50,7 +50,7 @@ if [ -n "$rc_file" ]; then
     fi
 
     rc_text=$(cat $rc_file)
-    lua_text=$(printf "{\n%s\n}" "$lua_text")
+    lua_text=$(printf "<\n%s\n>" "$lua_text")
     printf "%s\n" "${rc_text/$rc_marker/$lua_text}" > "$out_file"
     rc_nlines=$(echo "$rc_text" | wc -l)
     echo "Added $rc_nlines lines from $rc_file to $out_file"
@@ -59,7 +59,7 @@ else
         out_file="$lua_out_file"
     fi
 
-    printf "{\n%s\n}\n" "$lua_text" > "$out_file"
+    printf "<\n%s\n>\n" "$lua_text" > "$out_file"
 fi
 
 lua_nlines=$(echo "$lua_text" | wc -l)

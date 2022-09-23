@@ -134,7 +134,7 @@ function set_plan_orbrun_rest()
     plan_orbrun_rest = cascade {
         {plan_orbrun_rest, "orbrun_rest"},
         {plan_orbrun_hand, "orbrun_hand"},
-    } -- hack
+    }
 end
 
 function set_plan_orbrun_emergency()
@@ -151,7 +151,7 @@ function set_plan_orbrun_emergency()
         {plan_resistance, "resistance"},
         {plan_wield_weapon, "wield_weapon"},
         {plan_orbrun_might, "orbrun_might"},
-    } -- hack
+    }
 end
 
 function set_plan_orbrun_move()
@@ -172,5 +172,5 @@ function set_plan_orbrun_move()
         {plan_autoexplore, "try_autoexplore"},
         {plan_gd1, "try_gd1"},
         {plan_stuck, "stuck"},
-    } -- hack
+    }
 end

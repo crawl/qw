@@ -1027,5 +1027,5 @@ function set_plan_emergency()
         {plan_berserk, "berserk"},
         {plan_continue_flee, "continue_flee"},
         {plan_other_step, "other_step"},
-    } -- hack
+    }
 end

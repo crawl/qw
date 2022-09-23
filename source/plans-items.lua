@@ -826,7 +826,7 @@ function set_plan_handle_acquirement_result()
         {plan_maybe_upgrade_armour, "maybe_upgrade_armour"},
         {plan_maybe_upgrade_amulet, "maybe_upgrade_amulet"},
         {plan_maybe_upgrade_rings, "maybe_upgrade_rings"},
-    } -- hack
+    }
 end
 
 function c_choose_acquirement()

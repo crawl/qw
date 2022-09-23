@@ -28,7 +28,7 @@ local AUTOEXP = enum {
     "TRANSPORTER",
     "RUNED_DOOR",
     "FULL",
-} --hack
+}
 
 -- Feature LOS state enum
 local FEAT_LOS = enum {
@@ -37,13 +37,13 @@ local FEAT_LOS = enum {
     "DIGGABLE",
     "REACHABLE",
     "EXPLORED",
-} --hack
+}
 
 -- Stair direction
 local DIR = {
     UP   = -1,
     DOWN =  1,
-} --hack
+}
 
 local INF_TURNS = 200000000
 

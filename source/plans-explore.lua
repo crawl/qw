@@ -177,7 +177,7 @@ function set_plan_pre_explore()
         {plan_bless_weapon, "bless_weapon"},
         {plan_upgrade_weapon, "upgrade_weapon"},
         {plan_use_good_consumables, "use_good_consumables"},
-    } -- hack
+    }
 end
 
 function set_plan_pre_explore2()
@@ -191,7 +191,7 @@ function set_plan_pre_explore2()
         {plan_use_id_scrolls, "use_id_scrolls"},
         {plan_drop_other_items, "drop_other_items"},
         {plan_full_inventory_panic, "full_inventory_panic"},
-    } -- hack
+    }
 end
 
 function set_plan_explore()
@@ -199,7 +199,7 @@ function set_plan_explore()
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_autoexplore, "try_autoexplore"},
-    } -- hack
+    }
 end
 
 function set_plan_explore2()
@@ -238,7 +238,7 @@ function set_plan_explore2()
         {plan_go_command, "try_go_command"},
         {plan_autoexplore, "try_autoexplore2"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
-    } -- hack
+    }
 end
 
 -- Hook to determine which traps are safe to move over without requiring an

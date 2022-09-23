@@ -95,5 +95,5 @@ function set_plan_rest()
     plan_rest = cascade {
         {plan_easy_rest, "try_easy_rest"},
         {plan_rest, "rest"},
-    } -- hack
+    }
 end

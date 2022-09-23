@@ -47,7 +47,7 @@ function delta_to_vi(dx, dy)
         [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b'},
         [0]    = { [-1] = 'k',                        [1] = 'j'},
         [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
-    } -- hack
+    }
     return d2v[dx][dy]
 end
 
@@ -56,7 +56,7 @@ function vi_to_delta(c)
         [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b'},
         [0]    = { [-1] = 'k',                        [1] = 'j'},
         [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
-    } -- hack
+    }
     for x = -1, 1 do
         for y = -1, 1 do
             if supdist(x, y) > 0 and d2v[x][y] == c then

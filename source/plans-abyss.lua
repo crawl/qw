@@ -109,7 +109,7 @@ function set_plan_abyss_rest()
         {plan_abyss_rest, "rest"},
         {plan_go_down_abyss, "go_down_abyss"},
         {plan_go_to_abyss_downstairs, "try_go_to_abyss_downstairs"},
-    } -- hack
+    }
 end
 
 function set_plan_abyss_move()
@@ -128,5 +128,5 @@ function set_plan_abyss_move()
         {plan_pre_explore2, "pre_explore2"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_wait, "wait"},
-    } -- hack
+    }
 end

@@ -42,11 +42,11 @@ end
 
 local square = {
     {1, -1}, {1, 1}, {-1, 1}, {-1, -1}
-} --hack
+}
 
 local square_move = {
     {0, 1}, {-1, 0}, {0, -1}, {1, 0}
-} --hack
+}
 
 function radius_iter(x, y, radius, include_center)
     if radius <= 0 then
