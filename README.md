@@ -15,32 +15,69 @@ and 15 runes, and we try to maintain qw so it can continue to play and win the
 current version. See [accomplishments.md](accomplishments.md) for current and
 past achievements.
 
-## Running locally
+## Running qw
 
-It's best to run qw either locally or on your own server. You can set up
-[Sequell](https://github.com/crawl/sequell) or the DCSS
-[scoring](https://github.com/crawl/scoring) scripts to track its statistics.
+To run qw, you'll need a local trunk build of crawl, or your own crawl WebTiles
+server with this build availabe.
+
+### Setting up an rcfile
+
+First clone this repository, and then make any desired changes to the
+configuration in [qw.rc](qw.rc). See the comments in this file and the
+[configuration](#configuration) section below for more details. Next, use the
+[make-qw.sh](make-qw.sh) script from this repository to combine all lua source
+files in one of two ways.
+
+#### Method 1: lua include file (recommended)
+
+This puts all source lua into a single `qw.lua` file that gets included into the rcfile via an `include` statement.
 
 Steps:
-* Clone this repo.
-* You may want to edit some of the configuration in [qw.rc](qw.rc). See the
-  comments  in that file and the [configuration](#configuration) section below
-  for more details.
-* Run crawl locally with command like `./crawl -rc qw/qw.rc -rcdir qw`, where
-  here the repo is in a directory named `qw`. The `-rcdir` option is necessary
-  for `crawl` to find the [qw.lua](qw.lua) file. Alternately you can put the
-  contents of qw.lua directly in qw.rc per the instructions below for online
-  play.
-* Enter a name if necessary and start game. If you didn't change the
-  `AUTO_START` variable, press "Tab".
-* Enjoy!
+* Run `make-qw.sh` to create `qw.lua`.
+* Uncomment the include line at the end of qw.rc so that it simply reads
+  ```
+  include = qw.lua
+  ```
+* To run qw locally use a command like:
+  ```bash
+  ./crawl -rc /path/to/qw/qw.rc -rcdir /path/to/qw
+  ```
+  The `-rcdir` option is necessary for crawl to find qw.lua.
+
+This method makes rcfile modifications easier and debugging easier due to line
+numbers from error messages.Note that when running qw on a server, you can
+still use this method if you use the `qw.lua` file as the rcfile contents of
+another account. You would then modify your `include = qw.lua` statement to be
+`include = ACCOUNT.rc` where `ACCOUNT` is the second account name.
+
+#### Method 2: lua directly in the rcfile
+
+This puts all lua directly into the rcfile. This is an easy way to run qw from
+a single account on an online server.
+
+Steps:
+* Run `make-qw.sh -r qw.rc` to inline all lua directly into the contents of
+  `qw.rc`, saving the results in `qw-final.rc`.
+* To run qw locally use a command like:
+  ```bash
+  ./crawl -rc /path/to/qw/qw-final.rc
+  ```
+### Starting qw after crawl is loaded
+
+Enter a name if necessary and start a game. If you didn't change the
+`AUTO_START` variable, the "Tab" key will start and stop qw.
 
 The file [qw.exp](qw.exp) is a simple expect script that automates running qw
 for many games in a row. The `AUTO_START` variable should be left at false when
 when using this. (With minor modifications, this can also be used to run games
 on a remote server over ssh.)
 
-## Running on a WebTiles server
+### Running on a WebTiles server
+
+It's best to run qw either locally or on your own crawl server. You can set up
+[Sequell](https://github.com/crawl/sequell) or the DCSS
+[scoring](https://github.com/crawl/scoring) scripts to track statistics from
+local games.
 
 Please don't run qw on an official server unless you have permission from the
 server admin. Misconfigured (or even well-configured) bots can eat up server
@@ -51,20 +88,17 @@ can be easily filtered out of queries. Also, please don't run qw on the same
 account that you use for your own personal games.
 
 Steps:
-* In a text editor, open the [qw.rc](qw.rc) file from this repo.
+* Follow the [instructions above](#setting-up-an-rcfile) to create a final
+  rcfile based on your modified `qw.rc`. If you need to use only a single
+  account, you'll want [Method 2](method-2:-lua-directly-in-the-rcfile), but
+  the first method works if you can use two accounts.
+* In a text editor, open your qw.rc file.
 * In the *Interface* section, on the lines with `: DELAYED = false` and `:
   AUTO_START = false`, change `false` to `true`
-* At the end of the contents of qw.rc, put the contents of the [qw.lua](qw.lua)
-  file from this repository. Note that first line of `qw.lua` with `{` and the
-  last line with `}` must also be included, otherwise the Lua code won't execute.
-* Copy the full contents of your modified qw.rc file. It's wise to also save
-  this to a new file for ease of future modifications.
-* Go to your WebTiles server lobby.
-* Click the "(edit rc)" link for DCSS trunk, paste the contents of the modified
-  `qw.rc` you made, and click Save.
+* Click the "(edit rc)" link for DCSS trunk and paste the full contents of the
+  final rcfile, and click Save.
 * Run DCSS trunk, either in WebTiles or in console. If you didn't change the
   `AUTO_START` variable to `true`, press "Tab".
-* Enjoy!
 
 Since clua works on the server side, WebTiles drawing can lag behind things
 actually happening. To see more current events just refresh the page and press
@@ -72,7 +106,7 @@ actually happening. To see more current events just refresh the page and press
 
 ## Configuration
 
- Most qw variables are straightforward and are described in in comments in
+Most qw variables are straightforward and are described in in comments in
 qw.rc. Some important and more complicated variables are described here. Note
 that lines in qw.rc beginning with `:` define Lua variables and must be valid
 Lua code, otherwise the lines are Crawl options as described in the [options
@@ -302,7 +336,7 @@ executed from the clua console.
 * Put code you want to test in the `ttt()` function on the bottom; make it run
   by macroing some key to `===ttt`.
 
-* Use the included `make-qw-rc.sh` script to assemble a full qw rcfile from a
+* Use the included `make-qw.sh` script to assemble a full qw rcfile from a
   base rcfile you've made from qw.rc with your desired settings and your qw.lua
   file. This script sets a custom version string variable based on the latest
   git annotated tag and commit.
