@@ -282,7 +282,7 @@ function absolute_resist_value(str, n)
             if branch_soon("Zot") then
                 val = val * 2.5
             elseif branch_soon("Geh") then
-                val = val * 1.5
+                val = val * 2.5
             end
         elseif str == "rC" then
             if branch_soon("Coc") then

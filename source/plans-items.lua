@@ -508,6 +508,31 @@ function brand_is_great(brand)
     end
 end
 
+function want_cure_mutations()
+    return base_mutation("inhibited regeneration") > 0
+            and you.race() ~= "Ghoul"
+        or base_mutation("teleportitis") > 0
+        or base_mutation("inability to drink after injury") > 0
+        or base_mutation("inability to read after injury") > 0
+        or base_mutation("deformed body") > 0
+            and you.race() ~= "Naga"
+            and you.race() ~= "Palentonga"
+            and (armour_plan() == "heavy"
+                or armour_plan() == "large")
+        or base_mutation("berserk") > 0
+        or base_mutation("deterioration") > 1
+        or base_mutation("frail") > 0
+        or base_mutation("no potion heal") > 0
+            and you.race() ~= "Vine Stalker"
+        or base_mutation("heat vulnerability") > 0
+            and (you.res_fire() < 0
+                or you.res_fire() < 3
+                    and (branch_soon("Zot") or branch_soon("Geh")))
+        or base_mutation("cold vulnerability") > 0
+            and (you.res_cold() < 0
+                or you.res_cold() < 3 and branch_soon("Coc"))
+end
+
 function plan_use_good_consumables()
     for it in inventory() do
         if it.class(true) == "scroll" and can_read() then
@@ -592,30 +617,9 @@ function plan_use_good_consumables()
             if it.name():find("experience") then
                 return drink(it)
             end
-            if it.name():find("mutation") then
-                if base_mutation("inhibited regeneration") > 0
-                            and you.race() ~= "Ghoul"
-                        or base_mutation("teleportitis") > 0
-                        or base_mutation("inability to drink after injury") > 0
-                        or base_mutation("inability to read after injury") > 0
-                        or base_mutation("deformed body") > 0
-                            and you.race() ~= "Naga"
-                            and you.race() ~= "Palentonga"
-                            and (armour_plan() == "heavy"
-                                or armour_plan() == "large")
-                        or base_mutation("berserk") > 0
-                        or base_mutation("deterioration") > 1
-                        or base_mutation("frail") > 0
-                        or base_mutation("no potion heal") > 0
-                            and you.race() ~= "Vine Stalker" then
-                    if you.god() ~= "Zin" then
-                        return drink(it)
-                    elseif you.piety_rank() >= 6
-                            and not you.one_time_ability_used()
-                            and use_ability("Cure All Mutations", "Y") then
-                        return true
-                    end
-                end
+
+            if it.name():find("mutation") and want_cure_mutations() then
+                return drink(it)
             end
         end
     end
