@@ -234,8 +234,12 @@ function at_branch_end(branch)
     return where_branch == branch and where_depth == branch_depth(branch)
 end
 
+function is_hell_branch(branch)
+    return util.contains(hell_branches, branch)
+end
+
 function in_hell_branch()
-    return util.contains(hell_branches, where_branch)
+    return is_hell_branch(where_branch)
 end
 
 function branch_rune_depth(branch)

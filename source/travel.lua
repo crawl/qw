@@ -52,9 +52,16 @@ function travel_up_branches(start_branch, start_depth, parents, entries,
             break
         end
 
-        depth = travel_branch_levels(branch, depth, 1)
-        if depth ~= 1 then
-            break
+        if is_hell_branch(branch) then
+            if not branch_found(branch)
+                    or parents[i] ~= parent_branch(branch) then
+                break
+            end
+        else
+            depth = travel_branch_levels(branch, depth, 1)
+            if depth ~= 1 then
+                break
+            end
         end
 
         branch = parents[i]
@@ -133,15 +140,22 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
         return dest_branch, dest_depth
     end
 
-    local start_parents, start_entries = parent_branch_chain(start_branch,
-        dest_branch)
-    local dest_parents, dest_entries = parent_branch_chain(dest_branch,
-        start_branch, start_entries)
-    local common_parent
-    if dest_parents then
-        common_parent = dest_parents[#dest_parents]
+    local common_parent, start_parents, start_entries, dest_parents,
+        dest_entries
+    if start_branch == dest_branch
+            and (not is_hell_branch(start_branch)
+                or start_depth <= dest_depth) then
+        common_parent = start_branch
     else
-        common_parent = "D"
+        start_parents, start_entries = parent_branch_chain(start_branch,
+            dest_branch)
+        dest_parents, dest_entries = parent_branch_chain(dest_branch,
+            start_branch, start_entries)
+        if dest_parents then
+            common_parent = dest_parents[#dest_parents]
+        else
+            common_parent = "D"
+        end
     end
 
     local cur_branch = start_branch
