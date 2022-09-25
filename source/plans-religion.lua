@@ -33,6 +33,7 @@ function plan_abandon_god()
                 and you.god() == "Xom"
                 and CK_ABANDON_XOM then
         magic("aXYY")
+        want_gameplan_update = true
         return true
     end
 
@@ -45,6 +46,7 @@ function plan_join_beogh()
     end
     for _, god in ipairs(god_options()) do
         if god == "Beogh" and use_ability("Convert to Beogh", "YY") then
+            want_gameplan_update = true
             return true
         end
     end
@@ -89,17 +91,21 @@ function plan_join_god()
             else
                 magic("<J")
             end
+            want_gameplan_update = true
             return true
         end
     end
+
     if FADED_ALTAR and feat == "altar_ecumenical" then
         if you.silenced() then
             rest()
         else
             magic("<J")
         end
+        want_gameplan_update = true
         return true
     end
+
     return false
 end
 

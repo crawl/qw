@@ -258,12 +258,40 @@ function determine_gameplan()
         desc = status .. " rune"
     end
 
+    -- If we're configured to join a god, prioritize finding one from our god
+    -- list, possibly exploring Temple once it's found.
+    if want_altar() then
+        local found = {}
+        local gods = god_options()
+        for _, g in ipairs(gods) do
+            if altar_found(g) then
+                table.insert(found, g)
+            end
+        end
+
+        if #found ~= #gods
+                and branch_found("Temple")
+                and not explored_level_range("Temple") then
+            status = "Temple"
+            gameplan = "Temple"
+        elseif #found > 0 then
+            if not c_persist.chosen_god then
+                c_persist.chosen_god = found[crawl.roll_dice(1, #found)]
+            end
+
+            status = "God:" .. c_persist.chosen_god
+        end
+    end
+
     if status:find("^God:") then
         local god = gameplan_god(status)
-        desc = "conversion to " .. god
+        desc = god .. " worship"
         local altar_lev = altar_found(god)
         if altar_lev then
             gameplan = altar_lev
+        elseif branch_found("Temple")
+                and not explored_level_range("Temple") then
+            gameplan = "Temple"
         end
     end
 
@@ -272,31 +300,18 @@ function determine_gameplan()
     if portal then
         status = portal
         gameplan = portal
-        desc = portal
-    end
-
-    -- If we're configured to join a god, prioritize exploring Temple, once
-    -- it's found.
-    if want_altar()
-            and branch_found("Temple")
-            and not explored_level_range("Temple") then
-        status = "Temple"
-        gameplan = status
-        desc = status
     end
 
     -- Dive to and explore the end of Zot. We'll start trying to pick up the
     -- ORB via stash search travel as soon as it's found.
     if status == "Orb" then
         gameplan = zot_end
-        desc = "Orb"
     end
 
     -- Portals remain our gameplan while we're there.
     if in_portal() then
         status = where_branch
         gameplan = where_branch
-        desc = where_branch
     end
 
     local branch = parse_level_range(gameplan)
@@ -310,8 +325,6 @@ function determine_gameplan()
         if not desc then
             if status == "Shopping" then
                 desc = "shopping spree"
-            elseif status == "Orb" then
-                desc = "orb"
             else
                 desc = status
             end

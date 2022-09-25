@@ -254,13 +254,12 @@ function update_gameplan_travel()
             and (where_branch ~= travel_branch or where_depth ~= travel_depth))
 
     -- Don't autoexplore if we want to travel in some way. This is so we can
-    -- leave our current level before it's completely explored. If the level is
-    -- fully explored, always allow autexplore so we can get any nearby items
-    -- (e.g. from dead stairdanced monsters or thrown ammo). After autoexplore
-    -- finishes, it will fail on the next attempt, and the cascade will proceed
-    -- to travel.
+    -- leave our current level before it's completely explored.
     disable_autoexplore = (stairs_search_dir or want_go_travel or stash_travel)
-            and not explored_level(where_branch, where_depth)
+            -- Allow autoexplore if we've already fully explored our current
+            -- level, unless our current level is our travel destination.
+            and (not explored_level(where_branch, where_depth)
+                or (travel_branch and not want_go_travel))
 
     if DEBUG_MODE then
         dsay("Stash travel: " .. bool_string(stash_travel), "explore")
