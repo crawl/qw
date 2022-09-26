@@ -327,12 +327,17 @@ end
 
 function plan_stuck()
     stuck_turns = stuck_turns + 1
-    if stuck_turns > QUIT_TURNS then
+    return random_step("stuck")
+    -- panic("Stuck!")
+end
+
+function plan_quit()
+    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
         magic(control('q') .. "yes\r")
         return true
     end
-    return random_step("stuck")
-    -- panic("Stuck!")
+
+    return false
 end
 
 function plan_stuck_clear_exclusions()
@@ -576,6 +581,7 @@ end
 
 function set_plan_move()
     plan_move = cascade {
+        {plan_quit, "quit"},
         {plan_ancestor_identity, "try_ancestor_identity"},
         {plan_join_beogh, "join_beogh"},
         {plan_shop, "shop"},
