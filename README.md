@@ -181,7 +181,7 @@ proceed to those after its `Shopping` gameplan is complete. Hence a viable 15
 Rune route could be expressed as:
 
 ```
-"Normal, God:TSO, Crypt, Tomb, Pan, Slime, Hells, Abyss, Zot"
+"Normal, God:TSO, Crypt, Tomb, Pan, Slime:5, Hells, Abyss, Zot"
 ```
 
 This will have qw abandon its current god for the Shining One after shopping is
@@ -324,13 +324,15 @@ executed from the clua console.
 
   Toggle the output for the channel name in the `channel` string argument.
 
-* `set_stairs(branch, depth, dir, feat_los)`
+* `set_stairs(branch, depth, dir, feat_los, min_feat_los)`
 
   Set `c_persist` stair knowledge for all stairs on the level of the direction
   given in `dir` to the LOS value in `feat_los`. For `dir`, 1 means downstairs,
   -1 meaning upstairs, and 0 means both. For `feat_los`, 0 means the stair hasn't
   been seen, 1 means seen but behind transparent wall, 2 means seen but behind a
   grate, 3 means reachable, and 4 means the stair has been used at least once.
+  If `min_feat_los` is given, only stairs with a LOS value of `min_feat_los` or
+  higher will be changed.
 
 ### Miscellaneous tips for coding and testing
 
@@ -340,11 +342,7 @@ executed from the clua console.
 * Put code you want to test in the `ttt()` function on the bottom; make it run
   by macroing some key to `===ttt`.
 
-* The `make-qw.sh` script has the following options to change
-  base rcfile you've made from qw.rc with your desired settings and your qw.lua
-  file. This script sets a custom version string variable based on the latest
-  git annotated tag and commit.
-
 * qw outputs its version string and current configuration as notes at the start
   of every game. These can be viewed from the in-progress game dump and the
-  final game morgue.
+  final game morgue. The version string is updated by the `make-qw.sh` script
+  based on `git describe`.
