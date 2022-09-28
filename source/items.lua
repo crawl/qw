@@ -454,7 +454,7 @@ end
 
 function linear_resist_value(str)
     if str == "Regen" then
-        return 100
+        return 200
     elseif str == "Slay" or str == "AC" or str == "EV" then
         return 50
     elseif str == "SH" then
