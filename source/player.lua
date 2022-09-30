@@ -250,6 +250,7 @@ function can_invoke()
     return not (you.berserk()
             or you.confused()
             or you.silenced()
+            or you.under_penance(you.god())
             or you.status("engulfed (cannot breathe)"))
 end
 
