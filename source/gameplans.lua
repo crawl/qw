@@ -531,7 +531,7 @@ function explored_level(branch, depth)
     return autoexplored_level(branch, depth)
         and have_all_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE)
         and have_all_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE)
-        and (depth < branch_rune_depth(branch) or have_branch_runes(branch))
+        and (have_branch_runes(branch) or depth < branch_rune_depth(branch))
 end
 
 function explored_level_range(range)
@@ -845,8 +845,14 @@ function finalize_exploration_depth(branch, depth)
         if depth_up_finished then
             if depth_down_finished then
                 if down_unreach then
-                    level_stair_reset(branch, up_depth, DIR.DOWN)
-                    level_stair_reset(branch, depth, DIR.UP)
+                    -- We don't try stair resets if we're still looking for the
+                    -- rune. This way we'll instead try branch-end-specific
+                    -- plans for e.g. Swamp.
+                    if have_branch_runes(branch)
+                            or depth < branch_rune_depth(branch) then
+                        level_stair_reset(branch, up_depth, DIR.DOWN)
+                        level_stair_reset(branch, depth, DIR.UP)
+                    end
                     return depth
                 end
 

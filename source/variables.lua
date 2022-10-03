@@ -215,7 +215,6 @@ local plan_explore
 local plan_explore2
 local plan_move
 
-
 local plan_orbrun_rest
 local plan_orbrun_emergency
 local plan_orbrun_move

@@ -243,6 +243,10 @@ function in_hell_branch()
 end
 
 function branch_rune_depth(branch)
+    if not branch_rune(branch) then
+        return
+    end
+
     if branch == "Abyss" then
         return 3
     else
