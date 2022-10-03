@@ -228,6 +228,15 @@ function choose_tactical_step()
     end
 end
 
+function plan_quit()
+    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
+        magic(control('q') .. "yes\r")
+        return true
+    end
+
+    return false
+end
+
 function plan_cloud_step()
     if tactical_reason == "cloud" then
         say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
@@ -328,13 +337,11 @@ end
 function plan_stuck()
     stuck_turns = stuck_turns + 1
     return random_step("stuck")
-    -- panic("Stuck!")
 end
 
-function plan_quit()
-    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
-        magic(control('q') .. "yes\r")
-        return true
+function plan_stuck_initial()
+    if stuck_turns <= 50 then
+        return plan_stuck()
     end
 
     return false
@@ -616,6 +623,7 @@ function set_plan_move()
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_forget_map, "try_stuck_forget_map"},
+        {plan_stuck_initial, "stuck_initial"},
         {plan_stuck_teleport, "stuck_teleport"},
         {plan_stuck, "stuck"},
     }

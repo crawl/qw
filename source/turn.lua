@@ -125,16 +125,17 @@ function turn_update()
         where_depth = you.depth()
         want_gameplan_update = true
 
+        target_stair = nil
+        transp_zone = 0
+        zone_counts = {}
+
+        clear_ignores()
+        stuck_turns = 0
         if backtracked_to ~= where then
             backtracked_to = nil
         end
 
-        clear_ignores()
-        target_stair = nil
         base_corrosion = in_branch("Dis") and 2 or 0
-
-        transp_zone = 0
-        zone_counts = {}
 
         if you.have_orb() and where == zot_end then
             ignore_traps = true
