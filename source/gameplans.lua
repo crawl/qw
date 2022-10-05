@@ -754,127 +754,7 @@ function gameplan_options()
     return GAMEPLANS[plan]
 end
 
-function dir_key(dir)
-    return dir == DIR.DOWN and ">" or "<"
-end
-
--- Adjust depth for any backtracking, reversing to our previous level and
--- searching in the opposite direction. Otherwise we only set the dir if the
--- level is autoexplored.
-function final_depth_dir(branch, depth, dir, backtrack)
-    if backtrack then
-        return depth + dir, -dir
-    elseif autoexplored_level(branch, depth) then
-        return depth, dir
-    else
-        return depth
-    end
-end
-
-function finalize_exploration_depth(branch, depth)
-    if not autoexplored_level(branch, depth) then
-        return depth
-    end
-
-    -- We just backtracked from an adjacent level to this depth. We'll not
-    -- return to the final search depth we calculate, but rather try to reach
-    -- that search depth via unexplored stairs from the current depth.
-    local backtrack = backtracked_to == make_level(branch, depth)
-
-    function all_reachable(branch, depth, dir)
-        return count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
-            == num_required_stairs(branch, depth, dir)
-    end
-
-    function all_explored(branch, depth, dir)
-        return count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
-            == count_stairs(branch, depth, dir, FEAT_LOS.EXPLORED)
-    end
-
-    local up_depth = depth - 1
-    local up_unreach = true
-    local  depth_up_all_reachable, up_finished, up_lev
-    if up_depth >= 1 then
-        depth_up_all_reachable = all_reachable(branch, depth, DIR.UP)
-        up_lev = make_level(branch, up_depth)
-        up_unreach
-            = count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE) == 0
-        up_finished = depth_up_all_reachable
-            or autoexplored_level(branch, up_depth)
-                and all_explored(branch, up_depth, DIR.DOWN)
-    end
-
-    depth_up_finished = depth_up_all_reachable
-        or all_explored(branch, depth, DIR.UP)
-
-    local down_depth = depth + 1
-    local down_unreach = true
-    local depth_down_all_reachable, down_finished, down_lev
-    if down_depth <= branch_depth(branch) then
-        depth_down_all_reachable = all_reachable(branch, depth, DIR.DOWN)
-        down_depth_lev = make_level(branch, down_depth)
-        down_unreach =
-            count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) == 0
-        down_finished = depth_down_all_reachable
-            or autoexplored_level(branch, down_depth)
-                and all_explored(branch, down_depth, DIR.UP)
-    end
-
-    depth_down_finished = depth_down_all_reachable
-        or all_explored(branch, depth, DIR.DOWN)
-
-    if up_unreach then
-        if depth_down_finished then
-            if down_unreach then
-                return depth
-            end
-
-            if down_finished then
-                level_stair_reset(branch, depth, DIR.DOWN)
-                level_stair_reset(branch, down_depth, DIR.UP)
-                return depth
-            end
-
-            return final_depth_dir(branch, down_depth, DIR.UP, backtrack)
-        end
-
-        return depth, DIR.DOWN
-    end
-
-    if up_finished then
-        if depth_up_finished then
-            if depth_down_finished then
-                if down_unreach then
-                    -- We don't try stair resets if we're still looking for the
-                    -- rune. This way we'll instead try branch-end-specific
-                    -- plans for e.g. Swamp.
-                    if have_branch_runes(branch)
-                            or depth < branch_rune_depth(branch) then
-                        level_stair_reset(branch, up_depth, DIR.DOWN)
-                        level_stair_reset(branch, depth, DIR.UP)
-                    end
-                    return depth
-                end
-
-                if down_finished then
-                    level_stair_reset(branch, up_depth, DIR.DOWN)
-                    level_stair_reset(branch, depth, DIR.UP)
-                    level_stair_reset(branch, depth, DIR.DOWN)
-                    level_stair_reset(branch, down_depth, DIR.UP)
-                    return depth
-                end
-            end
-
-            return final_depth_dir(branch, down_depth, DIR.UP, backtrack)
-        end
-
-        return depth, DIR.UP
-    end
-
-    return final_depth_dir(branch, up_depth, DIR.DOWN, backtrack)
-end
-
-function explore_next_range_depth(branch, min_depth, max_depth)
+function next_exploration_depth(branch, min_depth, max_depth)
     -- The earliest depth that either lacks autoexplore or doesn't have all
     -- stairs reachable.
     local branch_max = branch_depth(branch)
@@ -909,7 +789,7 @@ function set_gameplan(status, gameplan)
         gameplan_depth = where_depth
     elseif gameplan_branch then
         gameplan_depth
-            = explore_next_range_depth(gameplan_branch, min_depth, max_depth)
+            = next_exploration_depth(gameplan_branch, min_depth, max_depth)
 
         if gameplan == zot_end and not gameplan_depth then
             gameplan_depth = branch_depth("Zot")

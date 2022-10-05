@@ -103,12 +103,10 @@ local want_go_travel
 local disable_autoexplore
 
 local stairs_search_dir
-local stairs_search
 local stairs_travel
 
 local go_travel_attempts = 0
 local stash_travel_attempts = 0
-local backtracked_to
 
 local transp_search
 local transp_zone

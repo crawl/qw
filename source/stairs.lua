@@ -47,6 +47,10 @@ function set_stairs(branch, depth, dir, feat_los, min_feat_los)
     end
 end
 
+function dir_key(dir)
+    return dir == DIR.DOWN and ">" or "<"
+end
+
 function level_stair_reset(branch, depth, dir)
     set_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
 
@@ -60,18 +64,6 @@ function level_stair_reset(branch, depth, dir)
     if where ~= lev then
         dsay("Resetting autoexplore of " .. lev, "explore")
         c_persist.autoexplore[lev] = AUTOEXP.NEEDED
-    end
-end
-
-function check_stairs_search(feat)
-    local dir, num
-    dir, num = stone_stair_type(feat)
-    if not dir then
-        return
-    end
-
-    if stairs_state(where_branch, where_depth, dir, num) < FEAT_LOS.EXPLORED then
-        stairs_search = feat
     end
 end
 
@@ -296,7 +288,6 @@ function update_level_map(num)
         if feat_uses_map_key(map_search_key, feat) then
             record_map_search(num, map_search_key, map_search_pos,
                 map_search_count, 100 * dx + dy)
-            check_stairs_search(feat)
         end
         map_search_key = nil
         map_search_pos = nil

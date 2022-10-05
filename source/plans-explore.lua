@@ -1,10 +1,5 @@
 function plan_autoexplore()
-    if disable_autoexplore
-            -- Autoexplore will try to take us near any runed doors. We don't
-            -- even attempt it if doing a stairs search, since it would move us
-            -- off our map travel destination.
-            or stairs_search
-            or free_inventory_slots() == 0 then
+    if disable_autoexplore or free_inventory_slots() == 0 then
         return false
     end
 
@@ -231,8 +226,8 @@ function set_plan_explore2()
         {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
         {plan_enter_abyss, "enter_abyss"},
         {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
+        {plan_take_unexplored_stairs, "take_unexplored_stairs"},
         {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
-        {plan_take_unexplored_stairs, "try_take_unexplored_stairs"},
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},

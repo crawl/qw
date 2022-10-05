@@ -113,19 +113,15 @@ function travel_down_branches(dest_branch, dest_depth, parents, entries)
 end
 
 -- Search branch and stair data from a starting level to a destination level,
--- returning the furthest point we know we can travel and any direction we'd
--- need to go next.
+-- returning the furthest point to which we know we can travel.
 -- @string  start_branch The starting branch.
 -- @int     start_depth  The starting depth.
 -- @string  dest_branch  The destination branch.
 -- @int     dest_depth   The destination depth.
 -- @treturn string       The furthest branch traveled.
 -- @treturn int          The furthest depth traveled in the furthest branch.
--- @return               Either -1, 1, a string, or nil. Values of -1 or 1
---                       indicate the next stair direction to travel from the
---                       furthest travel level. A string gives the branch name
---                       of an entry that needs to be taken next. nil indicates
---                       we don't need to go any further.
+-- @treturn string       Any branch whose entry we were not able to travel into
+--                       at the furthest location travel.
 function travel_destination_search(dest_branch, dest_depth, start_branch,
         start_depth)
     if not start_branch then
@@ -206,6 +202,90 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
     return cur_branch, cur_depth, stop_branch
 end
 
+function check_depth_dir(branch, depth, dir)
+    local dir_depth = depth + dir
+    -- We can already reach all required stairs in this direction on our level.
+    if count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+            == num_required_stairs(branch, depth, dir) then
+        return
+    end
+
+    local dir_depth_stairs =
+        count_stairs(branch, dir_depth, -dir, FEAT_LOS.EXPLORED)
+            < count_stairs(branch, dir_depth, -dir, FEAT_LOS.REACHABLE)
+    -- The adjacent level in this direction from our level is autoexplored and
+    -- we have no unexplored reachable stairs remaining on that level in the
+    -- opposite direction.
+    if autoexplored_level(branch, dir_depth) and not dir_depth_stairs then
+        -- The reachable stairs in this direction on our level are also all
+        -- explored, hence we've done as much as we can with this direction
+        -- relative to our level.
+        if count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+                == count_stairs(branch, depth, dir, FEAT_LOS.EXPLORED) then
+            return
+        end
+
+        return depth, dir
+    end
+
+    -- Only try a stair search on the adjacent level if we know there are
+    -- unexplored stairs we could take. Otherwise explore the adjacent level,
+    -- looking for relevant stairs.
+    if dir_depth_stairs then
+        return dir_depth, -dir
+    else
+        return dir_depth
+    end
+end
+
+function finalize_travel_depth(branch, depth)
+    if not autoexplored_level(branch, depth) then
+        return depth
+    end
+
+    local up_reachable = depth > 1
+        and count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE) > 0
+    local final_depth, final_dir
+    if up_reachable then
+        final_depth, final_dir = check_depth_dir(branch, depth, DIR.UP)
+    end
+
+    local down_reachable = depth < branch_depth(branch)
+        and count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) > 0
+    if not final_depth and down_reachable then
+        final_depth, final_dir = check_depth_dir(branch, depth, DIR.DOWN)
+    end
+
+    if not final_depth then
+        if up_reachable
+                -- Don't reset up stairs if we still need the branch rune,
+                -- since we have specific plans for branch ends we may need to
+                -- follow.
+                and (have_branch_runes(branch)
+                    or depth < branch_rune_depth(branch)) then
+            level_stair_reset(branch, depth, DIR.UP)
+            level_stair_reset(branch, depth - 1, DIR.DOWN)
+            final_depth = depth - 1
+            final_dir = DIR.DOWN
+        end
+
+        if down_reachable then
+            level_stair_reset(branch, depth, DIR.DOWN)
+            level_stair_reset(branch, depth + 1, DIR.UP)
+            if not final_depth then
+                final_depth = depth + 1
+                final_dir = DIR.UP
+            end
+        end
+    end
+
+    if not final_depth then
+        final_depth = depth
+    end
+
+    return final_depth, final_dir
+end
+
 function travel_destination(dest_branch, dest_depth, stash_travel)
     if not dest_branch or in_portal() then
         return
@@ -219,13 +299,13 @@ function travel_destination(dest_branch, dest_depth, stash_travel)
     -- best location to travel to in its parent branch.
     if stop_branch and not branch_found(stop_branch) then
         local parent, min_depth, max_depth = parent_branch(stop_branch)
-        depth = explore_next_range_depth(parent, min_depth, max_depth)
-        depth, dir = finalize_exploration_depth(branch, depth)
+        depth = next_exploration_depth(parent, min_depth, max_depth)
+        depth, dir = finalize_travel_depth(branch, depth)
     -- Get the final depth we should travel to given the state of stair
     -- exploration at our travel destination. For stash search travel, we don't
     -- do this, since we know what we want is on the destination level.
     elseif not stash_travel then
-        depth, dir = finalize_exploration_depth(branch, depth)
+        depth, dir = finalize_travel_depth(branch, depth)
     end
 
     return branch, depth, dir
@@ -256,8 +336,14 @@ function update_gameplan_travel()
     -- Don't autoexplore if we want to travel in some way. This is so we can
     -- leave our current level before it's completely explored.
     disable_autoexplore = (stairs_search_dir or want_go_travel or stash_travel)
-            -- Allow autoexplore if we've already fully explored our current
-            -- level, unless our current level is our travel destination.
+            -- We do allow autoexplore even when we want to travel if the
+            -- current is fully explored, since then it's safe to pick up any
+            -- surrounding items like thrown projectiles or loot from e.g.
+            -- stairdancing. However we don't allow autoexplore in this case if
+            -- our current level is our travel destination. This exception is
+            -- to allow within-level plans like taking unexplored stairs and
+            -- stash searches to on-level destinations to not be interrupted if
+            -- autoexplore would move us next to a runed door.
             and (not explored_level(where_branch, where_depth)
                 or (travel_branch and not want_go_travel))
 

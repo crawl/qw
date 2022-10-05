@@ -131,9 +131,6 @@ function turn_update()
 
         clear_ignores()
         stuck_turns = 0
-        if backtracked_to ~= where then
-            backtracked_to = nil
-        end
 
         base_corrosion = in_branch("Dis") and 2 or 0
 
@@ -151,8 +148,6 @@ function turn_update()
             tomb3_entry_turn = you.turns()
         end
     end
-
-    stairs_search = nil
 
     transp_search = nil
     if can_use_transporters() then

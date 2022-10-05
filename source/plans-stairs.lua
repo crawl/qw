@@ -1,15 +1,8 @@
 function plan_go_to_unexplored_stairs()
     if not can_waypoint
-            or stairs_search
             or not stairs_search_dir
             or where_branch ~= travel_branch
             or where_depth ~= travel_depth then
-        return false
-    end
-
-    -- No point in trying if we don't have unexplored stairs.
-    if have_all_stairs(where_branch, where_depth, stairs_search_dir,
-            FEAT_LOS.EXPLORED) then
         return false
     end
 
@@ -92,26 +85,35 @@ function plan_transporter_orient_exit()
 end
 
 function plan_take_unexplored_stairs()
-    if not stairs_search then
+    if not stairs_search_dir then
         return false
     end
 
-    local dir = stone_stair_type(stairs_search)
+    local dir, num
+    dir, num = stone_stair_type(view.feature_at(0, 0))
+    if not dir or dir ~= stairs_search_dir
+            or stairs_state(where_branch, where_depth, dir, num)
+                >= FEAT_LOS.EXPLORED then
+        return false
+    end
 
     -- Ensure that we autoexplore any new area we arrive in, otherwise, if we
     -- have completed autoexplore at least once, we may immediately leave once
     -- we see we've found the last missing staircase.
-    local level = make_level(where_branch, where_depth + dir)
-    c_persist.autoexplore[level] = AUTOEXP.NEEDED
+    c_persist.autoexplore[make_level(where_branch, where_depth + dir)]
+        = AUTOEXP.NEEDED
 
     magic("G" .. dir_key(dir))
     return true
 end
 
 -- Backtrack to the previous level if we're trying to explore stairs on a
--- travel or gameplan destination level yet have no further accessible
--- unexplored stairs. We require a travel or gameplan stairs search direction
--- to know whether to attempt this and what direction we should backtrack.
+-- destination level yet have no further accessible unexplored stairs. We
+-- require a travel stairs search direction to know whether to attempt this and
+-- what direction we should backtrack. Stairs are reset in the relevant
+-- directions on both levels so after we explore the pair of stairs used to
+-- return to the previous level, we'll take a different set of stairs from that
+-- level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
     if not stairs_search_dir
             or where_branch ~= travel_branch
@@ -123,7 +125,7 @@ function plan_unexplored_stairs_backtrack()
     local next_depth = where_depth + stairs_search_dir
     level_stair_reset(where_branch, where_depth, stairs_search_dir)
     level_stair_reset(where_branch, next_depth, -stairs_search_dir)
-    backtracked_to = make_level(where_branch, next_depth)
+    want_gameplan_update = true
     send_travel(where_branch, next_depth)
     return true
 end
