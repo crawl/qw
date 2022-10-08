@@ -106,8 +106,8 @@ local stairs_search_dir
 local stairs_search
 local stairs_travel
 
-local go_travel_fail_count = 0
-local stash_travel_fail_count = 0
+local go_travel_attempts = 0
+local stash_travel_attempts = 0
 local backtracked_to
 
 local transp_search
@@ -191,7 +191,7 @@ local map_search_key
 local map_search_pos
 local map_search_zone
 local map_search_count
-local map_search_fail_count = 0
+local map_search_attempts = 0
 
 local will_zig = false
 local might_be_good = false

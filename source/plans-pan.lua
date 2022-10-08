@@ -10,13 +10,13 @@ function plan_go_to_pan_portal()
         return false
     end
 
-    if stash_travel_fail_count == 0 then
-        stash_travel_fail_count = 1
+    if stash_travel_attempts == 0 then
+        stash_travel_attempts = 1
         magicfind("halls of Pandemonium")
         return
     end
 
-    stash_travel_fail_count = 0
+    stash_travel_attempts = 0
     disable_autoexplore = false
     return false
 end

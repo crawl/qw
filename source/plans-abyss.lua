@@ -6,13 +6,13 @@ function plan_go_to_abyss_portal()
         return false
     end
 
-    if stash_travel_fail_count == 0 then
-        stash_travel_fail_count = 1
+    if stash_travel_attempts == 0 then
+        stash_travel_attempts = 1
         magicfind("one-way gate to the infinite horrors of the Abyss")
         return
     end
 
-    stash_travel_fail_count = 0
+    stash_travel_attempts = 0
     disable_autoexplore = false
     return false
 end

@@ -3,13 +3,13 @@ function plan_go_to_orb()
         return false
     end
 
-    if stash_travel_fail_count == 0 then
-        stash_travel_fail_count = 1
+    if stash_travel_attempts == 0 then
+        stash_travel_attempts = 1
         magicfind("orb of zot")
         return
     end
 
-    stash_travel_fail_count = 0
+    stash_travel_attempts = 0
     disable_autoexplore = false
     return false
 end

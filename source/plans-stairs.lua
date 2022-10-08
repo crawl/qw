@@ -13,9 +13,9 @@ function plan_go_to_unexplored_stairs()
         return false
     end
 
-    if map_search_fail_count == 1 then
+    if map_search_attempts == 1 then
+        map_search_attempts = 0
         disable_autoexplore = false
-        map_search_fail_count = 0
         return false
     end
 
@@ -39,7 +39,7 @@ function plan_go_to_unexplored_stairs()
     map_search_key = key
     map_search_pos = pos
     map_search_count = count
-    map_search_fail_count = 1
+    map_search_attempts = 1
     magic("X" .. key:rep(count) .. "\r")
 end
 

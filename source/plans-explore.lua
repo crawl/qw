@@ -74,7 +74,7 @@ function plan_go_to_portal_entrance()
         return false
     end
 
-    if stash_travel_fail_count == 0 then
+    if stash_travel_attempts == 0 then
         local desc = portal_entrance_description(gameplan_branch)
         -- For timed bazaars, make a search string that can' match permanent
         -- ones.
@@ -83,11 +83,11 @@ function plan_go_to_portal_entrance()
         end
         magicfind(desc)
 
-        stash_travel_fail_count = 1
+        stash_travel_attempts = 1
         return
     end
 
-    stash_travel_fail_count = 0
+    stash_travel_attempts = 0
     disable_autoexplore = false
     return false
 end
@@ -98,13 +98,13 @@ function plan_go_command()
         return false
     end
 
-    if go_travel_fail_count == 0 then
-        go_travel_fail_count = 1
+    if go_travel_attempts == 0 then
+        go_travel_attempts = 1
         send_travel(travel_branch, travel_depth)
         return
     end
 
-    go_travel_fail_count = 0
+    go_travel_attempts = 0
     disable_autoexplore = false
     return false
 end

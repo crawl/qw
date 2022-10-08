@@ -521,6 +521,7 @@ function plan_swamp_go_to_rune()
             == c_persist.plan_fail_count.try_swamp_go_to_rune then
         swamp_rune_reachable = true
     end
+
     last_swamp_fail_count = c_persist.plan_fail_count.try_swamp_go_to_rune
     magicfind("@" .. branch_rune("Swamp") .. " rune")
     return true

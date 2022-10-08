@@ -188,9 +188,9 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    go_travel_fail_count = 0
-    stash_travel_fail_count = 0
-    map_search_fail_count = 0
+    go_travel_attempts = 0
+    stash_travel_attempts = 0
+    map_search_attempts = 0
 
     update_monster_array()
     danger = sense_danger(los_radius)
