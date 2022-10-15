@@ -42,28 +42,24 @@ function arrowkey(c)
     return a2c[c]
 end
 
+local d2v = {
+    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
+    [0]  = { [-1] = 'k', [1] = 'j' },
+    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
+}
+local v2d = { }
+for x, _ in pairs(d2v) do
+    for y, c in pairs(d2v[x]) do
+        v2d[c] = { x=x, y=y }
+    end
+end
+
 function delta_to_vi(dx, dy)
-    local d2v = {
-        [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b'},
-        [0]    = { [-1] = 'k',                        [1] = 'j'},
-        [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
-    }
     return d2v[dx][dy]
 end
 
 function vi_to_delta(c)
-    local d2v = {
-        [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b'},
-        [0]    = { [-1] = 'k',                        [1] = 'j'},
-        [1]    = { [-1] = 'u', [0] = 'l', [1] = 'n'},
-    }
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if supdist(x, y) > 0 and d2v[x][y] == c then
-                return x, y
-            end
-        end
-    end
+    return v2d[c].x, v2d[c].y
 end
 
 function sign(a)

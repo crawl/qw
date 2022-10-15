@@ -1,3 +1,12 @@
+function los_state(x, y)
+    if you.see_cell_solid_see(x, y) then
+        return FEAT_LOS.REACHABLE
+    elseif you.see_cell_no_trans(x, y) then
+        return FEAT_LOS.DIGGABLE
+    end
+    return FEAT_LOS.SEEN
+end
+
 function square_iter(x, y, radius, include_center)
     if radius <= 0 then
         error("Radius must be a positive integer.")

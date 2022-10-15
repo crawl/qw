@@ -199,20 +199,18 @@ function update_level_map(num)
         distqueue[j] = {}
     end
 
-    local dx, dy = travel.waypoint_delta(num)
+    local wx, wy = travel.waypoint_delta(num)
     local mapqueue = {}
-    for x = -los_radius, los_radius do
-        for y = -los_radius, los_radius do
-            local feat = view.feature_at(x, y)
-            if feat:find("stone_stairs") then
-                record_stairs(where_branch, where_depth, feat, los_state(x, y))
-            elseif feat:find("enter_") then
-                record_branch(x, y)
-            elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
-                record_altar(x, y)
-            end
-            table.insert(mapqueue, {x + dx, y + dy})
+    for x, y in square_iter(0, 0, los_radius, true) do
+        local feat = view.feature_at(x, y)
+        if feat:find("stone_stairs") then
+            record_stairs(where_branch, where_depth, feat, los_state(x, y))
+        elseif feat:find("enter_") then
+            record_branch(x, y)
+        elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
+            record_altar(x, y)
         end
+        table.insert(mapqueue, {x + wx, y + wy})
     end
 
     local newcount = staircount
@@ -226,16 +224,12 @@ function update_level_map(num)
         x = mapqueue[first][1]
         y = mapqueue[first][2]
         first = first + 1
-        feat = view.feature_at(x - dx, y - dy)
+        feat = view.feature_at(x - wx, y - wy)
         if feat ~= "unseen" then
             if level_map[num][x][y] == nil then
-                for ddx = -1, 1 do
-                    for ddy = -1, 1 do
-                        if ddx ~= 0 or ddy ~= 0 then
-                            last = last + 1
-                            mapqueue[last] = {x + ddx, y + ddy}
-                        end
-                    end
+                for dx, dy in adjacent_iter(x, y) do
+                    last = last + 1
+                    mapqueue[last] = {dx, dy}
                 end
             end
             if travel.feature_traversable(feat)
@@ -250,18 +244,15 @@ function update_level_map(num)
                         stair_dists[num][newcount][x][y] = 0
                         distqueue[newcount] = {{x, y}}
                     end
+
                     for j = 1, staircount do
                         oldval = stair_dists[num][j][x][y]
-                        for ddx = -1, 1 do
-                            for ddy = -1, 1 do
-                                if (ddx ~= 0 or ddy ~= 0) then
-                                    val = stair_dists[num][j][x + ddx][y + ddy]
-                                    if val ~= nil
-                                            and (oldval == nil
-                                                or oldval > val + 1) then
-                                        oldval = val + 1
-                                    end
-                                end
+                        for dx, dy in adjacent_iter(x, y) do
+                            val = stair_dists[num][j][dx][dy]
+                            if val ~= nil
+                                    and (oldval == nil
+                                        or oldval > val + 1) then
+                                oldval = val + 1
                             end
                         end
                         if stair_dists[num][j][x][y] ~= oldval then
@@ -307,17 +298,13 @@ function update_dist_map(dist_map, queue)
         y = queue[first][2]
         first = first + 1
         val = dist_map[x][y] + 1
-        for dx = -1, 1 do
-            for dy = -1, 1 do
-                if (dx ~= 0 or dy ~= 0)
-                        and level_map[waypoint_parity][x + dx][y + dy]
-                            == "." then
-                    oldval = dist_map[x + dx][y + dy]
-                    if oldval == nil or oldval > val then
-                        dist_map[x + dx][y + dy] = val
-                        last = last + 1
-                        queue[last] = {x + dx, y + dy}
-                    end
+        for dx, dy in adjacent_iter(x, y) do
+            if level_map[waypoint_parity][dx][dy] == "." then
+                oldval = dist_map[dx][dy]
+                if oldval == nil or oldval > val then
+                    dist_map[dx][dy] = val
+                    last = last + 1
+                    queue[last] = {dx, dy}
                 end
             end
         end
@@ -405,13 +392,4 @@ function set_stair_target(c)
         end
     end
     target_stair = best_stair
-end
-
-function los_state(x, y)
-    if you.see_cell_solid_see(x, y) then
-        return FEAT_LOS.REACHABLE
-    elseif you.see_cell_no_trans(x, y) then
-        return FEAT_LOS.DIGGABLE
-    end
-    return FEAT_LOS.SEEN
 end
