@@ -1,20 +1,10 @@
-function read(c)
+function read(c, etc)
     if not can_read() then
         return false
     end
-    say("READING " .. item(c).name() .. ".")
-    magic("r" .. letter(c))
-    return true
-end
 
-function read2(c, etc)
-    if not can_read() then
-        return false
-    end
-    local int, mint = you.intelligence()
-    if int <= 0 then
-        -- failing to read a scroll due to intzero can make qw unhappy
-        return false
+    if not etc then
+        etc = ""
     end
     say("READING " .. item(c).name() .. ".")
     magic("r" .. letter(c) .. etc)
@@ -25,6 +15,7 @@ function drink(c)
     if not can_drink() then
         return false
     end
+
     say("DRINKING " .. item(c).name() .. ".")
     magic("q" .. letter(c))
     return true
@@ -544,7 +535,7 @@ function plan_use_good_consumables()
                 if weapon and weapon.class(true) == "weapon"
                         and not weapon.artefact and weapon.plus < 9 then
                     local oldname = weapon.name()
-                    if read2(it, letter(weapon)) then
+                    if read(it, letter(weapon)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
@@ -555,7 +546,7 @@ function plan_use_good_consumables()
                         and not weapon.artefact
                         and not brand_is_great(weapon.ego()) then
                     local oldname = weapon.name()
-                    if read2(it, letter(weapon)) then
+                    if read(it, letter(weapon)) then
                         say("BRANDING " .. oldname .. ".")
                         return true
                     end
@@ -568,7 +559,7 @@ function plan_use_good_consumables()
                         and body_armour_is_great(body)
                         and not body.name():find("quicksilver") then
                     local oldname = body.name()
-                    if read2(it, letter(body)) then
+                    if read(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
@@ -581,7 +572,7 @@ function plan_use_good_consumables()
                                 and it2.plus >= 0
                                 and not it2.name():find("scarf") then
                             local oldname = it2.name()
-                            if read2(it, letter(it2)) then
+                            if read(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
                             end
@@ -593,7 +584,7 @@ function plan_use_good_consumables()
                                 and it2.plus < 4
                                 and it2.plus >= 0 then
                             local oldname = it2.name()
-                            if read2(it, letter(it2)) then
+                            if read(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
                             end
@@ -605,7 +596,7 @@ function plan_use_good_consumables()
                         and body_armour_is_good(body)
                         and not body.name():find("quicksilver") then
                     local oldname = body.name()
-                    if read2(it, letter(body)) then
+                    if read(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
@@ -667,9 +658,9 @@ function plan_read_id()
                 items.swap_slots(weap.slot, items.letter_to_index('Y'), false)
             end
             if you.race() ~= "Felid" then
-                return read2(scroll_letter, ".Y" .. string.char(27) .. "YB")
+                return read(scroll_letter, ".Y" .. string.char(27) .. "YB")
             else
-                return read2(scroll_letter, ".Y" .. string.char(27) .. "YC")
+                return read(scroll_letter, ".Y" .. string.char(27) .. "YC")
             end
         end
     end
@@ -697,7 +688,7 @@ function plan_use_id_scrolls()
         for it in inventory() do
             if it.class(true) == "potion" and not it.fully_identified then
                 oldname = it.name()
-                if read2(id_scroll, letter(it)) then
+                if read(id_scroll, letter(it)) then
                     say("IDENTIFYING " .. oldname)
                     return true
                 end

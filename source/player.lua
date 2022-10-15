@@ -208,12 +208,11 @@ function transformed()
 end
 
 function can_read()
-    if you.berserk() or you.confused() or you.silenced()
-         or you.status("engulfed (cannot breathe)")
-         or you.status("unable to read") then
-        return false
-    end
-    return true
+    return not (you.berserk()
+        or you.confused()
+        or you.silenced()
+        or you.status("engulfed (cannot breathe)")
+        or you.status("unable to read"))
 end
 
 function can_drink()

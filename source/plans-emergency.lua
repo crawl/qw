@@ -337,7 +337,7 @@ function plan_blinking()
     end
     if best_count >= cur_count + 2 then
         local c = find_item("scroll", "blinking")
-        return read2(letter(c),  vector_move(best_x, best_y) .. ".")
+        return read(letter(c),  vector_move(best_x, best_y) .. ".")
     end
     return false
 end
