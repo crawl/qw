@@ -8,6 +8,9 @@ function los_state(x, y)
 end
 
 function square_iter(x, y, radius, include_center)
+    if not radius then
+        radius = los_radius
+    end
     if radius <= 0 then
         error("Radius must be a positive integer.")
     end
@@ -58,6 +61,9 @@ local square_move = {
 }
 
 function radius_iter(x, y, radius, include_center)
+    if not radius then
+        radius = los_radius
+    end
     if radius <= 0 then
         error("Radius must be a positive integer.")
     end

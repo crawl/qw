@@ -291,13 +291,12 @@ function dangerous_to_rest()
         return true
     end
 
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if view.feature_at(x, y) == "slimy_wall" then
-                return true
-            end
+    for x, y in adjacent_iter(0, 0) do
+        if view.feature_at(x, y) == "slimy_wall" then
+            return true
         end
     end
+
     return false
 end
 

@@ -204,21 +204,16 @@ function choose_tactical_step()
     local x, y
     local a
     local reason
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if supdist(x, y) > 0 then
-                a = assess_square(x, y)
-                reason = step_reason(a0, a)
-                if reason then
-                    if besta == nil
-                            or step_improvement(bestreason, reason, besta,
-                                a) then
-                        bestx = x
-                        besty = y
-                        besta = a
-                        bestreason = reason
-                    end
-                end
+    for x, y in adjacent_iter(0, 0) do
+        a = assess_square(x, y)
+        reason = step_reason(a0, a)
+        if reason then
+            if besta == nil
+                    or step_improvement(bestreason, reason, besta, a) then
+                bestx = x
+                besty = y
+                besta = a
+                bestreason = reason
             end
         end
     end
@@ -479,24 +474,22 @@ function plan_step_towards_branch()
         return false
     end
 
-    for x = -los_radius, los_radius do
-        for y = -los_radius, los_radius do
-            local feat = view.feature_at(x, y)
-            if (feat == "enter_lair" or feat == "enter_tomb")
-                 and you.see_cell_no_trans(x, y) then
-                if x == 0 and y == 0 then
-                    if where == "Crypt:3" then
-                        stepped_on_tomb = true
-                    else
-                        stepped_on_lair = true
-                    end
-                    return false
+    for x, y in square_iter(0, 0, los_radius, true) do
+        local feat = view.feature_at(x, y)
+        if (feat == "enter_lair" or feat == "enter_tomb")
+                and you.see_cell_no_trans(x, y) then
+            if x == 0 and y == 0 then
+                if feat == "enter_lair" then
+                    stepped_on_lair = true
                 else
-                    branch_step_mode = true
-                    local result = move_towards(x, y)
-                    branch_step_mode = false
-                    return result
+                    stepped_on_tomb = true
                 end
+                return false
+            else
+                branch_step_mode = true
+                local result = move_towards(x, y)
+                branch_step_mode = false
+                return result
             end
         end
     end
@@ -532,8 +525,8 @@ function plan_swamp_clouds_hack()
         return false
     end
 
-    if have_branch_runes("Swamp") and can_teleport() and teleport() then
-        return true
+    if have_branch_runes("Swamp") and can_teleport() then
+        return teleport()
     end
 
     if swamp_rune_reachable then
@@ -543,27 +536,18 @@ function plan_swamp_clouds_hack()
     end
 
     local bestx, besty
-    local dist
     local bestdist = 11
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if supdist(x, y) > 0 and view.is_safe_square(x, y)
-                 and not view.withheld(x, y) and not monster_in_way(x, y) then
-                dist = 11
-                for x2 = -los_radius, los_radius do
-                    for y2 = -los_radius, los_radius do
-                        if (view.cloud_at(x2, y2) == "freezing vapour"
-                                or view.cloud_at(x2, y2) == "foul pestilence")
-                             and you.see_cell_no_trans(x2, y2)
-                             and (you.god() ~= "Qazlal"
-                                 or not view.is_safe_square(x2, y2)) then
-                            if supdist(x - x2, y - y2) < dist then
-                                dist = supdist(x - x2, y - y2)
-                            end
-                        end
-                    end
-                end
-                if dist < bestdist then
+    for x, y in adjacent_iter(0, 0) do
+        if view.is_safe_square(x, y)
+                and not view.withheld(x, y)
+                and not monster_in_way(x, y) then
+            for dx, dy in radius_iter(x, y) do
+                local dist = supdist(dx - x, dy - y)
+                if (view.cloud_at(dx, dy) == "freezing vapour"
+                            or view.cloud_at(dx, dy) == "foul pestilence")
+                        and you.see_cell_no_trans(dx, dy)
+                        and not view.is_safe_square(dx, dy)
+                        and dist < bestdist then
                     bestx = x
                     besty = y
                     bestdist = dist
@@ -571,19 +555,20 @@ function plan_swamp_clouds_hack()
             end
         end
     end
-    if bestdist < 11 then
+
+    if bestx then
         magic(delta_to_vi(bestx, besty) .. "Y")
         return true
     end
-    for x = -los_radius, los_radius do
-        for y = -los_radius, los_radius do
-            if (view.cloud_at(x, y) == "freezing vapour"
+
+    for x, y in square_iter(0, 0) do
+        if (view.cloud_at(x, y) == "freezing vapour"
                     or view.cloud_at(x, y) == "foul pestilence")
-                 and you.see_cell_no_trans(x, y) then
-                return random_step(where)
-            end
+                and you.see_cell_no_trans(x, y) then
+            return random_step(where)
         end
     end
+
     return plan_stuck_teleport()
 end
 

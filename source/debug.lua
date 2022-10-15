@@ -76,6 +76,7 @@ function print_level_map()
     local num = waypoint_parity
     local dx, dy = travel.waypoint_delta(num)
     local str
+    -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
@@ -95,6 +96,7 @@ function print_stair_dists()
     local str
     for i = 1, #stair_dists[num] do
     say("---------------------------------------")
+    -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do

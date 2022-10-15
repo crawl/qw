@@ -256,14 +256,13 @@ function count_bia(r)
     end
 
     local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            m = monster_array[x][y]
-            if m and m:is_safe() and m:is("berserk")
-                    and contains_string_in(m:name(),
-                        {"ogre", "giant", "bear", "troll"}) then
-                i = i + 1
-            end
+    for x, y in square_iter(0, 0, r) do
+        m = monster_array[x][y]
+        if m and m:is_safe()
+                and m:is("berserk")
+                and contains_string_in(m:name(),
+                    {"ogre", "giant", "bear", "troll"}) then
+            i = i + 1
         end
     end
     return i
@@ -276,13 +275,11 @@ function count_elliptic(r)
 
     local x, y
     local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            m = monster_array[x][y]
-            if m and m:is_safe() and contains_string_in(m:name(),
-                    {"elliptic"}) then
-                i = i + 1
-            end
+    for x, y in square_iter(0, 0, r) do
+        m = monster_array[x][y]
+        if m and m:is_safe()
+                and contains_string_in(m:name(), {"elliptic"}) then
+            i = i + 1
         end
     end
     return i
@@ -299,13 +296,12 @@ function count_sgd(r)
     end
 
     local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            local m = monster_array[x][y]
-            if m and m:is_safe() and m:is("summoned")
-                    and mons_is_greater_demon(m) then
-                i = i + 1
-            end
+    for x, y in square_iter(0, 0, r) do
+        local m = monster_array[x][y]
+        if m and m:is_safe()
+                and m:is("summoned")
+                and mons_is_greater_demon(m) then
+            i = i + 1
         end
     end
     return i
@@ -317,13 +313,11 @@ function count_divine_warrior(r)
     end
 
     local i = 0
-    for x = -r, r do
-        for y = -r, r do
-            local m = monster_array[x][y]
-            if m and m:is_safe()
-                    and contains_string_in(m:name(), {"angel", "daeva"}) then
-                i = i + 1
-            end
+    for x, y in square_iter(0, 0, r) do
+        local m = monster_array[x][y]
+        if m and m:is_safe()
+                and contains_string_in(m:name(), {"angel", "daeva"}) then
+            i = i + 1
         end
     end
     return i

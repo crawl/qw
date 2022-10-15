@@ -127,12 +127,10 @@ function plan_open_runed_doors()
         end
     end
 
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if view.feature_at(x, y) == "runed_clear_door" then
-                magic(delta_to_vi(x, y) .. "Y")
-                return true
-            end
+    for x, y in adjacent_iter(0, 0) do
+        if view.feature_at(x, y) == "runed_clear_door" then
+            magic(delta_to_vi(x, y) .. "Y")
+            return true
         end
     end
     return false

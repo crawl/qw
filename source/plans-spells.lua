@@ -32,12 +32,10 @@ function spell_castable(sp)
         end
     elseif sp == "Summon Small Mammal" then
         local count = 0
-        for x = -los_radius, los_radius do
-            for y = -los_radius, los_radius do
-                m = monster_array[x][y]
-                if m and m:attitude() == enum_att_friendly then
-                    count = count + 1
-                end
+        for x, y in square_iter(0, 0) do
+            m = monster_array[x][y]
+            if m and m:attitude() == enum_att_friendly then
+                count = count + 1
             end
         end
         if count >= 4 then

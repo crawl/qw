@@ -280,6 +280,7 @@ function plan_blinking()
     if not in_branch("Zig") or not danger or not can_read() then
         return false
     end
+
     local para_danger = false
     for _, e in ipairs(enemy_list) do
         if e.m:name() == "floating eye" or e.m:name() == "starcursed mass" then
@@ -289,54 +290,48 @@ function plan_blinking()
     if not para_danger then
         return false
     end
+
     if count_item("scroll", "of blinking") == 0 then
         return false
     end
-    local m
+
     local cur_count = 0
     local best_count = 0
-    local count
-    local best_x, best_y
-    for x = -1, 1 do
-        for y = -1, 1 do
-            m = monster_array[x][y]
-            if m and m:name() == "floating eye" then
-                cur_count = cur_count + 3
-            elseif m and m:name() == "starcursed mass" then
-                cur_count = cur_count + 1
-            end
+    local m, count, best_x, best_y
+    for x, y in adjacent_iter(0, 0) do
+        m = monster_array[x][y]
+        if m and m:name() == "floating eye" then
+            cur_count = cur_count + 3
+        elseif m and m:name() == "starcursed mass" then
+            cur_count = cur_count + 1
         end
     end
     if cur_count >= 2 then
         return false
     end
-    for x = -los_radius, los_radius do
-        for y = -los_radius, los_radius do
-            if is_traversable(x, y)
-                    and not is_solid(x, y)
-                    and monster_array[x][y] == nil
-                    and view.is_safe_square(x, y)
-                    and not view.withheld(x, y)
-                    and you.see_cell_no_trans(x, y) then
-                count = 0
-                for dx = -1, 1 do
-                    for dy = -1, 1 do
-                        if abs(x + dx) <= los_radius
-                                and abs(y + dy) <= los_radius then
-                            m = monster_array[x + dx][y + dy]
-                            if m and m:name() == "floating eye" then
-                                count = count + 3
-                            elseif m and m:name() == "starcursed mass" then
-                                count = count + 1
-                            end
-                        end
+
+    for x, y in square_iter(0, 0) do
+        if is_traversable(x, y)
+                and not is_solid(x, y)
+                and monster_array[x][y] == nil
+                and view.is_safe_square(x, y)
+                and not view.withheld(x, y)
+                and you.see_cell_no_trans(x, y) then
+            count = 0
+            for dx, dy in adjacent_iter(x, y) do
+                if abs(dx) <= los_radius and abs(dy) <= los_radius then
+                    m = monster_array[dx][dy]
+                    if m and m:name() == "floating eye" then
+                        count = count + 3
+                    elseif m and m:name() == "starcursed mass" then
+                        count = count + 1
                     end
                 end
-                if count > best_count then
-                    best_count = count
-                    best_x = x
-                    best_y = y
-                end
+            end
+            if count > best_count then
+                best_count = count
+                best_x = x
+                best_y = y
             end
         end
     end
@@ -775,24 +770,23 @@ function plan_continue_flee()
     end
 
     local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
+    local wx, wy = travel.waypoint_delta(num)
     local val
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if is_traversable(x, y)
-                    and not is_solid(x, y)
-                    and not monster_in_way(x, y)
-                    and view.is_safe_square(x, y)
-                    and not view.withheld(x, y) then
-                val = stair_dists[num][target_stair][dx + x][dy + y]
-                if val and val < stair_dists[num][target_stair][dx][dy] then
-                    dsay("STILL FLEEEEING.")
-                    magic(delta_to_vi(x, y) .. "YY")
-                    return true
-                end
+    for x, y in adjacent_iter(0, 0) do
+        if is_traversable(x, y)
+                and not is_solid(x, y)
+                and not monster_in_way(x, y)
+                and view.is_safe_square(x, y)
+                and not view.withheld(x, y) then
+            val = stair_dists[num][target_stair][wx + x][wy + y]
+            if val and val < stair_dists[num][target_stair][wx][wy] then
+                dsay("STILL FLEEEEING.")
+                magic(delta_to_vi(x, y) .. "YY")
+                return true
             end
         end
     end
+
     return false
 end
 
@@ -819,12 +813,10 @@ function plan_flail_at_invis()
     end
 
     invisi_count = invisi_count + 1
-    for x = -1, 1 do
-        for y = -1, 1 do
-            if supdist(x, y) > 0 and view.invisible_monster(x, y) then
-                magic(control(delta_to_vi(x, y)))
-                return true
-            end
+    for x, y in adjacent_iter(0, 0) do
+        if supdist(x, y) > 0 and view.invisible_monster(x, y) then
+            magic(control(delta_to_vi(x, y)))
+            return true
         end
     end
 

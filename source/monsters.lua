@@ -622,21 +622,15 @@ end
 function update_monster_array()
     enemy_list = {}
     --c_persist.mlist = {}
-    for x = -los_radius, los_radius do
-        for y = -los_radius, los_radius do
-            if you.see_cell_no_trans(x, y) then
-                monster_array[x][y] = monster.get_monster_at(x, y)
-                if is_candidate_for_attack(x, y) then
-                    entry = {}
-                    entry.x = x
-                    entry.y = y
-                    entry.m = monster_array[x][y]
-                    table.insert(enemy_list, entry)
-                    --table.insert(c_persist.mlist, entry.m:name())
-                end
-            else
-                monster_array[x][y] = nil
+    for x, y in square_iter(0, 0) do
+        if you.see_cell_no_trans(x, y) then
+            monster_array[x][y] = monster.get_monster_at(x, y)
+            if is_candidate_for_attack(x, y) then
+                entry = { x=x, y=y, m = monster_array[x][y] }
+                table.insert(enemy_list, entry)
             end
+        else
+            monster_array[x][y] = nil
         end
     end
 end

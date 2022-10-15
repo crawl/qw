@@ -1349,19 +1349,15 @@ end
 -- plural form, e.g. "Scrolls"
 -- or invoke with item_class="name_callback" and provide callback for name
 function see_item(item_class, r, name_callback)
-    for x = -r, r do
-        for y = -r, r do
-            -- crawl.mpr("(" .. x .. ", " .. y .. "): "
-            --     .. view.feature_at(x, y) .."\r")
-            local is = items.get_items_at(x, y)
-            if (is ~= nil) and (#is > 0) and (you.see_cell(x, y)) then
-                for ind, i in pairs(is) do
-                    local iname = i.name()
-                    if (i:class(true) == item_class)
-                            or ((item_class == "name_callback")
-                                and name_callback(iname)) then
-                        return true
-                    end
+    for x, y in square_iter(0, 0, r, true) do
+        local is = items.get_items_at(x, y)
+        if is ~= nil and #is > 0 and you.see_cell(x, y) then
+            for ind, i in pairs(is) do
+                local iname = i.name()
+                if (i:class(true) == item_class)
+                        or ((item_class == "name_callback")
+                            and name_callback(iname)) then
+                    return true
                 end
             end
         end

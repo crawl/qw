@@ -53,13 +53,11 @@ function should_ally_rest()
         return false
     end
 
-    for x = -3, 3 do
-        for y = -3, 3 do
-            m = monster_array[x][y]
-            if m and m:attitude() == enum_att_friendly
-                    and m:damage_level() > 0 then
-                return true
-            end
+    for x, y in square_iter(0, 0, 3) do
+        m = monster_array[x][y]
+        if m and m:attitude() == enum_att_friendly
+                and m:damage_level() > 0 then
+            return true
         end
     end
 

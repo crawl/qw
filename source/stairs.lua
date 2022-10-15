@@ -278,7 +278,7 @@ function update_level_map(num)
         -- cycle because the feature at our position uses that key.
         if feat_uses_map_key(map_search_key, feat) then
             record_map_search(num, map_search_key, map_search_pos,
-                map_search_count, 100 * dx + dy)
+                map_search_count, 100 * wx + wy)
         end
         map_search_key = nil
         map_search_pos = nil
