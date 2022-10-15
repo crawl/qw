@@ -653,11 +653,6 @@ function weapon_value(it, cur, it2, sit)
 
     local hydra_swap = sit == "hydra"
     local extended = sit == "extended"
-    local tso = you.god() == "the Shining One"
-        or planning_undead_demon_branches and planning_tso
-        or you.god() == "Elyvilon"
-        or you.god() == "Zin"
-        or you.god() == "No God" and might_be_good
     local name = it.name()
     local value = 1000
     local weap = items.equipped_at("Weapon")
@@ -704,7 +699,7 @@ function weapon_value(it, cur, it2, sit)
         return value + val1, value + val2
     end
 
-    if tso and name:find("demon") and not name:find("eudemon") then
+    if planning_good_god and name:find("demon") and not name:find("eudemon") then
         return -1, -1
     end
 
@@ -714,7 +709,7 @@ function weapon_value(it, cur, it2, sit)
     end
 
     if name:find("obsidian axe") then
-        if tso then
+        if planning_good_god then
             return -1, -1
         -- This is much less good when it can't make friendly demons.
         elseif you.mutation("hated by all") or you.god() == "Okawaru" then
@@ -756,7 +751,7 @@ function weapon_value(it, cur, it2, sit)
                 value = value + 500
             end
         elseif ego == "vampirism" then
-            if tso then
+            if planning_good_god then
                 return -1, -1
             end
 
@@ -778,7 +773,7 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "electrocution" then
             value = value + 150
         elseif ego == "draining" then
-            if tso then
+            if planning_good_god then
                 return -1, -1
             end
 
@@ -797,9 +792,11 @@ function weapon_value(it, cur, it2, sit)
             else
                 value = value + 75
             end
-        elseif ego == "pain" and (tso or you.god() == "Trog") then
+        elseif ego == "pain"
+                and (planning_good_god or you.god() == "Trog") then
             return -1, -1
-        elseif ego == "chaos" and (tso or you.god() == "Cheibriados") then
+        elseif ego == "chaos"
+                and (planning_good_god or you.god() == "Cheibriados") then
             return -1, -1
         end
     end
@@ -915,7 +912,7 @@ function want_scroll(it)
     wanted = { "acquirement", "brand weapon", "enchant armour",
         "enchant weapon", "identify", "teleportation"}
 
-    if will_zig then
+    if planning_zig then
         table.insert(wanted, "blinking")
         table.insert(wanted, "fog")
     end

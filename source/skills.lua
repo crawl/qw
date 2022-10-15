@@ -63,7 +63,7 @@ function skill_value(sk)
         return 0.2 * rating
     elseif sk == "Invocations" then
         if you.god() == "the Shining One" then
-            return in_extended() and 1.5 or 0.5
+            return planning_undead_demon_branch and 1.5 or 0.5
         elseif you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
         elseif you.god() == "Elyvilon" then

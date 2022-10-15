@@ -60,11 +60,10 @@ end
 
 function intrinsic_evil()
     local sp = you.race()
-    if sp == "Demonspawn" or sp == "Mummy" or sp == "Ghoul" or
-         sp == "Vampire" then
-        return true
-    end
-    return false
+    return sp == "Demonspawn"
+        or sp == "Mummy"
+        or sp == "Ghoul"
+        or sp == "Vampire"
 end
 
 function intrinsic_undead()

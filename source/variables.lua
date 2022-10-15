@@ -56,8 +56,10 @@ local update_coroutine
 local do_dummy_action
 
 local branch_data = {}
+local hell_branches
 local portal_data = {}
 local god_data = {}
+local good_gods
 
 local where
 local where_branch
@@ -87,9 +89,10 @@ local permanent_bazaar
 local ignore_traps
 
 local planning_god_uses_mp
+local planning_good_god
+local planning_tso
 local planning_vaults
 local planning_slime
-local planning_tso
 local planning_pan
 local planning_undead_demon_branches
 local planning_cocytus
@@ -175,31 +178,30 @@ local only_linear_resists = false
 
 local no_spells = false
 
-local level_map
+local traversal_map
 local stair_dists
 local waypoint_parity
-local current_where
-local previous_where
-local did_waypoint = false
 local good_stair_list
 local target_stair
 local last_flee_turn = -100
-local map_search
-local map_search_key
-local map_search_pos
-local map_search_zone
-local map_search_count
-local map_search_attempts = 0
 
-local will_zig = false
-local might_be_good = false
-local dislike_pan_level = false
+local map_mode_search
+local map_mode_search_key
+local map_mode_search_pos
+local map_mode_search_zone
+local map_mode_search_count
+local map_mode_search_attempts = 0
+
+local transp_map = {}
+local transp_search_zone
+local transp_search_count
+local transp_zone
+local transp_orient
+local transp_search
 
 local prev_hatch_dist = 1000
 local prev_hatch_x
 local prev_hatch_y
-
-local hell_branches = { "Coc", "Dis", "Geh", "Tar" }
 
 local plan_abyss_rest
 local plan_abyss_move

@@ -35,6 +35,15 @@ local god_data_values = {
     { "Zin", true, true },
 }
 
+good_gods = { "Elyvilon", "the Shining One", "Zin" }
+function is_good_god(god)
+    if not god then
+        god = you.god()
+    end
+
+    return util.contains(good_gods, god)
+end
+
 local god_data = {}
 local god_lookups = {}
 function initialize_god_data()

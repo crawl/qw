@@ -340,12 +340,11 @@ function branch_soon(branch)
 end
 
 function in_extended()
-    return gameplan_branch == "Pan"
-        or gameplan_branch == "Coc"
-        or gameplan_branch == "Dis"
-        or gameplan_branch == "Geh"
-        or gameplan_branch == "Tar"
-        or gameplan_branch == "Tomb"
+    return branch_soon("Pan")
+        or branch_soon("Tomb")
+        or branch_soon("Hell")
+        or is_hell_branch(gameplan_branch)
+        or branch_soon("Zig")
 end
 
 function gameplans_visit_branch(branch)
@@ -392,19 +391,17 @@ function check_future_branches()
 
     planning_vaults = gameplans_visit_branch("Vaults")
     planning_slime = gameplans_visit_branch("Slime")
-    planning_pan = gameplans_visit_branch("Pan")
+    -- Escaping Pan can take a while, so consider ourselves to be planning it
+    -- while we're there even if we have all the runes.
+    planning_pan = in_branch("Pan") or gameplans_visit_branch("Pan")
     planning_cocytus = gameplans_visit_branch("Coc")
     planning_gehenna = gameplans_visit_branch("Geh")
 end
 
 function check_future_gods()
-    planning_god_uses_mp = false
-    planning_tso = false
-
-    if god_uses_mp() then
-        planning_god_uses_mp = true
-        return
-    end
+    planning_god_uses_mp = god_uses_mp()
+    planning_tso = you.god() == "the Shining One"
+    planning_good_god = is_good_god()
 
     if not which_gameplan then
         return
@@ -423,8 +420,11 @@ function check_future_gods()
                         and not gameplan_complete(next_plan, next_final)) then
                 if god_uses_mp(god) then
                     planning_god_uses_mp = true
-                elseif god == "the Shining One" then
-                    planning_tso = true
+                elseif is_good_god(god) then
+                    planning_good_god = true
+                    if god == "the Shining One" then
+                        planning_tso = true
+                    end
                 end
             end
         end
@@ -708,10 +708,6 @@ function make_initial_gameplans()
             for _, br in ipairs(c_persist.hell_branches) do
                 table.insert(gameplan_list, "Rune:" .. br)
             end
-        end
-
-        if plan == "Zig" then
-            will_zig = true
         end
 
         local branch, min_level, max_level = parse_level_range(plan)

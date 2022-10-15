@@ -47,6 +47,8 @@ local branch_data_values = {
     { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
 }
 
+hell_branches = { "Coc", "Dis", "Geh", "Tar" }
+
 -- Portal branch, entry description, max timeout in turns, description.
 local portal_data_values = {
     { "Ossuary", "sand-covered staircase", 800 },
