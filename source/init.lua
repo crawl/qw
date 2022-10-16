@@ -22,7 +22,14 @@ function initialize_c_persist()
     end
 end
 
+function initialize_enums()
+    AUTOEXP = enum(AUTOEXP)
+    FEAT_LOS = enum(FEAT_LOS)
+end
+
 function initialize()
+    initialize_enums()
+
     if you.turns() == 0 then
         initialize_c_persist()
         initialize_branch_data()

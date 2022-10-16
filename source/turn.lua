@@ -1,6 +1,8 @@
 ---------------------------------------------
 -- per-turn update and ready function
 
+INF_TURNS = 200000000
+
 function stop()
     automatic = false
     unset_options()

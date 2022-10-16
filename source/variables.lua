@@ -12,39 +12,10 @@ local enum_mons_pan_lord = 344
 local enum_att_friendly = 4
 local enum_att_neutral = 1
 
-function enum(tbl)
-    local e = {}
-    for i = 0, #tbl - 1 do
-        e[tbl[i + 1]] = i
-    end
-
-    return e
-end
-
--- Exploration state enum
-local AUTOEXP = enum {
-    "NEEDED",
-    "PARTIAL",
-    "TRANSPORTER",
-    "RUNED_DOOR",
-    "FULL",
-}
-
--- Feature LOS state enum
-local FEAT_LOS = enum {
-    "NONE",
-    "SEEN",
-    "DIGGABLE",
-    "REACHABLE",
-    "EXPLORED",
-}
-
--- Stair direction
-local DIR = {
-    UP   = -1,
-    DOWN =  1,
-}
-
+-- Enum tables
+local AUTOEXP
+local FEAT_LOS
+local DIR
 local INF_TURNS = 200000000
 
 local los_radius = you.race() == "Barachi" and 8 or 7

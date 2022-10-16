@@ -1,6 +1,15 @@
 --------------------
 -- Utility functions
 
+function enum(tbl)
+    local e = {}
+    for i = 0, #tbl - 1 do
+        e[tbl[i + 1]] = i
+    end
+
+    return e
+end
+
 function contains_string_in(name, t)
     for _, value in ipairs(t) do
         if string.find(name, value) then

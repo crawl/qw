@@ -1,3 +1,12 @@
+-- Feature LOS state enum
+FEAT_LOS = {
+    "NONE",
+    "SEEN",
+    "DIGGABLE",
+    "REACHABLE",
+    "EXPLORED",
+}
+
 function los_state(x, y)
     if you.see_cell_solid_see(x, y) then
         return FEAT_LOS.REACHABLE

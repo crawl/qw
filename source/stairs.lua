@@ -1,3 +1,6 @@
+-- Stair direction enum
+DIR = { UP = -1, DOWN = 1 }
+
 function clear_level_map(num)
     level_map[num] = {}
     for i = -100, 100 do
