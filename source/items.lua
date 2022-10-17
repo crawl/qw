@@ -1233,19 +1233,6 @@ function have_reaching()
     return wp and wp.reach_range == 2 and not wp.is_melded
 end
 
-function body_size()
-    if you.race() == "Kobold" then
-        return -1
-    elseif you.race() == "Spriggan" or you.race() == "Felid" then
-        return -2
-    elseif you.race() == "Troll" or you.race() == "Ogre"
-            or you.race() == "Naga" or you.race() == "Palentonga" then
-        return 1
-    else
-        return 0
-    end
-end
-
 function shield_skill_utility()
     local shield = items.equipped_at("Shield")
     if not shield then

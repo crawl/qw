@@ -18,8 +18,6 @@ local FEAT_LOS
 local DIR
 local INF_TURNS = 200000000
 
-local los_radius = you.race() == "Barachi" and 8 or 7
-
 local initialized = false
 local time_passed
 local automatic = false
@@ -36,6 +34,7 @@ local where
 local where_branch
 local where_depth
 local can_waypoint
+local los_radius
 local base_corrosion
 
 local dump_count = you.turns() + 100 - (you.turns() % 100)

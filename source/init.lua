@@ -41,6 +41,7 @@ function initialize()
     initialize_branch_data()
     initialize_god_data()
 
+    calc_los_radius()
     initialize_monster_array()
 
     make_initial_gameplans()

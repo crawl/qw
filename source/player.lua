@@ -1,8 +1,6 @@
 -----------------------------------------
 -- player functions
 
--- "intrinsics" that shouldn't change over the course of the game:
-
 function intrinsic_rpois()
     local sp = you.race()
     if sp == "Gargoyle" or sp == "Naga" or sp == "Ghoul" or sp == "Mummy" then
@@ -25,11 +23,13 @@ function intrinsic_sinv()
             or sp == "Vampire" then
         return true
     end
-    -- we assume TSO piety won't drop below 2* and that we won't change gods
-    -- away from TSO
+
+    -- We assume TSO piety won't drop below 2* and that we won't change gods
+    -- away from TSO.
     if you.god() == "the Shining One" and you.piety_rank() >= 2 then
         return true
     end
+
     return false
 end
 
@@ -275,12 +275,15 @@ function player_speed_num()
     elseif you.race() == "Naga" then
         num = 2
     end
+
     if you.hasted() or you.berserk() then
         num = num + 1
     end
+
     if you.slowed() then
         num = num - 1
     end
+
     return num
 end
 
@@ -312,4 +315,29 @@ function drain_level()
         end
     end
     return 0
+end
+
+function body_size()
+    if you.race() == "Kobold" then
+        return -1
+    elseif you.race() == "Spriggan" or you.race() == "Felid" then
+        return -2
+    elseif you.race() == "Troll"
+            or you.race() == "Ogre"
+            or you.race() == "Naga"
+            or you.race() == "Palentonga" then
+        return 1
+    else
+        return 0
+    end
+end
+
+function calc_los_radius()
+    if you.race() == "Barachi" then
+        los_radius = 8
+    elseif you.race() == "Kobold" then
+        los_radius = 4
+    else
+        los_radius = 7
+    end
 end
