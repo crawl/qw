@@ -80,6 +80,7 @@ local stairs_travel
 
 local go_travel_attempts = 0
 local stash_travel_attempts = 0
+local open_runed_doors
 
 local transp_search
 local transp_zone

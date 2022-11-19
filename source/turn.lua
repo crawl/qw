@@ -127,6 +127,15 @@ function turn_update()
         where_depth = you.depth()
         want_gameplan_update = true
 
+        local pan_parent, min_depth, max_depth = parent_branch("Pan")
+        open_runed_doors = in_branch("Abyss")
+            or in_branch("Pan")
+            or in_portal()
+            or planning_pan
+                and where_branch == pan_parent
+                and where_depth >= min_depth
+                and where_depth <= max_depth
+
         target_stair = nil
         transp_zone = 0
         zone_counts = {}

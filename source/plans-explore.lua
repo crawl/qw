@@ -117,14 +117,8 @@ end
 -- Open runed doors in Pan to get to the pan lord vault and open them on levels
 -- that are known to contain entrances to Pan if we intend to visit Pan.
 function plan_open_runed_doors()
-    if not in_branch("Pan") and not in_branch("Abyss") and not in_portal() then
-        local br, min_depth, max_depth = parent_branch("Pan")
-        if where_branch ~= parent_branch("Pan")
-                or where_depth < min_depth
-                or where_depth > max_depth
-                or not planning_pan then
-            return false
-        end
+    if not open_runed_doors then
+        return false
     end
 
     for x, y in adjacent_iter(0, 0) do
