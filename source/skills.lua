@@ -72,7 +72,7 @@ function skill_value(sk)
             return 0
         end
     elseif sk == wskill() then
-        return (at_min_delay() and 0.5 or 1.5)
+        return at_min_delay() and 0.5 or 1.5
     end
 end
 

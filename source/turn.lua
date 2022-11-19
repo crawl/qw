@@ -102,30 +102,28 @@ function turn_update()
     end
 
     if you.where() ~= where then
-        if (where == "nowhere" or is_waypointable(where))
-                and is_waypointable(you.where()) then
-            waypoint_parity = 3 - waypoint_parity
+        waypoint_parity = 3 - waypoint_parity
 
-            if you.where() ~= previous_where or in_branch("Tomb") then
-                clear_level_map(waypoint_parity)
-                set_waypoint()
+        if you.where() ~= previous_where or in_branch("Tomb") then
+            clear_map_data(waypoint_parity)
+            set_waypoint()
+            if USE_COROUTINE then
                 coroutine.yield()
             end
-
-            current_where = you.where()
-            previous_where = where
-        elseif is_waypointable(you.where())
-                and you.where() ~= current_where then
-            clear_level_map(waypoint_parity)
-            set_waypoint()
-            coroutine.yield()
-            current_where = you.where()
         end
 
+        previous_where = where
         where = you.where()
         where_branch = you.branch()
         where_depth = you.depth()
         want_gameplan_update = true
+
+        level_has_upstairs = not in_portal()
+            and not in_branch("Abyss")
+            and not in_branch("Pan")
+            and (not in_branch("Tomb") or where_depth == 1)
+            and not in_hell_branch(where_branch)
+        base_corrosion = in_branch("Dis") and 2 or 0
 
         local pan_parent, min_depth, max_depth = parent_branch("Pan")
         open_runed_doors = in_branch("Abyss")
@@ -142,8 +140,6 @@ function turn_update()
 
         clear_ignores()
         stuck_turns = 0
-
-        base_corrosion = in_branch("Dis") and 2 or 0
 
         if you.have_orb() and where == zot_end then
             ignore_traps = true
@@ -163,13 +159,13 @@ function turn_update()
     transp_search = nil
     if can_use_transporters() then
         local feat = view.feature_at(0, 0)
-        if feature_uses_map_key(">", feat) and map_search_zone then
-            if not zone_counts[map_search_zone] then
-                zone_counts[map_search_zone] = {}
+        if feature_uses_map_key(">", feat) and transp_search_zone then
+            if not transp_map[transp_search_zone] then
+                transp_map[transp_search_zone] = {}
             end
-            zone_counts[map_search_zone][map_search_count] = transp_zone
-            map_search_zone = nil
-            map_search_count = nil
+            transp_map[transp_search_zone][transp_search_count] = transp_zone
+            transp_search_zone = nil
+            transp_search_count = nil
             if feat == "transporter" then
                 transp_search = transp_zone
             end
@@ -179,10 +175,7 @@ function turn_update()
         end
     end
 
-    can_waypoint = is_waypointable(where)
-    if can_waypoint then
-        update_level_map(waypoint_parity)
-    end
+    update_map_data()
 
     if want_gameplan_update then
         update_gameplan()
@@ -196,7 +189,7 @@ function turn_update()
 
     go_travel_attempts = 0
     stash_travel_attempts = 0
-    map_search_attempts = 0
+    map_mode_search_attempts = 0
 
     update_monster_array()
     danger = sense_danger(los_radius)
@@ -213,6 +206,11 @@ function turn_update()
 end
 
 function run_update()
+    if not USE_COROUTINE then
+        turn_update()
+        return
+    end
+
     if update_coroutine == nil then
         update_coroutine = coroutine.create(turn_update)
     end

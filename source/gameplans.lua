@@ -798,8 +798,10 @@ function set_gameplan(status, gameplan)
 
     if DEBUG_MODE then
         dsay("Gameplan status: " .. gameplan_status, "explore")
-        dsay("Gameplan branch: " .. tostring(gameplan_branch), "explore")
-        dsay("Gameplan depth: " .. tostring(gameplan_depth), "explore")
+        if gameplan_branch then
+            dsay("Gameplan branch: " .. tostring(gameplan_branch), ", depth: "
+                .. tostring(gameplan_depth), "explore")
+        end
     end
 end
 

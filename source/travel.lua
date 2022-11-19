@@ -28,100 +28,106 @@ function parent_branch_chain(branch, check_branch, check_entries)
     return parents, entries
 end
 
-function travel_branch_levels(branch, start_depth, dest_depth)
-    local dir = sign(dest_depth - start_depth)
-    local depth = start_depth
-    while depth ~= dest_depth do
-        if count_stairs(branch, depth, dir, FEAT_LOS.SEEN) == 0 then
-            return depth
-        end
-
-        depth = depth + dir
+function travel_branch_levels(result, dest_depth)
+    local dir = sign(dest_depth - result.depth)
+    if not result.first_dir then
+        result.first_dir = dir
     end
 
-    return depth
+    while result.depth ~= dest_depth do
+        if count_stairs(result.branch, result.depth, dir, FEAT_LOS.SEEN)
+                == 0 then
+            return
+        end
+
+        result.depth = result.depth + dir
+    end
 end
 
-function travel_up_branches(start_branch, start_depth, parents, entries,
-        dest_branch)
-    local branch = start_branch
-    local depth = start_depth
+function travel_up_branches(result, parents, entries, dest_branch)
+    if not result.first_dir then
+        result.first_dir = DIR.UP
+    end
+
     local i = 1
     for i = 1, #parents do
-        if branch == dest_branch then
+        if result.branch == dest_branch then
+            return
+        end
+
+        if is_hell_branch(result.branch) then
+            if not branch_found(result.branch)
+                    or parents[i] ~= parent_branch(result.branch) then
+                return
+            end
+        else
+            travel_branch_levels(result, 1)
+            if result.depth ~= 1 then
+                return
+            end
+        end
+
+        result.branch = parents[i]
+        result.depth = entries[result.branch]
+    end
+end
+
+function travel_down_branches(result, dest_branch, dest_depth, parents,
+        entries)
+    if not result.first_dir then
+        result.first_branch = parents[#parents]
+    end
+
+    local i = #parents
+    for i = #parents, 1, -1 do
+        result.branch = parents[i]
+        result.depth = entries[result.branch]
+
+        local next_branch, next_depth
+        if i > 1 then
+            next_branch = parents[i - 1]
+            next_depth = entries[result.branch]
+        else
+            next_branch = dest_branch
+            next_depth = dest_depth
+        end
+
+        -- We stop if we haven't found the next branch or if we can't actually
+        -- enter it with travel.
+        if not branch_found(next_branch)
+                or not branch_travel(next_branch) then
+            result.stop_branch = next_branch
             break
         end
 
-        if is_hell_branch(branch) then
-            if not branch_found(branch)
-                    or parents[i] ~= parent_branch(branch) then
-                break
-            end
-        else
-            depth = travel_branch_levels(branch, depth, 1)
-            if depth ~= 1 then
-                break
-            end
-        end
-
-        branch = parents[i]
-        depth = entries[branch]
-    end
-
-    return branch, depth
-end
-
-function travel_down_branches(dest_branch, dest_depth, parents, entries)
-    local i = #parents
-    local branch, depth, stop_branch
-    for i = #parents, 1, -1 do
-        branch = parents[i]
-        depth = entries[branch]
-
-        -- Try to travel into our next branch.
-        local next_depth
-        if i > 1 then
-            local next_parent = parents[i - 1]
-            if not branch_found(next_parent)
-                    -- A branch we can't actually enter with travel.
-                    or not branch_travel(next_parent) then
-                stop_branch = next_parent
-                break
-            end
-            branch = next_parent
-            next_depth = entries[branch]
-        else
-            if not branch_found(dest_branch)
-                    or not branch_travel(dest_branch) then
-                stop_branch = dest_branch
-                break
-            end
-            branch = dest_branch
-            next_depth = dest_depth
-        end
-        depth = 1
-
-        depth = travel_branch_levels(branch, depth, next_depth)
-        if depth ~= next_depth then
+        result.branch = next_branch
+        result.depth = 1
+        travel_branch_levels(result, next_depth)
+        if result.depth ~= next_depth then
             break
         end
 
         i = i - 1
     end
-
-    return branch, depth, stop_branch
 end
 
 -- Search branch and stair data from a starting level to a destination level,
 -- returning the furthest point to which we know we can travel.
--- @string  start_branch The starting branch.
--- @int     start_depth  The starting depth.
+-- @string  start_branch The starting branch. Defaults to the current branch.
+-- @int     start_depth  The starting depth. Defaults to the current depth.
 -- @string  dest_branch  The destination branch.
 -- @int     dest_depth   The destination depth.
--- @treturn string       The furthest branch traveled.
--- @treturn int          The furthest depth traveled in the furthest branch.
--- @treturn string       Any branch whose entry we were not able to travel into
---                       at the furthest location travel.
+-- @treturn table        The travel search results. A table that always
+--                       contains keys 'branch' and 'depth' containing the
+--                       furthest level reached. If a 'stairs_dir' key is
+--                       present, we should do a map mode stairs search to take
+--                       unexplored stairs in the given direction. If the
+--                       travel destination is not the current level, the table
+--                       will have either a key of 'first_dir' indicating the
+--                       first stair direction we should take during travel, or
+--                       a key of 'first_branch' indicating that we should
+--                       first proceed into the given branch. These two values
+--                       are used by movement plans when we're stuck.
 function travel_destination_search(dest_branch, dest_depth, start_branch,
         start_depth)
     if not start_branch then
@@ -130,17 +136,18 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
     if not start_depth then
         start_depth = where_depth
     end
+    local result = { branch = start_branch, depth = start_depth }
 
     -- We're already there.
     if start_branch == dest_branch and start_depth == dest_depth then
-        return dest_branch, dest_depth
+        return result
     end
 
     local common_parent, start_parents, start_entries, dest_parents,
         dest_entries
     if start_branch == dest_branch
-            and (not is_hell_branch(start_branch)
-                or start_depth <= dest_depth) then
+            and not (is_hell_branch(start_branch)
+                and start_depth > dest_depth) then
         common_parent = start_branch
     else
         start_parents, start_entries = parent_branch_chain(start_branch,
@@ -154,24 +161,21 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
         end
     end
 
-    local cur_branch = start_branch
-    local cur_depth = start_depth
     -- Travel up and out of the starting branch until we reach the common
     -- parent branch. Don't bother traveling up if the destination branch is a
     -- sub-branch of the starting branch.
     if start_branch ~= common_parent then
-        cur_branch, cur_depth = travel_up_branches(cur_branch, cur_depth,
-            start_parents, start_entries, common_parent)
+        travel_up_branches(result, start_parents, start_entries, common_parent)
 
         -- We weren't able to travel all the way up to the common parent.
-        if cur_depth ~= start_entries[common_parent] then
-            return cur_branch, cur_depth
+        if result.depth ~= start_entries[common_parent] then
+            return result
         end
     end
 
     -- We've already arrived at our ultimate destination.
-    if cur_branch == dest_branch and cur_depth == dest_depth then
-        return cur_branch, cur_depth
+    if result.branch == dest_branch and result.depth == dest_depth then
+        return result
     end
 
     -- We're now in the nearest branch in the chain of parent branches of our
@@ -185,174 +189,200 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
     else
         next_depth = dest_entries[common_parent]
     end
-    cur_depth = travel_branch_levels(common_parent, cur_depth, next_depth)
+    travel_branch_levels(result, next_depth)
 
-    -- We couldn't make it to the branch entry we need.
-    if cur_depth ~= next_depth then
-        return cur_branch, cur_depth
-    -- We already arrived at our ultimate destination.
-    elseif cur_branch == dest_branch and cur_depth == dest_depth then
-        return cur_branch, cur_depth
+    -- We couldn't make it to the branch entry we need or we already arrived at
+    -- our ultimate destination.
+    if result.depth ~= next_depth
+            or result.branch == dest_branch and result.depth == dest_depth then
+        return result
     end
 
     -- Travel into and down branches to reach our ultimate destination. We're
     -- always starting at the first branch entry we'll need to take.
-    cur_branch, cur_depth, stop_branch = travel_down_branches(dest_branch,
-        dest_depth, dest_parents, dest_entries)
-    return cur_branch, cur_depth, stop_branch
+    travel_down_branches(result, dest_branch, dest_depth, dest_parents,
+        dest_entries)
+    return result
 end
 
-function check_depth_dir(branch, depth, dir)
-    local dir_depth = depth + dir
+function finalize_depth_dir(result, dir)
+    local dir_depth = result.depth + dir
     -- We can already reach all required stairs in this direction on our level.
-    if count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
-            == num_required_stairs(branch, depth, dir) then
-        return
+    if count_stairs(result.branch, result.depth, dir, FEAT_LOS.REACHABLE)
+            == num_required_stairs(result.branch, depth, dir) then
+        return false
     end
 
     local dir_depth_stairs =
-        count_stairs(branch, dir_depth, -dir, FEAT_LOS.EXPLORED)
-            < count_stairs(branch, dir_depth, -dir, FEAT_LOS.REACHABLE)
+        count_stairs(result.branch, dir_depth, -dir, FEAT_LOS.EXPLORED)
+            < count_stairs(result.branch, dir_depth, -dir, FEAT_LOS.REACHABLE)
     -- The adjacent level in this direction from our level is autoexplored and
     -- we have no unexplored reachable stairs remaining on that level in the
     -- opposite direction.
-    if autoexplored_level(branch, dir_depth) and not dir_depth_stairs then
+    if autoexplored_level(result.branch, dir_depth)
+            and not dir_depth_stairs then
         -- The reachable stairs in this direction on our level are also all
         -- explored, hence we've done as much as we can with this direction
         -- relative to our level.
-        if count_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
-                == count_stairs(branch, depth, dir, FEAT_LOS.EXPLORED) then
-            return
+        if count_stairs(result.branch, result.depth, dir, FEAT_LOS.REACHABLE)
+                == count_stairs(result.branch, result.depth, dir,
+                    FEAT_LOS.EXPLORED) then
+            return false
         end
 
-        return depth, dir
+        result.stairs_dir = dir
+        if not result.first_dir then
+            result.first_dir = dir
+        end
+        return true
     end
 
+    if not result.first_dir then
+        result.first_dir = dir
+    end
+    result.depth = dir_depth
     -- Only try a stair search on the adjacent level if we know there are
     -- unexplored stairs we could take. Otherwise explore the adjacent level,
     -- looking for relevant stairs.
     if dir_depth_stairs then
-        return dir_depth, -dir
-    else
-        return dir_depth
+        result.stairs_dir = -dir
     end
+    return true
 end
 
-function finalize_travel_depth(branch, depth)
-    if not autoexplored_level(branch, depth) then
-        return depth
+function finalize_travel_depth(result)
+    if not autoexplored_level(result.branch, result.depth) then
+        return
     end
 
-    local up_reachable = depth > 1
-        and count_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE) > 0
-    local final_depth, final_dir
+    local up_reachable = result.depth > 1
+        and count_stairs(result.branch, result.depth, DIR.UP,
+            FEAT_LOS.REACHABLE) > 0
+    local finished
     if up_reachable then
-        final_depth, final_dir = check_depth_dir(branch, depth, DIR.UP)
+        finished = finalize_depth_dir(result, DIR.UP)
     end
 
-    local down_reachable = depth < branch_depth(branch)
-        and count_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE) > 0
-    if not final_depth and down_reachable then
-        final_depth, final_dir = check_depth_dir(branch, depth, DIR.DOWN)
+    local down_reachable = result.depth < branch_depth(result.branch)
+        and count_stairs(result.branch, result.depth, DIR.DOWN,
+            FEAT_LOS.REACHABLE) > 0
+    if not finished and down_reachable then
+        finished = finalize_depth_dir(result, DIR.DOWN)
     end
 
-    if not final_depth then
+    if not finished then
         if up_reachable
                 -- Don't reset up stairs if we still need the branch rune,
                 -- since we have specific plans for branch ends we may need to
                 -- follow.
-                and (have_branch_runes(branch)
-                    or depth < branch_rune_depth(branch)) then
-            level_stair_reset(branch, depth, DIR.UP)
-            level_stair_reset(branch, depth - 1, DIR.DOWN)
-            final_depth = depth - 1
-            final_dir = DIR.DOWN
+                and (have_branch_runes(result.branch)
+                    or result.depth < branch_rune_depth(result.branch)) then
+            level_stair_reset(result.branch, result.depth, DIR.UP)
+            level_stair_reset(result.branch, result.depth - 1, DIR.DOWN)
+            if not result.first_dir then
+                result.first_dir = DIR.UP
+            end
+            result.depth = result.depth - 1
+            result.stairs_dir = DIR.UP
+            finished = true
         end
 
         if down_reachable then
-            level_stair_reset(branch, depth, DIR.DOWN)
-            level_stair_reset(branch, depth + 1, DIR.UP)
-            if not final_depth then
-                final_depth = depth + 1
-                final_dir = DIR.UP
+            level_stair_reset(result.branch, result.depth, DIR.DOWN)
+            level_stair_reset(result.branch, result.depth + 1, DIR.UP)
+            if not finished then
+                result.depth = result.depth + 1
+                if not result.first_dir then
+                    result.first_dir = DIR.DOWN
+                end
+                result.stairs_dir = DIR.UP
             end
         end
     end
-
-    if not final_depth then
-        final_depth = depth
-    end
-
-    return final_depth, final_dir
 end
 
 function travel_destination(dest_branch, dest_depth, stash_travel)
     if not dest_branch or in_portal() then
-        return
+        return {}
     end
 
-    local dir
-    local branch, depth, stop_branch = travel_destination_search(dest_branch,
-        dest_depth)
-
-    -- We were unable enter the branch in stop_branch, so figure out the next
-    -- best location to travel to in its parent branch.
-    if stop_branch and not branch_found(stop_branch) then
-        local parent, min_depth, max_depth = parent_branch(stop_branch)
-        depth = next_exploration_depth(parent, min_depth, max_depth)
-        depth, dir = finalize_travel_depth(branch, depth)
+    local result = travel_destination_search(dest_branch, dest_depth)
+    -- We were unable enter the branch in result.stop_branch, so figure out the
+    -- next best travel location in the branch's parent.
+    if result.stop_branch and not branch_found(result.stop_branch) then
+        local parent, min_depth, max_depth = parent_branch(result.stop_branch)
+        result.branch = parent
+        result.depth = next_exploration_depth(parent, min_depth, max_depth)
+        finalize_travel_depth(result)
     -- Get the final depth we should travel to given the state of stair
     -- exploration at our travel destination. For stash search travel, we don't
     -- do this, since we know what we want is on the destination level.
     elseif not stash_travel then
-        depth, dir = finalize_travel_depth(branch, depth)
+        finalize_travel_depth(result)
     end
 
-    return branch, depth, dir
+    return result
 end
 
 function update_gameplan_travel()
     -- We use a stash search to reach our destination, but will still do a
     -- travel search for any given gameplan branch/depth, so we can use a go
     -- command as a backup.
-    local stash_travel = gameplan_status == "Orb" and c_persist.found_orb
-            or not gameplan_branch
-            or gameplan_status:find("^God") and gameplan_branch ~= "Temple"
-            or is_portal_branch(gameplan_branch)
-                and not in_portal()
-                and branch_found(gameplan_branch)
-            or gameplan_branch == "Abyss"
-                and where_branch ~= "Abyss"
-                and branch_found("Abyss")
-            or gameplan_branch == "Pan"
-                and where_branch ~= "Pan"
-                and branch_found("Pan")
+    local want_stash = gameplan_status == "Orb" and c_persist.found_orb
+        or not gameplan_branch
+        or gameplan_status:find("^God") and gameplan_branch ~= "Temple"
+        or is_portal_branch(gameplan_branch)
+            and not in_portal()
+            and branch_found(gameplan_branch)
+        or gameplan_branch == "Abyss"
+            and where_branch ~= "Abyss"
+            and branch_found("Abyss")
+        or gameplan_branch == "Pan"
+            and where_branch ~= "Pan"
+            and branch_found("Pan")
 
-    travel_branch, travel_depth, stairs_search_dir
-        = travel_destination(gameplan_branch, gameplan_depth, stash_travel)
-    want_go_travel = (travel_branch
-            and (where_branch ~= travel_branch or where_depth ~= travel_depth))
+    gameplan_travel = travel_destination(gameplan_branch, gameplan_depth,
+        want_stash)
+    gameplan_travel.want_stash = want_stash
+    gameplan_travel.want_go = gameplan_travel.branch
+        and (where_branch ~= gameplan_travel.branch
+            or where_depth ~= gameplan_travel.depth)
 
-    -- Don't autoexplore if we want to travel in some way. This is so we can
-    -- leave our current level before it's completely explored.
-    disable_autoexplore = (stairs_search_dir or want_go_travel or stash_travel)
-            -- We do allow autoexplore even when we want to travel if the
-            -- current is fully explored, since then it's safe to pick up any
-            -- surrounding items like thrown projectiles or loot from e.g.
-            -- stairdancing. However we don't allow autoexplore in this case if
-            -- our current level is our travel destination. This exception is
-            -- to allow within-level plans like taking unexplored stairs and
-            -- stash searches to on-level destinations to not be interrupted if
-            -- autoexplore would move us next to a runed door.
-            and (not explored_level(where_branch, where_depth)
-                or (travel_branch and not want_go_travel))
+    -- Don't autoexplore if we want to travel in some way. This allows us to
+    -- leave the level before it's completely explored.
+    disable_autoexplore = (gameplan_travel.stairs_dir
+            or gameplan_travel.want_go
+            or gameplan_travel.want_stash)
+        -- We do allow autoexplore even when we want to travel if the current
+        -- is fully explored, since then it's safe to pick up any surrounding
+        -- items like thrown projectiles or loot from e.g. stairdancing.
+        and (not explored_level(where_branch, where_depth)
+        -- However we don't allow autoexplore in this case if our current level
+        -- is our travel destination. This exception is to allow within-level
+        -- plans like taking unexplored stairs and stash searches to on-level
+        -- destinations like altars to not be interrupted when runed doors
+        -- exist. In that case autoexplore would move us next to a runed door
+        -- and off of our intermediate stair/altar/etc. where we need to be.
+            or (gameplan_travel.branch and not gameplan_travel.want_go))
 
     if DEBUG_MODE then
-        dsay("Stash travel: " .. bool_string(stash_travel), "explore")
-        dsay("Travel branch: " .. tostring(travel_branch) .. ", depth: "
-            .. tostring(travel_depth) .. ", stairs search dir: "
-            .. tostring(stairs_search_dir), "explore")
-        dsay("Want go travel: " .. bool_string(want_go_travel), "explore")
+        dsay("Travel branch: " .. tostring(gameplan_travel.branch)
+            ..  ", depth: " .. tostring(gameplan_travel.depth), "explore")
+        if gameplan_travel.stairs_dir then
+            dsay("Stairs search dir: " .. tostring(gameplan_travel.stairs_dir),
+                "explore")
+        end
+        if gameplan_travel.first_dir then
+            dsay("First dir: " .. tostring(gameplan_travel.first_dir),
+                "explore")
+        end
+        if gameplan_travel.first_branch then
+            dsay("First branch: " .. tostring(gameplan_travel.first_branch),
+                "explore")
+        end
+        dsay("Want stash travel: " .. bool_string(want_stash), "explore")
+        dsay("Want go travel: " .. bool_string(gameplan_travel.want_go),
+            "explore")
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore),
             "explore")
     end

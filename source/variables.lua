@@ -1,44 +1,51 @@
 ------------------------
--- Some global (local) variables and function
--- This code must be at the top of the final lua source file.
+-- Global variables. This file declares shared variables as local to the scope
+-- of the final qw lua source file.
 
--- The version of qw for logging purposes. Run the make-qw-rc.sh script to set
--- this variable automatically based on the latest annotate git tag and commit,
--- or change it here to a custom version string.
+-- The version of qw for logging purposes. Run the make-qw.sh script to set
+-- this variable automatically based on the latest annotated git tag and
+-- commit, or change it here to a custom version string.
 local qw_version = "%VERSION%"
 
 -- Crawl enum values :/
 local enum_mons_pan_lord = 344
 local enum_att_friendly = 4
 local enum_att_neutral = 1
+local enum_gxm
 
--- Enum tables
+-- Enum tables and constants
 local AUTOEXP
 local FEAT_LOS
 local DIR
-local INF_TURNS = 200000000
+local INF_TURNS
 
+-- All variables past this point are qw state.
 local initialized = false
-local time_passed
-local automatic = false
-local update_coroutine
-local do_dummy_action
-
 local branch_data = {}
 local hell_branches
 local portal_data = {}
 local god_data = {}
 local good_gods
+local upstairs_features
+local downstairs_features
 
-local where
-local where_branch
-local where_depth
-local can_waypoint
-local los_radius
-local base_corrosion
-
+local time_passed
+local automatic = false
+local update_coroutine
+local do_dummy_action
 local dump_count = you.turns() + 100 - (you.turns() % 100)
 local skill_count = you.turns() - (you.turns() % 5)
+local have_message = false
+local read_message = true
+
+local gameplan_list
+local override_gameplans
+local which_gameplan = 1
+local gameplan_status
+local gameplan_branch
+local gameplan_depth
+local gameplan_travel
+local want_gameplan_update
 
 local early_first_lair_branch
 local first_lair_branch_end
@@ -48,15 +55,6 @@ local early_vaults
 local vaults_end
 local early_zot
 local zot_end
-
-local gameplan_list
-local override_gameplans
-local which_gameplan = 1
-local gameplan_status
-local gameplan_branch
-local gameplan_depth
-local permanent_bazaar
-local ignore_traps
 
 local planning_god_uses_mp
 local planning_good_god
@@ -69,23 +67,26 @@ local planning_cocytus
 local planning_gehenna
 local planning_zig
 
-local travel_branch
-local travel_depth
-local want_gameplan_update
-local want_go_travel
+local previous_where
+local where
+local where_branch
+local where_depth
+
+local los_radius
+local base_corrosion
 local disable_autoexplore
-
-local stairs_search_dir
-local stairs_travel
-
-local go_travel_attempts = 0
-local stash_travel_attempts = 0
+local level_has_upstairs
+local base_corrosion
 local open_runed_doors
+local permanent_bazaar
+local ignore_traps
+local dislike_pan_level = false
 
-local transp_search
-local transp_zone
-local zone_counts = {}
+local branch_step_mode = false
+local stepped_on_lair = false
+local stepped_on_tomb = false
 
+local stairs_travel
 local danger
 local immediate_danger
 local cloudy
@@ -94,6 +95,7 @@ local ignore_list = { }
 local failed_move = { }
 local invisi_count = 0
 local next_delay = 100
+local is_waiting
 
 local sigmund_dx = 0
 local sigmund_dy = 0
@@ -102,10 +104,6 @@ local invis_sigmund = false
 local sgd_timer = -200
 
 local stuck_turns = 0
-
-local stepped_on_lair = false
-local stepped_on_tomb = false
-local branch_step_mode = false
 
 local did_move = false
 local move_count = 0
@@ -119,9 +117,6 @@ local wait_count = 0
 local old_turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
-local have_message = false
-local read_message = true
-
 local monster_array
 local enemy_list
 
@@ -132,7 +127,8 @@ local acquirement_class
 local tactical_step
 local tactical_reason
 
-local is_waiting
+local go_travel_attempts = 0
+local stash_travel_attempts = 0
 
 local stairdance_count = {}
 local clear_exclusion_count = {}
@@ -149,16 +145,18 @@ local only_linear_resists = false
 
 local no_spells = false
 
-local traversal_map
-local stair_dists
 local waypoint_parity
-local good_stair_list
+local feature_searches
+local feature_positions
+local traversal_maps
+local distance_maps
+local good_stairs
 local target_stair
 local last_flee_turn = -100
 
-local map_mode_search
+local map_mode_searches
 local map_mode_search_key
-local map_mode_search_pos
+local map_mode_search_hash
 local map_mode_search_zone
 local map_mode_search_count
 local map_mode_search_attempts = 0

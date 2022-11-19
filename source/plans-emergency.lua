@@ -769,17 +769,16 @@ function plan_continue_flee()
         return false
     end
 
-    local num = waypoint_parity
-    local wx, wy = travel.waypoint_delta(num)
-    local val
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
     for x, y in adjacent_iter(0, 0) do
         if is_traversable(x, y)
                 and not is_solid(x, y)
                 and not monster_in_way(x, y)
                 and view.is_safe_square(x, y)
                 and not view.withheld(x, y) then
-            val = stair_dists[num][target_stair][wx + x][wy + y]
-            if val and val < stair_dists[num][target_stair][wx][wy] then
+            local dist_map = get_distance_map(target_stair)
+            local val = dist_map[wx + x][wy + y]
+            if val and val < dist_map[wx][wy] then
                 dsay("STILL FLEEEEING.")
                 magic(delta_to_vi(x, y) .. "YY")
                 return true

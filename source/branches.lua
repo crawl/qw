@@ -138,6 +138,18 @@ function branch_entrance(branch)
     return branch_data[branch].entrance
 end
 
+function branch_exit(branch)
+    if not branch_data[branch] then
+        error("Unknown branch: " .. tostring(branch))
+    end
+
+    if branch_data[branch].entrance then
+        return branch_data[branch].entrance:gsub("enter", "exit", 1)
+    else
+        return "exit_dungeon"
+    end
+end
+
 function portal_entrance_description(portal)
     if not portal_data[portal] then
         error("Unknown portal: " .. tostring(portal))
@@ -273,13 +285,6 @@ function have_branch_runes(branch)
     return you.have_rune(rune)
 end
 
-function is_waypointable(loc)
-    local branch = parse_level_range(loc)
-    return not (is_portal_branch(branch)
-        or branch == "Abyss"
-        or branch == "Pan")
-end
-
 function is_portal_branch(branch)
     return portal_data[branch] ~= nil
 end
@@ -290,6 +295,42 @@ end
 
 function portal_allowed(portal)
     return util.contains(ALLOWED_PORTALS, portal)
+end
+
+function record_branch(x, y)
+    local feat = view.feature_at(x, y)
+    for br, entry in pairs(branch_data) do
+        if entry.entrance == feat then
+            record_feature_position(x, y)
+
+            if not c_persist.branches[br] then
+                c_persist.branches[br] = {}
+            end
+            local state = los_state(x, y)
+            -- We already have a suitable entry recorded.
+            if c_persist.branches[br][where]
+                    and c_persist.branches[br][where] >= state then
+                return
+            end
+
+            c_persist.branches[br][where] = state
+
+            -- Update the entry depth in the branch data with the depth where
+            -- we found this entry if the entry depth is currently unconfirmed
+            -- or if the found depth is higher.
+            local cur_br, cur_depth = parse_level_range(where)
+            local parent_br, parent_min, parent_max = parent_branch(br)
+            if cur_br == parent_br
+                    and (parent_min ~= parent_max
+                        or cur_depth < parent_min) then
+                branch_data[br].parent_min_depth = cur_depth
+                branch_data[br].parent_max_depth = cur_depth
+            end
+
+            want_gameplan_update = true
+            return
+        end
+    end
 end
 
 function record_portal(level, portal, permanent)

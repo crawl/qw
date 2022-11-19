@@ -49,12 +49,15 @@ function initialize()
     where_branch = "nowhere"
     where_depth = nil
 
-    if not level_map then
-        level_map = {}
-        stair_dists = {}
-        map_search = {}
-        clear_level_map(1)
-        clear_level_map(2)
+    if not feature_searches then
+        feature_searches = {}
+        feature_positions = {}
+        traversal_maps = {}
+        distance_maps = {}
+        map_mode_searches = {}
+        clear_map_data(1)
+        clear_map_data(2)
+
         waypoint_parity = 1
         previous_where = "nowhere"
     end

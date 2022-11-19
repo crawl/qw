@@ -1,24 +1,34 @@
 -- Stair direction enum
 DIR = { UP = -1, DOWN = 1 }
 
-function clear_level_map(num)
-    level_map[num] = {}
-    for i = -100, 100 do
-        level_map[num][i] = {}
-    end
-    stair_dists[num] = {}
-    map_search[num] = {}
-end
+upstairs_features = {
+    "stone_stairs_up_i",
+    "stone_stairs_up_ii",
+    "stone_stairs_up_iii",
+}
+
+downstairs_features = {
+    "stone_stairs_down_i",
+    "stone_stairs_down_ii",
+    "stone_stairs_down_iii",
+}
 
 function record_stairs(branch, depth, feat, state, force)
     local dir, num
     dir, num = stone_stair_type(feat)
-    local data = dir == DIR.DOWN and c_persist.downstairs or c_persist.upstairs
+
+    local data
+    if dir == DIR.DOWN then
+        data = c_persist.downstairs
+    else
+        data = c_persist.upstairs
+    end
 
     local level = make_level(branch, depth)
     if not data[level] then
         data[level] = {}
     end
+
     local old_state = not data[level][num] and FEAT_LOS.NONE
         or data[level][num]
     if old_state < state or force then
@@ -50,18 +60,14 @@ function set_stairs(branch, depth, dir, feat_los, min_feat_los)
     end
 end
 
-function dir_key(dir)
-    return dir == DIR.DOWN and ">" or "<"
-end
-
 function level_stair_reset(branch, depth, dir)
     set_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
 
     local lev = make_level(branch, depth)
     if lev == where then
-        map_search[waypoint_parity][dir_key(dir)] = nil
+        map_mode_searches[waypoint_parity][dir_key(dir)] = nil
     elseif lev == previous_where then
-        map_search[3 - waypoint_parity][dir_key(dir)] = nil
+        map_mode_searches[3 - waypoint_parity][dir_key(dir)] = nil
     end
 
     if where ~= lev then
@@ -148,192 +154,32 @@ function have_all_stairs(branch, depth, dir, state)
     return true
 end
 
-function record_map_search(parity, key, start_pos, count, end_pos)
-    if not map_search[parity][key] then
-        map_search[parity][key] = {}
-    end
-
-    if not map_search[parity][key][start_pos] then
-        map_search[parity][key][start_pos]  = {}
-    end
-
-    map_search[parity][key][start_pos][count] = end_pos
-end
-
-function record_branch(x, y)
-    local feat = view.feature_at(x, y)
-    for br, entry in pairs(branch_data) do
-        if entry.entrance == feat then
-            if not c_persist.branches[br] then
-                c_persist.branches[br] = {}
-            end
-
-            local state = los_state(x, y)
-            -- We already have a suitable entry recorded.
-            if c_persist.branches[br][where]
-                    and c_persist.branches[br][where] >= state then
-                return
-            end
-
-            c_persist.branches[br][where] = state
-
-            -- Update the parent entry depth with that of an entry
-            -- found in the parent either if the entry depth is
-            -- unconfirmed our the found entry is at a lower depth.
-            local cur_br, cur_depth = parse_level_range(where)
-            local parent_br, parent_min, parent_max = parent_branch(br)
-            if cur_br == parent_br
-                    and (parent_min ~= parent_max
-                        or cur_depth < parent_min) then
-                branch_data[br].parent_min_depth = cur_depth
-                branch_data[br].parent_max_depth = cur_depth
-            end
-
-            want_gameplan_update = true
-            return
-        end
-    end
-end
-
-function update_level_map(num)
-    local distqueue = {}
-    local staircount = #stair_dists[num]
-    for j = 1, staircount do
-        distqueue[j] = {}
-    end
-
-    local wx, wy = travel.waypoint_delta(num)
-    local mapqueue = {}
-    for x, y in square_iter(0, 0, los_radius, true) do
-        local feat = view.feature_at(x, y)
-        if feat:find("stone_stairs") then
-            record_stairs(where_branch, where_depth, feat, los_state(x, y))
-        elseif feat:find("enter_") then
-            record_branch(x, y)
-        elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
-            record_altar(x, y)
-        end
-        table.insert(mapqueue, {x + wx, y + wy})
-    end
-
-    local newcount = staircount
-    local first = 1
-    local last = #mapqueue
-    local x, y, feat, val, oldval
-    while first < last do
-        if first % 1000 == 0 then
-            coroutine.yield()
-        end
-        x = mapqueue[first][1]
-        y = mapqueue[first][2]
-        first = first + 1
-        feat = view.feature_at(x - wx, y - wy)
-        if feat ~= "unseen" then
-            if level_map[num][x][y] == nil then
-                for dx, dy in adjacent_iter(x, y) do
-                    last = last + 1
-                    mapqueue[last] = {dx, dy}
-                end
-            end
-            if travel.feature_traversable(feat)
-                    and not travel.feature_solid(feat) then
-                if level_map[num][x][y] ~= "." then
-                    if feat_is_upstairs(feat) then
-                        newcount = #stair_dists[num] + 1
-                        stair_dists[num][newcount] = {}
-                        for i = -100, 100 do
-                            stair_dists[num][newcount][i] = {}
-                        end
-                        stair_dists[num][newcount][x][y] = 0
-                        distqueue[newcount] = {{x, y}}
-                    end
-
-                    for j = 1, staircount do
-                        oldval = stair_dists[num][j][x][y]
-                        for dx, dy in adjacent_iter(x, y) do
-                            val = stair_dists[num][j][dx][dy]
-                            if val ~= nil
-                                    and (oldval == nil
-                                        or oldval > val + 1) then
-                                oldval = val + 1
-                            end
-                        end
-                        if stair_dists[num][j][x][y] ~= oldval then
-                            stair_dists[num][j][x][y] = oldval
-                            table.insert(distqueue[j], {x, y})
-                        end
-                    end
-                end
-                level_map[num][x][y] = "."
-            else
-                level_map[num][x][y] = "#"
-            end
-        end
-    end
-
-    for j = 1, newcount do
-        update_dist_map(stair_dists[num][j], distqueue[j])
-    end
-
-    if map_search_key then
-        local feat = view.feature_at(0, 0)
-        -- We assume we've landed on the next feature in our current "X<key>"
-        -- cycle because the feature at our position uses that key.
-        if feat_uses_map_key(map_search_key, feat) then
-            record_map_search(num, map_search_key, map_search_pos,
-                map_search_count, 100 * wx + wy)
-        end
-        map_search_key = nil
-        map_search_pos = nil
-        map_search_count = nil
-    end
-end
-
-function update_dist_map(dist_map, queue)
-    local first = 1
-    local last = #queue
-    local x, y, val
-    while first <= last do
-        if first % 300 == 0 then
-            coroutine.yield()
-        end
-        x = queue[first][1]
-        y = queue[first][2]
-        first = first + 1
-        val = dist_map[x][y] + 1
-        for dx, dy in adjacent_iter(x, y) do
-            if level_map[waypoint_parity][dx][dy] == "." then
-                oldval = dist_map[dx][dy]
-                if oldval == nil or oldval > val then
-                    dist_map[dx][dy] = val
-                    last = last + 1
-                    queue[last] = {dx, dy}
-                end
-            end
-        end
-    end
-end
-
 function find_good_stairs()
-    good_stair_list = { }
+    good_stairs = { }
 
-    if not can_waypoint then
+    if not level_has_upstairs then
         return
     end
 
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local staircount = #(stair_dists[num])
+    local feats = util.copy_table(upstairs_features)
+    local exit = branch_exit(where_branch)
+    if feature_is_upstairs(exit) then
+        table.insert(feats, exit)
+    end
+    local stair_positions = get_feature_positions(feats)
+
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local pdist, mdist, minmdist, speed_diff
     local pspeed = player_speed_num()
-    for i = 1, staircount do
-        pdist = stair_dists[num][i][dx][dy]
+    for _, pos in ipairs(stair_positions) do
+        local dist_map = get_distance_map(pos)
+        pdist = dist_map[wx][wy]
         if pdist == nil then
             pdist = 10000
         end
         minmdist = 1000
         for _, e in ipairs(enemy_list) do
-            mdist = stair_dists[num][i][dx + e.x][dy + e.y]
+            mdist = dist_map[wx + e.x][wy + e.y]
             if mdist == nil then
                 mdist = 10000
             end
@@ -351,29 +197,30 @@ function find_good_stairs()
             end
         end
         if pdist < minmdist then
-            table.insert(good_stair_list, i)
+            table.insert(good_stairs, pos)
         end
     end
 end
 
 function stair_improvement(x, y)
-    if not can_waypoint then
+    if not level_has_upstairs then
         return 10000
     end
+
     if x == 0 and y == 0 then
-        if feat_is_upstairs(view.feature_at(0, 0)) then
+        if feature_is_upstairs(view.feature_at(0, 0)) then
             return 0
         else
             return 10000
         end
     end
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local val
+
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local minval = 10000
-    for _, i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx + x][dy + y]
-        if val < stair_dists[num][i][dx][dy] and val < minval then
+    for _, pos in ipairs(good_stairs) do
+        local dist_map = get_distance_map(pos)
+        local val = dist_map[wx + x][wy + y]
+        if val and val < dist_map[wx][wy] and val < minval then
             minval = val
         end
     end
@@ -382,16 +229,15 @@ end
 
 function set_stair_target(c)
     local x, y = vi_to_delta(c)
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local val
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local minval = 10000
     local best_stair
-    for _, i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx + x][dy + y]
-        if val < stair_dists[num][i][dx][dy] and val < minval then
+    for _, pos in ipairs(good_stairs) do
+        local dist_map = get_distance_map(pos)
+        local val = dist_map[wx + x][wy + y]
+        if val and val < dist_map[wx][wy] and val < minval then
             minval = val
-            best_stair = i
+            best_stair = hash
         end
     end
     target_stair = best_stair

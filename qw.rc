@@ -179,6 +179,9 @@ bindkey = [^D] CMD_LUA_CONSOLE
 autopickup =
 autopickup_exceptions =
 
+# Enable use of a coroutine to avoid lua throttling
+: USE_COROUTINE = true
+
 #################
 ### Debugging ###
 #################

@@ -109,3 +109,17 @@ function radius_iter(x, y, radius, include_center)
         return x + dx, y + dy
     end
 end
+
+function hash_coordinates(x, y)
+    return 2 * GXM * x + y
+end
+
+function hash_position(pos)
+    return hash_coordinates(pos.x, pos.y)
+end
+
+function unhash_position(hash)
+    local x = math.floor(hash / (2 * GXM) + 0.5)
+    local y = hash - 2 * GXM * x
+    return { x = x, y = y }
+end

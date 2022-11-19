@@ -63,11 +63,12 @@ function assess_square(x, y)
 
     -- Would we want to move out of a cloud? note that we don't worry about
     -- weak clouds if monsters are around.
-    a.cloud_safe = (cloud == nil) or a.safe
-                                 or danger and not cloud_is_dangerous(cloud)
+    a.cloud_safe = (cloud == nil)
+        or a.safe
+        or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to 10000 if the move is not closer to any stair in
-    -- good_stair_list, otherwise equal to the (min) dist to such a stair
+    -- Equal to 10000 if the move is not closer to any stair in good_stairs,
+    -- otherwise equal to the (min) dist to such a stair
     a.stair_closer = stair_improvement(x, y)
 
     return a
@@ -571,6 +572,42 @@ function plan_swamp_clouds_hack()
     return plan_stuck_teleport()
 end
 
+function plan_stuck_move_to_target()
+    local move
+    if gameplan_travel.first_dir then
+        if gameplan_travel.first_dir == DIR.UP then
+            move = best_move_towards_features(upstairs_features)
+        else
+            move = best_move_towards_features(downstairs_features)
+        end
+    elseif gameplan_travel.first_branch then
+        move = best_move_towards_features(
+            branch_entrance(gameplan_travel.first_branch))
+    elseif gameplan_status:find("^God:") then
+        local god = gameplan_god(gameplan_status)
+        move = best_move_to_features(god_altar(god))
+    end
+
+    if not move then
+        local wx, wy = travel.waypoint_delta(waypoint_parity)
+        local mons_targets = {}
+        for x, y in square_iter(0, 0) do
+            if has_dangerous_monster(x, y)
+                    and not you.see_cell_no_trans(x, y) then
+                table.insert(mons_targets, { x = x + wx, y = y + wy })
+            end
+        end
+        move = best_move_towards(mons_targets)
+    end
+
+    if move then
+        magic(delta_to_vi(move.x, move.y) .. "YY")
+        return true
+    end
+
+    return false
+end
+
 function set_plan_move()
     plan_move = cascade {
         {plan_quit, "quit"},
@@ -604,6 +641,7 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
+        {plan_stuck_move_to_target, "stuck_move_to_target"},
         {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},

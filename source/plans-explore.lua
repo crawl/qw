@@ -89,13 +89,13 @@ end
 
 -- Use the 'G' command to travel to our next destination.
 function plan_go_command()
-    if not want_go_travel or cloudy then
+    if not gameplan_travel.want_go or cloudy then
         return false
     end
 
     if go_travel_attempts == 0 then
         go_travel_attempts = 1
-        send_travel(travel_branch, travel_depth)
+        send_travel(gameplan_travel.branch, gameplan_travel.depth)
         return
     end
 

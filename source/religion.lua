@@ -89,6 +89,14 @@ function god_uses_mp(god)
     return god_data[god].uses_mp
 end
 
+function god_altar(god)
+    if not god then
+        god = you.god()
+    end
+
+    return "altar_" .. string.gsub(string.lower(god), " ", "_")
+end
+
 function god_uses_invocations(god)
     if not god then
         god = you.god()
@@ -333,8 +341,10 @@ function count_divine_warrior(r)
 end
 
 function record_altar(x, y)
+    record_feature_position(x, y)
     local feat = view.feature_at(x, y)
     local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
+
     local state = los_state(x, y)
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}

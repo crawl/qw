@@ -1,38 +1,37 @@
 function plan_go_to_unexplored_stairs()
-    if not can_waypoint
-            or not stairs_search_dir
-            or where_branch ~= travel_branch
-            or where_depth ~= travel_depth then
+    if gameplan_travel.want_go or not gameplan_travel.stairs_dir or cloudy then
         return false
     end
 
-    if map_search_attempts == 1 then
-        map_search_attempts = 0
+    if map_mode_search_attempts == 1 then
+        map_mode_search_attempts = 0
         disable_autoexplore = false
         return false
     end
 
-    local key = dir_key(stairs_search_dir)
-    local dx, dy = travel.waypoint_delta(waypoint_parity)
-    local pos = 100 * dx + dy
-    local map = map_search[waypoint_parity]
+    local key = dir_key(gameplan_travel.stairs_dir)
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
+    local hash = hash_position({ x = wx, y = wy })
+    local searches = map_mode_searches[waypoint_parity]
     local count = 1
-    while map[key] and map[key][pos] and map[key][pos][count] do
+    while searches[key]
+            and searches[key][hash]
+            and searches[key][hash][count] do
         -- Trying to go one past this count lands us at the same destination as
         -- the count, so there are no more accessible unexplored stairs to be
         -- found from where we are, and we stop the search. The backtrack plan
         -- can take over from here.
-        if map[key][pos][count] == map[key][pos][count + 1] then
+        if searches[key][hash][count] == searches[key][hash][count + 1] then
             return false
         end
 
         count = count + 1
     end
 
-    map_search_key = key
-    map_search_pos = pos
-    map_search_count = count
-    map_search_attempts = 1
+    map_mode_search_key = key
+    map_mode_search_hash = hash
+    map_mode_search_count = count
+    map_mode_search_attempts = 1
     magic("X" .. key:rep(count) .. "\r")
 end
 
@@ -63,14 +62,14 @@ function plan_go_to_transporter()
         end
     else
         search_count = 1
-        while zone_counts[transp_zone]
-                and zone_counts[transp_zone][search_count] do
+        while transp_map[transp_zone]
+                and transp_map[transp_zone][search_count] do
             search_count = search_count + 1
         end
     end
 
-    map_search_zone = transp_zone
-    map_search_count = search_count
+    transp_search_zone = transp_zone
+    transp_search_count = search_count
     magic("X" .. (">"):rep(search_count) .. "\r")
     return true
 end
@@ -84,14 +83,23 @@ function plan_transporter_orient_exit()
     return true
 end
 
+function plan_enter_transporter()
+    if not transp_search or view.feature_at(0, 0) ~= "transporter" then
+        return false
+    end
+
+    magic(">")
+    return true
+end
+
 function plan_take_unexplored_stairs()
-    if not stairs_search_dir then
+    if not gameplan_travel.stairs_dir then
         return false
     end
 
     local dir, num
     dir, num = stone_stair_type(view.feature_at(0, 0))
-    if not dir or dir ~= stairs_search_dir
+    if not dir or dir ~= gameplan_travel.stairs_dir
             or stairs_state(where_branch, where_depth, dir, num)
                 >= FEAT_LOS.EXPLORED then
         return false
@@ -115,16 +123,13 @@ end
 -- return to the previous level, we'll take a different set of stairs from that
 -- level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
-    if not stairs_search_dir
-            or where_branch ~= travel_branch
-            or where_depth ~= travel_depth
-            or cloudy then
+    if gameplan_travel.want_go or not gameplan_travel.stairs_dir or cloudy then
         return false
     end
 
-    local next_depth = where_depth + stairs_search_dir
-    level_stair_reset(where_branch, where_depth, stairs_search_dir)
-    level_stair_reset(where_branch, next_depth, -stairs_search_dir)
+    local next_depth = where_depth + gameplan_travel.stairs_dir
+    level_stair_reset(where_branch, where_depth, gameplan_travel.stairs_dir)
+    level_stair_reset(where_branch, next_depth, -gameplan_travel.stairs_dir)
     want_gameplan_update = true
     send_travel(where_branch, next_depth)
     return true
@@ -132,15 +137,6 @@ end
 
 function plan_find_upstairs()
     magic("X<\r")
-    return true
-end
-
-function plan_enter_transporter()
-    if not transp_search or view.feature_at(0, 0) ~= "transporter" then
-        return false
-    end
-
-    magic(">")
     return true
 end
 

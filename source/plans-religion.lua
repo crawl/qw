@@ -63,8 +63,7 @@ function plan_convert()
         return false
     end
 
-    local altar = "altar_" .. god:lower():gsub(" ", "_")
-    if view.feature_at(0, 0) ~= altar then
+    if view.feature_at(0, 0) ~= god_altar(god) then
         return false
     end
 
@@ -85,7 +84,7 @@ function plan_join_god()
 
     feat = view.feature_at(0, 0)
     for _, god in ipairs(god_options()) do
-        if feat == ("altar_" .. string.gsub(string.lower(god), " ", "_")) then
+        if feat == god_altar(god) then
             if you.silenced() then
                 rest()
             else

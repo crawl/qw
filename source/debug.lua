@@ -33,6 +33,10 @@ function toggle_debug_channel(channel)
     end
 end
 
+function toggle_coroutine()
+    USE_COROUTINE = not USE_COROUTINE
+end
+
 function test_radius_iter()
     dsay("Testing 3, 3 with radius 1")
     for x, y in radius_iter(3, 3, 1) do
@@ -52,7 +56,8 @@ function ttt()
         for j = -los_radius, los_radius do
             m = monster.get_monster_at(i, j)
             if m then
-                crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name() .. ", desc = " .. m:desc() .. ".")
+                crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name()
+                    .. ", desc = " .. m:desc() .. ".")
             end
         end
     end
@@ -72,43 +77,44 @@ function ttt()
     end
 end
 
-function print_level_map()
-    local num = waypoint_parity
+function print_traversal_map()
+    local traversal_map = traversal_maps[waypoint_parity]
     local dx, dy = travel.waypoint_delta(num)
     local str
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            if level_map[num][dx + x][dy + y] == nil then
+            if traversal_map[dx + x][dy + y] == nil then
                 str = str .. " "
             else
-                str = str .. level_map[num][dx + x][dy + y]
+                str = str .. (traversal_map[dx + x][dy + y] and "." or "#")
             end
         end
         say(str)
     end
 end
 
-function print_stair_dists()
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local str
-    for i = 1, #stair_dists[num] do
-    say("---------------------------------------")
-    -- This needs to iterate by row then column for display purposes.
-    for y = -20, 20 do
-        str = ""
-        for x = -20, 20 do
-            if stair_dists[num][i][dx + x][dy + y] == nil then
-                str = str .. " "
-            else
-                str = str .. string.char(string.byte('A') +
-                stair_dists[num][i][dx + x][dy + y])
+function print_distance_maps()
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
+    local dist_maps = distance_maps[waypoint_parity]
+    for hash, dist_map in pairs(dist_maps) do
+        local pos = unhash_position(hash)
+        say("---------------------------------------")
+        say("feature: " .. view.feature_at(pos.x - wx, pos.y - wy))
+        -- This needs to iterate by row then column for display purposes.
+        for y = -20, 20 do
+            local str = ""
+            for x = -20, 20 do
+                if dist_map[wx + x][wy + y] == nil then
+                    str = str .. " "
+                else
+                    str = str .. string.char(string.byte('A')
+                        + dist_map[wx + x][wy + y])
+                end
             end
+            say(str)
         end
-        say(str)
-    end
     end
 end
 
