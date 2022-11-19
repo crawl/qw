@@ -729,7 +729,7 @@ function monster_in_way(dx, dy)
                 or m:status("paralysed")
                 or m:status("constricted by roots")
                 or m:desc():find("sleeping")
-                or feat_is_deep_water_or_lava(feat)
+                or feature_is_deep_water_or_lava(feat)
                 or feat  == "trap_zot"))
 end
 

@@ -1,4 +1,4 @@
-function get_feat_name(where_name)
+function get_feature_name(where_name)
     for _, value in ipairs(portal_data) do
         if where_name == value[1] then
             return value[3]
@@ -6,13 +6,18 @@ function get_feat_name(where_name)
     end
 end
 
+function feature_is_traversable(feat)
+    return feat ~= "unseen"
+        and (not feature_is_runed_door(feat) or open_runed_doors)
+        and travel.feature_traversable(feat)
+end
+
 function is_traversable(x, y)
-    local feat = view.feature_at(x, y)
-    return feat ~= "unseen" and travel.feature_traversable(feat)
+    return feature_is_traversable(view.feature_at(x, y))
 end
 
 function is_cornerish(x, y)
-    if is_traversable(x+ 1, y + 1)
+    if is_traversable(x + 1, y + 1)
             or is_traversable(x + 1, y - 1)
             or is_traversable(x - 1, y + 1)
             or is_traversable(x - 1, y - 1) then
@@ -27,20 +32,24 @@ function is_solid(x, y)
     return feat == "unseen" or travel.feature_solid(feat)
 end
 
-function feat_is_deep_water_or_lava(feat)
+function feature_is_deep_water_or_lava(feat)
     return feat == "deep_water" or feat == "lava"
 end
 
 function deep_water_or_lava(x, y)
-    return feat_is_deep_water_or_lava(view.feature_at(x, y))
+    return feature_is_deep_water_or_lava(view.feature_at(x, y))
 end
 
-function feat_is_upstairs(feat)
+function feature_is_upstairs(feat)
     return feat:find("stone_stairs_up")
         or feat:find("^exit_") and not feat == "exit_dungeon"
 end
 
-function feat_uses_map_key(key, feat)
+function feature_is_runed_door(feat)
+    return feat == "runed_clear_door" or feat == "runed_door"
+end
+
+function feature_uses_map_key(key, feat)
     if key == ">" then
         return feat:find("stone_stairs_down")
             or feat:find("enter_")
@@ -55,9 +64,9 @@ function feat_uses_map_key(key, feat)
     end
 end
 
-function feat_is_critical(feat)
-    return feat_uses_map_key(">", feat)
-        or feat_uses_map_key("<", feat)
+function feature_is_critical(feat)
+    return feature_uses_map_key(">", feat)
+        or feature_uses_map_key("<", feat)
         or feat:find("shop")
         or feat:find("altar")
         or feat:find("transporter")
@@ -79,7 +88,7 @@ function stone_stair_type(feat)
         .. (dir == DIR.DOWN and "down_" or "up_"), "")
 end
 
-function feat_is_upstairs(feat)
+function feature_is_upstairs(feat)
     return feat:find("stone_stairs_up")
         or feat:find("^exit_") and not feat == "exit_dungeon"
 end

@@ -19,7 +19,7 @@ function plan_move_to_zigfig_location()
             or in_branch("Abyss")
             or in_branch("Pan")
             or not find_item("misc", "figurine of a ziggurat")
-            or not feat_is_critical(view.feature_at(0, 0))
+            or not feature_is_critical(view.feature_at(0, 0))
             or cloudy then
         return false
     end
@@ -29,7 +29,7 @@ function plan_move_to_zigfig_location()
                 and not is_solid(x, y)
                 and not monster_in_way(x, y)
                 and view.is_safe_square(x, y)
-                and not feat_is_critical(view.feature_at(x, y)) then
+                and not feature_is_critical(view.feature_at(x, y)) then
             return move_towards(x, y)
         end
     end
@@ -44,7 +44,7 @@ function plan_use_zigfig()
             or in_branch("Pan")
             or you.berserk()
             or you.confused()
-            or feat_is_critical(view.feature_at(0, 0))
+            or feature_is_critical(view.feature_at(0, 0))
             or cloudy then
         return false
     end

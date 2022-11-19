@@ -150,7 +150,7 @@ function want_to_stairdance_up()
             or in_hell_branch()
             or in_branch("Abyss")
             or in_branch("Pan")
-            or not feat_is_upstairs(view.feature_at(0, 0)) then
+            or not feature_is_upstairs(view.feature_at(0, 0)) then
         return false
     end
 

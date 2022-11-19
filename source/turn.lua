@@ -154,7 +154,7 @@ function turn_update()
     transp_search = nil
     if can_use_transporters() then
         local feat = view.feature_at(0, 0)
-        if feat_uses_map_key(">", feat) and map_search_zone then
+        if feature_uses_map_key(">", feat) and map_search_zone then
             if not zone_counts[map_search_zone] then
                 zone_counts[map_search_zone] = {}
             end
