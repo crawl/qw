@@ -102,7 +102,7 @@ function plan_exit_pan()
     if view.feature_at(0, 0) == "exit_pandemonium"
             and not want_to_be_in_pan()
             and not you.mesmerised()
-            and you.transform() ~= "tree" then
+            and can_move() then
         magic("<")
         return true
     end

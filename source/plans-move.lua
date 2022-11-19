@@ -185,8 +185,7 @@ function choose_tactical_step()
     if you.confused()
             or you.berserk()
             or you.constricted()
-            or you.transform() == "tree"
-            or you.transform() == "fungus"
+            or not can_move()
             or in_branch("Slime")
             or you.status("spiked") then
         return

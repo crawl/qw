@@ -60,7 +60,7 @@ function plan_exit_abyss()
     if view.feature_at(0, 0) == "exit_abyss"
             and not want_to_stay_in_abyss()
             and not you.mesmerised()
-            and you.transform() ~= "tree" then
+            and can_move() then
         magic("<")
         return true
     end

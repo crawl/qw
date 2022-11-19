@@ -162,12 +162,10 @@ function want_to_stairdance_up()
     if you.caught()
             or you.mesmerised()
             or you.constricted()
-            or you.rooted()
-            or you.transform() == "tree"
-            or you.transform() == "fungus"
-         or count_bia(3) > 0
-         or count_sgd(3) > 0
-         or count_divine_warrior(3) > 0 then
+            or not can_move()
+            or count_bia(3) > 0
+            or count_sgd(3) > 0
+            or count_divine_warrior(3) > 0 then
         return false
     end
 

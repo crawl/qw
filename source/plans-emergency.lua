@@ -759,7 +759,7 @@ function plan_continue_flee()
     if danger
             or not (reason_to_rest(90)
                 or you.xl() <= 8 and disable_autoexplore)
-            or you.transform() == "tree"
+            or not can_move()
             or count_bia(3) > 0
             or count_sgd(3) > 0
             or count_divine_warrior(3) > 0

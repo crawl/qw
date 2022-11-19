@@ -260,7 +260,6 @@ function can_berserk()
         and you.race() ~= "Formicid"
         and not (you.status("on berserk cooldown")
             or you.mesmerised()
-            or you.transform() == "tree"
             or you.transform() == "lich"
             or you.status("afraid"))
         and can_invoke()
@@ -340,4 +339,9 @@ function calc_los_radius()
     else
         los_radius = 7
     end
+end
+
+function can_move()
+    return not (you.transform() == "tree"
+        or you.transform() == "fungus" and danger)
 end
