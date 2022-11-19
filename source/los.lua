@@ -1,3 +1,5 @@
+-- Coordinates and LOS
+
 -- Feature LOS state enum
 FEAT_LOS = {
     "NONE",
@@ -47,18 +49,6 @@ end
 
 function adjacent_iter(x, y, include_center)
     return square_iter(x, y, 1, include_center)
-end
-
-function test_square_iter()
-    dsay("Testing 3, 3 with radius 1")
-    for x, y in adjacent_iter(3, 3) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
-    end
-
-    dsay("Testing 0, 0 with radius 3")
-    for x, y in square_iter(0, 0, 3) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
-    end
 end
 
 local square = {
