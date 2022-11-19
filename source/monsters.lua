@@ -621,7 +621,6 @@ end
 
 function update_monster_array()
     enemy_list = {}
-    --c_persist.mlist = {}
     for x, y in square_iter(0, 0) do
         if you.see_cell_no_trans(x, y) then
             monster_array[x][y] = monster.get_monster_at(x, y)
@@ -792,18 +791,27 @@ function compare_monster_info(m1, m2, flag_order, flag_reversed)
     return false
 end
 
+function has_dangerous_monster(x, y)
+    return not monster_is_safe(monster.get_monster_at(x, y))
+end
+
+function monster_is_safe(m)
+    return not m
+        or m:attitude() > enum_att_neutral
+        or m:is_firewood()
+        or m:name() == "butterfly"
+        or m:name() == "orb of destruction"
+end
+
 function is_candidate_for_attack(x, y, no_untabbable)
     if supdist(x, y) > los_radius then
         return false
     end
-    local m = monster_array[x][y]
-    if not m or m:attitude() > enum_att_neutral then
+
+    if monster_is_safe(monster_array[x][y]) then
         return false
     end
-    if m:is_firewood() or m:name() == "butterfly"
-            or m:name() == "orb of destruction" then
-        return false
-    end
+
     if no_untabbable then
         if will_tab(0, 0, x, y, tabbable_square) then
             remove_ignore(x, y)
@@ -812,6 +820,7 @@ function is_candidate_for_attack(x, y, no_untabbable)
             return false
         end
     end
+
     return true
 end
 
@@ -867,10 +876,14 @@ function mons_tabbable_square(x, y)
     return not deep_water_or_lava(x, y) and not is_solid(x, y)
 end
 
+function can_move_square(x, y)
+    return view.is_safe_square(x, y)
+            and not view.withheld(x, y)
+            and not monster_in_way(x, y)
+end
+
 function try_move(dx, dy)
-    if view.is_safe_square(dx, dy)
-            and not view.withheld(dx, dy)
-            and not monster_in_way(dx, dy) then
+    if can_move_square(dx, dy) then
         return delta_to_vi(dx, dy)
     else
         return nil
