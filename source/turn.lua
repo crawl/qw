@@ -205,42 +205,13 @@ function turn_update()
     end
 end
 
-function run_update()
-    if not USE_COROUTINE then
-        turn_update()
-        return
-    end
+function qw_main()
+    turn_update()
 
-    if update_coroutine == nil then
-        update_coroutine = coroutine.create(turn_update)
-    end
-
-    local okay, err = coroutine.resume(update_coroutine)
-    if not okay then
-        error("Error in coroutine: " .. err)
-    end
-
-    if coroutine.status(update_coroutine) == "dead" then
-        update_coroutine = nil
-        do_dummy_action = false
-    else
-        do_dummy_action = true
-    end
-end
-
-function ready()
-    run_update()
-    if do_dummy_action then
-        if not did_waypoint then
-            crawl.process_keys(":" .. string.char(27) .. string.char(27))
-        else
-            did_waypoint = false
-        end
-        return
-    end
     if time_passed and SINGLE_STEP then
         stop()
     end
+
     if automatic then
         crawl.flush_input()
         crawl.more_autoclear(true)
@@ -254,4 +225,39 @@ function ready()
             plan_move()
         end
     end
+end
+
+function run_qw()
+    if not USE_COROUTINE then
+        qw_main()
+        return
+    end
+
+    if update_coroutine == nil then
+        update_coroutine = coroutine.create(qw_main)
+    end
+
+    local okay, err = coroutine.resume(update_coroutine)
+    if not okay then
+        error("Error in coroutine: " .. err)
+    end
+
+    if coroutine.status(update_coroutine) == "dead" then
+        update_coroutine = nil
+        do_dummy_action = false
+    else
+        do_dummy_action = true
+    end
+
+    if do_dummy_action then
+        if not did_waypoint then
+            crawl.process_keys(":" .. string.char(27) .. string.char(27))
+        else
+            did_waypoint = false
+        end
+    end
+end
+
+function ready()
+    run_qw()
 end
