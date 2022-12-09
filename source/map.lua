@@ -17,6 +17,12 @@ function dir_key(dir)
     return dir == DIR.DOWN and ">" or (dir == DIR.UP and "<" or nil)
 end
 
+function set_waypoint()
+    magic(control('w') .. waypoint_parity)
+    did_waypoint = true
+    return true
+end
+
 function record_map_mode_search(key, start_hash, count, end_hash)
     local searches = map_mode_searches[waypoint_parity]
     if not searches[key] then
