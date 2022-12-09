@@ -104,18 +104,20 @@ function distance_map_features()
     end
 end
 
-function position_became_traversable(pos, feat, dist_queues)
-    local hash = hash_position(pos)
-    local feat_positions = feature_positions[waypoint_parity]
-    local dist_maps = distance_maps[waypoint_parity]
+function handle_feature_search(pos, dist_queues)
+    local feat = view.feature_at(pos.x, pos.y)
     if feature_searches[waypoint_parity][feat] then
+        local feat_positions = feature_positions[waypoint_parity]
         if not feat_positions[feat] then
             feat_positions[feat] = {}
         end
+
+        local hash = hash_position(pos)
         if not feat_positions[feat][hash] then
             feat_positions[feat][hash] = pos
         end
 
+        local dist_maps = distance_maps[waypoint_parity]
         if not dist_maps[hash] then
             initialize_distance_map(pos)
         end
@@ -125,8 +127,10 @@ function position_became_traversable(pos, feat, dist_queues)
         end
         table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
     end
+end
 
-    for fh, dist_map in pairs(dist_maps) do
+function handle_traversable(pos, dist_queues)
+    for fh, dist_map in pairs(distance_maps[waypoint_parity]) do
         local oldval = dist_map[pos.x][pos.y]
         for dx, dy in adjacent_iter(pos.x, pos.y) do
             local val = dist_map[dx][dy]
@@ -196,9 +200,11 @@ function los_map_update()
 
         local feat = view.feature_at(pos.x - wx, pos.y - wy)
         if feat ~= "unseen" then
+            handle_feature_searches(pos, dist_queues)
+
             if feature_is_traversable(feat) then
                 if not traversal_map[pos.x][pos.y] then
-                    position_became_traversable(pos, feat, dist_queues)
+                    handle_traversable(pos, dist_queues)
                 end
                 traversal_map[pos.x][pos.y] = true
             else

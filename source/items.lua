@@ -1038,7 +1038,6 @@ function want_miscellaneous(it)
     return false
 end
 
-
 function autopickup(it, name)
     if not initialized then
         return
