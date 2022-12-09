@@ -20,6 +20,9 @@ function initialize_c_persist()
     if not c_persist.downstairs then
         c_persist.downstairs = { }
     end
+    if not c_persist.seen_items then
+        c_persist.seen_items = { }
+    end
 end
 
 function initialize_enums()

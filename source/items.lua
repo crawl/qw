@@ -1043,8 +1043,11 @@ function autopickup(it, name)
         return
     end
 
-    if name:find("rune of Zot")
-            or (gameplan_status == "Orb" and name:find("Orb of Zot")) then
+    if (name:find("rune of Zot") or name:find("Orb of Zot")) then
+        if not c_persist.seen_items[name] then
+            c_persist.seen_items[name] = true
+        end
+
         return true
     end
 

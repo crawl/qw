@@ -31,9 +31,10 @@ function record_map_mode_search(key, start_hash, count, end_hash)
 end
 
 function clear_map_data(num)
-    distance_maps[num] = {}
     feature_searches[num] = {}
     feature_positions[num] = {}
+    item_searches[num] = {}
+    distance_maps[num] = {}
 
     traversal_maps[num] = {}
     for x = -GXM, GXM do
@@ -173,6 +174,60 @@ function update_distance_map(dist_map, queue)
     end
 end
 
+function record_map_item(name, pos, dist_queues)
+    local item_ps = item_positions[waypoint_parity]
+    if not item_ps[name] then
+        item_ps[name] = {}
+    end
+
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
+    local pos = { x = wx + x, y = wy + y }
+    local hash = hash_position(pos)
+    local dist_maps = distance_maps[waypoint_parity]
+    for ih, _ in pairs(item_ps[name]) do
+        if ih ~= hash then
+            item_ps[name][ih] = nil
+            dist_maps[ih] = nil
+        end
+    end
+
+    item_ps[name][hash] = pos
+    initialize_distance_map(pos)
+    if not dist_queues[hash] then
+        dist_queues[hash] = {}
+    end
+    table.insert(dist_queues[hash], pos)
+end
+
+function handle_item_searches(pos, dist_queues)
+    -- Don't do an expensive iteration over all items if we don't have an
+    -- active search. TODO: Maybe move the search trigger to the autopickup
+    -- function so that this optimization is more accurate. Since that happens
+    -- before our turn update and hance might require careful coordination, we
+    -- do it this way for now.
+    local searches = item_searches[waypoint_parity]
+    local have_search = false
+    for name, _ in pairs(searches) do
+        have_search = true
+        break
+    end
+    if not have_search then
+        return
+    end
+
+    local floor_items = items.get_items_at(pos.x, pos.y)
+    if not floor_items then
+        return
+    end
+
+    for _, it in ipairs(floor_items) do
+        local name = it:name()
+        if searches[name] then
+            record_map_item(name, pos, dist_queues)
+            return
+        end
+    end
+end
 
 function los_map_update()
     local map_queue = {}
@@ -201,6 +256,7 @@ function los_map_update()
         local feat = view.feature_at(pos.x - wx, pos.y - wy)
         if feat ~= "unseen" then
             handle_feature_searches(pos, dist_queues)
+            handle_item_searches(pos, dist_queues)
 
             if feature_is_traversable(feat) then
                 if not traversal_map[pos.x][pos.y] then
@@ -228,6 +284,28 @@ function update_map_data()
     local exit = branch_exit(where_branch)
     if feature_is_upstairs(exit) then
         feature_searches[waypoint_parity][exit] = true
+    end
+
+    if where_depth >= branch_rune_depth(where_branch)
+            and not have_branch_runes(where_branch) then
+        local rune = branch_rune(where_branch)
+        if type(rune) == "string" then
+            if c_persist.seen_items[rune] then
+                item_searches[waypoint_parity][rune] = true
+            end
+        else
+            for _, r in ipairs(rune) do
+                local rune = rune .. " rune of Zot"
+                if c_persist.seen_items[rune] then
+                    item_searches[waypoint_parity][rune] = true
+                end
+                item_searches[waypoint_parity][rune] = true
+            end
+        end
+    end
+
+    if at_branch_end("Zot") and not you.have_orb() then
+        item_searches[waypoint_parity]["the orb of Zot"] = true
     end
 
     los_map_update()
