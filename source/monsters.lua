@@ -621,15 +621,55 @@ end
 
 function update_monster_array()
     enemy_list = {}
-    for x, y in square_iter(0, 0) do
+    for x, y in radius_iter(0, 0) do
         if you.see_cell_no_trans(x, y) then
             monster_array[x][y] = monster.get_monster_at(x, y)
             if is_candidate_for_attack(x, y) then
-                entry = { x=x, y=y, m = monster_array[x][y] }
-                table.insert(enemy_list, entry)
+                table.insert(enemy_list,
+                    { x = x, y = y, mons = monster_array[x][y] })
             end
         else
             monster_array[x][y] = nil
+        end
+    end
+end
+
+function distance_map_monster(mons)
+    local wx, wy = travel.waypoint_delta(waypoint_parity)
+    local traversal_func = function(x, y)
+        local dx = x - wy
+        local dy = y - wy
+        return supdist(dx, dy) <= los_radius and mons:can_traverse(dx, dy)
+    end
+
+    local pos = { x = wx, y = wy }
+    mons_distance_maps[waypoint_parity] = initialize_distance_map(pos)
+    update_distance_map(dist_map, { pos }, traversal_func)
+end
+
+function monster_is_reachable(mons)
+    local dist_map = mons_distance_maps[waypoint_parity]
+    for x, y in adjacent_iter(mons:x_pos(), mons:y_pos()) do
+        if dist_map[x][y] then
+            return true
+        end
+    end
+end
+
+function update_reachable_monster()
+    for _, entry in ipairs(enemy_list) do
+        if entry.mons:name() == reachable_monster:name()
+                and monster_is_reachable(entry.mons) then
+            return
+        end
+    end
+
+    reachable_monster = nil
+    for _, entry in ipairs(enemy_list) do
+        distance_map_monster(mons)
+        if monster_is_reachable(entry.mons) then
+            reachable_monster = entry.mons
+            break
         end
     end
 end

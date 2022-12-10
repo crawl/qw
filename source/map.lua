@@ -41,6 +41,7 @@ function clear_map_data(num)
     feature_positions[num] = {}
     item_searches[num] = {}
     distance_maps[num] = {}
+    mons_distance_maps[num] = {}
 
     traversal_maps[num] = {}
     for x = -GXM, GXM do
@@ -95,13 +96,13 @@ function find_features(radius)
 end
 
 function initialize_distance_map(pos)
-    local dist_maps = distance_maps[waypoint_parity]
-    local hash = hash_position(pos)
-    dist_maps[hash] = {}
+    local dist_map = {}
     for x = -GXM, GXM do
-        dist_maps[hash][x] = {}
+        dist_map[x] = {}
     end
-    dist_maps[hash][pos.x][pos.y] = 0
+
+    dist_map[pos.x][pos.y] = 0
+    return dist_map
 end
 
 function distance_map_features()
@@ -126,7 +127,7 @@ function handle_feature_search(pos, dist_queues)
 
         local dist_maps = distance_maps[waypoint_parity]
         if not dist_maps[hash] then
-            initialize_distance_map(pos)
+            dist_maps[hash] = initialize_distance_map(pos)
         end
 
         if not dist_queues[hash] then
@@ -155,7 +156,7 @@ function handle_traversable(pos, dist_queues)
     end
 end
 
-function update_distance_map(dist_map, queue)
+function update_distance_map(dist_map, queue, traversal_func)
     local traversal_map = traversal_maps[waypoint_parity]
     local first = 1
     local last = #queue
@@ -168,7 +169,8 @@ function update_distance_map(dist_map, queue)
         local y = queue[first].y
         local val = dist_map[x][y] + 1
         for dx, dy in adjacent_iter(x, y) do
-            if traversal_map[dx][dy] then
+            if not traversal_func and traversal_map[dx][dy]
+                    or traversal_func and traversal_func(dx, dy) then
                 if not dist_map[dx][dy] or dist_map[dx][dy] > val then
                     dist_map[dx][dy] = val
                     last = last + 1
@@ -198,7 +200,7 @@ function record_map_item(name, pos, dist_queues)
     end
 
     item_ps[name][hash] = pos
-    initialize_distance_map(pos)
+    dist_maps[hash] = initialize_distance_map(pos)
     if not dist_queues[hash] then
         dist_queues[hash] = {}
     end
@@ -335,7 +337,7 @@ function get_distance_map(pos)
     local dist_maps = distance_maps[waypoint_parity]
     local hash = hash_position(pos)
     if not dist_maps[hash] then
-        initialize_distance_map(pos)
+        dist_maps[hash] = initialize_distance_map(pos)
         local queue = { pos }
         update_distance_map(dist_maps[hash], queue)
     end
