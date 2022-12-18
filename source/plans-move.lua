@@ -54,7 +54,8 @@ function assess_square(x, y)
     -- Will we be slow if we move into this square?
     a.slow = not you.flying()
         and view.feature_at(x, y) == "shallow_water"
-        and not intrinsic_amphibious_or_flight()
+        and not intrinsic_amphibious()
+        and not intrinsic_flight()
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Is the square safe to step in? (checks traps & clouds)

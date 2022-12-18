@@ -44,14 +44,13 @@ function intrinsic_amphibious()
     return sp == "Merfolk" or sp == "Octopode" or sp == "Barachi"
 end
 
-function intrinsic_amphibious_or_flight()
-    return intrinsic_amphibious() or intrinsic_flight()
-end
-
 function intrinsic_fumble()
+    if intrinsic_amphibious() or intrinsic_flight() then
+        return false
+    end
+
     local sp = you.race()
-    return not (intrinsic_amphibious_or_flight()
-        or sp == "Grey Draconian"
+    return not (sp == "Grey Draconian"
         or sp == "Palentonga"
         or sp == "Naga"
         or sp == "Troll"
