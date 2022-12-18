@@ -647,7 +647,7 @@ function distance_map_monster(mons)
     update_distance_map(dist_map, { pos }, traversal_func)
 end
 
-function monster_is_reachable(mons)
+function can_path_monster(mons)
     local dist_map = mons_distance_maps[waypoint_parity]
     for x, y in adjacent_iter(mons:x_pos(), mons:y_pos()) do
         if dist_map[x][y] then
@@ -656,19 +656,31 @@ function monster_is_reachable(mons)
     end
 end
 
-function update_reachable_monster()
-    for _, entry in ipairs(enemy_list) do
-        if entry.mons:name() == reachable_monster:name()
-                and monster_is_reachable(entry.mons) then
-            return
+function monster_can_path(mons)
+    local tab_func = function(x, y)
+        return mons:can_traverse(x, y)
+    end
+    return will_tab(mx, my, 0, 0, tab_func, mons:reach_range())
+end
+
+function have_attack_path(mons)
+end
+
+function update_monster_pathing()
+    if pathable_monster then
+        local name = pathable_monster:name()
+        for _, entry in ipairs(enemy_list) do
+            if entry.mons:name() == name
+                    and monster_can_path(entry.mons) then
+                return
+            end
         end
     end
 
-    reachable_monster = nil
+    pathable_monster = nil
     for _, entry in ipairs(enemy_list) do
-        distance_map_monster(mons)
-        if monster_is_reachable(entry.mons) then
-            reachable_monster = entry.mons
+        if monster_can_path(entry.mons) then
+            pathable_monster = entry.mons
             break
         end
     end
@@ -785,27 +797,31 @@ end
 
 function get_monster_info(dx, dy)
     local m = monster_array[dx][dy]
-    if not m then return nil end
+    if not m then
+        return nil
+    end
+
     local name = m:name()
     local info = {}
-    info.distance = abs(dx) > abs(dy) and -abs(dx) or -abs(dy)
-    if not have_reaching() then
-        info.attack_type = -info.distance < 2 and 2 or 0
+    info.distance = -supdist(dx, dy)
+
+    local range = reach_range()
+    if you.caught() or you.confused() then
+        info.attack_range = 0
+    elseif range > 1 then
+        info.attack_range = view.can_reach(dx, dy) and range or 0
     else
-        if -info.distance > 2 then info.attack_type = 0
-        elseif -info.distance < 2 then info.attack_type = 2
-        elseif you.caught() or you.confused() then info.attack_type = 0
-        else info.attack_type = view.can_reach(dx, dy) and 1 or 0 end
+        info.attack_range = -info.distance < 2 and 1 or 0
     end
-    info.can_attack = info.attack_type > 0 and 1 or 0
+    info.can_attack = info.attack_range > 0 and 1 or 0
+
     info.safe = m:is_safe() and -1 or 0
     info.constricting_you = m:is_constricting_you() and 1 or 0
     info.very_stabbable = m:stabbability() >= 1 and 1 or 0
-    -- info.stabbable = m:is(0) and 1 or 0
     info.injury = m:damage_level()
     info.threat = m:threat()
-    info.orc_priest_wizard = (name == "orc priest"
-        or name == "orc wizard") and 1 or 0
+    info.orc_priest_wizard =
+        (name == "orc priest" or name == "orc wizard") and 1 or 0
     return info
 end
 
@@ -930,17 +946,22 @@ function try_move(dx, dy)
     end
 end
 
-function will_tab(cx, cy, ex, ey, square_func)
+function will_tab(cx, cy, ex, ey, square_func, tab_dist)
+    if not tab_dist then
+        tab_dist = 1
+    end
+
     local dx = ex - cx
     local dy = ey - cy
-    if abs(dx) <= 1 and abs(dy) <= 1 then
+    if supdist(dx, dy) <= tab_dist then
         return true
     end
+
     local function attempt_move(fx, fy)
         if fx == 0 and fy == 0 then return end
         if supdist(cx + fx, cy + fy) > los_radius then return end
         if square_func(cx + fx, cy + fy) then
-            return will_tab(cx + fx, cy + fy, ex, ey, square_func)
+            return will_tab(cx + fx, cy + fy, ex, ey, square_func, min_dist)
         end
     end
     local move = nil

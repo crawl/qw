@@ -35,8 +35,7 @@ end
 
 function plan_wait_for_melee()
     is_waiting = false
-    if sense_danger(1)
-            or have_reaching() and sense_danger(2)
+    if sense_danger(reach_range())
             or not options.autopick_on
             or you.berserk()
             or you.have_orb()
@@ -66,37 +65,42 @@ function plan_wait_for_melee()
         return false
     end
 
-    count = 0
-    sleeping_count = 0
+    local monster_needs_wait = false
     for _, e in ipairs(enemy_list) do
         if is_ranged(e.m) then
             wait_count = 0
             return false
         end
-        if e.m:reach_range() >= 2 and supdist(e.x, e.y) <= 2 then
+
+        local melee_range = e.m:reach_range()
+        if supdist(e.x, e.y) <= melee_range then
             wait_count = 0
             return false
         end
-        if will_tab(e.x, e.y, 0, 0, mons_tabbable_square) and not
-             (e.m:name() == "wandering mushroom" or
-                e.m:name():find("vortex") or
-                e.m:desc():find("fleeing") or
-                e.m:status("paralysed") or
-                e.m:status("confused") or
-                e.m:status("petrified")) then
-            count = count + 1
-            if e.m:desc():find("sleeping") or e.m:desc():find("dormant") then
-                sleeping_count = sleeping_count + 1
-            end
+
+        local tab_func = function(x, y)
+            return e.m:can_traverse(x, y)
+        end
+        if not monster_needs_wait
+                and not (e.m:name() == "wandering mushroom"
+                    or e.m:name():find("vortex")
+                    or e.m:desc():find("fleeing")
+                    or e.m:status("paralysed")
+                    or e.m:status("confused")
+                    or e.m:status("petrified"))
+                and will_tab(e.x, e.y, 0, 0, tab_func, melee_range)
+                -- If the monster can reach attack and we can't, be sure we can
+                -- close the final 1-square gap.
+                and (melee_range < 2
+                    or have_reaching()
+                    or can_move_closer(e.x, e.y)) then
+            monster_needs_wait = true
         end
     end
-    if count == 0 then
+    if not monster_needs_wait then
         return false
     end
 
-    if sleeping_count == 0 then
-        wait_count = wait_count + 1
-    end
     last_wait = you.turns()
     if plan_cure_poison() then
         return true
@@ -225,10 +229,14 @@ function attack_melee(x, y)
 end
 
 function make_attack(x, y, info)
-    if info.attack_type == 2 then attack_melee(x, y)
-    elseif info.attack_type == 1 then attack_reach(x, y)
-    else
+    if info.attack_range == 0 then
         return move_towards(x, y)
+    end
+
+    if info.attack_range == 1 then
+        attack_melee(x, y)
+    else
+        attack_reach(x, y)
     end
     return true
 end

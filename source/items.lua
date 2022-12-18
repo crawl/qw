@@ -1230,9 +1230,14 @@ function count_item(cls, name)
     return 0
 end
 
+function reach_range()
+    local wp = items.equipped_at("weapon")
+    return wp and not wp.is_melded and wp.reach_range or 0
+end
+
 function have_reaching()
     local wp = items.equipped_at("weapon")
-    return wp and wp.reach_range == 2 and not wp.is_melded
+    return wp and wp.reach_range >= 2 and not wp.is_melded
 end
 
 function shield_skill_utility()
