@@ -255,7 +255,7 @@ function determine_gameplan()
     if status:find("^Rune:") then
         local branch = gameplan_rune_branch(status)
         gameplan = branch_end(branch)
-        desc = status .. " rune"
+        desc = branch .. " rune"
     end
 
     -- If we're configured to join a god, prioritize finding one from our god
