@@ -1,3 +1,6 @@
+------------------
+-- Attack plans
+
 function get_target()
     local bestx, besty, best_info, new_info
     bestx = 0
@@ -33,15 +36,55 @@ function attack()
     return true
 end
 
+function plan_throw()
+    if melee_enemy or travel.is_excluded(0, 0) then
+        return false
+    end
+
+    local missile = best_missile()
+    if not missile then
+        return false
+    end
+
+    for _, e in ipairs(enemy_list) do
+        if crawl.do_targeted_command("CMD_FIRE", e.x, e.y) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function plan_move_to_monster()
+    if melee_enemy or travel.is_excluded(0, 0) then
+        return false
+    end
+
+    for _, e in ipairs(enemy_list) do
+        local move = best_move_towards({ { x = e.x, y = e.y } }, los_radius)
+        if move then
+
+
+    end
+end
+
+function plan_use_flight()
+    if melee_enemy then
+        return false
+    end
+
+
+end
+
 function plan_wait_for_melee()
     is_waiting = false
     if sense_danger(reach_range())
             or not options.autopick_on
             or you.berserk()
             or you.have_orb()
-            or count_bia(los_radius) > 0
-            or count_sgd(los_radius) > 0
-            or count_divine_warrior(los_radius) > 0
+            or count_brothers_in_arms(los_radius) > 0
+            or count_greater_servants(los_radius) > 0
+            or count_divine_warriors(los_radius) > 0
             or not view.is_safe_square(0, 0)
             or view.feature_at(0, 0) == "shallow_water"
                 and intrinsic_fumble()
@@ -65,7 +108,7 @@ function plan_wait_for_melee()
         return false
     end
 
-    local monster_needs_wait = false
+    local enemy_needs_wait = false
     for _, e in ipairs(enemy_list) do
         if is_ranged(e.m) then
             wait_count = 0
@@ -81,23 +124,18 @@ function plan_wait_for_melee()
         local tab_func = function(x, y)
             return e.m:can_traverse(x, y)
         end
-        if not monster_needs_wait
+        if not enemy_needs_wait
                 and not (e.m:name() == "wandering mushroom"
                     or e.m:name():find("vortex")
                     or e.m:desc():find("fleeing")
                     or e.m:status("paralysed")
                     or e.m:status("confused")
                     or e.m:status("petrified"))
-                and will_tab(e.x, e.y, 0, 0, tab_func, melee_range)
-                -- If the monster can reach attack and we can't, be sure we can
-                -- close the final 1-square gap.
-                and (melee_range < 2
-                    or have_reaching()
-                    or can_move_closer(e.x, e.y)) then
-            monster_needs_wait = true
+                and enemy_can_move_melee(e) then
+            enemy_needs_wait = true
         end
     end
-    if not monster_needs_wait then
+    if not enemy_needs_wait then
         return false
     end
 
@@ -148,6 +186,15 @@ function plan_wait_spit()
     return false
 end
 
+function throw_missile(missile)
+    local cur_missile = items.fired_item()
+    if cur_missile and missile.name() == cur_missile.name() then
+        magic("ff")
+    else
+        magic("Q*" .. letter(missile) .. "ff")
+    end
+end
+
 function plan_wait_throw()
     if not is_waiting then
         return false
@@ -157,15 +204,8 @@ function plan_wait_throw()
         return false
     end
 
-    local missile
-    _, missile = best_missile()
+    local missile = best_missile()
     if missile then
-        local cur_missile = items.fired_item()
-        if cur_missile and missile.name() == cur_missile.name() then
-            magic("ff")
-        else
-            magic("Q*" .. letter(missile) .. "ff")
-        end
         return true
     else
         return false
@@ -207,9 +247,9 @@ end
 
 function attack_melee(x, y)
     if you.confused() then
-        if count_bia(1) > 0
-                or count_sgd(1) > 0
-                or count_divine_warrior(1) > 0 then
+        if count_brothers_in_arms(1) > 0
+                or count_greater_servants(1) > 0
+                or count_divine_warriors(1) > 0 then
             magic("s")
             return
         elseif you.transform() == "tree" then

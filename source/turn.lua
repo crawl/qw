@@ -132,10 +132,19 @@ function turn_update()
     danger = sense_danger(los_radius)
     immediate_danger = sense_immediate_danger()
     sense_sigmund()
-
     find_good_stairs()
+
     cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
     choose_tactical_step()
+
+    if disconnected_enemy_phase and hp_is_low(50) then
+    for _, e in ipairs(enemy_list) do
+        if not enemy_can_move_melee(e) then
+            travel.set_exclude(e.x, e.y)
+        end
+    end
+    else
+
 
     if collectgarbage("count") > 7000 then
         collectgarbage()

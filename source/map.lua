@@ -1,4 +1,5 @@
--- Level map navigation
+------------------
+-- Level map data processing
 
 -- Maximum map width. We use this as a general map radius that's guaranteed to
 -- reach the entire map, since qw is never given absolute coordinates by crawl.
@@ -95,24 +96,21 @@ function find_features(radius)
     end
 end
 
-function initialize_distance_map(pos)
+function initialize_distance_map(pos, hash, radius)
     local dist_map = {}
+    dist_map.pos = pos
+    dist_map.hash = hash
+    dist_map.radius = radius
+    dist_map.map = {}
     for x = -GXM, GXM do
-        dist_map[x] = {}
+        dist_map.map[x] = {}
     end
 
-    dist_map[pos.x][pos.y] = 0
+    dist_map.map[pos.x][pos.y] = 0
     return dist_map
 end
 
-function distance_map_features()
-    find_features()
-    for _, positions in pairs(feature_positions[waypoint_parity]) do
-        distance_map_positions(positions)
-    end
-end
-
-function handle_feature_search(pos, dist_queues)
+function handle_feature_searches(pos, dist_queues)
     local feat = view.feature_at(pos.x, pos.y)
     if feature_searches[waypoint_parity][feat] then
         local feat_positions = feature_positions[waypoint_parity]
@@ -127,7 +125,7 @@ function handle_feature_search(pos, dist_queues)
 
         local dist_maps = distance_maps[waypoint_parity]
         if not dist_maps[hash] then
-            dist_maps[hash] = initialize_distance_map(pos)
+            dist_maps[hash] = initialize_distance_map(pos, hash)
         end
 
         if not dist_queues[hash] then
@@ -137,26 +135,38 @@ function handle_feature_search(pos, dist_queues)
     end
 end
 
-function handle_traversable(pos, dist_queues)
-    for fh, dist_map in pairs(distance_maps[waypoint_parity]) do
-        local oldval = dist_map[pos.x][pos.y]
-        for dx, dy in adjacent_iter(pos.x, pos.y) do
-            local val = dist_map[dx][dy]
-            if val and (not oldval or oldval > val + 1) then
-                oldval = val + 1
-            end
+function update_distance_map_pos_from_adjacent(pos, dist_map)
+    if not dist_map.radius
+            or supdist(dist_map.pos.x - pos.x, dist_map.pos.y - pos.y)
+                > dist_map.radius then
+        return false
+    end
+
+    local oldval = dist_map.map[pos.x][pos.y]
+    for dx, dy in adjacent_iter(pos.x, pos.y) do
+        local val = dist_map.map[dx][dy]
+        if val and (not oldval or oldval > val + 1) then
+            oldval = val + 1
         end
-        if dist_map[pos.x][pos.y] ~= oldval then
-            dist_map[pos.x][pos.y] = oldval
-            if not dist_queues[fh] then
-                dist_queues[fh] = {}
+    end
+    if dist_map.map[pos.x][pos.y] ~= oldval then
+        dist_map.map[pos.x][pos.y] = oldval
+        return true
+    end
+end
+
+function handle_traversable_pos(pos, dist_queues)
+    for hash, dist_map in pairs(distance_maps[waypoint_parity]) do
+        if update_distance_map_pos_from_adjacent(pos, dist_map) then
+            if not dist_queues[hash] then
+                dist_queues[hash] = {}
             end
-            table.insert(dist_queues[fh], { x = pos.x, y = pos.y })
+            table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
         end
     end
 end
 
-function update_distance_map(dist_map, queue, traversal_func)
+function update_distance_map(dist_map, queue)
     local traversal_map = traversal_maps[waypoint_parity]
     local first = 1
     local last = #queue
@@ -167,15 +177,17 @@ function update_distance_map(dist_map, queue, traversal_func)
 
         local x = queue[first].x
         local y = queue[first].y
-        local val = dist_map[x][y] + 1
+        local val = dist_map.map[x][y] + 1
         for dx, dy in adjacent_iter(x, y) do
-            if not traversal_func and traversal_map[dx][dy]
-                    or traversal_func and traversal_func(dx, dy) then
-                if not dist_map[dx][dy] or dist_map[dx][dy] > val then
-                    dist_map[dx][dy] = val
-                    last = last + 1
-                    queue[last] = { x = dx, y = dy }
-                end
+            if (not dist_map.radius
+                        or supdist(dx - dist_map.pos.x, dy - dist_map.pos.y)
+                            <= dist_map.radius)
+                    and traversal_map[dx][dy]
+                    and (not dist_map.map[dx][dy]
+                        or dist_map.map[dx][dy] > val) then
+                dist_map.map[dx][dy] = val
+                last = last + 1
+                queue[last] = { x = dx, y = dy }
             end
         end
         first = first + 1
@@ -200,7 +212,7 @@ function record_map_item(name, pos, dist_queues)
     end
 
     item_ps[name][hash] = pos
-    dist_maps[hash] = initialize_distance_map(pos)
+    dist_maps[hash] = initialize_distance_map(pos, hash)
     if not dist_queues[hash] then
         dist_queues[hash] = {}
     end
@@ -333,28 +345,28 @@ function update_map_data()
     end
 end
 
-function get_distance_map(pos)
+function get_distance_map(pos, radius)
     local dist_maps = distance_maps[waypoint_parity]
     local hash = hash_position(pos)
     if not dist_maps[hash] then
-        dist_maps[hash] = initialize_distance_map(pos)
+        dist_maps[hash] = initialize_distance_map(pos, hash, radius)
         local queue = { pos }
         update_distance_map(dist_maps[hash], queue)
     end
     return dist_maps[hash]
 end
 
-function best_move_towards(positions)
+function best_move_towards(positions, radius)
     local wx, wy = travel.waypoint_delta(waypoint_parity)
     local dist = 10000
     local move = {}
     for _, pos in ipairs(positions) do
-        local dist_map = get_distance_map(pos)
+        local dist_map = get_distance_map(pos, radius)
         for dx, dy in adjacent_iter(wx, wy) do
-            if dist_map[dx][dy] and dist_map[dx][dy] < dist then
+            if dist_map.map[dx][dy] and dist_map.map[dx][dy] < dist then
                 move.x = dx - wx
                 move.y = dy - wy
-                dist = dist_map[dx][dy]
+                dist = dist_map.map[dx][dy]
             end
         end
     end
@@ -364,7 +376,12 @@ function best_move_towards(positions)
     end
 end
 
-function get_feature_positions(feats, radius)
+function best_move_towards_position(x, y, radius)
+    return best_move_towards({ pos }, radius)
+end
+
+
+function get_feature_positions(feat)
     local positions = {}
     local feat_positions = feature_positions[waypoint_parity]
     for _, feat in ipairs(feats) do
@@ -379,15 +396,26 @@ function get_feature_positions(feats, radius)
     return positions
 end
 
-function best_move_towards_features(feats, radius)
-    local positions = get_feature_positions(feats, radius)
+function best_move_towards_features(feats)
+    local positions = get_feature_positions(feats)
     if #positions == 0 then
         add_feature_search(feats)
         find_features(radius)
-        positions = get_feature_positions(feats, radius)
+        positions = get_feature_positions(feats)
     end
 
     return best_move_towards(positions)
+end
+
+function can_move_closer(x, y)
+    local orig_dist = supdist(x, y)
+    for dx, dy in adjacent_iter(0, 0) do
+        if supdist(x - dx, y - dy) < orig_dist
+                and feature_is_traversable(view.feature_at(dx, dy)) then
+            return true
+        end
+    end
+    return false
 end
 
 function record_feature_position(x, y)

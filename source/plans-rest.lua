@@ -1,3 +1,6 @@
+------------------
+-- The rest plan cascade.
+
 function should_rest()
     if you.confused() or you.berserk() or transformed() then
         return true
@@ -10,7 +13,8 @@ function should_rest()
         return true
     end
     return reason_to_rest(99.9)
-        or you.god() == "Makhleb" and you.turns() <= sgd_timer + 100
+        or you.god() == "Makhleb"
+            and you.turns() <= greater_servant_timer + 100
         or should_ally_rest()
 end
 
@@ -35,7 +39,7 @@ function reason_to_rest(percentage)
         or hp_is_low(percentage)
             and (you.god() ~= "the Shining One"
                 or hp_is_low(75)
-                or count_divine_warrior(2) == 0)
+                or count_divine_warriors(2) == 0)
         or you.slowed()
         or you.exhausted()
         or you.teleporting()

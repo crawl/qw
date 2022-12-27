@@ -1,3 +1,6 @@
+------------------
+-- Plans for using items, including the acquirement plan cascade.
+
 function read(c, etc)
     if not can_read() then
         return false

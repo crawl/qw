@@ -1,3 +1,6 @@
+------------------
+-- The exploration plan cascades.
+
 function plan_autoexplore()
     if disable_autoexplore or free_inventory_slots() == 0 then
         return false

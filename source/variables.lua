@@ -101,7 +101,7 @@ local sigmund_dx = 0
 local sigmund_dy = 0
 local invis_sigmund = false
 
-local sgd_timer = -200
+local greater_servant_timer = -200
 
 local stuck_turns = 0
 

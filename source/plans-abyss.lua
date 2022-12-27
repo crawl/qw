@@ -1,3 +1,6 @@
+------------------
+-- The abyss plan cascade: choosing a move for a turn in the Abyss.
+
 function plan_go_to_abyss_portal()
     if where_branch == "Abyss"
             or not want_to_stay_in_abyss()

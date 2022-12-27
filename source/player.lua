@@ -1,5 +1,5 @@
 -----------------------------------------
--- player functions
+-- Player functions
 
 function intrinsic_rpois()
     local sp = you.race()
@@ -262,6 +262,9 @@ function can_berserk()
             or you.transform() == "lich"
             or you.status("afraid"))
         and can_invoke()
+end
+
+function can_move()
 end
 
 function player_speed_num()

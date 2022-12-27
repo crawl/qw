@@ -1,5 +1,5 @@
 -------------------------------------
--- equipment valuation and autopickup
+-- Equipment valuation and autopickup
 
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
@@ -1189,29 +1189,34 @@ function have_item(cls, name)
     end
 end
 
-function best_missile()
-    local missiles = {"boomerang", "javelin", "large rock"}
-    local best_rating = 0
-    local best_item = nil
-    local it, i, name
-    for it in inventory() do
-        local rating = 0
-        if it.class(true) == "missile" then
-            for i, name in ipairs(missiles) do
-                if it.name():find(name) then
-                    rating = i
-                    if it.ego() then
-                        rating = rating + 0.5
-                    end
-                    if rating > best_rating then
-                        best_rating = rating
-                        best_item = it
-                    end
-                end
+function missile_rating(missile)
+    local ratings = {
+        ["boomerang"] = 1,
+        ["javelin"] = 2,
+        ["large rock"] = 3
+    }
+
+    for name, rating in ipairs(ratings) do
+        if missile.name():find(name) then
+            if it.ego() then
+                rating = rating + 0.5
             end
+            return rating
         end
     end
-    return best_rating, best_item
+end
+
+function best_missile()
+    local best_rating = 0
+    local best_missile
+    for it in inventory() do
+        local rating = missile_rating(it)
+        if rating > best_rating then
+            best_rating = rating
+            best_missile = it
+        end
+    end
+    return best_missile
 end
 
 function find_wand(name)

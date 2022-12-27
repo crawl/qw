@@ -1,3 +1,6 @@
+------------------
+-- Plans for god worship and abilities.
+
 function plan_find_altar()
     if not want_altar() then
         return false

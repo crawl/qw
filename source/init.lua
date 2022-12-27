@@ -1,3 +1,6 @@
+------------------
+-- Start of game and session initialization.
+
 function initialize_c_persist()
     if not c_persist.portals then
         c_persist.portals = { }

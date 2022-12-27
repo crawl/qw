@@ -1,4 +1,6 @@
---
+------------------
+-- Functions and data related to god worship.
+
 -- God data: name (as reported by you.god()), whether the god uses Invocations,
 -- whether the god has abilities that use MP.
 --
@@ -125,14 +127,14 @@ function altar_found(god, los_state)
     end
 end
 
-function can_hand()
+function can_trogs_hand()
     return you.god() == "Trog"
                  and you.piety_rank() >= 2
                  and not you.regenerating()
                  and can_invoke()
 end
 
-function can_bia()
+function can_brothers_in_arms()
     return you.god() == "Trog"
                  and you.piety_rank() >= 4
                  and can_invoke()
@@ -226,7 +228,7 @@ function can_grand_finale()
                  and can_invoke()
 end
 
-function can_sgd()
+function can_greater_servant()
     return you.god() == "Makhleb"
                  and you.piety_rank() >= 5
                  and chp() > 10
@@ -267,7 +269,7 @@ function can_foxfire_swarm()
                  and can_invoke()
 end
 
-function count_bia(r)
+function count_brothers_in_arms(r)
     if you.god() ~= "Trog" then
         return 0
     end
@@ -302,12 +304,12 @@ function count_elliptic(r)
     return i
 end
 
-function mons_is_greater_demon(m)
+function mons_is_greater_servant(m)
     return contains_string_in(m:name(), {"Executioner", "green death",
         "blizzard demon", "balrug", "cacodemon"})
 end
 
-function count_sgd(r)
+function count_greater_servants(r)
     if you.god() ~= "Makhleb" then
         return 0
     end
@@ -317,14 +319,14 @@ function count_sgd(r)
         local m = monster_array[x][y]
         if m and m:is_safe()
                 and m:is("summoned")
-                and mons_is_greater_demon(m) then
+                and mons_is_greater_servant(m) then
             i = i + 1
         end
     end
     return i
 end
 
-function count_divine_warrior(r)
+function count_divine_warriors(r)
     if you.god() ~= "the Shining One" then
         return 0
     end

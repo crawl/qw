@@ -1,3 +1,6 @@
+------------------
+-- The orbrun plan cascade: choosing a move for a turn on the Orb run.
+
 function plan_go_to_orb()
     if gameplan_status ~= "Orb" or not c_persist.found_orb or cloudy then
         return false
@@ -15,8 +18,10 @@ function plan_go_to_orb()
 end
 
 function want_to_orbrun_divine_warrior()
-    return danger and count_pan_lords(los_radius) > 0
-        and count_divine_warrior(4) == 0 and not you.teleporting()
+    return danger
+        and count_pan_lords(los_radius) > 0
+        and count_divine_warriors(4) == 0
+        and not you.teleporting()
 end
 
 function plan_orbrun_divine_warrior()

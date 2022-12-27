@@ -1,3 +1,6 @@
+------------------
+-- Travel planning
+
 -- Go up from branch, tracking parent branches and their entries to the child
 -- branches we came from.
 function parent_branch_chain(branch, check_branch, check_entries)

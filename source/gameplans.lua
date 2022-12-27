@@ -1,3 +1,6 @@
+------------------
+-- gameplans: Goal configuration and assessment
+
 function gameplan_normal_next(final)
     local gameplan
 

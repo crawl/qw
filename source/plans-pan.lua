@@ -1,3 +1,6 @@
+------------------
+-- Plans for the Pandemonium branch.
+
 function want_to_be_in_pan()
     return gameplan_branch == "Pan" and not have_branch_runes("Pan")
 end

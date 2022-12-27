@@ -159,9 +159,9 @@ function want_to_stairdance_up()
             or you.mesmerised()
             or you.constricted()
             or not can_move()
-            or count_bia(3) > 0
-            or count_sgd(3) > 0
-            or count_divine_warrior(3) > 0 then
+            or count_brothers_in_arms(3) > 0
+            or count_greater_servants(3) > 0
+            or count_divine_warriors(3) > 0 then
         return false
     end
 

@@ -1,3 +1,6 @@
+------------------
+-- Stair-related functions
+
 -- Stair direction enum
 DIR = { UP = -1, DOWN = 1 }
 
@@ -173,13 +176,13 @@ function find_good_stairs()
     local pspeed = player_speed_num()
     for _, pos in ipairs(stair_positions) do
         local dist_map = get_distance_map(pos)
-        pdist = dist_map[wx][wy]
+        pdist = dist_map.map[wx][wy]
         if pdist == nil then
             pdist = 10000
         end
         minmdist = 1000
         for _, e in ipairs(enemy_list) do
-            mdist = dist_map[wx + e.x][wy + e.y]
+            mdist = dist_map.map[wx + e.x][wy + e.y]
             if mdist == nil then
                 mdist = 10000
             end
@@ -219,8 +222,8 @@ function stair_improvement(x, y)
     local minval = 10000
     for _, pos in ipairs(good_stairs) do
         local dist_map = get_distance_map(pos)
-        local val = dist_map[wx + x][wy + y]
-        if val and val < dist_map[wx][wy] and val < minval then
+        local val = dist_map.map[wx + x][wy + y]
+        if val and val < dist_map.map[wx][wy] and val < minval then
             minval = val
         end
     end
@@ -234,8 +237,8 @@ function set_stair_target(c)
     local best_stair
     for _, pos in ipairs(good_stairs) do
         local dist_map = get_distance_map(pos)
-        local val = dist_map[wx + x][wy + y]
-        if val and val < dist_map[wx][wy] and val < minval then
+        local val = dist_map.map[wx + x][wy + y]
+        if val and val < dist_map.map[wx][wy] and val < minval then
             minval = val
             best_stair = hash
         end

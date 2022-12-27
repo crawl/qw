@@ -1,3 +1,6 @@
+------------------
+-- Plans related to the Ziggurat portal.
+
 function plan_zig_fog()
     if not in_branch("Zig")
             or you.berserk()

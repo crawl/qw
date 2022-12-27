@@ -1,3 +1,6 @@
+------------------
+-- Emergency plans
+
 function plan_teleport()
     if can_teleport() and want_to_teleport() then
         -- return false
@@ -55,7 +58,7 @@ function drain_life()
     use_ability("Drain Life")
 end
 
-function hand()
+function trogs_hand()
     use_ability("Trog's Hand")
 end
 
@@ -75,11 +78,11 @@ function recite()
     use_ability("Recite", "", true)
 end
 
-function bia()
+function brothers_in_arms()
     use_ability("Brothers in Arms")
 end
 
-function sgd()
+function greater_servant()
     use_ability("Greater Servant of Makhleb")
 end
 
@@ -95,17 +98,17 @@ function apocalypse()
     use_ability("Apocalypse")
 end
 
-function plan_bia()
-    if can_bia() and want_to_bia() then
-        bia()
+function plan_brothers_in_arms()
+    if can_brothers_in_arms() and want_to_brothers_in_arms() then
+        brothers_in_arms()
         return true
     end
     return false
 end
 
-function plan_sgd()
-    if can_sgd() and want_to_sgd() then
-        sgd()
+function plan_greater_servant()
+    if can_greater_servant() and want_to_greater_servant() then
+        greater_servant()
         return true
     end
     return false
@@ -181,7 +184,7 @@ end
 function plan_hydra_destruction()
     if not can_destruction()
             or you.skill("Invocations") < 8
-            or count_sgd(4) > 0
+            or count_greater_servants(4) > 0
             or hydra_weapon_status(items.equipped_at("Weapon")) > -1
             or you.xl() >= 20 then
         return false
@@ -488,20 +491,20 @@ function plan_fiery_armour()
     return false
 end
 
-function want_to_bia()
+function want_to_brothers_in_arms()
     if not danger then
         return false
     end
 
     -- Always BiA this list of monsters.
-    if (check_monster_list(los_radius, bia_necessary_monsters)
+    if (check_monster_list(los_radius, brothers_in_arms_necessary_monsters)
                 -- If piety as high, we can also use BiA as a fallback for when
                 -- we'd like to berserk, but can't, or if when we see nasty
                 -- monsters.
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
                         or check_monster_list(los_radius, nasty_monsters)))
-            and count_bia(4) == 0
+            and count_brothers_in_arms(4) == 0
             and not you.teleporting() then
         return true
     end
@@ -537,11 +540,11 @@ function want_to_drain_life()
     return count_monsters(los_radius, function(m) return m:res_draining() == 0 end)
 end
 
-function want_to_sgd()
+function want_to_greater_servant()
     if you.skill("Invocations") >= 12
             and (check_monster_list(los_radius, nasty_monsters)
                 or hp_is_low(50) and immediate_danger) then
-        if count_sgd(4) == 0 and not you.teleporting() then
+        if count_greater_servants(4) == 0 and not you.teleporting() then
             return true
         end
     end
@@ -575,7 +578,7 @@ function want_to_divine_warrior()
     return you.skill("Invocations") >= 8
         and (check_monster_list(los_radius, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
-        and count_divine_warrior(4) == 0
+        and count_divine_warriors(4) == 0
         and not you.teleporting()
 end
 
@@ -611,8 +614,8 @@ function want_to_teleport()
         return false
     end
 
-    if count_hostile_sgd(los_radius) > 0 and you.xl() < 21 then
-        sgd_timer = you.turns()
+    if count_hostile_greater_servants(los_radius) > 0 and you.xl() < 21 then
+        greater_servant_timer = you.turns()
         return true
     end
 
@@ -760,9 +763,9 @@ function plan_continue_flee()
             or not (reason_to_rest(90)
                 or you.xl() <= 8 and disable_autoexplore)
             or not can_move()
-            or count_bia(3) > 0
-            or count_sgd(3) > 0
-            or count_divine_warrior(3) > 0
+            or count_brothers_in_arms(3) > 0
+            or count_greater_servants(3) > 0
+            or count_divine_warriors(3) > 0
             or you.status("spiked")
             or you.confused()
             or buffed() then
@@ -771,16 +774,14 @@ function plan_continue_flee()
 
     local wx, wy = travel.waypoint_delta(waypoint_parity)
     for x, y in adjacent_iter(0, 0) do
-        if is_traversable(x, y)
+        if can_move_to(x, y)
                 and not is_solid(x, y)
-                and not monster_in_way(x, y)
-                and view.is_safe_square(x, y)
-                and not view.withheld(x, y) then
+                and view.is_safe_square(x, y) then
             local dist_map = get_distance_map(target_stair)
             local val = dist_map[wx + x][wy + y]
             if val and val < dist_map[wx][wy] then
                 dsay("STILL FLEEEEING.")
-                magic(delta_to_vi(x, y) .. "YY")
+                move_to(x, y)
                 return true
             end
         end
@@ -959,22 +960,25 @@ function plan_dig_grate()
 end
 
 function plan_cure_poison()
-    if you.poison_survival() <= 1 and you.poisoned() then
-        if drink_by_name("curing") then
-            say("(to cure poison)")
-            return true
-        end
+    if not you.poisoned() or you.poison_survival() > 1 then
+        return false
     end
-    if you.poison_survival() <= 1 and you.poisoned() then
-        if can_hand() then
-            hand()
-            return true
-        end
-        if can_purification() then
-            purification()
-            return true
-        end
+
+    if drink_by_name("curing") then
+        say("(to cure poison)")
+        return true
     end
+
+    if can_trogs_hand() then
+        trogs_hand()
+        return true
+    end
+
+    if can_purification() then
+        purification()
+        return true
+    end
+
     return false
 end
 
@@ -999,8 +1003,8 @@ function set_plan_emergency()
         {plan_magic_points, "magic_points"},
         {plan_heroism, "heroism"},
         {plan_cleansing_flame, "try_cleansing_flame"},
-        {plan_bia, "bia"},
-        {plan_sgd, "sgd"},
+        {plan_brothers_in_arms, "brothers_in_arms"},
+        {plan_greater_servant, "greater_servant"},
         {plan_divine_warrior, "divine_warrior"},
         {plan_apocalypse, "try_apocalypse"},
         {plan_slouch, "try_slouch"},

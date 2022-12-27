@@ -58,9 +58,7 @@ function skill_value(sk)
     elseif sk == "Shields" then
         return shield_skill_utility()
     elseif sk == "Throwing" then
-        local rating
-        rating, _ = best_missile()
-        return 0.2 * rating
+        return 0.2 * missile_rating(best_missile())
     elseif sk == "Invocations" then
         if you.god() == "the Shining One" then
             return planning_undead_demon_branch and 1.5 or 0.5

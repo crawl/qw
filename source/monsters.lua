@@ -432,7 +432,7 @@ local nasty_monsters = {
 }
 
 -- BiA these even at low piety.
-local bia_necessary_monsters = {
+local brothers_in_arms_necessary_monsters = {
     ["*"] = {
         hydra_check_flaming(15),
         in_desc(100, "statue"),
@@ -634,16 +634,10 @@ function update_monster_array()
     end
 end
 
-function distance_map_monster(mons)
+function get_monster_distance_map(mons)
+    local dist_map = get_distance_map(mons_pos, los_radius)
     local wx, wy = travel.waypoint_delta(waypoint_parity)
-    local traversal_func = function(x, y)
-        local dx = x - wy
-        local dy = y - wy
-        return supdist(dx, dy) <= los_radius and mons:can_traverse(dx, dy)
-    end
-
-    local pos = { x = wx, y = wy }
-    mons_distance_maps[waypoint_parity] = initialize_distance_map(pos)
+    local mons_pos = { x = mons:x_pos() - wx, y = mons:y_pos() - wy }
     update_distance_map(dist_map, { pos }, traversal_func)
 end
 
@@ -656,31 +650,40 @@ function can_path_monster(mons)
     end
 end
 
-function monster_can_path(mons)
-    local tab_func = function(x, y)
-        return mons:can_traverse(x, y)
+function enemy_can_move_melee(entry)
+    if entry.can_move_melee ~= nil then
+        return entry.can_move_melee
     end
-    return will_tab(mx, my, 0, 0, tab_func, mons:reach_range())
+
+    local tab_func = function(x, y)
+        return entry.mons:can_traverse(x, y)
+    end
+    local melee_range = entry.mons:reach_range()
+    entry.can_move_melee = will_tab(entry.x, entry.y, 0, 0, tab_func,
+            melee_range)
+        -- If the monster can reach attack and we can't, be sure we can
+        -- close the final 1-square gap.
+        and (melee_range < 2
+            or attack_range() > 1
+            or can_move_closer(entry.x, entry.y))
+    return entry.can_move_melee
 end
 
-function have_attack_path(mons)
-end
-
-function update_monster_pathing()
-    if pathable_monster then
-        local name = pathable_monster:name()
+function update_melee_enemy()
+    if melee_enemy then
+        local name = melee_enemy.mons:name()
         for _, entry in ipairs(enemy_list) do
             if entry.mons:name() == name
-                    and monster_can_path(entry.mons) then
+                    and enemy_can_move_melee(entry) then
                 return
             end
         end
     end
 
-    pathable_monster = nil
+    melee_enemy = nil
     for _, entry in ipairs(enemy_list) do
-        if monster_can_path(entry.mons) then
-            pathable_monster = entry.mons
+        if enemy_can_move_melee(entry.mons) then
+            melee_enemy = entry
             break
         end
     end
@@ -747,13 +750,13 @@ function count_monster_by_name(r, name)
     return count_monsters(r, function(m) return m:name() == name end)
 end
 
-function count_hostile_sgd(r)
+function count_hostile_greater_servants(r)
     if you.god() ~= "Makhleb" then
         return 0
     end
 
     return count_monsters(r,
-        function(m) return m:is("summoned") and mons_is_greater_demon(m) end)
+        function(m) return m:is("summoned") and mons_is_greater_servant(m) end)
 end
 
 function count_big_slimes(r)
@@ -930,20 +933,6 @@ end
 
 function mons_tabbable_square(x, y)
     return not deep_water_or_lava(x, y) and not is_solid(x, y)
-end
-
-function can_move_square(x, y)
-    return view.is_safe_square(x, y)
-            and not view.withheld(x, y)
-            and not monster_in_way(x, y)
-end
-
-function try_move(dx, dy)
-    if can_move_square(dx, dy) then
-        return delta_to_vi(dx, dy)
-    else
-        return nil
-    end
 end
 
 function will_tab(cx, cy, ex, ey, square_func, tab_dist)

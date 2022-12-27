@@ -92,3 +92,22 @@ function feature_is_upstairs(feat)
     return feat:find("stone_stairs_up")
         or feat:find("^exit_") and not feat == "exit_dungeon"
 end
+
+function cloud_is_dangerous(cloud)
+    if cloud == "flame" or cloud == "fire" then
+        return (you.res_fire() < 1)
+    elseif cloud == "noxious fumes" then
+        return (not meph_immune())
+    elseif cloud == "freezing vapour" then
+        return (you.res_cold() < 1)
+    elseif cloud == "poison gas" then
+        return (you.res_poison() < 1)
+    elseif cloud == "calcifying dust" then
+        return (you.race() ~= "Gargoyle")
+    elseif cloud == "foul pestilence" then
+        return (not miasma_immune())
+    elseif cloud == "seething chaos" or cloud == "mutagenic fog" then
+        return true
+    end
+    return false
+end
