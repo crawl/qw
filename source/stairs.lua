@@ -181,18 +181,18 @@ function find_good_stairs()
             pdist = 10000
         end
         minmdist = 1000
-        for _, e in ipairs(enemy_list) do
-            mdist = dist_map.map[wx + e.x][wy + e.y]
+        for _, enemy in ipairs(enemy_list) do
+            mdist = dist_map.map[wx + enemy.pos.x][wy + enemy.pos.y]
             if mdist == nil then
                 mdist = 10000
             end
-            speed_diff = mon_speed_num(e.m) - pspeed
+            speed_diff = mon_speed_num(enemy.mons) - pspeed
             if speed_diff > 1 then
                 mdist = mdist / 2
             elseif speed_diff > 0 then
                 mdist = mdist / 1.5
             end
-            if is_ranged(e.m) then
+            if is_ranged(enemy.mons) then
                 mdist = mdist - 4
             end
             if mdist < minmdist then

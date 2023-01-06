@@ -144,7 +144,7 @@ end
 function can_heroism()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 1
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and not you.status("heroic")
                  and can_invoke()
 end
@@ -152,7 +152,7 @@ end
 function can_finesse()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 5
-                 and cmp() >= 5
+                 and you.mp() >= 5
                  and not you.status("finesse-ful")
                  and can_invoke()
 end
@@ -161,41 +161,41 @@ function can_recall()
     return (you.god() == "Yredelemnul" and you.piety_rank() >= 2)
                     or (you.god() == "Beogh" and you.piety_rank() >= 4)
                  and not you.status("recalling")
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and can_invoke()
 end
 
 function can_drain_life()
     return you.god() == "Yredelemnul"
                  and you.piety_rank() >= 4
-                 and cmp() >= 6
+                 and you.mp() >= 6
                  and can_invoke()
 end
 
 function can_recall_ancestor()
     return you.god() == "Hepliaklqana"
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and can_invoke()
 end
 
 function can_slouch()
     return you.god() == "Cheibriados"
                  and you.piety_rank() >= 4
-                 and cmp() >= 5
+                 and you.mp() >= 5
                  and can_invoke()
 end
 
 function can_ely_healing()
     return you.god() == "Elyvilon"
                  and you.piety_rank() >= 4
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and can_invoke()
 end
 
 function can_purification()
     return you.god() == "Elyvilon"
                  and you.piety_rank() >= 3
-                 and cmp() >= 3
+                 and you.mp() >= 3
                  and can_invoke()
 end
 
@@ -216,7 +216,7 @@ end
 function can_apocalypse()
     return you.god() == "Ru"
                  and you.piety_rank() >= 5
-                 and cmp() >= 8
+                 and you.mp() >= 8
                  and not you.exhausted()
                  and can_invoke()
 end
@@ -224,34 +224,34 @@ end
 function can_grand_finale()
     return you.god() == "Uskayaw"
                  and you.piety_rank() >= 5
-                 and cmp() >= 8
+                 and you.mp() >= 8
                  and can_invoke()
 end
 
 function can_greater_servant()
     return you.god() == "Makhleb"
                  and you.piety_rank() >= 5
-                 and chp() > 10
+                 and you.hp() > 10
                  and can_invoke()
 end
 
 function can_cleansing_flame(ignore_mp)
     return you.god() == "the Shining One"
         and you.piety_rank() >= 3
-        and (ignore_mp or cmp() >= 5)
+        and (ignore_mp or you.mp() >= 5)
         and can_invoke()
 end
 
 function can_divine_warrior(ignore_mp)
     return you.god() == "the Shining One"
                  and you.piety_rank() >= 5
-                 and (ignore_mp or cmp() >= 8)
+                 and (ignore_mp or you.mp() >= 8)
                  and can_invoke()
 end
 
 function can_destruction()
     return you.god() == "Makhleb"
-                 and chp() > 6
+                 and you.hp() > 6
                  and you.piety_rank() >= 4
                  and can_invoke()
 end

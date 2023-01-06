@@ -2,7 +2,7 @@
 -- The abyss plan cascade: choosing a move for a turn in the Abyss.
 
 function plan_go_to_abyss_portal()
-    if where_branch == "Abyss"
+    if in_branch("Abyss")
             or not want_to_stay_in_abyss()
             or not branch_found("Abyss")
             or cloudy then
@@ -97,7 +97,7 @@ function plan_lugonu_exit_abyss()
             or you.confused()
             or you.silenced()
             or you.piety_rank() < 1
-            or cmp() < 1 then
+            or you.mp() < 1 then
         return false
     end
 

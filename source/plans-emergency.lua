@@ -153,16 +153,16 @@ function plan_grand_finale()
     local flag_reversed = {false, true, true}
     best_info = nil
     for _, e in ipairs(enemy_list) do
-        if is_traversable(e.x, e.y)
-                and not cloud_is_dangerous(view.cloud_at(e.x, e.y)) then
-            new_info = get_monster_info(e.x, e.y)
+        if is_traversable(e.pos.x, e.pos.y)
+                and not cloud_is_dangerous(view.cloud_at(e.pos.x, e.pos.y)) then
+            new_info = get_monster_info(e.pos.x, e.pos.y)
             if new_info.safe == 0
                     and (not best_info
                         or compare_monster_info(new_info, best_info,
                             flag_order, flag_reversed)) then
                 best_info = new_info
-                bestx = e.x
-                besty = e.y
+                bestx = e.pos.x
+                besty = e.pos.y
             end
         end
     end
@@ -190,13 +190,14 @@ function plan_hydra_destruction()
         return false
     end
 
-    for _, e in ipairs(enemy_list) do
-        if supdist(e.x, e.y) <= 5 and string.find(e.m:desc(), "hydra") then
-            say("INVOKING MAJOR DESTRUCTION")
+    for _, enemy in ipairs(enemy_list) do
+        if supdist(enemy.pos.x, enemy.pos.y) <= 5
+                and string.find(enemy.mons:desc(), "hydra") then
+            say("invoking major destruction")
             for letter, abil in pairs(you.ability_table()) do
                 if abil == "Major Destruction" then
-                    magic("a" .. letter .. "r" .. vector_move(e.x, e.y) ..
-                        "\r")
+                    magic("a" .. letter .. "r"
+                        .. vector_move(enemy.pos.x, enemy.pos.y) .. "\r")
                     return true
                 end
             end
@@ -247,7 +248,7 @@ function plan_cure_bad_poison()
     if not danger then
         return false
     end
-    if you.poison_survival() <= chp() - 60 then
+    if you.poison_survival() <= you.hp() - 60 then
         if drink_by_name("curing") then
             say("(to cure bad poison)")
             return true
@@ -285,8 +286,9 @@ function plan_blinking()
     end
 
     local para_danger = false
-    for _, e in ipairs(enemy_list) do
-        if e.m:name() == "floating eye" or e.m:name() == "starcursed mass" then
+    for _, enemy in ipairs(enemy_list) do
+        if enemy.mons:name() == "floating eye"
+                or enemy.mons:name() == "starcursed mass" then
             para_danger = true
         end
     end
@@ -558,9 +560,9 @@ function want_to_cleansing_flame()
         return true
     end
 
-    local filter = function(m)
-        local holiness = m:holiness()
-        return not m:desc():find("summoned")
+    local filter = function(mons)
+        local holiness = mons:holiness()
+        return not mons:desc():find("summoned")
             and (holiness == "undead"
                 or holiness == "demonic"
                 or holiness == "evil")
@@ -798,63 +800,6 @@ function plan_full_inventory_panic()
     end
 end
 
-function plan_flail_at_invis()
-    if options.autopick_on then
-        invisi_count = 0
-        invis_sigmund = false
-        return false
-    end
-    if invisi_count > 100 then
-        say("Invisible monster not found???")
-        invisi_count = 0
-        invis_sigmund = false
-        magic(control('a'))
-        return true
-    end
-
-    invisi_count = invisi_count + 1
-    for x, y in adjacent_iter(0, 0) do
-        if supdist(x, y) > 0 and view.invisible_monster(x, y) then
-            magic(control(delta_to_vi(x, y)))
-            return true
-        end
-    end
-
-    if invis_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
-        x = sigmund_dx
-        y = sigmund_dy
-        if adjacent(x, y) and is_traversable(x, y) then
-            magic(control(delta_to_vi(x, y)))
-            return true
-        elseif x == 0 and is_traversable(0, sign(y)) then
-            magic(delta_to_vi(0, sign(y)))
-            return true
-        elseif y == 0 and is_traversable(sign(x),0) then
-            magic(delta_to_vi(sign(x),0))
-            return true
-        end
-    end
-
-    local success = false
-    local tries = 0
-    while not success and tries < 100 do
-        x = -1 + crawl.random2(3)
-        y = -1 + crawl.random2(3)
-        tries = tries + 1
-        if (x ~= 0 or y ~= 0) and is_traversable(x, y)
-             and view.feature_at(x, y) ~= "closed_door"
-             and not view.feature_at(x, y):find("runed") then
-            success = true
-        end
-    end
-    if tries >= 100 then
-        magic("s")
-    else
-        magic(control(delta_to_vi(x, y)))
-    end
-    return true
-end
-
 function plan_cure_confusion()
     if you.confused() and (danger or not options.autopick_on) then
         if view.cloud_at(0, 0) == "noxious fumes" and not meph_immune() then
@@ -921,62 +866,35 @@ function plan_dig_grate()
         return false
     end
 
-    for _, e in ipairs(enemy_list) do
-        local name = e.m:name()
+    for _, enemy in ipairs(enemy_list) do
+        local name = enemy.mons:name()
         if contains_string_in(name, grate_mon_list)
-             and not will_tab(0, 0, e.x, e.y, tabbable_square) then
+                and not can_melee_enemy(enemy) then
             local grate_count = 0
             local closest_grate = 20
-            local gx, gy, cgx, cgy
-            for dx = -1, 1 do
-                for dy = -1, 1 do
-                    gx = e.x + dx
-                    gy = e.y + dy
-                    if supdist(gx, gy) <= los_radius
-                            and view.feature_at(gx, gy) == "iron_grate" then
-                        grate_count = grate_count + 1
-                        if abs(gx) + abs(gy) < closest_grate
-                                and you.see_cell_solid_see(gx, gy) then
-                            cgx = gx
-                            cgy = gy
-                            closest_grate = abs(gx) + abs(gy)
-                        end
+            local cgx, cgy
+            for x, y in adjacent_iterator(enemy.pos.x, enemy.pos.y) do
+                if supdist(x, y) <= los_radius
+                        and view.feature_at(x, y) == "iron_grate" then
+                    grate_count = grate_count + 1
+                    if abs(x) + abs(y) < closest_grate
+                            and you.see_cell_solid_see(x, y) then
+                        cgx = x
+                        cgy = y
+                        closest_grate = abs(x) + abs(y)
                     end
                 end
             end
             if grate_count >= grate_count_needed and closest_grate < 20 then
-                local c = find_item("wand", "digging")
-                if c and can_zap() then
-                    say("ZAPPING " .. item(c).name() .. ".")
-                    magic("V" .. letter(c) .. "r" .. vector_move(cgx, cgy) ..
-                        "\r")
+                local wand = find_item("wand", "digging")
+                if wand and can_zap() then
+                    say("ZAPPING " .. item(wand).name() .. ".")
+                    magic("V" .. letter(wand) .. "r" .. vector_move(cgx, cgy)
+                        .. "\r")
                     return true
                 end
             end
         end
-    end
-
-    return false
-end
-
-function plan_cure_poison()
-    if not you.poisoned() or you.poison_survival() > 1 then
-        return false
-    end
-
-    if drink_by_name("curing") then
-        say("(to cure poison)")
-        return true
-    end
-
-    if can_trogs_hand() then
-        trogs_hand()
-        return true
-    end
-
-    if can_purification() then
-        purification()
-        return true
     end
 
     return false
@@ -1022,5 +940,8 @@ function set_plan_emergency()
         {plan_berserk, "berserk"},
         {plan_continue_flee, "continue_flee"},
         {plan_other_step, "other_step"},
+        {plan_recall, "recall"},
+        {plan_recall_ancestor, "try_recall_ancestor"},
+        {plan_recite, "try_recite"},
     }
 end

@@ -1,19 +1,19 @@
 ------------------
 -- Attack plans
 
-function get_target()
+function get_melee_target()
     local bestx, besty, best_info, new_info
     bestx = 0
     besty = 0
     best_info = nil
     for _, e in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20 * e.x + e.y) then
-            if is_candidate_for_attack(e.x, e.y, true) then
-                new_info = get_monster_info(e.x, e.y)
+        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y) then
+            if is_candidate_for_attack(e.pos.x, e.pos.y, true) then
+                new_info = get_monster_info(e.pos.x, e.pos.y)
                 if not best_info
                         or compare_monster_info(new_info, best_info) then
-                    bestx = e.x
-                    besty = e.y
+                    bestx = e.pos.x
+                    besty = e.pos.y
                     best_info = new_info
                 end
             end
@@ -22,12 +22,12 @@ function get_target()
     return bestx, besty, best_info
 end
 
-function attack()
+function melee()
     local bestx, besty, best_info
     local success = false
     failed_move = { }
     while not success do
-        bestx, besty, best_info = get_target()
+        bestx, besty, best_info = get_melee_target()
         if best_info == nil then
             return false
         end
@@ -36,6 +36,26 @@ function attack()
     return true
 end
 
+function get_ranged_target()
+    local bestx, besty, best_info, new_info
+    bestx = 0
+    besty = 0
+    best_info = nil
+    for _, e in ipairs(enemy_list) do
+        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y) then
+            if is_candidate_for_attack(e.pos.x, e.pos.y, true) then
+                new_info = get_monster_info(e.pos.x, e.pos.y)
+                if not best_info
+                        or compare_monster_info(new_info, best_info) then
+                    bestx = e.pos.x
+                    besty = e.pos.y
+                    best_info = new_info
+                end
+            end
+        end
+    end
+    return bestx, besty, best_info
+end
 function plan_throw()
     if melee_enemy or travel.is_excluded(0, 0) then
         return false
@@ -47,7 +67,7 @@ function plan_throw()
     end
 
     for _, e in ipairs(enemy_list) do
-        if crawl.do_targeted_command("CMD_FIRE", e.x, e.y) then
+        if crawl.do_targeted_command("CMD_FIRE", e.pos.x, e.pos.y) then
             return true
         end
     end
@@ -61,7 +81,7 @@ function plan_move_to_monster()
     end
 
     for _, e in ipairs(enemy_list) do
-        local move = best_move_towards({ { x = e.x, y = e.y } }, los_radius)
+        local move = best_move_towards({ { x = e.pos.x, y = e.pos.y } }, los_radius)
         if move then
 
 
@@ -76,7 +96,30 @@ function plan_use_flight()
 
 end
 
-function plan_wait_for_melee()
+function plan_cure_poison()
+    if not you.poisoned() or you.poison_survival() > 1 then
+        return false
+    end
+
+    if drink_by_name("curing") then
+        say("(to cure poison)")
+        return true
+    end
+
+    if can_trogs_hand() then
+        trogs_hand()
+        return true
+    end
+
+    if can_purification() then
+        purification()
+        return true
+    end
+
+    return false
+end
+
+function plan_check_incoming_melee_enemy()
     is_waiting = false
     if sense_danger(reach_range())
             or not options.autopick_on
@@ -109,29 +152,19 @@ function plan_wait_for_melee()
     end
 
     local enemy_needs_wait = false
-    for _, e in ipairs(enemy_list) do
-        if is_ranged(e.m) then
+    for _, enemy in ipairs(enemy_list) do
+        if is_ranged(enemy.m) then
             wait_count = 0
             return false
         end
 
-        local melee_range = e.m:reach_range()
-        if supdist(e.x, e.y) <= melee_range then
+        local melee_range = enemy.mons:reach_range()
+        if supdist(enemy.pos.x, enemy.pos.y) <= melee_range then
             wait_count = 0
             return false
         end
 
-        local tab_func = function(x, y)
-            return e.m:can_traverse(x, y)
-        end
-        if not enemy_needs_wait
-                and not (e.m:name() == "wandering mushroom"
-                    or e.m:name():find("vortex")
-                    or e.m:desc():find("fleeing")
-                    or e.m:status("paralysed")
-                    or e.m:status("confused")
-                    or e.m:status("petrified"))
-                and enemy_can_move_melee(e) then
+        if not enemy_needs_wait and enemy_can_move_melee(enemy) then
             enemy_needs_wait = true
         end
     end
@@ -163,12 +196,12 @@ function plan_wait_spit()
         return false
     end
     local best_dist = 10
-    local cur_e = none
-    for _, e in ipairs(enemy_list) do
-        local dist = supdist(e.x, e.y)
-        if dist < best_dist and e.m:res_poison() < 1 then
+    local target = none
+    for _, enemy in ipairs(enemy_list) do
+        local dist = supdist(enemy.pos.x, enemy.pos.y)
+        if dist < best_dist and enemy.mons:res_poison() < 1 then
             best_dist = dist
-            cur_e = e
+            target = enemy
         end
     end
     ab_range = 6
@@ -179,7 +212,7 @@ function plan_wait_spit()
     end
     if best_dist <= ab_range then
         if use_ability(ab_name,
-                "r" .. vector_move(cur_e.x, cur_e.y) .. "\r") then
+                "r" .. vector_move(target.pos.x, target.pos.y) .. "\r") then
             return true
         end
     end
@@ -220,7 +253,7 @@ function plan_wait_wait()
     return true
 end
 
-function plan_attack()
+function plan_melee()
     if danger and attack() then
         return true
     end
@@ -283,4 +316,74 @@ end
 
 function hit_closest()
     startstop()
+end
+
+function plan_flail_at_invis()
+    if options.autopick_on then
+        invisi_count = 0
+        invis_sigmund = false
+        return false
+    end
+    if invisi_count > 100 then
+        say("Invisible monster not found???")
+        invisi_count = 0
+        invis_sigmund = false
+        magic(control('a'))
+        return true
+    end
+
+    invisi_count = invisi_count + 1
+    for x, y in adjacent_iter(0, 0) do
+        if supdist(x, y) > 0 and view.invisible_monster(x, y) then
+            magic(control(delta_to_vi(x, y)))
+            return true
+        end
+    end
+
+    if invis_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
+        x = sigmund_dx
+        y = sigmund_dy
+        if adjacent(x, y) and is_traversable(x, y) then
+            magic(control(delta_to_vi(x, y)))
+            return true
+        elseif x == 0 and is_traversable(0, sign(y)) then
+            magic(delta_to_vi(0, sign(y)))
+            return true
+        elseif y == 0 and is_traversable(sign(x),0) then
+            magic(delta_to_vi(sign(x),0))
+            return true
+        end
+    end
+
+    local success = false
+    local tries = 0
+    while not success and tries < 100 do
+        x = -1 + crawl.random2(3)
+        y = -1 + crawl.random2(3)
+        tries = tries + 1
+        if (x ~= 0 or y ~= 0) and is_traversable(x, y)
+             and view.feature_at(x, y) ~= "closed_door"
+             and not view.feature_at(x, y):find("runed") then
+            success = true
+        end
+    end
+    if tries >= 100 then
+        magic("s")
+    else
+        magic(control(delta_to_vi(x, y)))
+    end
+    return true
+end
+
+function set_plan_attack()
+    plan_attack = cascade {
+        {plan_wait_for_melee, "wait_for_melee"},
+        {plan_starting_spell, "try_starting_spell"},
+        {plan_wait_spit, "try_wait_spit"},
+        {plan_wait_throw, "try_wait_throw"},
+        {plan_wait_wait, "wait_wait"},
+        {plan_melee, "attack"},
+        {plan_cure_poison, "cure_poison"},
+        {plan_flail_at_invis, "try_flail_at_invis"},
+    }
 end

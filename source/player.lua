@@ -181,16 +181,6 @@ function hp_is_low(percentage)
     return (100 * hp <= percentage * mhp)
 end
 
-function chp()
-    local hp, mhp = you.hp()
-    return hp
-end
-
-function cmp()
-    local mp, mmp = you.mp()
-    return mp
-end
-
 function meph_immune()
     -- should also check clarity and unbreathing
     return (you.res_poison() >= 1)
@@ -240,7 +230,7 @@ function can_teleport()
             or you.anchored()
             or you.transform() == "tree"
             or you.race() == "Formicid"
-            or where_branch == "Gauntlet")
+            or in_branch("Gauntlet"))
 end
 
 function can_invoke()
@@ -262,9 +252,6 @@ function can_berserk()
             or you.transform() == "lich"
             or you.status("afraid"))
         and can_invoke()
-end
-
-function can_move()
 end
 
 function player_speed_num()

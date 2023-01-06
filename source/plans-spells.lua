@@ -60,7 +60,7 @@ function plan_starting_spell()
     if not sp then
         return false
     end
-    if cmp() < spells.mana_cost(sp) then
+    if you.mp() < spells.mana_cost(sp) then
         return false
     end
     if you.xl() > 4 and not is_waiting then

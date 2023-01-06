@@ -37,7 +37,7 @@ end
 
 function can_use_transporters()
     return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
-        and (where_branch == "Temple" or in_portal())
+        and (in_branch("Temple") or in_portal())
 end
 
 function plan_go_to_transporter()
@@ -46,7 +46,7 @@ function plan_go_to_transporter()
     end
 
     local search_count
-    if where_branch == "Gauntlet" then
+    if in_branch("Gauntlet") then
         -- Maps can have functionally different types of transporter routes and
         -- always start the player closest to a route of one type, so randomize
         -- which of the starting transporters we choose. No Gauntlet map has
@@ -168,9 +168,9 @@ function want_to_stairdance_up()
     local only_when_safe = you.berserk() or hp_is_low(33)
     local follow_count = 0
     local other_count = 0
-    for _, e in ipairs(enemy_list) do
-        if supdist(e.x, e.y) == 1
-                and e.m:stabbability() == 0
+    for _, enemy in ipairs(enemy_list) do
+        if supdist(enemy.pos.x, enemy.pos.y) == 1
+                and enemy.mons:stabbability() == 0
                 and can_use_stairs(e.m) then
             follow_count = follow_count + 1
         else

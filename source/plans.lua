@@ -105,6 +105,7 @@ end
 
 function initialize_plans()
     set_plan_emergency()
+    set_plan_attack()
     set_plan_rest()
     set_plan_handle_acquirement_result()
     set_plan_pre_explore()

@@ -98,10 +98,10 @@ function plan_swap_weapon()
 
     local sit
     if you.xl() < 18 then
-        for _, e in ipairs(enemy_list) do
-            if supdist(e.x, e.y) <= 3
-                    and string.find(e.m:desc(), "hydra")
-                    and will_tab(0, 0, e.x, e.y, tabbable_square) then
+        for _, enemy in ipairs(enemy_list) do
+            if supdist(enemy.pos.x, enemy.pos.y) <= 3
+                    and string.find(enemy.mons:desc(), "hydra")
+                    and can_melee_enemy(enemy) then
                 sit = "hydra"
             end
         end

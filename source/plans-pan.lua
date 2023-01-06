@@ -6,7 +6,7 @@ function want_to_be_in_pan()
 end
 
 function plan_go_to_pan_portal()
-    if where_branch == "Pan"
+    if in_branch("Pan")
             or not want_to_be_in_pan()
             or not branch_found("Pan")
             or cloudy then

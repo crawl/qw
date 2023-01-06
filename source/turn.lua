@@ -67,7 +67,7 @@ function turn_update()
             or in_branch("Pan")
             or in_portal()
             or planning_pan
-                and where_branch == pan_parent
+                and in_branch(pan_parent)
                 and where_depth >= min_depth
                 and where_depth <= max_depth
 
@@ -138,9 +138,9 @@ function turn_update()
     choose_tactical_step()
 
     if disconnected_enemy_phase and hp_is_low(50) then
-    for _, e in ipairs(enemy_list) do
-        if not enemy_can_move_melee(e) then
-            travel.set_exclude(e.x, e.y)
+    for _, enemy in ipairs(enemy_list) do
+        if not enemy_can_move_melee(enemy) then
+            travel.set_exclude(enemy.pos.x, enemy.pos.y)
         end
     end
     else
