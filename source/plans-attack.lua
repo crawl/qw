@@ -1,39 +1,83 @@
 ------------------
 -- Attack plans
+--
+function compare_target_enemies(first, second, flag_order,
+        flag_reversed)
+    if not flag_order then
+    end
 
-function get_melee_target()
-    local bestx, besty, best_info, new_info
-    bestx = 0
-    besty = 0
-    best_info = nil
-    for _, e in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y) then
-            if is_candidate_for_attack(e.pos.x, e.pos.y, true) then
-                new_info = get_monster_info(e.pos.x, e.pos.y)
-                if not best_info
-                        or compare_monster_info(new_info, best_info) then
-                    bestx = e.pos.x
-                    besty = e.pos.y
-                    best_info = new_info
-                end
+    if not flag_reversed then
+        flag_reversed = {}
+        for _, flag in ipairs(flag_order) do
+            table.insert(flag_reversed, false)
+        end
+    end
+
+    for i, flag in ipairs(flag_order) do
+        local if_greater_val = not flag_reversed[i] and true or false
+        if first[flag] > second[flag] then
+            return if_greater_val
+        elseif first[flag] < second[flag] then
+            return not if_greater_val
+        end
+    end
+    return false
+end
+
+function get_melee_target_enemy()
+    local best_enemy = nil
+    for _, enemy in ipairs(enemy_list) do
+        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y)
+                and player_can_move_to_melee_enemy(enemy, true) then
+            update_melee_target_info(enemy)
+            if not best_enemy
+                    or compare_target_enemies(enemy, best_enemy) then
+                best_enemy = enemy
             end
         end
     end
     return bestx, besty, best_info
 end
 
-function melee()
-    local bestx, besty, best_info
+function melee_attack()
     local success = false
     failed_move = { }
     while not success do
-        bestx, besty, best_info = get_melee_target()
-        if best_info == nil then
+        local enemy = get_melee_target_enemy()
+        if enemy == nil then
             return false
         end
-        success = make_attack(bestx, besty, best_info)
+        success = make_attack(enemy)
     end
     return true
+end
+
+function compare_ranged_target_enemies(first, second, flag_order,
+        flag_reversed)
+    update_melee_target_info(first)
+    update_melee_target_info(second)
+
+    if not flag_order then
+        flag_order = { "player_can_range_attack", "distance",
+            "constricting_you", "injury", "threat", "orc_priest_wizard" }
+    end
+
+    if not flag_reversed then
+        flag_reversed = {}
+        for _, flag in ipairs(flag_order) do
+            table.insert(flag_reversed, false)
+        end
+    end
+
+    for i, flag in ipairs(flag_order) do
+        local if_greater_val = not flag_reversed[i] and true or false
+        if first[flag] > second[flag] then
+            return if_greater_val
+        elseif first[flag] < second[flag] then
+            return not if_greater_val
+        end
+    end
+    return false
 end
 
 function get_ranged_target()
@@ -46,7 +90,7 @@ function get_ranged_target()
             if is_candidate_for_attack(e.pos.x, e.pos.y, true) then
                 new_info = get_monster_info(e.pos.x, e.pos.y)
                 if not best_info
-                        or compare_monster_info(new_info, best_info) then
+                        or compare_enemy_ranged_info(new_info, best_info) then
                     bestx = e.pos.x
                     besty = e.pos.y
                     best_info = new_info
@@ -254,7 +298,7 @@ function plan_wait_wait()
 end
 
 function plan_melee()
-    if danger and attack() then
+    if danger and melee_attack() then
         return true
     end
     return false

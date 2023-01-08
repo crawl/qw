@@ -10,27 +10,19 @@ function plan_autoexplore()
     return true
 end
 
-function add_ignore(dx, dy)
-    local m = monster_array[dx][dy]
-    if not m then
-        return
-    end
-
-    local name = m:name()
-    if not util.contains(ignore_list, name) then
-        table.insert(ignore_list, name)
-        crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
+function add_ignore_enemy(enemy)
+    if not util.contains(ignore_list, enemy.name) then
+        table.insert(ignore_list, enemy.name)
+        crawl.setopt("runrest_ignore_monster ^= " .. enemy.name .. ":1")
         if DEBUG_MODE then
-            dsay("Ignoring " .. name .. ".")
+            dsay("Ignoring " .. enemy.name .. ".")
         end
     end
 end
 
-function remove_ignore(dx, dy)
-    local m = monster_array[dx][dy]
-    local name = m:name()
-    for i, mname in ipairs(ignore_list) do
-        if mname == name then
+function remove_ignore_enemy(enemy)
+    for i, name in ipairs(ignore_list) do
+        if enemy.name == name then
             table.remove(ignore_list, i)
             crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
             if DEBUG_MODE then
@@ -43,12 +35,11 @@ end
 
 function clear_ignores()
     local size = #ignore_list
-    local mname
     if size > 0 then
         for i = 1, size do
-            mname = table.remove(ignore_list)
-            crawl.setopt("runrest_ignore_monster -= " .. mname .. ":1")
-            dsay("Unignoring " .. mname .. ".")
+            local name = table.remove(ignore_list)
+            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
+            dsay("Unignoring " .. name .. ".")
         end
     end
 end

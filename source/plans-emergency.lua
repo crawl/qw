@@ -287,8 +287,7 @@ function plan_blinking()
 
     local para_danger = false
     for _, enemy in ipairs(enemy_list) do
-        if enemy.mons:name() == "floating eye"
-                or enemy.mons:name() == "starcursed mass" then
+        if enemy.name == "floating eye" or enemy.name == "starcursed mass" then
             para_danger = true
         end
     end
@@ -302,12 +301,12 @@ function plan_blinking()
 
     local cur_count = 0
     local best_count = 0
-    local m, count, best_x, best_y
+    local count, best_x, best_y
     for x, y in adjacent_iter(0, 0) do
-        m = monster_array[x][y]
-        if m and m:name() == "floating eye" then
+        local mons = monster_array[x][y]
+        if mons and mons:name() == "floating eye" then
             cur_count = cur_count + 3
-        elseif m and m:name() == "starcursed mass" then
+        elseif mons and mons:name() == "starcursed mass" then
             cur_count = cur_count + 1
         end
     end
@@ -325,10 +324,10 @@ function plan_blinking()
             count = 0
             for dx, dy in adjacent_iter(x, y) do
                 if abs(dx) <= los_radius and abs(dy) <= los_radius then
-                    m = monster_array[dx][dy]
-                    if m and m:name() == "floating eye" then
+                    local mons = monster_array[dx][dy]
+                    if mons and mons:name() == "floating eye" then
                         count = count + 3
-                    elseif m and m:name() == "starcursed mass" then
+                    elseif mons and mons:name() == "starcursed mass" then
                         count = count + 1
                     end
                 end
@@ -867,8 +866,7 @@ function plan_dig_grate()
     end
 
     for _, enemy in ipairs(enemy_list) do
-        local name = enemy.mons:name()
-        if contains_string_in(name, grate_mon_list)
+        if contains_string_in(enemy.name, grate_mon_list)
                 and not can_melee_enemy(enemy) then
             local grate_count = 0
             local closest_grate = 20

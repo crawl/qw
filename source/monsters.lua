@@ -3,14 +3,14 @@
 
 -- functions for use in the monster lists below
 function in_desc(lev, str)
-    return function (m)
-        return you.xl() < lev and m:desc():find(str)
+    return function (enemy)
+        return you.xl() < lev and enemy.mons:desc():find(str)
     end
 end
 
 function pan_lord(lev)
-    return function (m)
-        return you.xl() < lev and m:type() == enum_mons_pan_lord
+    return function (enemy)
+        return you.xl() < lev and enemy.mons:type() == enum_mons_pan_lord
     end
 end
 
@@ -26,13 +26,13 @@ local res_func_table = {
 }
 
 function check_resist(lev, resist, value)
-    return function (m)
+    return function (enemy)
         return (you.xl() < lev and res_func_table[resist]() < value)
     end
 end
 
 function slow_berserk(lev)
-    return function (m)
+    return function (enemy)
         return (you.xl() < lev and count_monsters_near(0, 0, 1) > 0)
     end
 end
@@ -53,11 +53,11 @@ function hydra_weapon_status(weap)
 end
 
 function hydra_check_flaming(lev)
-    return function (m)
+    return function (enemy)
         return you.xl() < lev
-            and m:desc():find("hydra")
-            and not contains_string_in(m:name(),
-                {"skeleton", "zombie", "simulacrum", "spectral"})
+            and enemy.mons:desc():find("hydra")
+            and not contains_string_in(enemy.name,
+                { "skeleton", "zombie", "simulacrum", "spectral" })
             and hydra_weapon_status(items.equipped_at("Weapon")) ~= 1
     end
 end
@@ -524,8 +524,8 @@ local acid_resistance_monsters = {
     ["acid blob"] = 100,
 }
 
-function mon_speed_num(mons)
-    local sdesc = mons:speed_description()
+function enemy_speed_num(enemy)
+    local sdesc = enemy.mons:speed_description()
     local num
     if sdesc == "extremely fast" then
         num = 6
@@ -540,37 +540,35 @@ function mon_speed_num(mons)
     elseif sdesc == "very slow" then
         num = 1
     end
-    if mons:status("fast") then
+    if enemy.mons:status("fast") then
         num = num + 1
     end
-    if mons:status("slow") then
+    if enemy.mons:status("slow") then
         num = num - 1
     end
-    if mons:name():find("boulder beetle") then
+    if enemy.name:find("boulder beetle") then
         num = num + 3
     end
-    if mons:name():find("spriggan") or mons:name() == "the Enchantress" then
+    if enemy.name:find("spriggan") or enemy.name == "the Enchantress" then
         num = num + 1
-    elseif mons:name():find("naga") or mons:name() == "Vashnia" then
+    elseif enemy.name:find("naga") or enemy.name == "Vashnia" then
         num = num - 1
     end
     return num
 end
 
-function is_fast(mons)
-    return (mon_speed_num(mons) > player_speed_num())
+function is_fast_mons(mons)
+    return (mons_speed_num(mons) > player_speed_num())
 end
 
-function is_ranged(mons)
-    local name = mons:name()
-    if name:find("kraken") then
+function is_ranged_enemy(enemy)
+    if enemy.name:find("kraken") then
         return false
     end
     if mons:has_known_ranged_attack() then
         return true
     end
-    if name == "Maurice" or name == "Ijyb" or name == "crimson imp"
-         or name == "lost soul" then
+    if name == "lost soul" then
         return true
     end
     return false
@@ -604,7 +602,7 @@ end
 
 function sense_sigmund()
     for _, enemy in ipairs(enemy_list) do
-        if enemy.mons:name() == "Sigmund" then
+        if enemy.name == "Sigmund" then
             sigmund_dx = enemy.pos.x
             sigmund_dy = enemy.pos.y
             return
@@ -619,14 +617,26 @@ function initialize_monster_array()
     end
 end
 
+function get_enemy_info_at(x, y)
+    local info = {}
+    info.mons = monster_array[x][y]
+    info.pos = { x = x, y = y }
+    info.name = mons:name()
+    info.distance = -supdist(info.pos.x, info.pos.y)
+    info.constricting_you = mons:is_constricting_you() and 1 or 0
+    info.injury = mons:damage_level()
+    info.threat = mons:threat()
+    info.orc_priest_wizard =
+        (info.name == "orc priest" or info.name == "orc wizard") and 1 or 0
+end
+
 function update_monster_array()
     enemy_list = {}
     for x, y in radius_iter(0, 0) do
         if you.see_cell_no_trans(x, y) then
             monster_array[x][y] = monster.get_monster_at(x, y)
-            if is_enemy_at(x, y) then
-                table.insert(enemy_list,
-                    { pos = { x = x, y = y }, mons = monster_array[x][y] })
+            if monster_is_enemy(monster_array[x][y]) then
+                table.insert(enemy_list, get_enemy_info(monster_array[x][y]))
             end
         else
             monster_array[x][y] = nil
@@ -650,18 +660,18 @@ function can_path_monster(mons)
     end
 end
 
-function enemy_can_move_melee(enemy)
-    if enemy.can_move_melee ~= nil then
-        return enemy.can_move_melee
+function enemy_can_move_to_melee_player(enemy)
+    if enemy.can_move_to_melee_player ~= nil then
+        return enemy.can_move_to_melee
     end
 
-    if enemy.mons:name() == "wandering mushroom"
-            or e.mons:name():find("vortex")
-            or e.mons:desc():find("fleeing")
-            or e.mons:status("paralysed")
-            or e.mons:status("confused")
-            or e.mons:status("petrified") then
-        enemy.can_move_melee = false
+    if enemy.name == "wandering mushroom"
+            or enemy.name:find("vortex")
+            or enemy.mons:desc():find("fleeing")
+            or enemy.mons:status("paralysed")
+            or enemy.mons:status("confused")
+            or enemy.mons:status("petrified") then
+        enemy.can_move_to_melee = false
         return false
     end
 
@@ -669,22 +679,21 @@ function enemy_can_move_melee(enemy)
         return enemy.mons:can_traverse(x, y)
     end
     local melee_range = enemy.mons:reach_range()
-    enemy.can_move_melee = will_tab(enemy.pos.x, enemy.pos.y, 0, 0, tab_func,
-            melee_range)
+    enemy.can_move_to_melee = will_tab(enemy.pos.x, enemy.pos.y, 0, 0,
+            tab_func, melee_range)
         -- If the monster can reach attack and we can't, be sure we can
         -- close the final 1-square gap.
         and (melee_range < 2
             or attack_range() > 1
-            or can_move_closer(enemy.pos.x, enemy.pos.y))
+            or player_can_move_closer(enemy.pos.x, enemy.pos.y))
     return enemy.can_move_melee
 end
 
 function update_melee_enemy()
     if melee_enemy then
-        local name = melee_enemy.mons:name()
+        local name = melee_enemy.name
         for _, enemy in ipairs(enemy_list) do
-            if enemy.mons:name() == name
-                    and enemy_can_move_melee(enemy) then
+            if enemy.name == name and enemy_can_move_to_melee(enemy) then
                 return
             end
         end
@@ -692,18 +701,18 @@ function update_melee_enemy()
 
     melee_enemy = nil
     for _, enemy in ipairs(enemy_list) do
-        if enemy_can_move_melee(enemy) then
+        if enemy_can_move_to_melee(enemy) then
             melee_enemy = enemy
             break
         end
     end
 end
 
-function mons_in_list(m, mlist)
-    local entry = mlist[m:name()]
+function enemy_in_list(enemy, mlist)
+    local entry = mlist[enemy.name]
     if type(entry) == "number" and you.xl() < entry then
         return true
-    elseif type(entry) == "function" and entry(m) then
+    elseif type(entry) == "function" and entry(enemy) then
         return true
     end
 
@@ -729,71 +738,75 @@ function check_monster_list(r, mlist, filter)
     return false
 end
 
-function count_monsters_near(cx, cy, r, filter)
+function count_monsters_near(cx, cy, radius, filter)
     local i = 0
-    for _, e in ipairs(enemy_list) do
-        if supdist(cx - e.pos.x, cy - e.pos.y) <= r
-                and (not filter or filter(e.m)) then
+    for _, enemy in ipairs(enemy_list) do
+        if supdist(cx - enemy.pos.x, cy - enemy.pos.y) <= radius
+                and (not filter or filter(enemy)) then
             i = i + 1
         end
     end
     return i
 end
 
-function count_monsters_near_by_name(cx, cy, r, name)
-    return count_monsters_near(cx, cy, r,
-        function(m) return m:name() == name end)
+function count_monsters_near_by_name(cx, cy, radius, name)
+    return count_monsters_near(cx, cy, radius,
+        function(enemy) return enemy.name == name end)
 end
 
-function count_monsters(r, filter)
-    return count_monsters_near(0, 0, r, filter)
+function count_monsters(radius, filter)
+    return count_monsters_near(0, 0, radius, filter)
 end
 
-function count_monster_list(r, mlist, filter)
-    return count_monsters(r,
-        function(m)
-            return (not filter or filter(m)) and mons_in_list(m, mlist)
+function count_monster_list(radius, mlist, filter)
+    return count_monsters(radius,
+        function(enemy)
+            return (not filter or filter(enemy))
+                and enemy_in_list(enemy, mlist)
         end)
 end
 
-function count_monster_by_name(r, name)
-    return count_monsters(r, function(m) return m:name() == name end)
+function count_monster_by_name(radius, name)
+    return count_monsters(radius,
+        function(enemy) return enemy.name == name end)
 end
 
-function count_hostile_greater_servants(r)
+function count_hostile_greater_servants(radius)
     if you.god() ~= "Makhleb" then
         return 0
     end
 
-    return count_monsters(r,
-        function(m) return m:is("summoned") and mons_is_greater_servant(m) end)
+    return count_enemies(radius,
+        function(enemy) return enemy.mons:is("summoned")
+            and mons_is_greater_servant(enemy.mons) end)
 end
 
-function count_big_slimes(r)
-    return count_monsters(r,
-        function(m)
-            return contains_string_in(m:name(),
-                {"enormous slime creature", "titanic slime creature"})
+function count_big_slimes(radius)
+    return count_monsters(radius,
+        function(enemy)
+            return contains_string_in(enemy.name,
+                { "enormous slime creature", "titanic slime creature" })
         end)
 end
 
-function count_pan_lords(r)
-    return count_monsters(r,
-        function(m) return m:type() == enum_mons_pan_lord end)
+function count_pan_lords(radius)
+    return count_monsters(radius,
+        function(enemy) return enemy.mons:type() == enum_mons_pan_lord end)
 end
 
 -- Should only be called for adjacent squares.
 function monster_in_way(dx, dy)
     local m = monster_array[dx][dy]
     local feat = view.feature_at(0, 0)
-    return m and (m:attitude() <= enum_att_neutral and not branch_step_mode
-        or m:attitude() > enum_att_neutral
-            and (m:is_constricted()
-                or m:is_caught()
-                or m:status("petrified")
-                or m:status("paralysed")
-                or m:status("constricted by roots")
-                or m:desc():find("sleeping")
+    return mons and (mons:attitude() <= enum_att_neutral
+            and not branch_step_mode
+        or mons:attitude() > enum_att_neutral
+            and (mons:is_constricted()
+                or mons:is_caught()
+                or mons:status("petrified")
+                or mons:status("paralysed")
+                or mons:status("constricted by roots")
+                or mons:desc():find("sleeping")
                 or feature_is_deep_water_or_lava(feat)
                 or feat  == "trap_zot"))
 end
@@ -808,98 +821,61 @@ function tabbable_square(x, y)
     return false
 end
 
-function get_monster_info(dx, dy)
-    local mons = monster_array[dx][dy]
-    if not mons then
-        return nil
+function update_melee_target_info(enemy)
+    if enemy.have_melee_target_info then
+        return
     end
-
-    local name = mons:name()
-    local info = {}
-    info.distance = -supdist(dx, dy)
 
     local range = reach_range()
+    local dist = abs(enemy.dist)
     if you.caught() or you.confused() then
-        info.attack_range = 0
-    elseif range > 1 then
-        info.attack_range = view.can_reach(dx, dy) and range or 0
+        enemy.player_melee_range = 0
+    elseif range == 2 then
+        enemy.player_melee_range = dist <= range
+            and view.can_reach(enemy.pos.x, enemy.pos.y)
+            and dist or 0
+    elseif range == 3 then
+        enemy.player_melee_range = dist <= range
+            and view.can_reach(enemy.pos.x, enemy.pos.y)
+            and dist or 0
     else
-        info.attack_range = -info.distance < 2 and 1 or 0
+        enemy.player_melee_range = dist < 2 and 1 or 0
     end
-    info.can_attack = info.attack_range > 0 and 1 or 0
+    enemy.player_can_melee = enemy.player_melee_range > 0 and 1 or 0
 
-    info.safe = mons:is_safe() and -1 or 0
-    info.constricting_you = mons:is_constricting_you() and 1 or 0
-    info.very_stabbable = mons:stabbability() >= 1 and 1 or 0
-    info.injury = mons:damage_level()
-    info.threat = mons:threat()
-    info.orc_priest_wizard =
-        (name == "orc priest" or name == "orc wizard") and 1 or 0
-    return info
-end
-
-function compare_monster_info(m1, m2, flag_order, flag_reversed)
-    if not flag_order then
-        flag_order = {"can_attack", "safe", "distance", "constricting_you",
-            "very_stabbable", "injury", "threat", "orc_priest_wizard"}
-    end
-
-    if not flag_reversed then
-        flag_reversed = {}
-        for _, flag in ipairs(flag_order) do
-            table.insert(flag_reversed, false)
-        end
-    end
-
-    for i, flag in ipairs(flag_order) do
-        local if_greater_val = not flag_reversed[i] and true or false
-        if m1[flag] > m2[flag] then
-            return if_greater_val
-        elseif m1[flag] < m2[flag] then
-            return not if_greater_val
-        end
-    end
-    return false
-end
-
-function has_dangerous_monster(x, y)
-    return not monster_is_safe(monster.get_monster_at(x, y))
-end
-
-function monster_is_safe(mons)
-    return not mons
-        or mons:attitude() > enum_att_neutral
-        or mons:is_firewood()
-        or mons:name() == "butterfly"
-        or mons:name() == "orb of destruction"
+    enemy.very_stabbable = mons:stabbability() >= 1 and 1 or 0
+    enemy.have_melee_target_info = true
 end
 
 function is_enemy_at(x, y)
-    if supdist(x, y) > los_radius then
-        return false
-    end
-
-    if monster_is_safe(monster_array[x][y]) then
-        return false
-    end
-
-    return true
+    return monster_is_enemy(monster_array[x][y])
 end
 
-function can_melee_enemy(enemy, handle_ignore)
+function mons_is_enemy(mons)
+    return mons
+        and not mons:is_safe()
+        and mons:attitude() < enum_att_neutral
+        and mons:name() ~= "orb of destruction"
+end
+
+function player_can_move_to_melee_enemy(enemy, handle_ignore)
+    if enemy.player_can_move_to_melee ~= nil then
+        return enemy.player_can_move_to_melee
+    end
+
     if will_tab(0, 0, enemy.pos.x, enemy.pos.y, tabbable_square) then
         if handle_ignore then
             remove_ignore(enemy.pos.x, enemy.pos.y)
         end
-        return true
+        enemy.player_can_move_to_melee = true
     else
         if handle_ignore then
             add_ignore(enemy.pos.x, enemy.pos.y)
         end
-        return false
+        enemy.player_can_move_to_melee = false
     end
+    return enemy.player_can_move_to_melee
 end
-
 
 function can_ranged_attack_enemy(enemy, weapon)
     local test_spell = ranged_weapon_test_spell(weapon)
@@ -964,10 +940,6 @@ function mons_can_use_stairs(mons)
     end
 end
 
-function mons_tabbable_square(x, y)
-    return not deep_water_or_lava(x, y) and not is_solid(x, y)
-end
-
 function will_tab(cx, cy, ex, ey, square_func, tab_dist)
     if not tab_dist then
         tab_dist = 1
@@ -1017,8 +989,8 @@ end
 function estimate_slouch_damage()
     local count = 0
     local s, v
-    for _, e in ipairs(enemy_list) do
-        s = mon_speed_num(e.m)
+    for _, enemy in ipairs(enemy_list) do
+        s = mons_speed_num(enemy.mons)
         v = 0
         if s >= 6 then
             v = 3
@@ -1029,9 +1001,9 @@ function estimate_slouch_damage()
         elseif s == 3 then
             v = 1
         end
-        if e.mons:name() == "orb of fire" then
+        if e.name == "orb of fire" then
             v = v + 1
-        elseif v > 0 and e.mons:threat() <= 1 then
+        elseif v > 0 and e.threat <= 1 then
             v = 0.5
         end
         count = count + v
@@ -1044,11 +1016,11 @@ function mons_is_holy_vulnerable(mons)
     return holiness == "undead" or holiness == "demonic"
 end
 
-function mons_liquid_bound(mons)
-    return mons:name() == "electric eel"
-        or mons:name() == "kraken"
-        or mons:name() == "elemental wellspring"
-        or mons:name() == "lava snake"
+function enemy_is_liquid_bound(enemy)
+    return enemy.name == "electric eel"
+        or enemy.name == "kraken"
+        or enemy.name == "elemental wellspring"
+        or enemy.name == "lava snake"
 end
 
 function assess_square_monsters(a, cx, cy)
@@ -1060,11 +1032,11 @@ function assess_square_monsters(a, cx, cy)
     a.ranged = 0
     a.unalert = 0
     a.longranged = 0
-    for _, e in ipairs(enemy_list) do
+    for _, enemy in ipairs(enemy_list) do
         local dist = supdist(cx - enemy.pos.x, cy - enemy.pos.y)
         local see_cell = view.cell_see_cell(cx, cy, enemy.pos.x, enemy.pos.y)
         local ranged = is_ranged(enemy.m)
-        local liquid_bound = mons_liquid_bound(enemy.m, true)
+        local liquid_bound = enemy_is_liquid_bound(enemy)
 
         if dist < best_dist then
             best_dist = dist
@@ -1073,14 +1045,16 @@ function assess_square_monsters(a, cx, cy)
         if dist == 1 then
             a.adjacent = a.adjacent + 1
 
-            if not liquid_bound and not ranged and enemy.mons:reach_range() < 2 then
+            if not liquid_bound
+                    and not ranged
+                    and enemy.mons:reach_range() < 2 then
                 a.followers_to_land = true
             end
 
             if have_reaching()
                     and not ranged
                     and enemy.mons:reach_range() < 2
-                    and mon_speed_num(enemy.mons) < player_speed_num() then
+                    and enemy_speed_num(enemy) < player_speed_num() then
                 a.slow_adjacent = a.slow_adjacent + 1
             end
         end
@@ -1088,8 +1062,8 @@ function assess_square_monsters(a, cx, cy)
         if dist > 1
                 and see_cell
                 and (dist == 2
-                        and (is_fast(enemy.mons)
-                            or enemy.mons:reach_range() >= 2)
+                        and (is_fast_mons(enemy.mons)
+                            or enemy.reach_range >= 2)
                     or ranged) then
             a.ranged = a.ranged + 1
         end
@@ -1112,7 +1086,7 @@ function assess_square_monsters(a, cx, cy)
                     or enemy.mons:desc():find("stupefied")
                     or liquid_bound
                     or enemy.mons:is_stationary())
-                and enemy_can_move_melee(e) then
+                and enemy_can_move_to_melee(enemy) then
             a.longranged = a.longranged + 1
         end
 
@@ -1123,8 +1097,8 @@ end
 
 function distance_to_enemy(cx, cy)
     local best_dist = 10
-    for _, e in ipairs(enemy_list) do
-        local dist = supdist(cx - e.pos.x, cy - e.pos.y)
+    for _, enemy in ipairs(enemy_list) do
+        local dist = supdist(cx - enemy.pos.x, cy - enemy.pos.y)
         if dist < best_dist then
             best_dist = dist
         end
@@ -1134,12 +1108,10 @@ end
 
 function distance_to_tabbable_enemy(cx, cy)
     local best_dist = 10
-    for _, e in ipairs(enemy_list) do
-        local dist = supdist(cx - e.pos.x, cy - e.pos.y)
-        if dist < best_dist then
-            if will_tab(e.pos.x, e.pos.y, 0,  0, mons_tabbable_square) then
-                best_dist = dist
-            end
+    for _, enemy in ipairs(enemy_list) do
+        local dist = supdist(cx - enemy.pos.x, cy - enemy.pos.y)
+        if dist < best_dist and enemy_can_move_to_melee(enemy) then
+            best_dist = dist
         end
     end
     return best_dist

@@ -269,18 +269,18 @@ function can_foxfire_swarm()
                  and can_invoke()
 end
 
-function count_brothers_in_arms(r)
+function count_brothers_in_arms(radius)
     if you.god() ~= "Trog" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        m = monster_array[x][y]
-        if m and m:is_safe()
-                and m:is("berserk")
-                and contains_string_in(m:name(),
-                    {"ogre", "giant", "bear", "troll"}) then
+    for x, y in square_iter(0, 0, radius) do
+        local mons = monster_array[x][y]
+        if mons and mons:is_safe()
+                and mons:is("berserk")
+                and contains_string_in(mons:name(),
+                    { "ogre", "giant", "bear", "troll" }) then
             i = i + 1
         end
     end
@@ -292,33 +292,32 @@ function count_elliptic(r)
         return 0
     end
 
-    local x, y
     local i = 0
     for x, y in square_iter(0, 0, r) do
-        m = monster_array[x][y]
-        if m and m:is_safe()
-                and contains_string_in(m:name(), {"elliptic"}) then
+        local mons = monster_array[x][y]
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"elliptic"}) then
             i = i + 1
         end
     end
     return i
 end
 
-function mons_is_greater_servant(m)
-    return contains_string_in(m:name(), {"Executioner", "green death",
-        "blizzard demon", "balrug", "cacodemon"})
+function mons_is_greater_servant(mons)
+    return contains_string_in(mons:name(), { "Executioner", "green death",
+        "blizzard demon", "balrug", "cacodemon" })
 end
 
-function count_greater_servants(r)
+function count_greater_servants(radius)
     if you.god() ~= "Makhleb" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        local m = monster_array[x][y]
-        if m and m:is_safe()
-                and m:is("summoned")
+    for x, y in square_iter(0, 0, radius) do
+        local mons = monster_array[x][y]
+        if mons and mons:is_safe()
+                and mons:is("summoned")
                 and mons_is_greater_servant(m) then
             i = i + 1
         end
@@ -326,16 +325,16 @@ function count_greater_servants(r)
     return i
 end
 
-function count_divine_warriors(r)
+function count_divine_warriors(radius)
     if you.god() ~= "the Shining One" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        local m = monster_array[x][y]
-        if m and m:is_safe()
-                and contains_string_in(m:name(), {"angel", "daeva"}) then
+    for x, y in square_iter(0, 0, radius) do
+        local mons = monster_array[x][y]
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"angel", "daeva"}) then
             i = i + 1
         end
     end

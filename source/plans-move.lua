@@ -374,7 +374,7 @@ function plan_stuck_move_to_target()
         local wx, wy = travel.waypoint_delta(waypoint_parity)
         local mons_targets = {}
         for x, y in square_iter(0, 0) do
-            if has_dangerous_monster(x, y)
+            if has_enemy(x, y)
                     and not you.see_cell_no_trans(x, y) then
                 table.insert(mons_targets, { x = x + wx, y = y + wy })
             end
