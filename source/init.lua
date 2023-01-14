@@ -55,7 +55,7 @@ function initialize()
     where_branch = "nowhere"
     where_depth = nil
 
-    if not feature_searches then
+    if not waypoint_parity then
         feature_searches = {}
         feature_positions = {}
         traversal_maps = {}

@@ -1,17 +1,17 @@
 ------------------
 -- Movement evaluation
 
-function can_move_to(x, y)
-    return is_traversable(x, y)
-        and not view.withheld(x, y)
-        and not monster_in_way(x, y)
+function can_move_to(pos)
+    return is_traversable(pos)
+        and not view.withheld(pos.x, pos.y)
+        and not monster_in_way(pos)
 end
 
-function assess_square(x, y)
+function assess_square(pos)
     a = {}
 
     -- Distance to current square
-    a.supdist = supdist(x, y)
+    a.supdist = supdist(pos.x, pos.y)
 
     -- Is current square near a BiA/SGD?
     if a.supdist == 0 then
@@ -21,36 +21,36 @@ function assess_square(x, y)
 
     -- Can we move there?
     a.can_move = a.supdist == 0
-        or can_movenot view.withheld(x, y)
-                      and not monster_in_way(x, y)
-                      and is_traversable(x, y)
-                      and not is_solid(x, y)
+        or can_movenot view.withheld(pos.x, pos.y)
+                      and not monster_in_way(pos)
+                      and is_traversable(pos)
+                      and not is_solid(pos)
     if not a.can_move then
         return a
     end
 
     -- Count various classes of monsters from the enemy list.
-    assess_square_monsters(a, x, y)
+    assess_square_monsters(a, pos)
 
     -- Avoid corners if possible.
-    a.cornerish = is_cornerish(x, y)
+    a.cornerish = is_cornerish(pos)
 
     -- Will we fumble if we try to attack from this square?
     a.fumble = not you.flying()
-        and view.feature_at(x, y) == "shallow_water"
+        and view.feature_at(pos.x, pos.y) == "shallow_water"
         and intrinsic_fumble()
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Will we be slow if we move into this square?
     a.slow = not you.flying()
-        and view.feature_at(x, y) == "shallow_water"
+        and view.feature_at(pos.x, pos.y) == "shallow_water"
         and not intrinsic_amphibious()
         and not intrinsic_flight()
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Is the square safe to step in? (checks traps & clouds)
-    a.safe = view.is_safe_square(x, y)
-    cloud = view.cloud_at(x, y)
+    a.safe = view.is_safe_square(pos.x, pos.y)
+    cloud = view.cloud_at(pos.x, pos.y)
 
     -- Would we want to move out of a cloud? note that we don't worry about
     -- weak clouds if monsters are around.
@@ -60,7 +60,7 @@ function assess_square(x, y)
 
     -- Equal to 10000 if the move is not closer to any stair in good_stairs,
     -- otherwise equal to the (min) dist to such a stair
-    a.stair_closer = stair_improvement(x, y)
+    a.stair_closer = stair_improvement(pos)
 
     return a
 end
@@ -190,26 +190,55 @@ function choose_tactical_step()
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end
-    local bestx, besty, bestreason
-    local besta = nil
-    local x, y
-    local a
-    local reason
-    for x, y in adjacent_iter(0, 0) do
-        a = assess_square(x, y)
-        reason = step_reason(a0, a)
+    local best_pos, best_reason, besta
+    for pos in adjacent_iter(origin) do
+        local a = assess_square(pos)
+        local reason = step_reason(a0, a)
         if reason then
             if besta == nil
                     or step_improvement(bestreason, reason, besta, a) then
-                bestx = x
-                besty = y
+                best_pos = pos
                 besta = a
-                bestreason = reason
+                best_reason = reason
             end
         end
     end
     if besta then
-        tactical_step = delta_to_vi(bestx, besty)
-        tactical_reason = bestreason
+        tactical_step = delta_to_vi(best_pos)
+        tactical_reason = best_reason
     end
+end
+
+function player_can_move_closer(pos)
+    local orig_dist = supdist(pos)
+    for dpos in adjacent_iter(origin) do
+        if supdist({ x = pos.x - dpos.x, y = pos.y - dpos.y }) < orig_dist
+                and feature_is_traversable(view.feature_at(dpos.x, dpos.y)) then
+            return true
+        end
+    end
+    return false
+end
+
+function mons_can_move_to_melee_player(mons)
+    local name = mons:name()
+    if name == "wandering mushroom"
+            or name:find("vortex")
+            or mons:desc():find("fleeing")
+            or mons:status("paralysed")
+            or mons:status("confused")
+            or mons:status("petrified") then
+        return false
+    end
+
+    local tab_func = function(pos)
+        return mons:can_traverse(pos.x, pos.y)
+    end
+    local melee_range = mons:reach_range()
+    return will_tab(mons:pos(), { x = 0, y = 0 }, tab_func, melee_range)
+        -- If the monster can reach attack and we can't, be sure we can
+        -- close the final 1-square gap.
+        and (melee_range < 2
+            or attack_range() > 1
+            or player_can_move_closer(pos))
 end

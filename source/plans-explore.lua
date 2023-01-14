@@ -10,40 +10,6 @@ function plan_autoexplore()
     return true
 end
 
-function add_ignore_enemy(enemy)
-    if not util.contains(ignore_list, enemy.name) then
-        table.insert(ignore_list, enemy.name)
-        crawl.setopt("runrest_ignore_monster ^= " .. enemy.name .. ":1")
-        if DEBUG_MODE then
-            dsay("Ignoring " .. enemy.name .. ".")
-        end
-    end
-end
-
-function remove_ignore_enemy(enemy)
-    for i, name in ipairs(ignore_list) do
-        if enemy.name == name then
-            table.remove(ignore_list, i)
-            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            if DEBUG_MODE then
-                dsay("Unignoring " .. name .. ".")
-            end
-            return
-        end
-    end
-end
-
-function clear_ignores()
-    local size = #ignore_list
-    if size > 0 then
-        for i = 1, size do
-            local name = table.remove(ignore_list)
-            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            dsay("Unignoring " .. name .. ".")
-        end
-    end
-end
-
 function send_travel(branch, depth)
     local depth_str
     if depth == nil or branch_depth(branch) == 1 then
@@ -115,9 +81,9 @@ function plan_open_runed_doors()
         return false
     end
 
-    for x, y in adjacent_iter(0, 0) do
-        if view.feature_at(x, y) == "runed_clear_door" then
-            magic(delta_to_vi(x, y) .. "Y")
+    for pos in adjacent_iter(origin) do
+        if view.feature_at(pos.x, pos.y) == "runed_clear_door" then
+            magic(delta_to_vi(pos) .. "Y")
             return true
         end
     end

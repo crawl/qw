@@ -12,23 +12,25 @@ function feature_is_traversable(feat)
         and travel.feature_traversable(feat)
 end
 
-function is_traversable(x, y)
-    return feature_is_traversable(view.feature_at(x, y))
+function is_traversable(pos)
+    return feature_is_traversable(view.feature_at(pos.x, pos.y))
 end
 
-function is_cornerish(x, y)
-    if is_traversable(x + 1, y + 1)
-            or is_traversable(x + 1, y - 1)
-            or is_traversable(x - 1, y + 1)
-            or is_traversable(x - 1, y - 1) then
+function is_cornerish(pos)
+    if is_traversable({ x = pos.x + 1, y = pos.y + 1 })
+            or is_traversable({ x = pos.x + 1, y = pos.y - 1 })
+            or is_traversable({ x = pos.x - 1, y = pos.y + 1 })
+            or is_traversable({ x = pos.x - 1, y = pos.y - 1 }) then
         return false
     end
-    return (is_traversable(x + 1, y) or is_traversable(x - 1, y))
-        and (is_traversable(x, y + 1) or is_traversable(x, y - 1))
+    return (is_traversable({ x = pos.x + 1, y = y })
+            or is_traversable({ x = pos.x - 1, y = y }))
+        and (is_traversable({ x = pos.x, y = pos.y + 1 })
+            or is_traversable({ x = pos.x, y = pos.y - 1 }))
 end
 
-function is_solid(x, y)
-    local feat = view.feature_at(x, y)
+function is_solid(pos)
+    local feat = view.feature_at(pos.x, pos.y)
     return feat == "unseen" or travel.feature_solid(feat)
 end
 
@@ -36,8 +38,8 @@ function feature_is_deep_water_or_lava(feat)
     return feat == "deep_water" or feat == "lava"
 end
 
-function deep_water_or_lava(x, y)
-    return feature_is_deep_water_or_lava(view.feature_at(x, y))
+function deep_water_or_lava_at(pos)
+    return feature_is_deep_water_or_lava(view.feature_at(pos.x, pos.y))
 end
 
 function feature_is_upstairs(feat)

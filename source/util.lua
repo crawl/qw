@@ -59,16 +59,16 @@ local d2v = {
 local v2d = { }
 for x, _ in pairs(d2v) do
     for y, c in pairs(d2v[x]) do
-        v2d[c] = { x=x, y=y }
+        v2d[c] = { x = x, y = y }
     end
 end
 
-function delta_to_vi(dx, dy)
-    return d2v[dx][dy]
+function delta_to_vi(pos)
+    return d2v[pos.x][pos.y]
 end
 
 function vi_to_delta(c)
-    return v2d[c].x, v2d[c].y
+    return v2d[c]
 end
 
 function sign(a)
@@ -79,13 +79,13 @@ function abs(a)
     return a * sign(a)
 end
 
-function vector_move(dx, dy)
+function vector_move(pos)
     local str = ''
-    for i = 1, abs(dx) do
-        str = str .. delta_to_vi(sign(dx), 0)
+    for i = 1, abs(pos.x) do
+        str = str .. delta_to_vi({ x = sign(pos.x), y = 0 })
     end
-    for i = 1, abs(dy) do
-        str = str .. delta_to_vi(0, sign(dy))
+    for i = 1, abs(pos.y) do
+        str = str .. delta_to_vi({ x = 0, y = sign(pos.y) })
     end
     return str
 end
@@ -106,10 +106,10 @@ function min(x, y)
     end
 end
 
-function supdist(dx, dy)
-    return max(abs(dx), abs(dy))
+function supdist(pos)
+    return max(abs(pos.x), abs(pos.y))
 end
 
-function adjacent(dx, dy)
-    return abs(dx) <= 1 and abs(dy) <= 1
+function is_adjacent(pos)
+    return abs(pos.x) <= 1 and abs(pos.y) <= 1
 end

@@ -73,6 +73,7 @@ local where_branch
 local where_depth
 
 local los_radius
+local origin
 local base_corrosion
 local disable_autoexplore
 local level_has_upstairs
@@ -91,14 +92,13 @@ local danger
 local immediate_danger
 local cloudy
 
-local ignore_list = { }
-local failed_move = { }
+local ignore_list = {}
+local failed_move = {}
 local invisi_count = 0
 local next_delay = 100
 local is_waiting
 
-local sigmund_dx = 0
-local sigmund_dy = 0
+local sigmund_pos
 local invis_sigmund = false
 
 local greater_servant_timer = -200
@@ -109,8 +109,7 @@ local did_move = false
 local move_count = 0
 
 local did_move_towards_monster = 0
-local target_memory_x
-local target_memory_y
+local target_memory
 
 local last_wait = 0
 local wait_count = 0
@@ -146,6 +145,7 @@ local only_linear_resists = false
 local no_spells = false
 
 local waypoint_parity
+local waypoint = {}
 local feature_searches
 local feature_positions
 local traversal_maps
@@ -169,8 +169,7 @@ local transp_orient
 local transp_search
 
 local prev_hatch_dist = 1000
-local prev_hatch_x
-local prev_hatch_y
+local prev_hatch
 
 local plan_abyss_rest
 local plan_abyss_move

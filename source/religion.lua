@@ -275,8 +275,8 @@ function count_brothers_in_arms(radius)
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, radius) do
-        local mons = monster_array[x][y]
+    for pos in square_iter(origin, radius) do
+        local mons = monster_array[pos.x][pos.y]
         if mons and mons:is_safe()
                 and mons:is("berserk")
                 and contains_string_in(mons:name(),
@@ -287,14 +287,14 @@ function count_brothers_in_arms(radius)
     return i
 end
 
-function count_elliptic(r)
+function count_elliptic(radius)
     if you.god() ~= "Hepliaklqana" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        local mons = monster_array[x][y]
+    for pos in square_iter(origin, radius) do
+        local mons = monster_array[pos.x][pos.y]
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"elliptic"}) then
             i = i + 1
@@ -314,8 +314,8 @@ function count_greater_servants(radius)
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, radius) do
-        local mons = monster_array[x][y]
+    for pos in square_iter(origin, radius) do
+        local mons = monster_array[pos.x][pos.y]
         if mons and mons:is_safe()
                 and mons:is("summoned")
                 and mons_is_greater_servant(m) then
@@ -331,8 +331,8 @@ function count_divine_warriors(radius)
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, radius) do
-        local mons = monster_array[x][y]
+    for pos in square_iter(origin, radius) do
+        local mons = monster_array[pos.x][pos.y]
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"angel", "daeva"}) then
             i = i + 1
@@ -341,12 +341,12 @@ function count_divine_warriors(radius)
     return i
 end
 
-function record_altar(x, y)
-    record_feature_position(x, y)
-    local feat = view.feature_at(x, y)
+function record_altar(pos)
+    record_feature_position(pos)
+    local feat = view.feature_at(pos.x, pos.y)
     local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
 
-    local state = los_state(x, y)
+    local state = los_state(pos)
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}
     end

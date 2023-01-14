@@ -1,42 +1,53 @@
 ------------------
 -- Attack plans
 --
-function compare_target_enemies(first, second, flag_order,
-        flag_reversed)
-    if not flag_order then
+
+function player_can_melee_mons(mons)
+    local range = reach_range()
+    local dist = mons:distance()
+    if you.caught() or you.confused() then
+        return false
+    elseif range == 2 then
+        local pos = mons:pos()
+        return dist <= range and view.can_reach(pos.x, pos.y)
+    else
+        return dist <= range
     end
 
-    if not flag_reversed then
-        flag_reversed = {}
-        for _, flag in ipairs(flag_order) do
-            table.insert(flag_reversed, false)
-        end
-    end
+    return
+end
 
-    for i, flag in ipairs(flag_order) do
-        local if_greater_val = not flag_reversed[i] and true or false
-        if first[flag] > second[flag] then
+function compare_melee_targets(first, second, props, reversed)
+    for _, prop in ipairs(props) do
+        local val1 = tonumber(first[prop]())
+        local val2 = tonumber(second[prop]())
+        local if_greater_val = not reversed[prop] and true or false
+        if val1 > val2 then
             return if_greater_val
-        elseif first[flag] < second[flag] then
+        elseif val1 < val2 then
             return not if_greater_val
         end
     end
     return false
 end
 
-function get_melee_target_enemy()
+function get_melee_target()
     local best_enemy = nil
+    local props = { "player_can_melee", "distance", "constricting_you",
+        "very_stabbable", "damage_level", "threat", "is_orc_priest_wizard" }
+    local reversed = { }
+    -- We favor closer monsters.
+    reversed.distance = true
     for _, enemy in ipairs(enemy_list) do
         if not util.contains(failed_move, 20 * e.pos.x + e.pos.y)
-                and player_can_move_to_melee_enemy(enemy, true) then
-            update_melee_target_info(enemy)
-            if not best_enemy
-                    or compare_target_enemies(enemy, best_enemy) then
-                best_enemy = enemy
-            end
+                and enemy:player_can_move_to_melee()
+                and (not best_enemy
+                    or compare_target(enemy, best_enemy, props,
+                        reversed)) then
+            best_enemy = enemy
         end
     end
-    return bestx, besty, best_info
+    return best_enemy
 end
 
 function melee_attack()
@@ -52,42 +63,16 @@ function melee_attack()
     return true
 end
 
-function compare_ranged_target_enemies(first, second, flag_order,
-        flag_reversed)
-    update_melee_target_info(first)
-    update_melee_target_info(second)
-
-    if not flag_order then
-        flag_order = { "player_can_range_attack", "distance",
-            "constricting_you", "injury", "threat", "orc_priest_wizard" }
-    end
-
-    if not flag_reversed then
-        flag_reversed = {}
-        for _, flag in ipairs(flag_order) do
-            table.insert(flag_reversed, false)
-        end
-    end
-
-    for i, flag in ipairs(flag_order) do
-        local if_greater_val = not flag_reversed[i] and true or false
-        if first[flag] > second[flag] then
-            return if_greater_val
-        elseif first[flag] < second[flag] then
-            return not if_greater_val
-        end
-    end
-    return false
-end
-
 function get_ranged_target()
     local bestx, besty, best_info, new_info
     bestx = 0
     besty = 0
     best_info = nil
     for _, e in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y) then
-            if is_candidate_for_attack(e.pos.x, e.pos.y, true) then
+        if you.see_cell_solid_see(e.pos.x, e.pos.y) then
+            update_ranged_target_info(enemy)
+
+
                 new_info = get_monster_info(e.pos.x, e.pos.y)
                 if not best_info
                         or compare_enemy_ranged_info(new_info, best_info) then
@@ -100,6 +85,7 @@ function get_ranged_target()
     end
     return bestx, besty, best_info
 end
+
 function plan_throw()
     if melee_enemy or travel.is_excluded(0, 0) then
         return false
@@ -208,7 +194,7 @@ function plan_check_incoming_melee_enemy()
             return false
         end
 
-        if not enemy_needs_wait and enemy_can_move_melee(enemy) then
+        if not enemy_needs_wait and enemy:can_move_to_melee_player() then
             enemy_needs_wait = true
         end
     end
@@ -308,21 +294,21 @@ function plan_continue_tab()
     if did_move_towards_monster == 0 then
         return false
     end
-    if supdist(target_memory_x, target_memory_y) == 0 then
+    if supdist(target_memory) == 0 then
         return false
     end
     if not options.autopick_on then
         return false
     end
-    return move_towards(target_memory_x, target_memory_y)
+    return move_towards(target_memory)
 end
 
 -- This gets stuck if netted, confused, etc
-function attack_reach(x, y)
-    magic('vr' .. vector_move(x, y) .. '.')
+function attack_reach(pos)
+    magic('vr' .. vector_move(pos) .. '.')
 end
 
-function attack_melee(x, y)
+function attack_melee(pos)
     if you.confused() then
         if count_brothers_in_arms(1) > 0
                 or count_greater_servants(1) > 0
@@ -330,30 +316,31 @@ function attack_melee(x, y)
             magic("s")
             return
         elseif you.transform() == "tree" then
-            magic(control(delta_to_vi(x, y)) .. "Y")
+            magic(control(delta_to_vi(pos)) .. "Y")
             return
         end
     end
-    if monster_array[x][y]:attitude() == enum_att_neutral then
-        if you.god() == "the Shining One" or you.god() == "Elyvilon"
-             or you.god() == "Zin" then
+    if monster_array[pos.x][pos.y]:attitude() == enum_att_neutral then
+        if you.god() == "the Shining One"
+                or you.god() == "Elyvilon"
+                or you.god() == "Zin" then
             magic("s")
         else
-            magic(control(delta_to_vi(x, y)))
+            magic(control(delta_to_vi(pos)))
         end
     end
-    magic(delta_to_vi(x, y) .. "Y")
+    magic(delta_to_vi(pos) .. "Y")
 end
 
-function make_attack(x, y, info)
-    if info.attack_range == 0 then
-        return move_towards(x, y)
+function make_melee_attack(enemy)
+    if not enemy:player_can_melee() then
+        return move_towards(enemy:pos())
     end
 
-    if info.attack_range == 1 then
-        attack_melee(x, y)
+    if enemy:distance() == 1 then
+        attack_melee(enemy:pos())
     else
-        attack_reach(x, y)
+        attack_reach(enemy:pos())
     end
     return true
 end
@@ -377,24 +364,22 @@ function plan_flail_at_invis()
     end
 
     invisi_count = invisi_count + 1
-    for x, y in adjacent_iter(0, 0) do
-        if supdist(x, y) > 0 and view.invisible_monster(x, y) then
-            magic(control(delta_to_vi(x, y)))
+    for pos in adjacent_iter(origin) do
+        if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
+            magic(control(delta_to_vi(pos)))
             return true
         end
     end
 
-    if invis_sigmund and (sigmund_dx ~= 0 or sigmund_dy ~= 0) then
-        x = sigmund_dx
-        y = sigmund_dy
-        if adjacent(x, y) and is_traversable(x, y) then
-            magic(control(delta_to_vi(x, y)))
+    if invis_sigmund and (sigmund_pos.x ~= 0 or sigmund_pos. ~= 0) then
+        if is_adjacent(sigmund_pos) and is_traversable(sigmund_pos) then
+            magic(control(delta_to_vi(sigmund_pos)))
             return true
         elseif x == 0 and is_traversable(0, sign(y)) then
-            magic(delta_to_vi(0, sign(y)))
+            magic(delta_to_vi({ x = 0, y = sign(y) }))
             return true
         elseif y == 0 and is_traversable(sign(x),0) then
-            magic(delta_to_vi(sign(x),0))
+            magic(delta_to_vi({ x = sign(x), y = 0 }))
             return true
         end
     end
@@ -402,19 +387,18 @@ function plan_flail_at_invis()
     local success = false
     local tries = 0
     while not success and tries < 100 do
-        x = -1 + crawl.random2(3)
-        y = -1 + crawl.random2(3)
+        local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if (x ~= 0 or y ~= 0) and is_traversable(x, y)
-             and view.feature_at(x, y) ~= "closed_door"
-             and not view.feature_at(x, y):find("runed") then
+        if (pos.x ~= 0 or pos.y ~= 0) and is_traversable(pos)
+             and view.feature_at(pos.x, pos.y) ~= "closed_door"
+             and not feature_is_runed_door(view.feature_at(pos.x, pos.y)) then
             success = true
         end
     end
     if tries >= 100 then
         magic("s")
     else
-        magic(control(delta_to_vi(x, y)))
+        magic(control(delta_to_vi(pos)))
     end
     return true
 end

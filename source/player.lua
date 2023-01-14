@@ -254,7 +254,7 @@ function can_berserk()
         and can_invoke()
 end
 
-function player_speed_num()
+function player_speed()
     local num = 3
     if you.god() == "Cheibriados" then
         num = 1
@@ -280,8 +280,8 @@ function dangerous_to_rest()
         return true
     end
 
-    for x, y in adjacent_iter(0, 0) do
-        if view.feature_at(x, y) == "slimy_wall" then
+    for pos in adjacent_iter(origin) do
+        if view.feature_at(pos.x, pos.y) == "slimy_wall" then
             return true
         end
     end

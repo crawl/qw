@@ -93,6 +93,8 @@ function turn_update()
         end
     end
 
+    waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_parity)
+
     transp_search = nil
     if can_use_transporters() then
         local feat = view.feature_at(0, 0)

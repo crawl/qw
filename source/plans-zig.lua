@@ -27,13 +27,13 @@ function plan_move_to_zigfig_location()
         return false
     end
 
-    for x, y in adjacent_iter(0, 0) do
-        if is_traversable(x, y)
-                and not is_solid(x, y)
-                and not monster_in_way(x, y)
+    for pos in adjacent_iter(origin) do
+        if is_traversable(pos)
+                and not is_solid(pos)
+                and not monster_in_way(pos)
                 and view.is_safe_square(x, y)
-                and not feature_is_critical(view.feature_at(x, y)) then
-            return move_towards(x, y)
+                and not feature_is_critical(view.feature_at(pos.x, pos.y)) then
+            return move_towards(pos)
         end
     end
 

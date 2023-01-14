@@ -69,28 +69,26 @@ function find_features(radius)
     local feat_search = feature_searches[waypoint_parity]
     local feat_positions = feature_positions[waypoint_parity]
     local traversal_map = traversal_maps[waypoint_parity]
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local i = 1
-    for x, y in square_iter(0, 0, radius, true) do
+    for pos in square_iter(origin, radius, true) do
         if USE_COROUTINE and i % 1000 == 0 then
             coroutine.yield()
         end
 
-        local feat = view.feature_at(x, y)
-        local dx = x + wx
-        local dy = y + wy
+        local feat = view.feature_at(pos.x, pos.y)
+        local dpos = { x = pos.x + waypoint.x,  y = pos.y + waypoint.y }
         if feat_search[feat] then
             if not feat_positions[feat] then
                 feat_positions[feat] = {}
             end
-            local hash = hash_coordinates(dx, dy)
+            local hash = hash_position(dpos)
             if not feat_positions[feat][hash] then
-                feat_positions[feat][hash] = { x = dx, y = dy }
+                feat_positions[feat][hash] = dpos
             end
         end
 
-        if feat ~= "unseen" and traversal_map[dx][dy] == nil then
-            traversal_map[dx][dy] = feature_is_traversable(feat)
+        if feat ~= "unseen" and traversal_map[dpos.x][dpos.y] == nil then
+            traversal_map[dpos.x][dpos.y] = feature_is_traversable(feat)
         end
         i = i + 1
     end
@@ -143,8 +141,8 @@ function update_distance_map_pos_from_adjacent(pos, dist_map)
     end
 
     local oldval = dist_map.map[pos.x][pos.y]
-    for dx, dy in adjacent_iter(pos.x, pos.y) do
-        local val = dist_map.map[dx][dy]
+    for dpos in adjacent_iter(pos) do
+        local val = dist_map.map[dpos.x][dpos.y]
         if val and (not oldval or oldval > val + 1) then
             oldval = val + 1
         end
@@ -175,19 +173,18 @@ function update_distance_map(dist_map, queue)
             coroutine.yield()
         end
 
-        local x = queue[first].x
-        local y = queue[first].y
+        local pos = queue[first]
         local val = dist_map.map[x][y] + 1
-        for dx, dy in adjacent_iter(x, y) do
+        for dpos in adjacent_iter(pos) do
             if (not dist_map.radius
-                        or supdist(dx - dist_map.pos.x, dy - dist_map.pos.y)
-                            <= dist_map.radius)
-                    and traversal_map[dx][dy]
-                    and (not dist_map.map[dx][dy]
-                        or dist_map.map[dx][dy] > val) then
-                dist_map.map[dx][dy] = val
+                        or supdist(dpos.x - dist_map.pos.x,
+                            dpos.y - dist_map.pos.y) <= dist_map.radius)
+                    and traversal_map[dpos.x][dpos.y]
+                    and (not dist_map.map[dpos.x][dpos.y]
+                        or dist_map.map[dpos.x][dpos.y] > val) then
+                dist_map.map[dpos.x][dpos.y] = val
                 last = last + 1
-                queue[last] = { x = dx, y = dy }
+                queue[last] = dpos
             end
         end
         first = first + 1
@@ -200,8 +197,7 @@ function record_map_item(name, pos, dist_queues)
         item_ps[name] = {}
     end
 
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
-    local pos = { x = wx + x, y = wy + y }
+    local pos = { x = waypoint.x + x, y = waypoint.y + y }
     local hash = hash_position(pos)
     local dist_maps = distance_maps[waypoint_parity]
     for ih, _ in pairs(item_ps[name]) do
@@ -251,19 +247,19 @@ end
 
 function los_map_update()
     local map_queue = {}
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
-    for x, y in square_iter(0, 0, los_radius, true) do
-        local feat = view.feature_at(x, y)
+    for pos in square_iter(origin, los_radius, true) do
+        local feat = view.feature_at(pos.x, pos.y)
         if feat:find("stone_stairs") then
-            record_feature_position(x, y)
-            record_stairs(where_branch, where_depth, feat, los_state(x, y))
+            record_feature_position(pos)
+            record_stairs(where_branch, where_depth, feat, los_state(pos))
         elseif feat:find("enter_") then
-            record_branch(x, y)
+            record_branch(pos)
         elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
-            record_altar(x, y)
+            record_altar(pos)
         end
 
-        table.insert(map_queue, { x = x + wx, y = y + wy })
+        table.insert(map_queue, { x = pos.x + waypoint.x,
+            y = pos.y + waypoint.y })
     end
 
     local traversal_map = traversal_maps[waypoint_parity]
@@ -273,7 +269,7 @@ function los_map_update()
             coroutine.yield()
         end
 
-        local feat = view.feature_at(pos.x - wx, pos.y - wy)
+        local feat = view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y)
         if feat ~= "unseen" then
             handle_feature_searches(pos, dist_queues)
             handle_item_searches(pos, dist_queues)
@@ -331,13 +327,12 @@ function update_map_data()
     los_map_update()
 
     if map_mode_search_key then
-        local wx, wy = travel.waypoint_delta(waypoint_parity)
         local feat = view.feature_at(0, 0)
         -- We assume we've landed on the next feature in our current "X<key>"
         -- cycle because the feature at our position uses that key.
         if feature_uses_map_key(map_mode_search_key, feat) then
             record_map_mode_search(map_mode_search_key, map_mode_search_hash,
-                map_mode_search_count, hash_coordinates(wx, wy))
+                map_mode_search_count, hash_position(waypoint))
         end
         map_mode_search_key = nil
         map_mode_search_hash = nil
@@ -357,16 +352,16 @@ function get_distance_map(pos, radius)
 end
 
 function best_move_towards(positions, radius)
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local dist = 10000
     local move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
-        for dx, dy in adjacent_iter(wx, wy) do
-            if dist_map.map[dx][dy] and dist_map.map[dx][dy] < dist then
-                move.x = dx - wx
-                move.y = dy - wy
-                dist = dist_map.map[dx][dy]
+        for dpos in adjacent_iter(waypoint) do
+            if dist_map.map[dpos.x][dpos.y]
+                    and dist_map.map[dpos.x][dpos.y] < dist then
+                move.x = dpos.x - waypoint.x
+                move.y = dpos.y - waypoint.y
+                dist = dist_map.map[dpos.x][dpos.y]
             end
         end
     end
@@ -376,7 +371,7 @@ function best_move_towards(positions, radius)
     end
 end
 
-function best_move_towards_position(x, y, radius)
+function best_move_towards_position(pos, radius)
     return best_move_towards({ pos }, radius)
 end
 
@@ -407,27 +402,50 @@ function best_move_towards_features(feats)
     return best_move_towards(positions)
 end
 
-function can_move_closer(x, y)
-    local orig_dist = supdist(x, y)
-    for dx, dy in adjacent_iter(0, 0) do
-        if supdist(x - dx, y - dy) < orig_dist
-                and feature_is_traversable(view.feature_at(dx, dy)) then
-            return true
-        end
-    end
-    return false
-end
-
-function record_feature_position(x, y)
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
+function record_feature_position(pos)
     local feat_positions = feature_positions[waypoint_parity]
-    local feat = view.feature_at(x, y)
+    local feat = view.feature_at(pos.x, pos.y)
     if not feat_positions[feat] then
         feat_positions[feat] = {}
     end
-    local pos = { x = wx + x, y = wy + y }
-    local hash = hash_position(pos)
+    local gpos = { x = waypoint.x + pos.x, y = waypoint.y + pos.y }
+    local hash = hash_position(gpos)
     if not feat_positions[feat][hash] then
-        feat_positions[feat][hash] = pos
+        feat_positions[feat][hash] = gpos
+    end
+end
+
+function add_ignore_mons(mons)
+    local name = enemy:name()
+    if not util.contains(ignore_list, name) then
+        table.insert(ignore_list, name)
+        crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
+        if DEBUG_MODE then
+            dsay("Ignoring " .. name .. ".")
+        end
+    end
+end
+
+function remove_ignore_mons(mons)
+    for i, name in ipairs(ignore_list) do
+        if enemy:name() == name then
+            table.remove(ignore_list, i)
+            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
+            if DEBUG_MODE then
+                dsay("Unignoring " .. name .. ".")
+            end
+            return
+        end
+    end
+end
+
+function clear_ignores()
+    local size = #ignore_list
+    if size > 0 then
+        for i = 1, size do
+            local name = table.remove(ignore_list)
+            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
+            dsay("Unignoring " .. name .. ".")
+        end
     end
 end

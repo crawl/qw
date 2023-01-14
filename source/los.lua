@@ -9,16 +9,16 @@ FEAT_LOS = {
     "EXPLORED",
 }
 
-function los_state(x, y)
-    if you.see_cell_solid_see(x, y) then
+function los_state(pos)
+    if you.see_cell_solid_see(pos.x, pos.y) then
         return FEAT_LOS.REACHABLE
-    elseif you.see_cell_no_trans(x, y) then
+    elseif you.see_cell_no_trans(pos.x, pos.y) then
         return FEAT_LOS.DIGGABLE
     end
     return FEAT_LOS.SEEN
 end
 
-function square_iter(x, y, radius, include_center)
+function square_iter(pos, radius, include_center)
     if not radius then
         radius = los_radius
     end
@@ -43,13 +43,15 @@ function square_iter(x, y, radius, include_center)
             end
         end
 
-        return x + dx, y + dy
+        return { x = pos.x + dx, y = pos.y + dy }
     end
 end
 
-function adjacent_iter(x, y, include_center)
-    return square_iter(x, y, 1, include_center)
+function adjacent_iter(pos, include_center)
+    return square_iter(pos, 1, include_center)
 end
+
+local origin = { x = 0, y = 0 }
 
 local square = {
     {1, -1}, {1, 1}, {-1, 1}, {-1, -1}
@@ -59,7 +61,7 @@ local square_move = {
     {0, 1}, {-1, 0}, {0, -1}, {1, 0}
 }
 
-function radius_iter(x, y, radius, include_center)
+function radius_iter(pos, radius, include_center)
     if not radius then
         radius = los_radius
     end
@@ -106,16 +108,12 @@ function radius_iter(x, y, radius, include_center)
             dy = dy + square_move[i - 1][2]
         end
 
-        return x + dx, y + dy
+        return { x = pos.x + dx, y = pos.y + dy }
     end
 end
 
-function hash_coordinates(x, y)
-    return 2 * GXM * x + y
-end
-
 function hash_position(pos)
-    return hash_coordinates(pos.x, pos.y)
+    return 2 * GXM * pos.x + pos.y
 end
 
 function unhash_position(hash)

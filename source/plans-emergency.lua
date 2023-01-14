@@ -300,10 +300,8 @@ function plan_blinking()
     end
 
     local cur_count = 0
-    local best_count = 0
-    local count, best_x, best_y
-    for x, y in adjacent_iter(0, 0) do
-        local mons = monster_array[x][y]
+    for pos in adjacent_iter(origin) do
+        local mons = monster_array[pos.x][pos.y]
         if mons and mons:name() == "floating eye" then
             cur_count = cur_count + 3
         elseif mons and mons:name() == "starcursed mass" then
@@ -314,28 +312,33 @@ function plan_blinking()
         return false
     end
 
-    for x, y in square_iter(0, 0) do
-        if is_traversable(x, y)
-                and not is_solid(x, y)
-                and monster_array[x][y] == nil
-                and view.is_safe_square(x, y)
-                and not view.withheld(x, y)
-                and you.see_cell_no_trans(x, y) then
-            count = 0
-            for dx, dy in adjacent_iter(x, y) do
-                if abs(dx) <= los_radius and abs(dy) <= los_radius then
-                    local mons = monster_array[dx][dy]
-                    if mons and mons:name() == "floating eye" then
+    local best_count = 0
+    local best_pos
+    for pos in square_iter(origin) do
+        if is_traversable(pos)
+                and not is_solid(pos)
+                and not monster_array[pos.x][pos.y]
+                and view.is_safe_square(pos.x, pos.y)
+                and not view.withheld(pos.x, pos.y)
+                and you.see_cell_no_trans(pos.x, pos.y) then
+            local count = 0
+            for dpos in adjacent_iter(pos) do
+                if supdist(dpos) <= los_radius then
+                    local mons = monster_array[dpos.x][dpos.y]
+                    if mons
+                            and mons:is_enemy()
+                            and mons:name() == "floating eye" then
                         count = count + 3
-                    elseif mons and mons:name() == "starcursed mass" then
+                    elseif mons
+                            and mons:is_enemy()
+                            and mons:name() == "starcursed mass" then
                         count = count + 1
                     end
                 end
             end
             if count > best_count then
                 best_count = count
-                best_x = x
-                best_y = y
+                best_pos = pos
             end
         end
     end
@@ -773,16 +776,15 @@ function plan_continue_flee()
         return false
     end
 
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
-    for x, y in adjacent_iter(0, 0) do
-        if can_move_to(x, y)
-                and not is_solid(x, y)
-                and view.is_safe_square(x, y) then
+    for pos in adjacent_iter(origin) do
+        if can_move_to(pos)
+                and not is_solid(pos)
+                and view.is_safe_square(pos.x, pos.y) then
             local dist_map = get_distance_map(target_stair)
-            local val = dist_map[wx + x][wy + y]
-            if val and val < dist_map[wx][wy] then
+            local val = dist_map[waypoint.x + pos.x][waypoint.y + pos.y]
+            if val and val < dist_map[waypoint.x][waypoint.y] then
                 dsay("STILL FLEEEEING.")
-                move_to(x, y)
+                move_to(pos)
                 return true
             end
         end
@@ -866,28 +868,27 @@ function plan_dig_grate()
     end
 
     for _, enemy in ipairs(enemy_list) do
-        if contains_string_in(enemy.name, grate_mon_list)
-                and not can_melee_enemy(enemy) then
+        if contains_string_in(enemy:name(), grate_mon_list)
+                and not enemy:can_move_to_melee_player() then
             local grate_count = 0
-            local closest_grate = 20
-            local cgx, cgy
-            for x, y in adjacent_iterator(enemy.pos.x, enemy.pos.y) do
-                if supdist(x, y) <= los_radius
-                        and view.feature_at(x, y) == "iron_grate" then
+            local grate_offset = 20
+            local grate_pos
+            for pos in adjacent_iterator(enemy:pos()) do
+                if supdist(pos) <= los_radius
+                        and view.feature_at(pos.x, pos.y) == "iron_grate" then
                     grate_count = grate_count + 1
-                    if abs(x) + abs(y) < closest_grate
-                            and you.see_cell_solid_see(x, y) then
-                        cgx = x
-                        cgy = y
-                        closest_grate = abs(x) + abs(y)
+                    if abs(pos.x) + abs(pos.y) < closest_grate
+                            and you.see_cell_solid_see(pos.x, pos.y) then
+                        grate_pos = pos
+                        grate_offset = abs(pos.x) + abs(pos.y)
                     end
                 end
             end
-            if grate_count >= grate_count_needed and closest_grate < 20 then
+            if grate_count >= grate_count_needed and grate_offset < 20 then
                 local wand = find_item("wand", "digging")
                 if wand and can_zap() then
                     say("ZAPPING " .. item(wand).name() .. ".")
-                    magic("V" .. letter(wand) .. "r" .. vector_move(cgx, cgy)
+                    magic("V" .. letter(wand) .. "r" .. vector_move(grate_pos)
                         .. "\r")
                     return true
                 end

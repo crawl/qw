@@ -61,8 +61,8 @@ function plan_other_step()
     return false
 end
 
-function move_to(x, y)
-    magic(delta_to_vi(x, y) .. "YY")
+function move_to(pos)
+    magic(delta_to_vi(pos) .. "YY")
 end
 
 function random_step(reason)
@@ -72,20 +72,19 @@ function random_step(reason)
         return true
     end
 
-    local dx, dy
+    local new_pos
     local count = 0
-    for x, y in adjacent_iter(0, 0) do
-        if can_move_to(x, y) then
+    for pos in adjacent_iter(origin) do
+        if can_move_to(pos) then
             count = count + 1
             if crawl.one_chance_in(count) then
-                dx = x
-                dy = y
+                new_pos = pos
             end
         end
     end
     if count > 0 then
         say("Stepping randomly (" .. reason .. ").")
-        move_to(dx, dy)
+        move_to(new_pos)
         return true
     else
         say("Standing still (" .. reason .. ").")
@@ -130,17 +129,14 @@ function plan_stuck_clear_exclusions()
 end
 
 function plan_stuck_dig_grate()
-    local closest_grate = 20
-    local cx, cy
-    for dx = -los_radius, los_radius do
-        for dy = -los_radius, los_radius do
-            if view.feature_at(dx, dy) == "iron_grate" then
-                if abs(dx) + abs(dy) < closest_grate
-                        and you.see_cell_solid_see(dx, dy) then
-                    cx = dx
-                    cy = dy
-                    closest_grate = abs(dx) + abs(dy)
-                end
+    local grate_offset = 20
+    local grate_pos
+    for pos in square_iter(origin) do
+        if view.feature_at(pos.x, pos.y) == "iron_grate" then
+            if abs(pos.x) + abs(pos.y) < grate_offset
+                    and you.see_cell_solid_see(pos.x, pos.y) then
+                grate_pos = pos
+                grate_offset = abs(pos.x) + abs(pos.y)
             end
         end
     end
@@ -149,7 +145,7 @@ function plan_stuck_dig_grate()
         local c = find_item("wand", "digging")
         if c and can_zap() then
             say("ZAPPING " .. item(c).name() .. ".")
-            magic("V" .. letter(c) .. "r" .. vector_move(cx, cy) .. "\r")
+            magic("V" .. letter(c) .. "r" .. vector_move(grate_pos) .. "\r")
             return true
         end
     end
@@ -182,15 +178,15 @@ function plan_stuck_teleport()
     return false
 end
 
-function try_move(dx, dy)
-    if can_move_to(dx, dy) then
-        return delta_to_vi(dx, dy)
+function try_move(pos)
+    if can_move_to(pos) then
+        return delta_to_vi(pos)
     else
-        return nil
+        return
     end
 end
 
-function move_towards(dx, dy)
+function move_towards(pos)
     if not can_move()
             or you.confused()
                 and (count_brothers_in_arms(1) > 0
@@ -199,48 +195,73 @@ function move_towards(dx, dy)
         magic("s")
         return true
     end
-    local move = nil
-    if abs(dx) > abs(dy) then
-        if abs(dy) == 1 then move = try_move(sign(dx), 0) end
-        if move == nil then move = try_move(sign(dx), sign(dy)) end
-        if move == nil then move = try_move(sign(dx), 0) end
-        if move == nil and abs(dx) > abs(dy) + 1 then
-                 move = try_move(sign(dx), 1) end
-        if move == nil and abs(dx) > abs(dy) + 1 then
-                 move = try_move(sign(dx), -1) end
-        if move == nil then move = try_move(0, sign(dy)) end
-    elseif abs(dx) == abs(dy) then
-        move = try_move(sign(dx), sign(dy))
-        if move == nil then move = try_move(sign(dx), 0) end
-        if move == nil then move = try_move(0, sign(dy)) end
+
+    local move
+    if abs(pos.x) > abs(pos.y) then
+        if abs(pos.y) == 1 then
+            move = try_move({ x = sign(pos.x), y = 0 })
+        end
+        if not move then
+            move = try_move({ x = sign(pos.x), y = sign(pos.y) })
+        end
+        if not move then
+            move = try_move({ x = sign(pos.x), y = 0 })
+        end
+        if not move and abs(pos.x) > abs(pos.y) + 1 then
+            move = try_move({ x = sign(pos.x), y = 1 })
+        end
+        if not move and abs(pos.x) > abs(pos.y) + 1 then
+            move = try_move({ x = sign(pos.x), y = -1 })
+        end
+        if not move then
+            move = try_move({ x = 0, y = sign(pos.y) })
+        end
+    elseif abs(pos.x) == abs(pos.y) then
+        move = try_move({ x = sign(pos.x), y = sign(pos.y) })
+        if not move then
+            move = try_move({ x = sign(pos.x), y = 0 })
+        end
+        if not move then
+            move = try_move({ x = 0, y = sign(pos.y) })
+        end
     else
-        if abs(dx) == 1 then move = try_move(0, sign(dy)) end
-        if move == nil then move = try_move(sign(dx), sign(dy)) end
-        if move == nil then move = try_move(0, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx) + 1 then
-                 move = try_move(1, sign(dy)) end
-        if move == nil and abs(dy) > abs(dx) + 1 then
-                 move = try_move(-1, sign(dy)) end
-        if move == nil then move = try_move(sign(dx), 0) end
+        if abs(pos.x) == 1 then
+            move = try_move({ x = 0, y = sign(pos.y) })
+        end
+        if not move then
+            move = try_move({ x = sign(pos.x), y = sign(pos.y) })
+        end
+        if not move then
+            move = try_move({ x = 0, y = sign(pos.y) })
+        end
+        if not move and abs(pos.y) > abs(pos.x) + 1 then
+            move = try_move({ x = 1, y = sign(pos.y) })
+        end
+        if not move and abs(pos.y) > abs(pos.x) + 1 then
+            move = try_move({ x = -1, y = sign(pos.y) })
+        end
+        if not move then
+            move = try_move({ x = sign(pos.x), y = 0 })
+        end
     end
-    if move == nil or move_count >= 10 then
-        add_ignore(dx, dy)
-        table.insert(failed_move, 20 * dx + dy)
+    if not move or move_count >= 10 then
+        add_ignore(pos.x, pos.y)
+        table.insert(failed_move, 20 * pos.x + pos.y)
         return false
     else
-        if (abs(dx) > 1 or abs(dy) > 1) and not branch_step_mode
-             and view.feature_at(dx, dy) ~= "closed_door" then
+        if (abs(pos.x) > 1 or abs(pos.y) > 1)
+                and not branch_step_mode
+                and view.feature_at(pos.x, pos.y) ~= "closed_door" then
             did_move = true
-            if monster_array[dx][dy] or did_move_towards_monster > 0 then
-                local move_x, move_y = vi_to_delta(move)
-                target_memory_x = dx - move_x
-                target_memory_y = dy - move_y
+            if monster_array[pos.x][pos.y] or did_move_towards_monster > 0 then
+                local mpos = vi_to_delta(move)
+                target_memory = { x = pos.x - mpos.x,  y = pos.y - mpos.y }
                 did_move_towards_monster = 2
             end
         end
         if branch_step_mode then
-            local move_x, move_y = vi_to_delta(move)
-            if view.feature_at(move_x, move_y) == "shallow_water" then
+            local mpos = vi_to_delta(move)
+            if view.feature_at(mpos.x, mpos.y) == "shallow_water" then
                 return false
             end
         end
@@ -258,10 +279,10 @@ function plan_step_towards_branch()
         return false
     end
 
-    for x, y in square_iter(0, 0, los_radius, true) do
-        local feat = view.feature_at(x, y)
+    for pos in square_iter(origin, los_radius, true) do
+        local feat = view.feature_at(pos.x, pos.y)
         if (feat == "enter_lair" or feat == "enter_tomb")
-                and you.see_cell_no_trans(x, y) then
+                and you.see_cell_no_trans(pos.x, pos.y) then
             if x == 0 and y == 0 then
                 if feat == "enter_lair" then
                     stepped_on_lair = true
@@ -271,7 +292,7 @@ function plan_step_towards_branch()
                 return false
             else
                 branch_step_mode = true
-                local result = move_towards(x, y)
+                local result = move_towards(pos)
                 branch_step_mode = false
                 return result
             end
@@ -319,34 +340,33 @@ function plan_swamp_clouds_hack()
         return true
     end
 
-    local bestx, besty
-    local bestdist = 11
-    for x, y in adjacent_iter(0, 0) do
-        if can_move_to(x, y) and view.is_safe_square(x, y) then
-            for dx, dy in radius_iter(x, y) do
-                local dist = supdist(dx - x, dy - y)
-                if (view.cloud_at(dx, dy) == "freezing vapour"
-                            or view.cloud_at(dx, dy) == "foul pestilence")
-                        and you.see_cell_no_trans(dx, dy)
-                        and not view.is_safe_square(dx, dy)
-                        and dist < bestdist then
-                    bestx = x
-                    besty = y
-                    bestdist = dist
+    local best_pos
+    local best_dist = 11
+    for pos in adjacent_iter(origin) do
+        if can_move_to(pos) and view.is_safe_square(pos.x, pos.y) then
+            for dpos in radius_iter(pos) do
+                local dist = supdist(dpos.x - pos.x, dpos.y - pos.y)
+                if (view.cloud_at(dpos.x, dpos.y) == "freezing vapour"
+                            or view.cloud_at(dpos.x, dpos.y) == "foul pestilence")
+                        and you.see_cell_no_trans(dpos.x, dpos.y)
+                        and not view.is_safe_square(dpos.x, dpos.y)
+                        and dist < best_dist then
+                    best_pos = pos
+                    best_dist = dist
                 end
             end
         end
     end
 
-    if bestx then
-        magic(delta_to_vi(bestx, besty) .. "Y")
+    if best_pos then
+        magic(delta_to_vi(best_pos) .. "Y")
         return true
     end
 
-    for x, y in square_iter(0, 0) do
-        if (view.cloud_at(x, y) == "freezing vapour"
-                    or view.cloud_at(x, y) == "foul pestilence")
-                and you.see_cell_no_trans(x, y) then
+    for pos in square_iter(origin) do
+        if (view.cloud_at(pos.x, pos.y) == "freezing vapour"
+                    or view.cloud_at(pos.x, pos.y) == "foul pestilence")
+                and you.see_cell_no_trans(pos.x, pos.y) then
             return random_step(where)
         end
     end
@@ -371,19 +391,19 @@ function plan_stuck_move_to_target()
     end
 
     if not move then
-        local wx, wy = travel.waypoint_delta(waypoint_parity)
         local mons_targets = {}
-        for x, y in square_iter(0, 0) do
-            if has_enemy(x, y)
-                    and not you.see_cell_no_trans(x, y) then
-                table.insert(mons_targets, { x = x + wx, y = y + wy })
+        for pos in square_iter(origin) do
+            if has_enemy(pos)
+                    and not you.see_cell_no_trans(pos.x, pos.y) then
+                table.insert(mons_targets, { x = pos.x + waypoint.x,
+                    y = pos.y + waypoint.y })
             end
         end
         move = best_move_towards(mons_targets)
     end
 
     if move then
-        move_to(move.x, move.y)
+        move_to(move)
         return true
     end
 

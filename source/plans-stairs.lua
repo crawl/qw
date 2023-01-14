@@ -10,8 +10,7 @@ function plan_go_to_unexplored_stairs()
     end
 
     local key = dir_key(gameplan_travel.stairs_dir)
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
-    local hash = hash_position({ x = wx, y = wy })
+    local hash = hash_position({ x = waypoint.x, y = waypoint.y })
     local searches = map_mode_searches[waypoint_parity]
     local count = 1
     while searches[key]

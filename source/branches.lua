@@ -297,16 +297,16 @@ function portal_allowed(portal)
     return util.contains(ALLOWED_PORTALS, portal)
 end
 
-function record_branch(x, y)
-    local feat = view.feature_at(x, y)
+function record_branch(pos)
+    local feat = view.feature_at(pos.x, pos.y)
     for br, entry in pairs(branch_data) do
         if entry.entrance == feat then
-            record_feature_position(x, y)
+            record_feature_position(pos)
 
             if not c_persist.branches[br] then
                 c_persist.branches[br] = {}
             end
-            local state = los_state(x, y)
+            local state = los_state(pos)
             -- We already have a suitable entry recorded.
             if c_persist.branches[br][where]
                     and c_persist.branches[br][where] >= state then

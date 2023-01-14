@@ -38,29 +38,27 @@ function plan_tomb_go_to_hatch()
             return false
         end
         if view.feature_at(0, 0) == "escape_hatch_up" then
-            local x, y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x, y)
+            local new_hatch_dist = supdist(waypoint)
             if new_hatch_dist >= prev_hatch_dist
-                 and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
+                 and (waypoint.x ~= prev_hatch.x
+                     or waypoint.y ~= prev_hatch.y) then
                 return false
             end
             prev_hatch_dist = new_hatch_dist
-            prev_hatch_x = x
-            prev_hatch_y = y
+            prev_hatch = waypoint
         end
         magic("X<\r")
         return true
     elseif where == "Tomb:1" then
         if view.feature_at(0, 0) == "escape_hatch_down" then
-            local x, y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x, y)
+            local new_hatch_dist = supdist(waypoint)
             if new_hatch_dist >= prev_hatch_dist
-                 and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
+                 and (waypoint.x ~= prev_hatch.x
+                     or waypoint.y ~= prev_hatch.y) then
                 return false
             end
             prev_hatch_dist = new_hatch_dist
-            prev_hatch_x = x
-            prev_hatch_y = y
+            prev_hatch = waypoint
         end
         magic("X>\r")
         return true

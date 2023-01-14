@@ -39,13 +39,13 @@ end
 
 function test_radius_iter()
     dsay("Testing 3, 3 with radius 1")
-    for x, y in radius_iter(3, 3, 1) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
+    for pos in radius_iter({ x = 3, y = 3 }, 1) do
+        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 
-    dsay("Testing 0, 0 with radius 3")
-    for x, y in radius_iter(0, 0, 3) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
+    dsay("Testing origin with radius 3")
+    for pos in radius_iter(origin, 3) do
+        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 end
 
@@ -79,16 +79,16 @@ end
 
 function print_traversal_map()
     local traversal_map = traversal_maps[waypoint_parity]
-    local dx, dy = travel.waypoint_delta(num)
     local str
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            if traversal_map[dx + x][dy + y] == nil then
+            if traversal_map[waypoint.x + x][waypoint.y + y] == nil then
                 str = str .. " "
             else
-                str = str .. (traversal_map[dx + x][dy + y] and "." or "#")
+                str = str .. (traversal_map[waypoint.x + x][waypoint.y + y]
+                    and "." or "#")
             end
         end
         say(str)
@@ -96,21 +96,21 @@ function print_traversal_map()
 end
 
 function print_distance_maps()
-    local wx, wy = travel.waypoint_delta(waypoint_parity)
     local dist_maps = distance_maps[waypoint_parity]
     for hash, dist_map in pairs(dist_maps) do
         local pos = unhash_position(hash)
         say("---------------------------------------")
-        say("feature: " .. view.feature_at(pos.x - wx, pos.y - wy))
+        say("feature: "
+            .. view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y))
         -- This needs to iterate by row then column for display purposes.
         for y = -20, 20 do
             local str = ""
             for x = -20, 20 do
-                if dist_map[wx + x][wy + y] == nil then
+                if dist_map[waypoint.x + x][waypoint.y + y] == nil then
                     str = str .. " "
                 else
                     str = str .. string.char(string.byte('A')
-                        + dist_map[wx + x][wy + y])
+                        + dist_map[waypoint.x + x][waypoint.y + y])
                 end
             end
             say(str)
