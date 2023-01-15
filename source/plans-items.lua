@@ -99,9 +99,9 @@ function plan_swap_weapon()
     local sit
     if you.xl() < 18 then
         for _, enemy in ipairs(enemy_list) do
-            if supdist(enemy.pos.x, enemy.pos.y) <= 3
-                    and string.find(enemy.mons:desc(), "hydra")
-                    and can_melee_enemy(enemy) then
+            if enemy:distance() <= 3
+                    and string.find(enemy:desc(), "hydra")
+                    and enemy:player_can_melee() then
                 sit = "hydra"
             end
         end
@@ -529,7 +529,7 @@ function plan_use_good_consumables()
     for it in inventory() do
         if it.class(true) == "scroll" and can_read() then
             if it.name():find("acquirement")
-                    and not deep_water_or_lava(0, 0) then
+                    and not destroys_items_at(origin) then
                 if read(it) then
                     return true
                 end

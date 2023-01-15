@@ -133,10 +133,10 @@ function handle_feature_searches(pos, dist_queues)
     end
 end
 
-function update_distance_map_pos_from_adjacent(pos, dist_map)
+function update_distance_map_pos(pos, dist_map)
     if not dist_map.radius
-            or supdist(dist_map.pos.x - pos.x, dist_map.pos.y - pos.y)
-                > dist_map.radius then
+            or supdist({ x = dist_map.pos.x - pos.x,
+                y = dist_map.pos.y - pos.y }) > dist_map.radius then
         return false
     end
 
@@ -155,7 +155,7 @@ end
 
 function handle_traversable_pos(pos, dist_queues)
     for hash, dist_map in pairs(distance_maps[waypoint_parity]) do
-        if update_distance_map_pos_from_adjacent(pos, dist_map) then
+        if update_distance_map_pos(pos, dist_map) then
             if not dist_queues[hash] then
                 dist_queues[hash] = {}
             end

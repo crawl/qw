@@ -28,7 +28,7 @@ function Monster:set_props()
             return { x = self:x_pos(), y = self:y_pos() }
         end)
     self.distance = self.prop_func("distance",
-        function() return supdist(self:x_pos(), self:y_pos()) end)
+        function() return supdist(self:pos()) end)
 
     self.name = self.prop_func("name")
     self.desc = self.prop_func("desc")
@@ -46,6 +46,8 @@ function Monster:set_props()
     self.type = self.prop_func("type")
     self.attitude = self.prop_func("attitude")
     self.holiness = self.prop_func("holiness")
+    self.res_poison = self.prop_func("res_poison")
+    self.res_draining = self.prop_func("res_draining")
     self.is_holy_vulnerable = self.prop_func("is_holy_vulnerable",
         function()
             local holiness = self:holiness()
@@ -109,6 +111,8 @@ function Monster:set_props()
                 and self:attitude() < enum_att_neutral
                 and self:name() ~= "orb of destruction"
         end)
+    self.is_friendly = self.prop_func("is_friendly",
+        function() return self:attitude() == enum_att_friendly end)
 
     self.is_orc_priest_wizard = self.prop_func("is_orc_priest_wizard",
         function()
@@ -117,8 +121,13 @@ function Monster:set_props()
 
     self.player_can_melee = self.prop_func("player_can_melee",
         function() player_can_melee_mons(self) end)
+    self.player_can_move_to_melee = self.prop_func("player_can_move_to_melee",
+        function() will_tab(origin, self:pos(), tabbable_square) end)
+
     self.can_melee_player = self.prop_func("can_melee_player",
         function() mons_can_melee_player(self) end)
+    self.can_move_to_melee_player = self.prop_func("can_move_to_melee_player",
+        function() mons_can_move_to_melee_player(self) end)
 end
 
 function Monster:new(mons)
@@ -182,13 +191,13 @@ local res_func_table = {
 
 function check_resist(lev, resist, value)
     return function (enemy)
-        return (you.xl() < lev and res_func_table[resist]() < value)
+        return you.xl() < lev and res_func_table[resist]() < value
     end
 end
 
 function slow_berserk(lev)
     return function (enemy)
-        return (you.xl() < lev and count_monsters_near(0, 0, 1) > 0)
+        return you.xl() < lev and count_enemies(1) > 0
     end
 end
 
@@ -808,9 +817,9 @@ function mons_in_list(mons, mlist)
     return false
 end
 
-function check_mons_list(radius, mons_list, filter)
+function check_monster_list(radius, mons_list, filter)
     for _, enemy in ipairs(enemy_list) do
-        if supdist(enemy:x_pos(), enemy:y_pos()) <= radius
+        if enemy:distance() <= radius
                 and (not filter or filter(enemy))
                 and mons_in_list(enemy, mons_list) then
             return true
@@ -820,24 +829,23 @@ function check_mons_list(radius, mons_list, filter)
     return false
 end
 
-function count_enemies_near(cx, cy, radius, filter)
+function count_enemies_near(pos, radius, filter)
     local i = 0
     for _, enemy in ipairs(enemy_list) do
-        if supdist(cx - enemy:x_pos(), cy - enemy:y_pos()) <= radius
-                and (not filter or filter(enemy)) then
+        if enemy:distance() <= radius and (not filter or filter(enemy)) then
             i = i + 1
         end
     end
     return i
 end
 
-function count_enemies_near_by_name(cx, cy, radius, name)
-    return count_enemies_near(cx, cy, radius,
+function count_enemies_near_by_name(pos, radius, name)
+    return count_enemies_near(pos, radius,
         function(enemy) return enemy:name() == name end)
 end
 
 function count_enemies(radius, filter)
-    return count_enemies_near(0, 0, radius, filter)
+    return count_enemies_near(origin, radius, filter)
 end
 
 function count_enemies_in_mons_list(radius, mons_list, filter)
@@ -864,7 +872,7 @@ function count_hostile_greater_servants(radius)
 end
 
 function count_big_slimes(radius)
-    return count_monsters(radius,
+    return count_enemies(radius,
         function(mons)
             return contains_string_in(mons:name(),
                 { "enormous slime creature", "titanic slime creature" })
@@ -872,271 +880,6 @@ function count_big_slimes(radius)
 end
 
 function count_pan_lords(radius)
-    return count_monsters(radius,
+    return count_enemies(radius,
         function(mons) return mons:type() == enum_mons_pan_lord end)
-end
-
--- Should only be called for adjacent squares.
-function monster_in_way(pos)
-    local mons = monster_array[pos.x][pos.y]
-    local feat = view.feature_at(0, 0)
-    return mons and (mons:attitude() <= enum_att_neutral
-            and not branch_step_mode
-        or mons:attitude() > enum_att_neutral
-            and (mons:is_constricted()
-                or mons:is_caught()
-                or mons:status("petrified")
-                or mons:status("paralysed")
-                or mons:status("constricted by roots")
-                or mons:desc():find("sleeping")
-                or feature_is_deep_water_or_lava(feat)
-                or feat  == "trap_zot"))
-end
-
-function tabbable_square(pos)
-    if view.feature_at(pos.x, pos.y) ~= "unseen"
-            and view.is_safe_square(pos.x, pos.y) then
-        if not monster_array[pos.x][pos.y]
-                or not monster_array[pos.x][pos.y]:is_firewood() then
-            return true
-        end
-    end
-    return false
-end
-
-function update_ranged_target_info(enemy, ranged_items)
-    if enemy.have_ranged_target_info then
-        return
-    end
-
-    local weapon = items.fired_item()
-    local test_spell = weapon_test_spell(weapon)
-    local penetrating = is_penetrating_weapon(weapon)
-    local positions = spells.path(test_spell, enemy.pos.x, enemy.pos.y, false)
-    for _, pos in ipairs(positions) do
-    end
-
-
-    enemy.player_can_ranged_attack = enemy.player_melee_range > 0
-
-    enemy.have_ranged_target_info = true
-end
-
-function is_enemy_at(pos)
-    return monster_array[pos.x][pos.y]
-        and monster_array[pos.x][pos.y].is_enemy()
-end
-
-function player_can_move_to_melee_mons(mons)
-    local pos = mons:pos()
-    if will_tab(origin, pos, tabbable_square) then
-        return true
-    else
-        return false
-    end
-end
-
-function can_ranged_attack_enemy(enemy, weapon)
-    local hit = false
-    for _, pos in ipairs(positions) do
-        if pos.x == enemy.pos.x and pos.y == enemy.pos.y then
-            hit = true
-        elseif not penetrating then
-            return false
-        end
-    end
-end
-
-function will_tab(center, target, square_func, tab_dist)
-    if not tab_dist then
-        tab_dist = 1
-    end
-
-    local dpos = { x = target.x - center.x, y = target.y - center.y }
-    if supdist(dpos.x, dpos.y) <= tab_dist then
-        return true
-    end
-
-    local function attempt_move(pos)
-        if pos.x == 0 and pos.y == 0 then
-            return
-        end
-
-        local new_pos = { x = center.x + pos.x, y = center.y + pos.y }
-        if supdist(newpos.x, newpos.y) > los_radius then
-            return
-        end
-
-        if square_func(newpos) then
-            return will_tab(newpos, target, square_func, tab_dist)
-        end
-    end
-
-    local move
-    if abs(dpos.x) > abs(dpos.y) then
-        if abs(dpos.y) == 1 then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-             move = attempt_move({ x = sign(dpos.x), y = 1 })
-        end
-        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-             move = attempt_move({ x = sign(dpos.x), y = -1 })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-    elseif abs(dpos.x) == abs(dpos.y) then
-        move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-    else
-        if abs(dpos.x) == 1 then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-             move = attempt_move({ x = 1, y = sign(dpos.y) })
-        end
-        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-             move = attempt_move({ x = -1, y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-    end
-    return move
-end
-
-function estimate_slouch_damage()
-    local count = 0
-    local s, v
-    for _, enemy in ipairs(enemy_list) do
-        s = mons_speed_num(enemy.mons)
-        v = 0
-        if s >= 6 then
-            v = 3
-        elseif s == 5 then
-            v = 2.5
-        elseif s == 4 then
-            v = 1.5
-        elseif s == 3 then
-            v = 1
-        end
-        if e.name == "orb of fire" then
-            v = v + 1
-        elseif v > 0 and e.threat <= 1 then
-            v = 0.5
-        end
-        count = count + v
-    end
-    return count
-end
-
-function assess_square_enemies(a, cx, cy)
-    local best_dist = 10
-    a.enemy_distance = 0
-    a.followers_to_land = false
-    a.adjacent = 0
-    a.slow_adjacent = 0
-    a.ranged = 0
-    a.unalert = 0
-    a.longranged = 0
-    for _, enemy in ipairs(enemy_list) do
-        local pos = enemy:pos()
-        local dist = enemy:distance()
-        local see_cell = view.cell_see_cell(cx, cy, pos.x, pos.y)
-        local ranged = enemy:is_ranged()
-        local liquid_bound = enemy:is_liquid_bound()
-
-        if dist < best_dist then
-            best_dist = dist
-        end
-
-        if dist == 1 then
-            a.adjacent = a.adjacent + 1
-
-            if not liquid_bound
-                    and not ranged
-                    and enemy:reach_range() < 2 then
-                a.followers_to_land = true
-            end
-
-            if have_reaching()
-                    and not ranged
-                    and enemy:reach_range() < 2
-                    and enemy:speed() < player_speed() then
-                a.slow_adjacent = a.slow_adjacent + 1
-            end
-        end
-
-        if dist > 1
-                and see_cell
-                and (dist == 2
-                        and (enemy:is_fast() or enemy:reach_range() >= 2)
-                    or ranged) then
-            a.ranged = a.ranged + 1
-        end
-
-        if dist > 1
-                and see_cell
-                and (enemy:desc():find("wandering")
-                        and not enemy:desc():find("mushroom")
-                    or enemy:desc():find("sleeping")
-                    or enemy:desc():find("dormant")) then
-            a.unalert = a.unalert + 1
-        end
-
-        if dist >= 4
-                and see_cell
-                and ranged
-                and not (enemy:desc():find("wandering")
-                    or enemy:desc():find("sleeping")
-                    or enemy:desc():find("dormant")
-                    or enemy:desc():find("stupefied")
-                    or liquid_bound
-                    or enemy:is_stationary())
-                and enemy:can_move_to_melee_player() then
-            a.longranged = a.longranged + 1
-        end
-
-    end
-
-    a.enemy_distance = best_dist
-end
-
-function distance_to_enemy()
-    local best_dist = 10
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() < best_dist then
-            best_dist = enemy:distance()
-        end
-    end
-    return best_dist
-end
-
-function distance_to_tabbable_enemy()
-    local best_dist = 10
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() < best_dist
-                and enemy:can_move_to_melee_player() then
-            best_dist = enemy:distance()
-        end
-    end
-    return best_dist
 end

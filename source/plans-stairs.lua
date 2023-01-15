@@ -168,9 +168,9 @@ function want_to_stairdance_up()
     local follow_count = 0
     local other_count = 0
     for _, enemy in ipairs(enemy_list) do
-        if supdist(enemy.pos.x, enemy.pos.y) == 1
-                and enemy.mons:stabbability() == 0
-                and can_use_stairs(e.m) then
+        if enemy:distance() == 1
+                and enemy:stabbability() == 0
+                and enemy:can_use_stairs() then
             follow_count = follow_count + 1
         else
             other_count = other_count + 1

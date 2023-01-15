@@ -8,38 +8,35 @@ end
 
 function feature_is_traversable(feat)
     return feat ~= "unseen"
-        and (not feature_is_runed_door(feat) or open_runed_doors)
+        and (open_runed_doors or not feature_is_runed_door(feat))
         and travel.feature_traversable(feat)
 end
 
-function is_traversable(pos)
+function is_traversable_at(pos)
     return feature_is_traversable(view.feature_at(pos.x, pos.y))
 end
 
-function is_cornerish(pos)
-    if is_traversable({ x = pos.x + 1, y = pos.y + 1 })
-            or is_traversable({ x = pos.x + 1, y = pos.y - 1 })
-            or is_traversable({ x = pos.x - 1, y = pos.y + 1 })
-            or is_traversable({ x = pos.x - 1, y = pos.y - 1 }) then
+function is_cornerish_at(pos)
+    if is_traversable_at({ x = pos.x + 1, y = pos.y + 1 })
+            or is_traversable_at({ x = pos.x + 1, y = pos.y - 1 })
+            or is_traversable_at({ x = pos.x - 1, y = pos.y + 1 })
+            or is_traversable_at({ x = pos.x - 1, y = pos.y - 1 }) then
         return false
     end
-    return (is_traversable({ x = pos.x + 1, y = y })
-            or is_traversable({ x = pos.x - 1, y = y }))
-        and (is_traversable({ x = pos.x, y = pos.y + 1 })
-            or is_traversable({ x = pos.x, y = pos.y - 1 }))
+    return (is_traversable_at({ x = pos.x + 1, y = y })
+            or is_traversable_at({ x = pos.x - 1, y = y }))
+        and (is_traversable_at({ x = pos.x, y = pos.y + 1 })
+            or is_traversable_at({ x = pos.x, y = pos.y - 1 }))
 end
 
-function is_solid(pos)
+function is_solid_at(pos)
     local feat = view.feature_at(pos.x, pos.y)
     return feat == "unseen" or travel.feature_solid(feat)
 end
 
-function feature_is_deep_water_or_lava(feat)
-    return feat == "deep_water" or feat == "lava"
-end
-
-function deep_water_or_lava_at(pos)
-    return feature_is_deep_water_or_lava(view.feature_at(pos.x, pos.y))
+function destroys_items_at(pos)
+    return feat == "deep_water" and not intrinsic_amphibious()
+        or feat == "lava"
 end
 
 function feature_is_upstairs(feat)

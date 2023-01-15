@@ -8,8 +8,7 @@ function plan_zig_fog()
             or you.confused()
             or not danger
             or not hp_is_low(70)
-            or count_monsters_near(0, 0, los_radius)
-                - count_monsters_near(0, 0, 2) < 15
+            or count_enemies(los_radius) - count_enemies(2) < 15
             or view.cloud_at(0, 0) ~= nil then
         return false
     end
@@ -28,8 +27,8 @@ function plan_move_to_zigfig_location()
     end
 
     for pos in adjacent_iter(origin) do
-        if is_traversable(pos)
-                and not is_solid(pos)
+        if is_traversable_at(pos)
+                and not is_solid_at(pos)
                 and not monster_in_way(pos)
                 and view.is_safe_square(x, y)
                 and not feature_is_critical(view.feature_at(pos.x, pos.y)) then

@@ -359,3 +359,27 @@ function record_altar(pos)
     c_persist.altars[god][where] = state
     want_gameplan_update = true
 end
+
+function estimate_slouch_damage()
+    local count = 0
+    for _, enemy in ipairs(enemy_list) do
+        local speed = enemy:speed()
+        local val = 0
+        if speed >= 6 then
+            val = 3
+        elseif speed == 5 then
+            val = 2.5
+        elseif speed == 4 then
+            val = 1.5
+        elseif speed == 3 then
+            val = 1
+        end
+        if enemy:name() == "orb of fire" then
+            val = val + 1
+        elseif v > 0 and enemy:threat() <= 1 then
+            val = 0.5
+        end
+        count = count + val
+    end
+    return count
+end

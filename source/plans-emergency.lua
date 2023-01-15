@@ -151,23 +151,21 @@ function plan_grand_finale()
     local bestx, besty, best_info, new_info
     local flag_order = {"threat", "injury", "distance"}
     local flag_reversed = {false, true, true}
-    best_info = nil
-    for _, e in ipairs(enemy_list) do
-        if is_traversable(e.pos.x, e.pos.y)
-                and not cloud_is_dangerous(view.cloud_at(e.pos.x, e.pos.y)) then
-            new_info = get_monster_info(e.pos.x, e.pos.y)
+    local best_info, best_pos
+    for _, enemy in ipairs(enemy_list) do
+        local pos = enemy:pos()
+        if is_traversable(pos)
+                and not cloud_is_dangerous(view.cloud_at(pos.x, pos.y)) then
             if new_info.safe == 0
                     and (not best_info
-                        or compare_monster_info(new_info, best_info,
-                            flag_order, flag_reversed)) then
+                        or compare_melee_targets(enemy, best_enemy, props, reversed)) then
                 best_info = new_info
-                bestx = e.pos.x
-                besty = e.pos.y
+                best_pos = pos
             end
         end
     end
     if best_info then
-        use_ability("Grand Finale", "r" .. vector_move(bestx, besty) .. "\rY")
+        use_ability("Grand Finale", "r" .. vector_move(best_pos) .. "\rY")
         return true
     end
     return false
@@ -191,8 +189,7 @@ function plan_hydra_destruction()
     end
 
     for _, enemy in ipairs(enemy_list) do
-        if supdist(enemy.pos.x, enemy.pos.y) <= 5
-                and string.find(enemy.mons:desc(), "hydra") then
+        if enemy:distance() <= 5 and string.find(enemy:desc(), "hydra") then
             say("invoking major destruction")
             for letter, abil in pairs(you.ability_table()) do
                 if abil == "Major Destruction" then
@@ -315,8 +312,8 @@ function plan_blinking()
     local best_count = 0
     local best_pos
     for pos in square_iter(origin) do
-        if is_traversable(pos)
-                and not is_solid(pos)
+        if is_traversable_at(pos)
+                and not is_solid_at(pos)
                 and not monster_array[pos.x][pos.y]
                 and view.is_safe_square(pos.x, pos.y)
                 and not view.withheld(pos.x, pos.y)
@@ -519,7 +516,7 @@ function want_to_finesse()
     if danger
             and in_branch("Zig")
             and hp_is_low(80)
-            and count_monsters_near(0, 0, los_radius) >= 5 then
+            and count_enemies(los_radius) >= 5 then
         return true
     end
     if danger and check_monster_list(los_radius, nasty_monsters)
@@ -541,7 +538,8 @@ function want_to_drain_life()
     if not danger then
         return false
     end
-    return count_monsters(los_radius, function(m) return m:res_draining() == 0 end)
+    return count_enemies(los_radius,
+        function(mons) return mons:res_draining() == 0 end)
 end
 
 function want_to_greater_servant()
@@ -558,7 +556,7 @@ end
 function want_to_cleansing_flame()
     if not check_monster_list(1, scary_monsters, mons_is_holy_vulnerable)
             and check_monster_list(2, scary_monsters, mons_is_holy_vulnerable)
-        or count_monsters(2, mons_is_holy_vulnerable) > 8 then
+        or count_enemies(2, mons_is_holy_vulnerable) > 8 then
         return true
     end
 
@@ -570,8 +568,8 @@ function want_to_cleansing_flame()
                 or holiness == "evil")
     end
     if hp_is_low(50) and immediate_danger then
-        local flame_restore_count = count_monsters(2, filter)
-        return flame_restore_count > count_monsters(1, filter)
+        local flame_restore_count = count_enemies(2, filter)
+        return flame_restore_count > count_enemies(1, filter)
             and flame_restore_count >= 4
     end
 
@@ -591,7 +589,7 @@ function want_to_fiery_armour()
         and (hp_is_low(50)
             or count_monster_list(los_radius, scary_monsters) >= 2
             or check_monster_list(los_radius, nasty_monsters)
-            or count_monsters_near(0, 0, los_radius) >= 6)
+            or count_enemies(los_radius) >= 6)
 end
 
 function want_to_apocalypse()
@@ -624,8 +622,8 @@ function want_to_teleport()
     end
 
     if in_branch("Pan")
-            and (count_monster_by_name(los_radius, "hellion") >= 3
-                or count_monster_by_name(los_radius, "daeva") >= 3) then
+            and (count_enemies_by_name(los_radius, "hellion") >= 3
+                or count_enemies_by_name(los_radius, "daeva") >= 3) then
         dislike_pan_level = true
         return true
     end
@@ -651,7 +649,7 @@ function want_to_heal_wounds()
     return danger and hp_is_low(25)
 end
 
-function count_nasty_hell_monsters(r)
+function count_nasty_hell_monsters(radius)
     if not in_hell_branch() then
         return 0
     end
@@ -662,16 +660,16 @@ function count_nasty_hell_monsters(r)
     local have_holy_wrath = you.god() == "the Shining One"
         or items.equipped_at("weapon")
             and items.equipped_at("weapon").ego() == "holy wrath"
-    local filter = function(m)
-        return not (have_holy_wrath and mons_is_holy_vulnerable(m))
+    local filter = function(mons)
+        return not (have_holy_wrath and mons_is_holy_vulnerable(mons))
     end
-    return count_monster_list(r, nasty_monsters, filter)
+    return count_monster_list(radius, nasty_monsters, filter)
 end
 
 function want_to_serious_buff()
     if danger and in_branch("Zig")
             and hp_is_low(50)
-            and count_monsters_near(0, 0, los_radius) >= 5 then
+            and count_enemies(los_radius) >= 5 then
         return true
     end
 
@@ -717,7 +715,7 @@ end
 
 function want_magic_points()
     -- No point trying to restore MP with ghost moths around.
-    return count_monster_by_name(los_radius, "ghost moth") == 0
+    return count_enemies_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or you.have_orb() or in_extended())
         -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
@@ -742,7 +740,7 @@ function want_to_heroism()
     return danger
         and (hp_is_low(70)
             or check_monster_list(los_radius, scary_monsters)
-            or count_monsters_near(0, 0, los_radius) >= 4)
+            or count_(0, 0, los_radius) >= 4)
 end
 
 function want_to_recall()
@@ -778,7 +776,7 @@ function plan_continue_flee()
 
     for pos in adjacent_iter(origin) do
         if can_move_to(pos)
-                and not is_solid(pos)
+                and not is_solid_at(pos)
                 and view.is_safe_square(pos.x, pos.y) then
             local dist_map = get_distance_map(target_stair)
             local val = dist_map[waypoint.x + pos.x][waypoint.y + pos.y]

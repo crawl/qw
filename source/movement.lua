@@ -7,6 +7,126 @@ function can_move_to(pos)
         and not monster_in_way(pos)
 end
 
+function tabbable_square(pos)
+    if view.feature_at(pos.x, pos.y) ~= "unseen"
+            and view.is_safe_square(pos.x, pos.y) then
+        if not monster_array[pos.x][pos.y]
+                or not monster_array[pos.x][pos.y]:is_firewood() then
+            return true
+        end
+    end
+    return false
+end
+
+-- Should only be called for adjacent squares.
+function monster_in_way(pos)
+    local mons = monster_array[pos.x][pos.y]
+    local feat = view.feature_at(0, 0)
+    return mons and (mons:attitude() <= enum_att_neutral
+            and not branch_step_mode
+        or mons:attitude() > enum_att_neutral
+            and (mons:is_constricted()
+                or mons:is_caught()
+                or mons:status("petrified")
+                or mons:status("paralysed")
+                or mons:status("constricted by roots")
+                or mons:is("sleeping")
+                or not mons:can_traverse(0, 0)
+                or feat  == "trap_zot"))
+end
+
+function assess_square_enemies(a, cx, cy)
+    local best_dist = 10
+    a.enemy_distance = 0
+    a.followers_to_land = false
+    a.adjacent = 0
+    a.slow_adjacent = 0
+    a.ranged = 0
+    a.unalert = 0
+    a.longranged = 0
+    for _, enemy in ipairs(enemy_list) do
+        local pos = enemy:pos()
+        local dist = enemy:distance()
+        local see_cell = view.cell_see_cell(cx, cy, pos.x, pos.y)
+        local ranged = enemy:is_ranged()
+        local liquid_bound = enemy:is_liquid_bound()
+
+        if dist < best_dist then
+            best_dist = dist
+        end
+
+        if dist == 1 then
+            a.adjacent = a.adjacent + 1
+
+            if not liquid_bound
+                    and not ranged
+                    and enemy:reach_range() < 2 then
+                a.followers_to_land = true
+            end
+
+            if have_reaching()
+                    and not ranged
+                    and enemy:reach_range() < 2
+                    and enemy:speed() < player_speed() then
+                a.slow_adjacent = a.slow_adjacent + 1
+            end
+        end
+
+        if dist > 1
+                and see_cell
+                and (dist == 2
+                        and (enemy:is_fast() or enemy:reach_range() >= 2)
+                    or ranged) then
+            a.ranged = a.ranged + 1
+        end
+
+        if dist > 1
+                and see_cell
+                and (enemy:desc():find("wandering")
+                        and not enemy:desc():find("mushroom")
+                    or enemy:desc():find("sleeping")
+                    or enemy:desc():find("dormant")) then
+            a.unalert = a.unalert + 1
+        end
+
+        if dist >= 4
+                and see_cell
+                and ranged
+                and not (enemy:desc():find("wandering")
+                    or enemy:desc():find("sleeping")
+                    or enemy:desc():find("dormant")
+                    or enemy:desc():find("stupefied")
+                    or liquid_bound
+                    or enemy:is_stationary())
+                and enemy:can_move_to_melee_player() then
+            a.longranged = a.longranged + 1
+        end
+
+    end
+
+    a.enemy_distance = best_dist
+end
+
+function distance_to_enemy()
+    local best_dist = 10
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:distance() < best_dist then
+            best_dist = enemy:distance()
+        end
+    end
+    return best_dist
+end
+
+function distance_to_tabbable_enemy()
+    local best_dist = 10
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:distance() < best_dist
+                and enemy:can_move_to_melee_player() then
+            best_dist = enemy:distance()
+        end
+    end
+    return best_dist
+end
 function assess_square(pos)
     a = {}
 
@@ -23,8 +143,8 @@ function assess_square(pos)
     a.can_move = a.supdist == 0
         or can_movenot view.withheld(pos.x, pos.y)
                       and not monster_in_way(pos)
-                      and is_traversable(pos)
-                      and not is_solid(pos)
+                      and is_traversable_at(pos)
+                      and not is_solid_at(pos)
     if not a.can_move then
         return a
     end
@@ -33,7 +153,7 @@ function assess_square(pos)
     assess_square_monsters(a, pos)
 
     -- Avoid corners if possible.
-    a.cornerish = is_cornerish(pos)
+    a.cornerish = is_cornerish_at(pos)
 
     -- Will we fumble if we try to attack from this square?
     a.fumble = not you.flying()
@@ -241,4 +361,80 @@ function mons_can_move_to_melee_player(mons)
         and (melee_range < 2
             or attack_range() > 1
             or player_can_move_closer(pos))
+end
+
+function will_tab(center, target, square_func, tab_dist)
+    if not tab_dist then
+        tab_dist = 1
+    end
+
+    local dpos = { x = target.x - center.x, y = target.y - center.y }
+    if supdist(dpos) <= tab_dist then
+        return true
+    end
+
+    local function attempt_move(pos)
+        if pos.x == 0 and pos.y == 0 then
+            return
+        end
+
+        local new_pos = { x = center.x + pos.x, y = center.y + pos.y }
+        if supdist(newpos.x, newpos.y) > los_radius then
+            return
+        end
+
+        if square_func(newpos) then
+            return will_tab(newpos, target, square_func, tab_dist)
+        end
+    end
+
+    local move
+    if abs(dpos.x) > abs(dpos.y) then
+        if abs(dpos.y) == 1 then
+            move = attempt_move({ x = sign(dpos.x), y = 0 })
+        end
+        if not move then
+            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
+        end
+        if not move then
+            move = attempt_move({ x = sign(dpos.x), y = 0 })
+        end
+        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
+             move = attempt_move({ x = sign(dpos.x), y = 1 })
+        end
+        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
+             move = attempt_move({ x = sign(dpos.x), y = -1 })
+        end
+        if not move then
+            move = attempt_move({ x = 0, y = sign(dpos.y) })
+        end
+    elseif abs(dpos.x) == abs(dpos.y) then
+        move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
+        if not move then
+            move = attempt_move({ x = sign(dpos.x), y = 0 })
+        end
+        if not move then
+            move = attempt_move({ x = 0, y = sign(dpos.y) })
+        end
+    else
+        if abs(dpos.x) == 1 then
+            move = attempt_move({ x = 0, y = sign(dpos.y) })
+        end
+        if not move then
+            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
+        end
+        if not move then
+            move = attempt_move({ x = 0, y = sign(dpos.y) })
+        end
+        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
+             move = attempt_move({ x = 1, y = sign(dpos.y) })
+        end
+        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
+             move = attempt_move({ x = -1, y = sign(dpos.y) })
+        end
+        if not move then
+            move = attempt_move({ x = sign(dpos.x), y = 0 })
+        end
+    end
+    return move
 end

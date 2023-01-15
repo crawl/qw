@@ -325,6 +325,13 @@ function plan_swamp_go_to_rune()
     return true
 end
 
+function is_swamp_end_cloud(pos)
+    return (view.cloud_at(pos.x, pos.y) == "freezing vapour"
+            or view.cloud_at(pos.x, pos.y) == "foul pestilence")
+        and you.see_cell_no_trans(pos.x, pos.y)
+        and not view.is_safe_square(pos.x, pos.y)
+end
+
 function plan_swamp_clouds_hack()
     if not at_branch_end("Swamp") then
         return false
@@ -345,12 +352,9 @@ function plan_swamp_clouds_hack()
     for pos in adjacent_iter(origin) do
         if can_move_to(pos) and view.is_safe_square(pos.x, pos.y) then
             for dpos in radius_iter(pos) do
-                local dist = supdist(dpos.x - pos.x, dpos.y - pos.y)
-                if (view.cloud_at(dpos.x, dpos.y) == "freezing vapour"
-                            or view.cloud_at(dpos.x, dpos.y) == "foul pestilence")
-                        and you.see_cell_no_trans(dpos.x, dpos.y)
-                        and not view.is_safe_square(dpos.x, dpos.y)
-                        and dist < best_dist then
+                local dist = supdist({ x = dpos.x - pos.x,
+                    y = dpos.y - pos.y })
+                if is_swamp_end_cloud(dpos) and dist < best_dist then
                     best_pos = pos
                     best_dist = dist
                 end

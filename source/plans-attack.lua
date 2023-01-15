@@ -2,35 +2,6 @@
 -- Attack plans
 --
 
-function player_can_melee_mons(mons)
-    local range = reach_range()
-    local dist = mons:distance()
-    if you.caught() or you.confused() then
-        return false
-    elseif range == 2 then
-        local pos = mons:pos()
-        return dist <= range and view.can_reach(pos.x, pos.y)
-    else
-        return dist <= range
-    end
-
-    return
-end
-
-function compare_melee_targets(first, second, props, reversed)
-    for _, prop in ipairs(props) do
-        local val1 = tonumber(first[prop]())
-        local val2 = tonumber(second[prop]())
-        local if_greater_val = not reversed[prop] and true or false
-        if val1 > val2 then
-            return if_greater_val
-        elseif val1 < val2 then
-            return not if_greater_val
-        end
-    end
-    return false
-end
-
 function get_melee_target()
     local best_enemy = nil
     local props = { "player_can_melee", "distance", "constricting_you",
@@ -39,11 +10,10 @@ function get_melee_target()
     -- We favor closer monsters.
     reversed.distance = true
     for _, enemy in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20 * e.pos.x + e.pos.y)
+        if not util.contains(failed_move, 20 * enemy:x_pos() + enemy:y_pos())
                 and enemy:player_can_move_to_melee()
                 and (not best_enemy
-                    or compare_target(enemy, best_enemy, props,
-                        reversed)) then
+                    or compare_target(enemy, best_enemy, props, reversed)) then
             best_enemy = enemy
         end
     end
@@ -63,27 +33,143 @@ function melee_attack()
     return true
 end
 
-function get_ranged_target()
-    local bestx, besty, best_info, new_info
-    bestx = 0
-    besty = 0
-    best_info = nil
-    for _, e in ipairs(enemy_list) do
-        if you.see_cell_solid_see(e.pos.x, e.pos.y) then
-            update_ranged_target_info(enemy)
+function add_enemy_hit_props(result, enemy, props)
+    for _, prop in ipairs(props) do
+        if not result[prop] then
+            result[prop] = 0
+        end
 
+        if prop == "hit" then
+            result.hit = result.hit + 1
+        else
+            result[prop] = result[prop] + tonumber(enemy[prop]())
+        end
+    end
+end
 
-                new_info = get_monster_info(e.pos.x, e.pos.y)
-                if not best_info
-                        or compare_enemy_ranged_info(new_info, best_info) then
-                    bestx = e.pos.x
-                    besty = e.pos.y
-                    best_info = new_info
+function assess_ranged_target(attack, target)
+    local positions = spells.path(attack.test_spell, target.x, target.y, false)
+    local result = { pos = target }
+    local stop_target_result
+    for i, pos in ipairs(positions) do
+        local mons = monster_array[pos.x][pos.y]
+        if attack.is_penetrating then
+            -- If we haven't reached our target yet, stop_target_result will be
+            -- nil. This correctly indicates that we can't use this target at
+            -- all, since it hits a friendly even if we use '.'.
+            if mons:is_friendly() then
+                result = stop_target_result
+                break
+            end
+
+            if mons:is_enemy() then
+                add_enemy_hit_props(result, mons, props)
+            end
+
+            -- Prefer to use '.' if we'd destroy
+            if i == #positions
+                    and attack.uses_ammunition
+                    and not destroys_items_at(attack.target)
+                    and destroys_items_at(pos) then
+                result = stop_target_result
+            end
+        elseif attack.is_explosion and mons then
+            for epos in adjacent_iter(target, true) do
+                -- Never hit ourselves.
+                if epos.x == 0 and epos.y == 0 then
+                    return
                 end
+
+                local emons = monster_array[epos.x][epos.y]
+                if emons and emons:is_friendly() then
+                    return
+                end
+
+                if emons and emons:is_enemy() then
+                    add_enemy_hit_props(result, emons, props)
+                end
+            end
+        else
+            if mons and (pos.x ~= target.x or pos.y ~= target.y) then
+                result = stop_target_result
+        end
+
+        -- We've reached the target, so make a copy in case we have to aim
+        -- at the target with '.'.
+        if pos.x == target.x and pos.y == target.y then
+            target_stop_result = util.copy(result)
+            target_stop_result.stop_at_target = true
+        end
+    end
+    return result
+end
+
+function assess_ranged_explosion(attack, target, seen_pos)
+        k
+
+    end
+
+end
+
+function compare_ranged_targets(first, second, props, reversed)
+    for _, prop in ipairs(props) do
+        local val1 = tonumber(first[prop]())
+        local val2 = tonumber(second[prop]())
+        local if_greater_val = not reversed[prop] and true or false
+        if val1 > val2 then
+            return if_greater_val
+        elseif val1 < val2 then
+            return not if_greater_val
+        end
+    end
+    return false
+end
+
+function get_ranged_target()
+    local weapon = items.fired_item()
+    local attack = {}
+    attack.range = weapon_range(weapon)
+    attack.is_penetrating = is_penetrating_weapon(weapon)
+    attack.is_explosion = is_exploding_weapon(weapon)
+    attack.test_spell = weapon_test_spell(weapon)
+
+    local seen_pos
+    if explosion then
+        seen_pos = {}
+        for i = -los_radius, los_radius do
+            seen_pos[i] = {}
+        end
+    end
+
+    local props = { "hit", "distance", "constricting_you", "damage_level",
+        "threat", "is_orc_priest_wizard" }
+    local reversed = {}
+    reversed.distance = true
+    local best_result
+    for _, enemy in ipairs(enemy_list) do
+        local pos = enemy:pos()
+        if enemy:distance() <= attack.range
+                and you.see_cell_solid_see(pos.x, pos.y) then
+            if explosion then
+                for _, pos in adjacent_iter(target, true) do
+                    if not seen_pos[target.x][target.y] then
+                        result = assess_ranged_target(attack, pos, props)
+                        seen_pos[target.x][target.y] = true
+                        if compare_ranged_result(best_result, result, props, reversed) then
+                            best_result = result
+                        end
+                    end
+                end
+            else
+                result = assess_ranged_target(attack, pos, props)
+            end
+
+            if compare_ranged_result(best_result, result, props, reversed) then
+                best_result = result
             end
         end
     end
-    return bestx, besty, best_info
+    return best_result
 end
 
 function plan_throw()
@@ -183,13 +269,13 @@ function plan_check_incoming_melee_enemy()
 
     local enemy_needs_wait = false
     for _, enemy in ipairs(enemy_list) do
-        if is_ranged(enemy.m) then
+        if enemy:is_ranged() then
             wait_count = 0
             return false
         end
 
-        local melee_range = enemy.mons:reach_range()
-        if supdist(enemy.pos.x, enemy.pos.y) <= melee_range then
+        local melee_range = enemy:reach_range()
+        if enemy:distance() <= melee_range then
             wait_count = 0
             return false
         end
@@ -228,10 +314,10 @@ function plan_wait_spit()
     local best_dist = 10
     local target = none
     for _, enemy in ipairs(enemy_list) do
-        local dist = supdist(enemy.pos.x, enemy.pos.y)
-        if dist < best_dist and enemy.mons:res_poison() < 1 then
+        local dist = enemy:distance()
+        if dist < best_dist and enemy:res_poison() < 1 then
             best_dist = dist
-            target = enemy
+            target = enemy:pos()
         end
     end
     ab_range = 6
@@ -242,7 +328,7 @@ function plan_wait_spit()
     end
     if best_dist <= ab_range then
         if use_ability(ab_name,
-                "r" .. vector_move(target.pos.x, target.pos.y) .. "\r") then
+                "r" .. vector_move(target) .. "\r") then
             return true
         end
     end

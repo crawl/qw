@@ -334,3 +334,17 @@ function can_move()
     return not (you.transform() == "tree"
         or you.transform() == "fungus" and danger)
 end
+
+function player_can_melee_mons(mons)
+    local range = reach_range()
+    local dist = mons:distance()
+    if you.caught() or you.confused() then
+        return false
+    elseif range == 2 then
+        return dist <= range and view.can_reach(mons:x_pos(), mons:y_pos())
+    else
+        return dist <= range
+    end
+
+    return
+end
