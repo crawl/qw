@@ -47,68 +47,87 @@ function add_enemy_hit_props(result, enemy, props)
     end
 end
 
-function assess_ranged_target(attack, target)
-    local positions = spells.path(attack.test_spell, target.x, target.y, false)
+function assess_ranged_explosion(attack, target)
     local result = { pos = target }
-    local stop_target_result
-    for i, pos in ipairs(positions) do
-        local mons = monster_array[pos.x][pos.y]
-        if attack.is_penetrating then
-            -- If we haven't reached our target yet, stop_target_result will be
-            -- nil. This correctly indicates that we can't use this target at
-            -- all, since it hits a friendly even if we use '.'.
-            if mons:is_friendly() then
-                result = stop_target_result
-                break
-            end
-
-            if mons:is_enemy() then
-                add_enemy_hit_props(result, mons, props)
-            end
-
-            -- Prefer to use '.' if we'd destroy
-            if i == #positions
-                    and attack.uses_ammunition
-                    and not destroys_items_at(attack.target)
-                    and destroys_items_at(pos) then
-                result = stop_target_result
-            end
-        elseif attack.is_explosion and mons then
-            for epos in adjacent_iter(target, true) do
-                -- Never hit ourselves.
-                if epos.x == 0 and epos.y == 0 then
-                    return
-                end
-
-                local emons = monster_array[epos.x][epos.y]
-                if emons and emons:is_friendly() then
-                    return
-                end
-
-                if emons and emons:is_enemy() then
-                    add_enemy_hit_props(result, emons, props)
-                end
-            end
-        else
-            if mons and (pos.x ~= target.x or pos.y ~= target.y) then
-                result = stop_target_result
+    for pos in adjacent_iter(target, true) do
+        -- Never hit ourselves.
+        if pos.x == 0 and pos.y == 0 then
+            return
         end
 
-        -- We've reached the target, so make a copy in case we have to aim
-        -- at the target with '.'.
-        if pos.x == target.x and pos.y == target.y then
-            target_stop_result = util.copy(result)
-            target_stop_result.stop_at_target = true
+        local mons = monster_array[epos.x][epos.y]
+        if mons then
+            if mons:is_friendly()
+                and not mons:ignores_friendly_projectiles() then
+            return
+
+            if mons:is_enemy() then
+                add_enemy_hit_props(result, mons, attack.props)
+            end
         end
     end
     return result
 end
 
-function assess_ranged_explosion(attack, target, seen_pos)
-        k
+function assess_ranged_target(attack, target)
+    local positions = spells.path(attack.test_spell, target.x, target.y, false)
+    local result = { pos = target }
+    local hit_target, at_target_result
+    for i, pos in ipairs(positions) do
+        if pos.x == target.x and pos.y == target.y then
+            hit_target = true
+        end
 
+        local mons = monster_array[pos.x][pos.y]
+        -- Non-penetrating attacks must hit the target before hitting any other
+        -- monster.
+        if not attack.is_penetrating
+                and not hit_target
+                and mons
+                -- Fedhas allies ignore friendly projectiles.
+                and not (mons:is_friendly()
+                    and mons:ignores_friendly_projectiles()) then
+            return
+        end
+
+        -- Never potentially hit friendlies. If we haven't reached our target
+        -- yet, at_target_result will be nil, meaning this target won't get
+        -- chosen.
+        if mons and mons:is_friendly()
+                and not mons:ignores_friendly_projectiles() then
+            return at_target_result
+        end
+
+        -- Try to avoid losing ammo to destructive terrain at the end of our
+        -- throw path by using '.'. If at_target_result is nil, we're hitting
+        -- our target at the end of our throw path, and '.' isn't necessary.
+        if at_target_result
+                and not attack.is_explosion
+                and attack.uses_ammunition
+                and i == #positions
+                and not destroys_items_at(attack.target)
+                and destroys_items_at(pos) then
+            return at_target_result
+        end
+
+        if mons and not (mons:is_friendly()
+                and mons:ignores_friendly_projectiles()) then
+            if attack.is_explosion then
+                result = assess_ranged_explosion(attack, target)
+            elseif mons:is_enemy()
+                    and (attack.is_penetrating or not at_target_result) then
+                add_enemy_hit_props(result, mons, attack.props)
+            end
+        end
+
+        -- We've reached the target, so make a copy of the results up to this
+        -- point in case we later decide to use '.'.
+        if hit_target and not at_target_result then
+            at_target_result = util.copy(result)
+            at_target_result.stop_at_target = true
+        end
     end
-
+    return result
 end
 
 function compare_ranged_targets(first, second, props, reversed)
@@ -125,6 +144,17 @@ function compare_ranged_targets(first, second, props, reversed)
     return false
 end
 
+function assess_ranged_explosion(attack, target, seen_pos)
+    local results = {}
+    for _, pos in adjacent_iter(target, true) do
+        if not seen_pos[target.x][target.y] then
+            table.insert(results, assess_ranged_target(attack, pos, props))
+            seen_pos[target.x][target.y] = true
+        end
+    end
+    return results
+end
+
 function get_ranged_target()
     local weapon = items.fired_item()
     local attack = {}
@@ -132,40 +162,35 @@ function get_ranged_target()
     attack.is_penetrating = is_penetrating_weapon(weapon)
     attack.is_explosion = is_exploding_weapon(weapon)
     attack.test_spell = weapon_test_spell(weapon)
+    attack.props = { "hit", "distance", "constricting_you", "damage_level",
+        "threat", "is_orc_priest_wizard" }
+    attack.reversed = {}
+    attack.reversed.distance = true
 
-    local seen_pos
     if explosion then
-        seen_pos = {}
+        attack.seen_pos = {}
         for i = -los_radius, los_radius do
-            seen_pos[i] = {}
+            attack.seen_pos[i] = {}
         end
     end
 
-    local props = { "hit", "distance", "constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
-    local reversed = {}
     reversed.distance = true
     local best_result
     for _, enemy in ipairs(enemy_list) do
         local pos = enemy:pos()
         if enemy:distance() <= attack.range
                 and you.see_cell_solid_see(pos.x, pos.y) then
+            local results
             if explosion then
-                for _, pos in adjacent_iter(target, true) do
-                    if not seen_pos[target.x][target.y] then
-                        result = assess_ranged_target(attack, pos, props)
-                        seen_pos[target.x][target.y] = true
-                        if compare_ranged_result(best_result, result, props, reversed) then
-                            best_result = result
-                        end
-                    end
-                end
+                results = assess_ranged_explosion(attack, pos)
             else
-                result = assess_ranged_target(attack, pos, props)
+                results = { assess_ranged_target(attack, pos) }
             end
 
-            if compare_ranged_result(best_result, result, props, reversed) then
-                best_result = result
+            for _, result in ipairs(results) do
+                if compare_ranged_result(best_result, result, props, reversed) then
+                    best_result = result
+                end
             end
         end
     end
