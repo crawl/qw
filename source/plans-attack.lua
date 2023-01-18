@@ -47,7 +47,7 @@ function add_enemy_hit_props(result, enemy, props)
     end
 end
 
-function assess_ranged_explosion(attack, target)
+function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
         -- Never hit ourselves.
@@ -58,7 +58,7 @@ function assess_ranged_explosion(attack, target)
         local mons = monster_array[epos.x][epos.y]
         if mons then
             if mons:is_friendly()
-                and not mons:ignores_friendly_projectiles() then
+                and not mons:ignores_player_projectiles() then
             return
 
             if mons:is_enemy() then
@@ -72,36 +72,31 @@ end
 function assess_ranged_target(attack, target)
     local positions = spells.path(attack.test_spell, target.x, target.y, false)
     local result = { pos = target }
-    local hit_target, at_target_result
+    local past_target, at_target_result
     for i, pos in ipairs(positions) do
-        if pos.x == target.x and pos.y == target.y then
-            hit_target = true
-        end
-
+        local hit_target = pos.x == target.x and pos.y == target.y
         local mons = monster_array[pos.x][pos.y]
-        -- Non-penetrating attacks must hit the target before hitting any other
-        -- monster.
+        -- Non-penetrating attacks must reach the target before reaching any
+        -- other monster, otherwise they're considered blocked and unusable.
         if not attack.is_penetrating
+                and not past_target
                 and not hit_target
                 and mons
-                -- Fedhas allies ignore friendly projectiles.
-                and not (mons:is_friendly()
-                    and mons:ignores_friendly_projectiles()) then
+                and not mons:ignores_player_projectiles() then
             return
         end
 
-        -- Never potentially hit friendlies. If we haven't reached our target
-        -- yet, at_target_result will be nil, meaning this target won't get
-        -- chosen.
+        -- Never potentially hit friendlies. If at_target_result is defined,
+        -- we'll be using '.', otherwise we haven't yet reached our target and
+        -- the attack is unusable.
         if mons and mons:is_friendly()
-                and not mons:ignores_friendly_projectiles() then
+                and not mons:ignores_player_projectiles() then
             return at_target_result
         end
 
         -- Try to avoid losing ammo to destructive terrain at the end of our
-        -- throw path by using '.'. If at_target_result is nil, we're hitting
-        -- our target at the end of our throw path, and '.' isn't necessary.
-        if at_target_result
+        -- throw path by using '.'.
+        if not hit_target
                 and not attack.is_explosion
                 and attack.uses_ammunition
                 and i == #positions
@@ -110,31 +105,40 @@ function assess_ranged_target(attack, target)
             return at_target_result
         end
 
-        if mons and not (mons:is_friendly()
-                and mons:ignores_friendly_projectiles()) then
+        if mons and not mons:ignores_player_projectiles() then
             if attack.is_explosion then
-                result = assess_ranged_explosion(attack, target)
+                return assess_explosion(attack, target)
             elseif mons:is_enemy()
-                    and (attack.is_penetrating or not at_target_result) then
+                    and (attack.is_penetrating or hit_target) then
                 add_enemy_hit_props(result, mons, attack.props)
             end
         end
 
         -- We've reached the target, so make a copy of the results up to this
         -- point in case we later decide to use '.'.
-        if hit_target and not at_target_result then
+        if hit_target then
             at_target_result = util.copy(result)
             at_target_result.stop_at_target = true
+            past_target = true
         end
     end
     return result
 end
 
-function compare_ranged_targets(first, second, props, reversed)
-    for _, prop in ipairs(props) do
-        local val1 = tonumber(first[prop]())
-        local val2 = tonumber(second[prop]())
-        local if_greater_val = not reversed[prop] and true or false
+function compare_attack_results(attack, first, second)
+    if not first then
+        return second
+    end
+
+    if not second then
+        return first
+    end
+
+    for _, prop in ipairs(attack.props) do
+        local val1 = first[prop]
+        local val2 = second[prop]
+        local if_greater_val =
+            not attack.reversed_props[prop] and true or false
         if val1 > val2 then
             return if_greater_val
         elseif val1 < val2 then
@@ -144,15 +148,18 @@ function compare_ranged_targets(first, second, props, reversed)
     return false
 end
 
-function assess_ranged_explosion(attack, target, seen_pos)
-    local results = {}
+function assess_explosion_targets(attack, target)
+    local best_result
     for _, pos in adjacent_iter(target, true) do
-        if not seen_pos[target.x][target.y] then
-            table.insert(results, assess_ranged_target(attack, pos, props))
-            seen_pos[target.x][target.y] = true
+        if not attack.seen_pos[target.x][target.y] then
+            local result = assess_ranged_target(attack, pos)
+            if compare_attack_results(attack, result, best_result) then
+                best_result = result
+            end
+            attack.seen_pos[pos.x][pos.y] = true
         end
     end
-    return results
+    return best_result
 end
 
 function get_ranged_target()
@@ -180,17 +187,15 @@ function get_ranged_target()
         local pos = enemy:pos()
         if enemy:distance() <= attack.range
                 and you.see_cell_solid_see(pos.x, pos.y) then
-            local results
+            local result
             if explosion then
-                results = assess_ranged_explosion(attack, pos)
+                result = assess_explosion_targets(attack, pos)
             else
-                results = { assess_ranged_target(attack, pos) }
+                result = assess_ranged_target(attack, pos)
             end
 
-            for _, result in ipairs(results) do
-                if compare_ranged_result(best_result, result, props, reversed) then
-                    best_result = result
-                end
+            if compare_attack_results(attack, result, best_result) then
+                best_result = result
             end
         end
     end

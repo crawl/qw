@@ -56,6 +56,12 @@ function Monster:set_props()
 
     self.is_firewood = self.prop_func("is_firewood")
     self.is_safe = self.prop_func("is_safe")
+    self.ignores_player_projectiles =
+        self.prop_func("ignores_player_projectiles",
+            function()
+                return self:name() == "bush"
+                    or self:holiness() == "plant" and you.god() == "Fedhas"
+            end)
     self.threat = self.prop_func("threat")
 
     self.is_stationary = self.prop_func("is_stationary")
@@ -732,7 +738,7 @@ function sense_immediate_danger()
             return true
         elseif dist == 3 and enemy:reach_range() >= 2 then
             return true
-        elseif is_ranged_mons(enemy) then
+        elseif enemy:is_ranged() then
             return true
         end
     end
