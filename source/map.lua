@@ -414,38 +414,3 @@ function record_feature_position(pos)
         feat_positions[feat][hash] = gpos
     end
 end
-
-function add_ignore_mons(mons)
-    local name = enemy:name()
-    if not util.contains(ignore_list, name) then
-        table.insert(ignore_list, name)
-        crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
-        if DEBUG_MODE then
-            dsay("Ignoring " .. name .. ".")
-        end
-    end
-end
-
-function remove_ignore_mons(mons)
-    for i, name in ipairs(ignore_list) do
-        if enemy:name() == name then
-            table.remove(ignore_list, i)
-            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            if DEBUG_MODE then
-                dsay("Unignoring " .. name .. ".")
-            end
-            return
-        end
-    end
-end
-
-function clear_ignores()
-    local size = #ignore_list
-    if size > 0 then
-        for i = 1, size do
-            local name = table.remove(ignore_list)
-            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            dsay("Unignoring " .. name .. ".")
-        end
-    end
-end

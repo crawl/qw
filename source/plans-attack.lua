@@ -2,35 +2,28 @@
 -- Attack plans
 --
 
-function get_melee_target()
-    local best_enemy = nil
-    local props = { "player_can_melee", "distance", "constricting_you",
-        "very_stabbable", "damage_level", "threat", "is_orc_priest_wizard" }
-    local reversed = { }
-    -- We favor closer monsters.
-    reversed.distance = true
-    for _, enemy in ipairs(enemy_list) do
-        if not util.contains(failed_move, 20 * enemy:x_pos() + enemy:y_pos())
-                and enemy:player_can_move_to_melee()
-                and (not best_enemy
-                    or compare_target(enemy, best_enemy, props, reversed)) then
-            best_enemy = enemy
-        end
+-- Is the first attack result better than the second?
+function compare_attack_results(attack, first, second)
+    if not first then
+        return false
     end
-    return best_enemy
-end
 
-function melee_attack()
-    local success = false
-    failed_move = { }
-    while not success do
-        local enemy = get_melee_target_enemy()
-        if enemy == nil then
-            return false
-        end
-        success = make_attack(enemy)
+    if not second then
+        return true
     end
-    return true
+
+    for _, prop in ipairs(attack.props) do
+        local val1 = first[prop]
+        local val2 = second[prop]
+        local if_greater_val =
+            not attack.reversed_props[prop] and true or false
+        if val1 > val2 then
+            return if_greater_val
+        elseif val1 < val2 then
+            return not if_greater_val
+        end
+    end
+    return false
 end
 
 function add_enemy_hit_props(result, enemy, props)
@@ -47,6 +40,39 @@ function add_enemy_hit_props(result, enemy, props)
     end
 end
 
+function get_melee_target()
+    local best_result
+    local attack = {}
+    attack.props = { "player_can_melee", "distance", "constricting_you",
+        "very_stabbable", "damage_level", "threat", "is_orc_priest_wizard" }
+    attack.reversed_props = { }
+    attack.reversed_props.distance = true
+    -- We favor closer monsters.
+    reversed.distance = true
+    for _, enemy in ipairs(enemy_list) do
+        local pos = enemy:pos()
+        if not failed_moves[hash_position(pos)]
+                and enemy:player_can_move_to_melee() then
+            result = assess_melee_target(attack, pos)
+                and compare_target(attack, result, best_result) then
+            best_result = result
+        end
+    end
+    return best_enemy
+end
+
+function melee_attack()
+    local success = false
+    failed_move = { }
+    while not success do
+        local enemy = get_melee_target()
+        if enemy == nil then
+            return false
+        end
+        success = make_attack(enemy)
+    end
+    return true
+end
 function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
@@ -109,6 +135,8 @@ function assess_ranged_target(attack, target)
             if attack.is_explosion then
                 return assess_explosion(attack, target)
             elseif mons:is_enemy()
+                    -- Non-penetrating attacks only get the values from the
+                    -- target.
                     and (attack.is_penetrating or hit_target) then
                 add_enemy_hit_props(result, mons, attack.props)
             end
@@ -123,29 +151,6 @@ function assess_ranged_target(attack, target)
         end
     end
     return result
-end
-
-function compare_attack_results(attack, first, second)
-    if not first then
-        return second
-    end
-
-    if not second then
-        return first
-    end
-
-    for _, prop in ipairs(attack.props) do
-        local val1 = first[prop]
-        local val2 = second[prop]
-        local if_greater_val =
-            not attack.reversed_props[prop] and true or false
-        if val1 > val2 then
-            return if_greater_val
-        elseif val1 < val2 then
-            return not if_greater_val
-        end
-    end
-    return false
 end
 
 function assess_explosion_targets(attack, target)
