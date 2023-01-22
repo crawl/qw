@@ -897,6 +897,29 @@ function plan_dig_grate()
     return false
 end
 
+function plan_cure_poison()
+    if not you.poisoned() or you.poison_survival() > 1 then
+        return false
+    end
+
+    if drink_by_name("curing") then
+        say("(to cure poison)")
+        return true
+    end
+
+    if can_trogs_hand() then
+        trogs_hand()
+        return true
+    end
+
+    if can_purification() then
+        purification()
+        return true
+    end
+
+    return false
+end
+
 function set_plan_emergency()
     plan_emergency = cascade {
         {plan_special_purification, "special_purification"},

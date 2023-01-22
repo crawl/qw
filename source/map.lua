@@ -71,7 +71,7 @@ function find_features(radius)
     local traversal_map = traversal_maps[waypoint_parity]
     local i = 1
     for pos in square_iter(origin, radius, true) do
-        if USE_COROUTINE and i % 1000 == 0 then
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
 
@@ -169,7 +169,7 @@ function update_distance_map(dist_map, queue)
     local first = 1
     local last = #queue
     while first <= last do
-        if USE_COROUTINE and first % 300 == 0 then
+        if COROUTINE_THROTTLE and first % 300 == 0 then
             coroutine.yield()
         end
 
@@ -265,7 +265,7 @@ function los_map_update()
     local traversal_map = traversal_maps[waypoint_parity]
     local dist_queues = {}
     for i, pos in ipairs(map_queue) do
-        if USE_COROUTINE and i % 1000 == 0 then
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
 

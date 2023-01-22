@@ -245,8 +245,7 @@ function move_towards(pos)
         end
     end
     if not move or move_count >= 10 then
-        add_ignore(pos.x, pos.y)
-        table.insert(failed_move, 20 * pos.x + pos.y)
+        failed_moves[hash_position(pos)] = true
         return false
     else
         if (abs(pos.x) > 1 or abs(pos.y) > 1)

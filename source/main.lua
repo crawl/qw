@@ -82,11 +82,6 @@ function qw_main()
 end
 
 function run_qw()
-    if not USE_COROUTINE then
-        qw_main()
-        return
-    end
-
     if update_coroutine == nil then
         update_coroutine = coroutine.create(qw_main)
     end

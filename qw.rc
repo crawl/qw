@@ -175,12 +175,12 @@ bindkey = [.] CMD_NO_CMD_DEFAULT
 bindkey = [\{-253}] CMD_NO_CMD_DEFAULT
 bindkey = [^D] CMD_LUA_CONSOLE
 
-# Autopickup is all handled via lua.
+# Autopickup is handled directly by qw.
 autopickup =
 autopickup_exceptions =
 
-# Enable use of a coroutine to avoid lua throttling
-: USE_COROUTINE = true
+# Use the coroutine to break up execution so as to avoid lua throttling.
+: COROUTINE_THROTTLE = true
 
 #################
 ### Debugging ###

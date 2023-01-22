@@ -348,3 +348,19 @@ function player_can_melee_mons(mons)
 
     return
 end
+
+function melee_is_unsafe()
+    if melee_unsafe ~= nil then
+        return melee_unsafe
+    end
+
+    melee_unsafe = false
+    if you.confused()
+        and (count_brothers_in_arms(1) > 0
+            or count_greater_servants(1) > 0
+            or count_divine_warriors(1) > 0) then
+        melee_unsafe = true
+    end
+
+    return melee_unsafe
+end

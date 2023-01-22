@@ -221,7 +221,7 @@ function step_reason(a1, a2)
     elseif not a1.cloud_safe then
         return "cloud"
     elseif a1.fumble then
-        -- We require some close threats that try to say adjacent to us before
+        -- We require some close threats that try to stay adjacent to us before
         -- we'll try to move out of water. We also require that we are no worse
         -- in at least one of ranged threats or enemy distance at the new
         -- position.
@@ -340,37 +340,22 @@ function player_can_move_closer(pos)
     return false
 end
 
-function mons_can_move_to_melee_player(mons)
-    local name = mons:name()
-    if name == "wandering mushroom"
-            or name:find("vortex")
-            or mons:desc():find("fleeing")
-            or mons:status("paralysed")
-            or mons:status("confused")
-            or mons:status("petrified") then
-        return false
+function get_move_towards(center, target, square_func, min_dist, failed_moves)
+    local hash
+    if failed_moves then
+        hash = hash_position(target)
+        if failed_moves[hash] then
+            return
+        end
     end
 
-    local tab_func = function(pos)
-        return mons:can_traverse(pos.x, pos.y)
-    end
-    local melee_range = mons:reach_range()
-    return will_tab(mons:pos(), { x = 0, y = 0 }, tab_func, melee_range)
-        -- If the monster can reach attack and we can't, be sure we can
-        -- close the final 1-square gap.
-        and (melee_range < 2
-            or attack_range() > 1
-            or player_can_move_closer(pos))
-end
-
-function will_tab(center, target, square_func, tab_dist)
-    if not tab_dist then
-        tab_dist = 1
+    if not min_dist then
+        min_dist = 0
     end
 
     local dpos = { x = target.x - center.x, y = target.y - center.y }
-    if supdist(dpos) <= tab_dist then
-        return true
+    if supdist(dpos) <= min_dist then
+        return center
     end
 
     local function attempt_move(pos)
@@ -379,12 +364,9 @@ function will_tab(center, target, square_func, tab_dist)
         end
 
         local new_pos = { x = center.x + pos.x, y = center.y + pos.y }
-        if supdist(newpos.x, newpos.y) > los_radius then
-            return
-        end
-
         if square_func(newpos) then
-            return will_tab(newpos, target, square_func, tab_dist)
+            return get_move_towards_target(newpos, target, square_func,
+                min_dist, failed_moves)
         end
     end
 
@@ -436,5 +418,33 @@ function will_tab(center, target, square_func, tab_dist)
             move = attempt_move({ x = sign(dpos.x), y = 0 })
         end
     end
+
+    if not move and failed_moves then
+        failed_moves[hash] = true
+    end
+
     return move
+end
+
+function mons_can_move_to_melee_player(mons)
+    local name = mons:name()
+    if name == "wandering mushroom"
+            or name:find("vortex")
+            or mons:desc():find("fleeing")
+            or mons:status("paralysed")
+            or mons:status("confused")
+            or mons:status("petrified") then
+        return false
+    end
+
+    local tab_func = function(pos)
+        return mons:can_traverse(pos.x, pos.y)
+    end
+    local melee_range = mons:reach_range()
+    return get_move_towards(mons:pos(), origin, tab_func, melee_range)
+        -- If the monster can reach attack and we can't, be sure we can
+        -- close the final 1-square gap.
+        and (melee_range < 2
+            or attack_range() > 1
+            or player_can_move_closer(pos))
 end

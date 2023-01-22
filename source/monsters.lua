@@ -113,7 +113,7 @@ function Monster:set_props()
     -- the enemy_list.
     self.is_enemy = self.prop_func("is_enemy",
         function()
-            return self:is_safe()
+            return not self:is_safe()
                 and self:attitude() < enum_att_neutral
                 and self:name() ~= "orb of destruction"
         end)
@@ -127,11 +127,12 @@ function Monster:set_props()
 
     self.player_can_melee = self.prop_func("player_can_melee",
         function() player_can_melee_mons(self) end)
-    self.player_can_move_to_melee = self.prop_func("player_can_move_to_melee",
-        function() will_tab(origin, self:pos(), tabbable_square) end)
+    self.get_player_move_towards = self.prop_func("get_player_move_towards",
+        function()
+            return get_move_towards(origin, self:pos(), tabbable_square,
+                    reach_range(), failed_moves_towards)
+        end)
 
-    self.can_melee_player = self.prop_func("can_melee_player",
-        function() mons_can_melee_player(self) end)
     self.can_move_to_melee_player = self.prop_func("can_move_to_melee_player",
         function() mons_can_move_to_melee_player(self) end)
 end
@@ -166,9 +167,6 @@ function Monster:status(status)
     end
 
     return self.props.status[status]
-end
-
-function Monster:player_can_move_to_melee(handle_ignore)
 end
 
 -- functions for use in the monster lists below
@@ -760,11 +758,26 @@ function sense_danger(radius, moveable)
 end
 
 function sense_sigmund()
+    local see_sigmund = false
     for _, enemy in ipairs(enemy_list) do
         if enemy:name() == "Sigmund" then
             sigmund_pos = enemy:pos()
-            return
+            see_sigmund = true
+            break
         end
+    end
+
+    if invis_sigmund and invis_sigmund_count > 100 then
+        say("Invisible monster not found???")
+        if not options.autopick_on then
+            magic(control('a'))
+            coroutine.yield()
+        end
+    end
+
+    if see_sigmund or options.autopick_on then
+        invis_sigmund_count = 0
+        invis_sigmund = false
     end
 end
 
@@ -779,10 +792,12 @@ function update_monster_array()
     enemy_list = {}
     for pos in radius_iter(origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
-            monster_array[pos.x][pos.y] =
-                Monster(monster.get_monster_at(pos.x, pos.y))
-            if monster_array[pos.x][pos.y]:is_enemy() then
-                table.insert(enemy_list, monster_array[pos.x][pos.y])
+            local mons = monster.get_monster_at(pos.x, pos.y)
+            if mons then
+                monster_array[pos.x][pos.y] = Monster(mons)
+                if monster_array[pos.x][pos.y]:is_enemy() then
+                    table.insert(enemy_list, monster_array[pos.x][pos.y])
+                end
             end
         else
             monster_array[pos.x][pos.y] = nil

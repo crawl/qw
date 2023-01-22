@@ -1237,7 +1237,7 @@ end
 
 function reach_range()
     local wp = items.equipped_at("weapon")
-    return wp and not wp.is_melded and wp.reach_range or 0
+    return wp and not wp.is_melded and wp.reach_range or 1
 end
 
 function have_reaching()

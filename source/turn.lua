@@ -44,9 +44,7 @@ function turn_update()
         if you.where() ~= previous_where or in_branch("Tomb") then
             clear_map_data(waypoint_parity)
             set_waypoint()
-            if USE_COROUTINE then
-                coroutine.yield()
-            end
+            coroutine.yield()
         end
 
         previous_where = where
