@@ -3,7 +3,7 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_sigmund then
+    if not invis_sigmund or melee_is_unsafe() then
         return false
     end
 
@@ -252,8 +252,8 @@ function get_ranged_target(weapon)
     attack.test_spell = weapon_test_spell(weapon)
     attack.props = { "hit", "distance", "constricting_you", "damage_level",
         "threat", "is_orc_priest_wizard" }
-    attack.reversed = {}
-    attack.reversed.distance = true
+    attack.reversed_props = {}
+    attack.reversed_props.distance = true
 
     if explosion then
         attack.seen_pos = {}
@@ -293,6 +293,10 @@ function throw_missile(missile, pos)
 end
 
 function plan_throw()
+    if not danger or attacking_is_unsafe() then
+        return false
+    end
+
     local missile = best_missile()
     if not missile then
         return false
@@ -313,6 +317,10 @@ function do_wait()
 end
 
 function plan_wait_for_enemy()
+    if not danger or attacking_is_unsafe() then
+        return false
+    end
+
     if melee_target and melee_is_unsafe() then
         do_wait()
         return true
@@ -368,6 +376,7 @@ end
 
 function plan_poison_spit()
     if not danger
+        or attacking_is_unsafe()
         or you.xl() > 11
         or you.mutation("spit poison") < 1
         or you.breath_timeout()

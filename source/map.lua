@@ -18,10 +18,19 @@ function dir_key(dir)
     return dir == DIR.DOWN and ">" or (dir == DIR.UP and "<" or nil)
 end
 
-function set_waypoint()
-    magic(control('w') .. waypoint_parity)
-    did_waypoint = true
-    return true
+function update_waypoint_data()
+    waypoint_parity = 3 - waypoint_parity
+
+    local place = in_portal and "Portal" or where
+    if not c_persist.waypoints[place] then
+        c_persist.waypoints[place] = c_persist.waypoint_count
+        c_persist.waypoint_count = c_persist.waypoint_count + 1
+        did_waypoint = true
+        magic(control('w') .. waypoint_parity)
+        coroutine.yield()
+    end
+
+    waypoint.x, waypoint.y = travel.waypoint_delta(c_persist.waypoints[place])
 end
 
 function record_map_mode_search(key, start_hash, count, end_hash)
@@ -133,37 +142,6 @@ function handle_feature_searches(pos, dist_queues)
     end
 end
 
-function update_distance_map_pos(pos, dist_map)
-    if not dist_map.radius
-            or supdist({ x = dist_map.pos.x - pos.x,
-                y = dist_map.pos.y - pos.y }) > dist_map.radius then
-        return false
-    end
-
-    local oldval = dist_map.map[pos.x][pos.y]
-    for dpos in adjacent_iter(pos) do
-        local val = dist_map.map[dpos.x][dpos.y]
-        if val and (not oldval or oldval > val + 1) then
-            oldval = val + 1
-        end
-    end
-    if dist_map.map[pos.x][pos.y] ~= oldval then
-        dist_map.map[pos.x][pos.y] = oldval
-        return true
-    end
-end
-
-function handle_traversable_pos(pos, dist_queues)
-    for hash, dist_map in pairs(distance_maps[waypoint_parity]) do
-        if update_distance_map_pos(pos, dist_map) then
-            if not dist_queues[hash] then
-                dist_queues[hash] = {}
-            end
-            table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
-        end
-    end
-end
-
 function update_distance_map(dist_map, queue)
     local traversal_map = traversal_maps[waypoint_parity]
     local first = 1
@@ -241,6 +219,37 @@ function handle_item_searches(pos, dist_queues)
         if searches[name] then
             record_map_item(name, pos, dist_queues)
             return
+        end
+    end
+end
+
+function update_distance_map_pos(pos, dist_map)
+    if dist_map.radius
+            and supdist({ x = dist_map.pos.x - pos.x,
+                y = dist_map.pos.y - pos.y }) > dist_map.radius then
+        return false
+    end
+
+    local oldval = dist_map.map[pos.x][pos.y]
+    for dpos in adjacent_iter(pos) do
+        local val = dist_map.map[dpos.x][dpos.y]
+        if val and (not oldval or oldval > val + 1) then
+            oldval = val + 1
+        end
+    end
+    if dist_map.map[pos.x][pos.y] ~= oldval then
+        dist_map.map[pos.x][pos.y] = oldval
+        return true
+    end
+end
+
+function handle_traversable_pos(pos, dist_queues)
+    for hash, dist_map in pairs(distance_maps[waypoint_parity]) do
+        if update_distance_map_pos(pos, dist_map) then
+            if not dist_queues[hash] then
+                dist_queues[hash] = {}
+            end
+            table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
         end
     end
 end
@@ -412,5 +421,24 @@ function record_feature_position(pos)
     local hash = hash_position(gpos)
     if not feat_positions[feat][hash] then
         feat_positions[feat][hash] = gpos
+    end
+end
+
+function handle_exclusions()
+    in_exclusion = travel.is_excluded(0, 0)
+
+    if incoming_melee_turn == turn_count - 1 or not hp_is_low(50) then
+        return
+    end
+
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:can_melee_player() or enemy:can_move_to_melee_player() then
+            incoming_melee_turn = you.turns()
+            return
+        end
+    end
+
+    for _, enemy in ipairs(enemy_list) do
+        travel.set_exclude(enemy.x_pos(), enemy.y_pos())
     end
 end

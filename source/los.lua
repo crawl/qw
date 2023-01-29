@@ -1,5 +1,7 @@
 -- Coordinates and LOS
 
+origin = { x = 0, y = 0 }
+
 -- Feature LOS state enum
 FEAT_LOS = {
     "NONE",
@@ -51,7 +53,6 @@ function adjacent_iter(pos, include_center)
     return square_iter(pos, 1, include_center)
 end
 
-local origin = { x = 0, y = 0 }
 
 local square = {
     {1, -1}, {1, 1}, {-1, 1}, {-1, -1}

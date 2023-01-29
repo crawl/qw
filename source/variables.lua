@@ -11,13 +11,16 @@ local qw_version = "%VERSION%"
 local enum_mons_pan_lord = 344
 local enum_att_friendly = 4
 local enum_att_neutral = 1
-local enum_gxm
 
--- Enum tables and constants
+-- Constants
+local INF_TURNS
+local GXM
+local origin
+
+-- Enum tables
 local AUTOEXP
 local FEAT_LOS
 local DIR
-local INF_TURNS
 
 -- All variables past this point are qw state.
 local initialized = false
@@ -73,7 +76,6 @@ local where_branch
 local where_depth
 
 local los_radius
-local origin
 local base_corrosion
 local disable_autoexplore
 local level_has_upstairs
@@ -113,7 +115,7 @@ local target_memory
 
 local last_wait = 0
 local wait_count = 0
-local old_turn_count = you.turns() - 1
+local turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
 local monster_array

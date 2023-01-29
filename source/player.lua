@@ -354,13 +354,19 @@ function melee_is_unsafe()
         return melee_unsafe
     end
 
-    melee_unsafe = false
-    if you.confused()
-        and (count_brothers_in_arms(1) > 0
-            or count_greater_servants(1) > 0
-            or count_divine_warriors(1) > 0) then
-        melee_unsafe = true
-    end
+    melee_unsafe = you.confused()
+            and (count_brothers_in_arms(1) > 0
+                or count_greater_servants(1) > 0
+                or count_divine_warriors(1) > 0)
 
     return melee_unsafe
+end
+
+function attacking_is_unsafe()
+    if attacking_unsafe ~= nil then
+        return attacking_unsafe
+    end
+
+    attacking_unsafe = travel.is_excluded(0, 0)
+    return attacking_unsafe
 end

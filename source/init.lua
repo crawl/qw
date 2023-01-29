@@ -2,29 +2,37 @@
 -- Start of game and session initialization.
 
 function initialize_c_persist()
+    if not c_persist.waypoint_count then
+        c_persist.waypoint_count = 0
+    end
+
+    if not c_persist.waypoints then
+        c_persist.waypoints = {}
+    end
+
     if not c_persist.portals then
-        c_persist.portals = { }
+        c_persist.portals = {}
     end
     if not c_persist.plan_fail_count then
-        c_persist.plan_fail_count = { }
+        c_persist.plan_fail_count = {}
     end
     if not c_persist.branches then
-        c_persist.branches = { }
+        c_persist.branches = {}
     end
     if not c_persist.altars then
-        c_persist.altars = { }
+        c_persist.altars = {}
     end
     if not c_persist.autoexplore then
-        c_persist.autoexplore = { }
+        c_persist.autoexplore = {}
     end
     if not c_persist.upstairs then
-        c_persist.upstairs = { }
+        c_persist.upstairs = {}
     end
     if not c_persist.downstairs then
-        c_persist.downstairs = { }
+        c_persist.downstairs = {}
     end
     if not c_persist.seen_items then
-        c_persist.seen_items = { }
+        c_persist.seen_items = {}
     end
 end
 
@@ -65,6 +73,7 @@ function initialize()
         clear_map_data(2)
 
         waypoint_parity = 1
+        waypoint = {}
         previous_where = "nowhere"
     end
 

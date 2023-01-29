@@ -10,19 +10,20 @@ function turn_update()
         initialize()
     end
 
-    if you.turns() == old_turn_count then
+    local turns = you.turns()
+    if turns == turn_count then
         time_passed = false
         return
     end
 
     time_passed = true
-    old_turn_count = you.turns()
+    turn_count = turns
     if you.turns() >= dump_count then
         dump_count = dump_count + 100
         crawl.dump_char()
     end
 
-    if you.turns() >= skill_count then
+    if turn_count >= skill_count then
         skill_count = skill_count + 5
         handle_skills()
     end
@@ -39,14 +40,11 @@ function turn_update()
     end
 
     if you.where() ~= where then
-        waypoint_parity = 3 - waypoint_parity
+        update_waypoint_data()
 
-        if you.where() ~= previous_where or in_branch("Tomb") then
+        if you.where() ~= previous_where then
             clear_map_data(waypoint_parity)
-            set_waypoint()
-            coroutine.yield()
         end
-
         previous_where = where
         where = you.where()
         where_branch = you.branch()
@@ -73,7 +71,6 @@ function turn_update()
         transp_zone = 0
         zone_counts = {}
 
-        clear_ignores()
         stuck_turns = 0
 
         if you.have_orb() and where == zot_end then
@@ -83,15 +80,13 @@ function turn_update()
         end
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
-            vaults_end_entry_turn = you.turns()
+            vaults_end_entry_turn = turn_count
         elseif where == "Tomb:2" and not tomb2_entry_turn then
-            tomb2_entry_turn = you.turns()
+            tomb2_entry_turn = turn_count
         elseif where == "Tomb:3" and not tomb3_entry_turn then
-            tomb3_entry_turn = you.turns()
+            tomb3_entry_turn = turn_count
         end
     end
-
-    waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_parity)
 
     transp_search = nil
     if can_use_transporters() then
@@ -112,6 +107,7 @@ function turn_update()
         end
     end
 
+    handle_exclusions()
     update_map_data()
 
     if want_gameplan_update then
@@ -136,15 +132,6 @@ function turn_update()
 
     cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
     choose_tactical_step()
-
-    if disconnected_enemy_phase and hp_is_low(50) then
-    for _, enemy in ipairs(enemy_list) do
-        if not enemy_can_move_melee(enemy) then
-            travel.set_exclude(enemy.pos.x, enemy.pos.y)
-        end
-    end
-    else
-
 
     if collectgarbage("count") > 7000 then
         collectgarbage()
