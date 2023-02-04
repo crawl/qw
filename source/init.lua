@@ -64,11 +64,13 @@ function initialize()
     where_depth = nil
 
     if not waypoint_parity then
-        feature_searches = {}
-        feature_positions = {}
         traversal_maps = {}
-        distance_maps = {}
-        map_mode_searches = {}
+        exclusion_maps = {}
+        level_distance_maps = {}
+        level_feature_searches = {}
+        level_feature_positions = {}
+        level_item_searches = {}
+        level_map_mode_searches = {}
         clear_map_data(1)
         clear_map_data(2)
 

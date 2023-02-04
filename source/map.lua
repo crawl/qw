@@ -4,6 +4,7 @@
 -- Maximum map width. We use this as a general map radius that's guaranteed to
 -- reach the entire map, since qw is never given absolute coordinates by crawl.
 GXM = 80
+GYM = 70
 
 -- Autoexplore state enum.
 AUTOEXP = {
@@ -20,6 +21,13 @@ end
 
 function update_waypoint_data()
     waypoint_parity = 3 - waypoint_parity
+    traversal_map = traversal_maps[waypoint_parity]
+    exclusion_map = exclusion_maps[waypoint_parity]
+    distance_maps = level_distance_maps[waypoint_parity]
+    feature_searches = level_feature_searches[waypoint_parity]
+    feature_positions = level_feature_positions[waypoint_parity]
+    item_searches = level_item_searches[waypoint_parity]
+    map_mode_searches = level_map_mode_searches[waypoint_parity]
 
     local place = in_portal and "Portal" or where
     if not c_persist.waypoints[place] then
@@ -31,41 +39,44 @@ function update_waypoint_data()
     end
 
     waypoint.x, waypoint.y = travel.waypoint_delta(c_persist.waypoints[place])
+
 end
 
 function record_map_mode_search(key, start_hash, count, end_hash)
-    local searches = map_mode_searches[waypoint_parity]
-    if not searches[key] then
-        searches[key] = {}
+    if not map_mode_searches[key] then
+        map_mode_searches[key] = {}
     end
 
-    if not searches[key][start_hash] then
-        searches[key][start_hash]  = {}
+    if not map_mode_searches[key][start_hash] then
+        map_mode_searches[key][start_hash]  = {}
     end
 
-    searches[key][start_hash][count] = end_hash
+    map_mode_searches[key][start_hash][count] = end_hash
 end
 
 function clear_map_data(num)
-    feature_searches[num] = {}
-    feature_positions[num] = {}
-    item_searches[num] = {}
-    distance_maps[num] = {}
-    mons_distance_maps[num] = {}
+    level_feature_searches[num] = {}
+    level_feature_positions[num] = {}
+    level_item_searches[num] = {}
+    level_distance_maps[num] = {}
 
     traversal_maps[num] = {}
     for x = -GXM, GXM do
         traversal_maps[num][x] = {}
     end
 
+    exclusion_maps[num] = {}
+    for x = -GXM, GXM do
+        exclusion_maps[num][x] = {}
+    end
+
     map_mode_searches[num] = {}
 end
 
 function add_feature_search(feats)
-    local feat_search = feature_searches[waypoint_parity]
     for _, feat in ipairs(feats) do
-        if not feat_search[feat] then
-            feat_search[feat] = true
+        if not feature_search[feat] then
+            feature_search[feat] = true
         end
     end
 end
@@ -75,9 +86,6 @@ function find_features(radius)
         radius = GXM
     end
 
-    local feat_search = feature_searches[waypoint_parity]
-    local feat_positions = feature_positions[waypoint_parity]
-    local traversal_map = traversal_maps[waypoint_parity]
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
@@ -86,111 +94,180 @@ function find_features(radius)
 
         local feat = view.feature_at(pos.x, pos.y)
         local dpos = { x = pos.x + waypoint.x,  y = pos.y + waypoint.y }
-        if feat_search[feat] then
-            if not feat_positions[feat] then
-                feat_positions[feat] = {}
+        if feature_searches[feat] then
+            if not feature_positions[feat] then
+                feature_positions[feat] = {}
             end
             local hash = hash_position(dpos)
-            if not feat_positions[feat][hash] then
-                feat_positions[feat][hash] = dpos
+            if not feature_positions[feat][hash] then
+                feature_positions[feat][hash] = dpos
             end
         end
 
-        if feat ~= "unseen" and traversal_map[dpos.x][dpos.y] == nil then
-            traversal_map[dpos.x][dpos.y] = feature_is_traversable(feat)
+        if feat ~= "unseen" then
+            if traversal_map[dpos.x][dpos.y] == nil then
+                traversal_map[dpos.x][dpos.y] = feature_is_traversable(feat)
+            end
+
+            if exclusion_map[dpos.x][dpos.y] == nil then
+                exclusion_map[dpos.x][dpos.y] = travel.is_excluded(pos.x, pos.y)
+            end
         end
         i = i + 1
     end
 end
 
-function initialize_distance_map(pos, hash, radius)
+function distance_map_initialize(pos, hash, radius)
     local dist_map = {}
     dist_map.pos = pos
     dist_map.hash = hash
     dist_map.radius = radius
+
     dist_map.map = {}
     for x = -GXM, GXM do
         dist_map.map[x] = {}
     end
-
     dist_map.map[pos.x][pos.y] = 0
+    for x = -GXM, GXM do
+        dist_map.exclusion_map[x] = {}
+    end
+    dist_map.exclusion_map[pos.x][pos.y] = 0
+
+    dist_map.queue = { { x = pos.x, y = pos.y, became_traversable = true } }
     return dist_map
+end
+
+function distance_map_initialize_exclusions(dist_map)
+    for x = -GXM, GXM do
+        dist_map.exclusion_map[x] = {}
+        for y = -GYM, GYM do
+            dist_map.exclusion_map[x][y] = dist_map.map[x][y]
+        end
+    end
 end
 
 function handle_feature_searches(pos, dist_queues)
     local feat = view.feature_at(pos.x, pos.y)
-    if feature_searches[waypoint_parity][feat] then
-        local feat_positions = feature_positions[waypoint_parity]
-        if not feat_positions[feat] then
-            feat_positions[feat] = {}
+    if feature_searches[feat] then
+        if not feature_positions[feat] then
+            feature_positions[feat] = {}
         end
 
         local hash = hash_position(pos)
-        if not feat_positions[feat][hash] then
-            feat_positions[feat][hash] = pos
+        if not feature_positions[feat][hash] then
+            feature_positions[feat][hash] = pos
         end
 
-        local dist_maps = distance_maps[waypoint_parity]
-        if not dist_maps[hash] then
-            dist_maps[hash] = initialize_distance_map(pos, hash)
+        if not distance_maps[hash] then
+            distance_maps[hash] = distance_map_initialize(pos, hash)
         end
-
-        if not dist_queues[hash] then
-            dist_queues[hash] = {}
-        end
-        table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
+        table.insert(distance_maps[hash]., { x = pos.x, y = pos.y })
     end
 end
 
-function update_distance_map(dist_map, queue)
-    local traversal_map = traversal_maps[waypoint_parity]
-    local first = 1
-    local last = #queue
-    while first <= last do
-        if COROUTINE_THROTTLE and first % 300 == 0 then
+function distance_map_best_adjacent(pos, dist_map)
+    local best_dist, best_exc_dist
+    for apos in adjacent_iter(pos) do
+        if traversal_map[apos.x][apos.y] then
+            local dist = dist_map.map[apos.x][apos.y]
+             if dist and (not best_dist or best_dist > dist) then
+                best_dist = dist
+            end
+
+            dist = dist_map.exclusion_map[apos.x][apos.y]
+            if exclusion_map[apos.x][apos.y]
+                    and dist
+                    and (not best_exc_dist or best_exc_dist > dist) then
+                best_exc_dist = dist
+            end
+        end
+    end
+    return best_dist, best_exc_dist
+end
+
+function distance_map_update_adjacent_pos(center, pos, dist_map)
+    if (dist_map.radius
+                and supdist(pos.x - dist_map.pos.x,
+                        pos.y - dist_map.pos.y) > dist_map.radius)
+            or not traversal_map[pos.x][pos.y] then
+        return false
+    end
+
+    local center_dist = dist_map.map[center.x][center.y]
+    local dist = dist_map.map[pos.x][pos.y]
+    if center.became_traversable
+            and (not dist or dist > center_dist + 1) then
+        dist_map.map[pos.x][pos.y] = center_dist + 1
+
+        if exclusion_map[pos.x][pos.y] then
+            center_dist = dist_map.exclusion_map[center.x][center.y]
+            dist = dist_map.exclusion_map[pos.x][pos.y]
+            if not dist or dist > center_dist + 1 then
+                dist_map.exclusion_map[pos.x][pos.y] = center_dist + 1
+            end
+        end
+
+        pos.became_traversable = true
+        table.insert(queue, pos)
+    elseif center.became_untraversable then
+        local best_dist, best_exc_dist = distance_map_best_adjacent(pos,
+            dist_map)
+        if best_dist and dist < best_dist + 1 then
+            dist_map.map[pos.x][pos.y] = best_dist + 1
+            pos.became_untraversable = true
+            table.insert(queue, pos)
+        end
+
+        if exclusion_map[pos.x][pos.y] then
+            dist = dist_map.exclusion_map[pos.x][pos.y]
+            if best_exc_dist and dist < best_exc_dist + 1 then
+                dist_map.exclusion_map[pos.x][pos.y] = best_exc_dist + 1
+                if not pos.became_untraversable then
+                    pos.became_untraversable = true
+                    table.insert(queue, pos)
+                end
+            end
+        end
+    elseif center.became_unexcluded then
+    elseif center.became_excluded then
+    end
+end
+
+function distance_map_queue_update(dist_map)
+    local ind = 1
+    local count = ind
+    while ind <= #dist_map.queue do
+        if COROUTINE_THROTTLE and count % 300 == 0 then
             coroutine.yield()
         end
 
-        local pos = queue[first]
-        local val = dist_map.map[x][y] + 1
-        for dpos in adjacent_iter(pos) do
-            if (not dist_map.radius
-                        or supdist(dpos.x - dist_map.pos.x,
-                            dpos.y - dist_map.pos.y) <= dist_map.radius)
-                    and traversal_map[dpos.x][dpos.y]
-                    and (not dist_map.map[dpos.x][dpos.y]
-                        or dist_map.map[dpos.x][dpos.y] > val) then
-                dist_map.map[dpos.x][dpos.y] = val
-                last = last + 1
-                queue[last] = dpos
-            end
+        local pos = dist_map.queue[ind]
+        for apos in adjacent_iter(pos) do
+            distance_map_update_adjacent_pos(pos, apos, dist_map)
         end
-        first = first + 1
+        ind = ind + 1
+        count = ind
     end
+    dist_map.queue = {}
 end
 
 function record_map_item(name, pos, dist_queues)
-    local item_ps = item_positions[waypoint_parity]
-    if not item_ps[name] then
-        item_ps[name] = {}
+    if not item_positions[name] then
+        item_positions[name] = {}
     end
 
     local pos = { x = waypoint.x + x, y = waypoint.y + y }
-    local hash = hash_position(pos)
-    local dist_maps = distance_maps[waypoint_parity]
-    for ih, _ in pairs(item_ps[name]) do
-        if ih ~= hash then
-            item_ps[name][ih] = nil
-            dist_maps[ih] = nil
+    local pos_hash = hash_position(pos)
+    for hash, _ in pairs(item_positions[name]) do
+        if hash ~= pos_hash then
+            item_positions[name][hash] = nil
+            distance_maps[hash] = nil
         end
     end
 
-    item_ps[name][hash] = pos
-    dist_maps[hash] = initialize_distance_map(pos, hash)
-    if not dist_queues[hash] then
-        dist_queues[hash] = {}
-    end
-    table.insert(dist_queues[hash], pos)
+    item_positions[name][pos_hash] = pos
+    distance_maps[pos_hash] = distance_map_initialize(pos, pos_hash)
+    table.insert(distance_maps[pos_hash].queue, pos)
 end
 
 function handle_item_searches(pos, dist_queues)
@@ -223,35 +300,65 @@ function handle_item_searches(pos, dist_queues)
     end
 end
 
-function update_distance_map_pos(pos, dist_map)
+function distance_map_update_pos(pos, dist_map)
     if dist_map.radius
             and supdist({ x = dist_map.pos.x - pos.x,
                 y = dist_map.pos.y - pos.y }) > dist_map.radius then
         return false
     end
 
-    local oldval = dist_map.map[pos.x][pos.y]
-    for dpos in adjacent_iter(pos) do
-        local val = dist_map.map[dpos.x][dpos.y]
-        if val and (not oldval or oldval > val + 1) then
-            oldval = val + 1
+    local traversable = traversal_map[pos.x][pos.y]
+    local excluded = exclusion_map[pos.x][pos.y]
+    if traversable and not dist_map.map[pos.x][pos.y] then
+        local best_dist
+        local best_exc_dist
+        for apos in adjacent_iter(pos) do
+            local dist = dist_map.map[apos.x][apos.y]
+            if traversal_map[apos.x][apos.y]
+                    and dist and (not best_dist or best_dist > dist + 1) then
+                best_dist = dist + 1
+            end
+
+            dist = dist_map.exclusion_map[apos.x][apos.y]
+            if not excluded
+                    and dist
+                    and (not best_exc_dist or best_exc_dist > dist + 1) then
+                best_exc_dist = dist + 1
+            end
         end
-    end
-    if dist_map.map[pos.x][pos.y] ~= oldval then
-        dist_map.map[pos.x][pos.y] = oldval
-        return true
+        dist_map.map[pos.x][pos.y] = best_dist
+        if not excluded then
+            dist_map.exclusion_map[pos.x][pos.y] = best_exc_dist
+        end
+        table.insert(queue, pos)
+        pos.became_traversable = true
+    elseif not traversable and dist_map.map[pos.x][pos.y] then
+        dist_map.map[pos.x][pos.y] = nil
+        dist_map.exclusion_map[pos.x][pos.y] = nil
+
+        pos.became_untraversable = true
+        table.insert(dist_map.queue, pos)
+    elseif traversable
+            and not excluded
+            and not dist_map.exclusion_map[pos.x][pos.y] then
+        local best_dist
+        for apos in adjacent_iter(pos) do
+            local dist = dist_map.exclusion_map[apos.x][apos.y]
+            if dist and (not best_dist or best_dist > dist + 1) then
+                best_dist = dist + 1
+            end
+        end
+        dist_map.exclusion_map[pos.x][pos.y] = best_dist
+        pos.became_unexcluded = true
+        table.insert(dist_map.queue, pos)
+    elseif excluded and dist_map.exclusion_map[pos.x][pos.y] then
+        dist_map.exclusion_map[pos.x][pos.y] = nil
+        pos.became_excluded = true
+        table.insert(dist_map.queue, pos)
     end
 end
 
-function handle_traversable_pos(pos, dist_queues)
-    for hash, dist_map in pairs(distance_maps[waypoint_parity]) do
-        if update_distance_map_pos(pos, dist_map) then
-            if not dist_queues[hash] then
-                dist_queues[hash] = {}
-            end
-            table.insert(dist_queues[hash], { x = pos.x, y = pos.y })
-        end
-    end
+function distance_map_los_update(pos, traversable, excluded)
 end
 
 function los_map_update()
@@ -267,12 +374,13 @@ function los_map_update()
             record_altar(pos)
         end
 
+        traversal_map[pos.x][pos.y] = feature_is_traversable(feat)
+        exclusion_map[pos.x][pos.y] = travel.is_excluded(pos.x, pos.y)
+
         table.insert(map_queue, { x = pos.x + waypoint.x,
             y = pos.y + waypoint.y })
     end
 
-    local traversal_map = traversal_maps[waypoint_parity]
-    local dist_queues = {}
     for i, pos in ipairs(map_queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
@@ -280,35 +388,30 @@ function los_map_update()
 
         local feat = view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y)
         if feat ~= "unseen" then
-            handle_feature_searches(pos, dist_queues)
-            handle_item_searches(pos, dist_queues)
+            handle_feature_searches(pos)
+            handle_item_searches(pos)
 
-            if feature_is_traversable(feat) then
-                if not traversal_map[pos.x][pos.y] then
-                    handle_traversable(pos, dist_queues)
-                end
-                traversal_map[pos.x][pos.y] = true
-            else
-                traversal_map[pos.x][pos.y] = false
+            for _, dist_map in pairs(distance_maps) do
+                distance_map_update_pos(pos, dist_map)
             end
         end
     end
 
-    for fh, queue in pairs(dist_queues) do
-        update_distance_map(distance_maps[waypoint_parity][fh], queue)
+    for _, dist_map in pairs(distance_maps) do
+        distance_map_queue_update(dist_map)
     end
 end
 
 function update_map_data()
     if num_required_stairs(where_branch, where_dir, DIR.UP) > 0 then
         for _, feat in ipairs(upstairs_features) do
-            feature_searches[waypoint_parity][feat] = true
+            feature_searches[feat] = true
         end
     end
 
     local exit = branch_exit(where_branch)
     if feature_is_upstairs(exit) then
-        feature_searches[waypoint_parity][exit] = true
+        feature_searches[exit] = true
     end
 
     if where_depth >= branch_rune_depth(where_branch)
@@ -316,21 +419,21 @@ function update_map_data()
         local rune = branch_rune(where_branch)
         if type(rune) == "string" then
             if c_persist.seen_items[rune] then
-                item_searches[waypoint_parity][rune] = true
+                item_searches[rune] = true
             end
         else
             for _, r in ipairs(rune) do
                 local rune = rune .. " rune of Zot"
                 if c_persist.seen_items[rune] then
-                    item_searches[waypoint_parity][rune] = true
+                    item_searches[rune] = true
                 end
-                item_searches[waypoint_parity][rune] = true
+                item_searches[rune] = true
             end
         end
     end
 
     if at_branch_end("Zot") and not you.have_orb() then
-        item_searches[waypoint_parity]["the orb of Zot"] = true
+        item_searches["the orb of Zot"] = true
     end
 
     los_map_update()
@@ -350,14 +453,12 @@ function update_map_data()
 end
 
 function get_distance_map(pos, radius)
-    local dist_maps = distance_maps[waypoint_parity]
     local hash = hash_position(pos)
-    if not dist_maps[hash] then
-        dist_maps[hash] = initialize_distance_map(pos, hash, radius)
-        local queue = { pos }
-        update_distance_map(dist_maps[hash], queue)
+    if not distance_maps[hash] then
+        distance_maps[hash] = distance_map_initialize(pos, hash, radius)
+        distance_map_queue_update(distance_maps[hash])
     end
-    return dist_maps[hash]
+    return distance_maps[hash]
 end
 
 function best_move_towards(positions, radius)
@@ -387,10 +488,9 @@ end
 
 function get_feature_positions(feat)
     local positions = {}
-    local feat_positions = feature_positions[waypoint_parity]
     for _, feat in ipairs(feats) do
-        if feat_positions[feat] then
-            for _, pos in pairs(feat_positions[feat]) do
+        if feature_positions[feat] then
+            for _, pos in pairs(feature_positions[feat]) do
                 if not radius or supdist(pos.x, pos.y) <= radius then
                     table.insert(positions, pos)
                 end
@@ -412,15 +512,14 @@ function best_move_towards_features(feats)
 end
 
 function record_feature_position(pos)
-    local feat_positions = feature_positions[waypoint_parity]
     local feat = view.feature_at(pos.x, pos.y)
-    if not feat_positions[feat] then
-        feat_positions[feat] = {}
+    if not feature_positions[feat] then
+        feature_positions[feat] = {}
     end
     local gpos = { x = waypoint.x + pos.x, y = waypoint.y + pos.y }
     local hash = hash_position(gpos)
-    if not feat_positions[feat][hash] then
-        feat_positions[feat][hash] = gpos
+    if not feature_positions[feat][hash] then
+        feature_positions[feat][hash] = gpos
     end
 end
 

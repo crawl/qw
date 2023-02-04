@@ -812,15 +812,6 @@ function get_monster_distance_map(mons)
     update_distance_map(dist_map, { pos }, traversal_func)
 end
 
-function can_path_monster(mons)
-    local dist_map = mons_distance_maps[waypoint_parity]
-    for pos in adjacent_iter(mons:pos()) do
-        if dist_map[pos.x][pos.y] then
-            return true
-        end
-    end
-end
-
 function mons_in_list(mons, mlist)
     local entry = mlist[mons:name()]
     if type(entry) == "number" and you.xl() < entry then
