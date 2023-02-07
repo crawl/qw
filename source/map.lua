@@ -6,6 +6,10 @@
 GXM = 80
 GYM = 70
 
+-- A distance greater than any possible map distance between two squares that
+-- represents an unreachable target.
+INF_DIST = 10000
+
 -- Autoexplore state enum.
 AUTOEXP = {
     "NEEDED",
@@ -129,9 +133,9 @@ function distance_map_initialize(pos, hash, radius)
     end
     dist_map.map[pos.x][pos.y] = 0
     for x = -GXM, GXM do
-        dist_map.exclusion_map[x] = {}
+        dist_map.excluded_map[x] = {}
     end
-    dist_map.exclusion_map[pos.x][pos.y] = 0
+    dist_map.excluded_map[pos.x][pos.y] = 0
 
     dist_map.queue = { { x = pos.x, y = pos.y, became_traversable = true } }
     return dist_map
@@ -139,9 +143,9 @@ end
 
 function distance_map_initialize_exclusions(dist_map)
     for x = -GXM, GXM do
-        dist_map.exclusion_map[x] = {}
+        dist_map.excluded_map[x] = {}
         for y = -GYM, GYM do
-            dist_map.exclusion_map[x][y] = dist_map.map[x][y]
+            dist_map.excluded_map[x][y] = dist_map.map[x][y]
         end
     end
 end
@@ -166,7 +170,8 @@ function handle_feature_searches(pos, dist_queues)
 end
 
 function distance_map_best_adjacent(pos, dist_map)
-    local best_dist, best_exc_dist
+    local best_dist = INF_DIST
+    local best_exc_dist = INF_DIST
     for apos in adjacent_iter(pos) do
         if traversal_map[apos.x][apos.y] then
             local dist = dist_map.map[apos.x][apos.y]
@@ -174,7 +179,7 @@ function distance_map_best_adjacent(pos, dist_map)
                 best_dist = dist
             end
 
-            dist = dist_map.exclusion_map[apos.x][apos.y]
+            dist = dist_map.excluded_map[apos.x][apos.y]
             if exclusion_map[apos.x][apos.y]
                     and dist
                     and (not best_exc_dist or best_exc_dist > dist) then
@@ -200,10 +205,10 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
         dist_map.map[pos.x][pos.y] = center_dist + 1
 
         if exclusion_map[pos.x][pos.y] then
-            center_dist = dist_map.exclusion_map[center.x][center.y]
-            dist = dist_map.exclusion_map[pos.x][pos.y]
+            center_dist = dist_map.excluded_map[center.x][center.y]
+            dist = dist_map.excluded_map[pos.x][pos.y]
             if not dist or dist > center_dist + 1 then
-                dist_map.exclusion_map[pos.x][pos.y] = center_dist + 1
+                dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
             end
         end
 
@@ -219,9 +224,9 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
         end
 
         if exclusion_map[pos.x][pos.y] then
-            dist = dist_map.exclusion_map[pos.x][pos.y]
+            dist = dist_map.excluded_map[pos.x][pos.y]
             if best_exc_dist and dist < best_exc_dist + 1 then
-                dist_map.exclusion_map[pos.x][pos.y] = best_exc_dist + 1
+                dist_map.excluded_map[pos.x][pos.y] = best_exc_dist + 1
                 if not pos.became_untraversable then
                     pos.became_untraversable = true
                     table.insert(queue, pos)
@@ -308,57 +313,44 @@ function distance_map_update_pos(pos, dist_map)
     end
 
     local traversable = traversal_map[pos.x][pos.y]
-    local excluded = exclusion_map[pos.x][pos.y]
+    local excluded = not exclusion_map[pos.x][pos.y]
+    local dist, excluded_dist
+    local update_pos
+    -- If we're traversable and don't have a map distance, we just became
+    -- traversable, so update the map distance from adjacent squares.
     if traversable and not dist_map.map[pos.x][pos.y] then
-        local best_dist
-        local best_exc_dist
-        for apos in adjacent_iter(pos) do
-            local dist = dist_map.map[apos.x][apos.y]
-            if traversal_map[apos.x][apos.y]
-                    and dist and (not best_dist or best_dist > dist + 1) then
-                best_dist = dist + 1
-            end
-
-            dist = dist_map.exclusion_map[apos.x][apos.y]
-            if not excluded
-                    and dist
-                    and (not best_exc_dist or best_exc_dist > dist + 1) then
-                best_exc_dist = dist + 1
-            end
-        end
-        dist_map.map[pos.x][pos.y] = best_dist
-        if not excluded then
-            dist_map.exclusion_map[pos.x][pos.y] = best_exc_dist
-        end
-        table.insert(queue, pos)
-        pos.became_traversable = true
+        local dist, excluded_dist = distance_map_best_adjacent(pos, dist_map)
+        dist_map.map[pos.x][pos.y] = dist + 1
+        update_pos = pos
+        update_pos.became_traversable = true
+    -- If we're not traversable yet have a map distance, we just became
+    -- untraversable, so nil both map distances.
     elseif not traversable and dist_map.map[pos.x][pos.y] then
         dist_map.map[pos.x][pos.y] = nil
-        dist_map.exclusion_map[pos.x][pos.y] = nil
+        dist_map.excluded_map[pos.x][pos.y] = nil
+        update_pos = pos
+        update_pos.became_untraversable = true
+    end
 
-        pos.became_untraversable = true
-        table.insert(dist_map.queue, pos)
+    -- We're excluded yet have an excluded distance, so we just became
+    -- excluded. If update_pos isn't set, we
+    if excluded and dist_map.excluded_map[pos.x][pos.y] then
+        dist_map.excluded_map[pos.x][pos.y] = nil
+        if not update_pos then
+            update_pos = pos
+            update_pos.became_excluded = true
+        end
     elseif traversable
             and not excluded
-            and not dist_map.exclusion_map[pos.x][pos.y] then
-        local best_dist
-        for apos in adjacent_iter(pos) do
-            local dist = dist_map.exclusion_map[apos.x][apos.y]
-            if dist and (not best_dist or best_dist > dist + 1) then
-                best_dist = dist + 1
-            end
-        end
-        dist_map.exclusion_map[pos.x][pos.y] = best_dist
-        pos.became_unexcluded = true
-        table.insert(dist_map.queue, pos)
-    elseif excluded and dist_map.exclusion_map[pos.x][pos.y] then
-        dist_map.exclusion_map[pos.x][pos.y] = nil
-        pos.became_excluded = true
-        table.insert(dist_map.queue, pos)
+            and not dist_map.excluded_map[pos.x][pos.y] then
+        if not excluded_dist then
+            excluded_dist = select(2, distance_map_best_adjacent(pos, dist_map))
+        dist_map.excluded_map[pos.x][pos.y] = best_dist
     end
-end
 
-function distance_map_los_update(pos, traversable, excluded)
+    if update_pos then
+        table.insert(dist_map.queue, update_pos)
+    end
 end
 
 function los_map_update()
@@ -462,7 +454,7 @@ function get_distance_map(pos, radius)
 end
 
 function best_move_towards(positions, radius)
-    local dist = 10000
+    local dist = INF_DIST
     local move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
@@ -476,7 +468,7 @@ function best_move_towards(positions, radius)
         end
     end
 
-    if dist < 10000 then
+    if dist < INF_DIST then
         return move
     end
 end
