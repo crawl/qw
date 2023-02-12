@@ -1,3 +1,6 @@
+----------------------
+-- Stair-related plans
+
 function plan_go_to_unexplored_stairs()
     if gameplan_travel.want_go or not gameplan_travel.stairs_dir or cloudy then
         return false
@@ -183,6 +186,8 @@ function want_to_stairdance_up()
 
     if follow_count == 0
                 and (reason_to_rest(90)
+                    -- Makes Delver take upstairs immediately rather than stay
+                    -- and fight incoming monsters that .
                     or you.xl() <= 8 and disable_autoexplore
                     or you.status("spiked"))
                 and not buffed()

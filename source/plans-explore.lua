@@ -129,7 +129,6 @@ end
 
 function set_plan_pre_explore2()
     plan_pre_explore2 = cascade {
-        {plan_disturbance_random_step, "disturbance_random_step"},
         {plan_upgrade_armour, "upgrade_armour"},
         {plan_upgrade_amulet, "upgrade_amulet"},
         {plan_upgrade_rings, "upgrade_rings"},

@@ -354,7 +354,9 @@ function melee_is_unsafe()
         return melee_unsafe
     end
 
-    melee_unsafe = you.confused()
+    melee_unsafe = attacking_is_unsafe()
+        -- Don't attempt melee with summoned allies adjacent.
+        or you.confused()
             and (count_brothers_in_arms(1) > 0
                 or count_greater_servants(1) > 0
                 or count_divine_warriors(1) > 0)
@@ -362,11 +364,7 @@ function melee_is_unsafe()
     return melee_unsafe
 end
 
+-- Currently we only use this to disallow attacking when in an exclusion.
 function attacking_is_unsafe()
-    if attacking_unsafe ~= nil then
-        return attacking_unsafe
-    end
-
-    attacking_unsafe = travel.is_excluded(0, 0)
-    return attacking_unsafe
+    return not exclusion_map[waypoint.x][waypoint.y]
 end

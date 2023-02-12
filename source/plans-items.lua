@@ -148,10 +148,13 @@ function plan_swap_weapon()
 end
 
 function plan_bless_weapon()
-    if you.god() ~= "the Shining One" or you.one_time_ability_used()
-         or you.piety_rank() < 6 or you.silenced() then
+    if you.god() ~= "the Shining One"
+            or you.one_time_ability_used()
+            or you.piety_rank() < 6
+            or not can_invoke() then
         return false
     end
+
     local bestv = -1
     local minv, maxv, bestletter
     for it in inventory() do
@@ -167,6 +170,7 @@ function plan_bless_weapon()
         use_ability("Brand Weapon With Holy Wrath", bestletter .. "Y")
         return true
     end
+
     return false
 end
 
@@ -440,12 +444,10 @@ function plan_upgrade_armour()
 end
 
 function plan_unwield_weapon()
-    if wskill() ~= "Unarmed Combat" then
+    if wskill() ~= "Unarmed Combat" or not items.equipped_at("Weapon") then
         return false
     end
-    if not items.equipped_at("Weapon") then
-        return false
-    end
+
     magic("w-")
     return true
 end

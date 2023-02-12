@@ -152,6 +152,7 @@ function plan_ancestor_identity()
     if you.god() ~= "Hepliaklqana" or not can_invoke() then
         return false
     end
+
     if not did_ancestor_identity then
         use_ability("Ancestor Identity",
             "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\belliptic\ra")
@@ -171,5 +172,6 @@ function plan_ancestor_life()
             ancestor_options[crawl.roll_dice(1, 3)], "Y") then
         return true
     end
+
     return false
 end

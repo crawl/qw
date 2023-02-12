@@ -803,13 +803,11 @@ function update_monster_array()
             monster_array[pos.x][pos.y] = nil
         end
     end
-end
 
-function get_monster_distance_map(mons)
-    local dist_map = get_distance_map(mons_pos, los_radius)
-    local mons_pos = { x = mons:x_pos() - waypoint.x,
-        y = mons:y_pos() - waypoint.y }
-    update_distance_map(dist_map, { pos }, traversal_func)
+    if #enemy_list > 0 and move_reason == "monster" then
+        move_target = nil
+        move_reason = nil
+    end
 end
 
 function mons_in_list(mons, mlist)

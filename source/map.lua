@@ -107,16 +107,6 @@ function find_features(radius)
                 feature_positions[feat][hash] = dpos
             end
         end
-
-        if feat ~= "unseen" then
-            if traversal_map[dpos.x][dpos.y] == nil then
-                traversal_map[dpos.x][dpos.y] = feature_is_traversable(feat)
-            end
-
-            if exclusion_map[dpos.x][dpos.y] == nil then
-                exclusion_map[dpos.x][dpos.y] = travel.is_excluded(pos.x, pos.y)
-            end
-        end
         i = i + 1
     end
 end
@@ -133,11 +123,12 @@ function distance_map_initialize(pos, hash, radius)
     end
     dist_map.map[pos.x][pos.y] = 0
     for x = -GXM, GXM do
-        dist_map.excluded_map[x] = {}
+        dist_map.unexcluded_map[x] = {}
     end
-    dist_map.excluded_map[pos.x][pos.y] = 0
+    dist_map.unexcluded_map[pos.x][pos.y] = 0
 
-    dist_map.queue = { { x = pos.x, y = pos.y, became_traversable = true } }
+    dist_map.queue = { { x = pos.x, y = pos.y, propagate_traversable = true,
+        propagate_unexcluded = true } }
     return dist_map
 end
 
@@ -156,79 +147,90 @@ function handle_feature_searches(pos, dist_queues)
         if not distance_maps[hash] then
             distance_maps[hash] = distance_map_initialize(pos, hash)
         end
-        table.insert(distance_maps[hash]., { x = pos.x, y = pos.y })
+        table.insert(distance_maps[hash].queue, { x = pos.x, y = pos.y })
     end
 end
 
-function distance_map_best_adjacent(pos, dist_map)
+function distance_map_best_adjacent(pos, dist_map, use_map, use_excluded_map)
     local best_dist = INF_DIST
-    local best_exc_dist = INF_DIST
+    local best_excluded_dist = INF_DIST
     for apos in adjacent_iter(pos) do
         if traversal_map[apos.x][apos.y] then
-            local dist = dist_map.map[apos.x][apos.y]
-             if dist and (not best_dist or best_dist > dist) then
-                best_dist = dist
+            local dist
+            if use_map then
+                dist = dist_map.map[apos.x][apos.y]
+                if dist and (not best_dist or best_dist > dist) then
+                    best_dist = dist
+                end
             end
 
-            dist = dist_map.excluded_map[apos.x][apos.y]
-            if exclusion_map[apos.x][apos.y]
-                    and dist
-                    and (not best_exc_dist or best_exc_dist > dist) then
-                best_exc_dist = dist
+            if use_excluded_map and exclusion_map[apos.x][apos.y] then
+                dist = dist_map.excluded_map[apos.x][apos.y]
+                if dist and (not best_excluded_dist
+                        or best_excluded_dist > dist) then
+                    best_excluded_dist = dist
+                end
             end
         end
     end
-    return best_dist, best_exc_dist
+    if use_map and not use_excluded_map then
+        return best_dist
+    elseif not use_map and use_excluded_map then
+        return best_excluded_dist
+    else
+        return best_dist, best_excluded_dist
+    end
 end
 
 function distance_map_update_adjacent_pos(center, pos, dist_map)
     if (dist_map.radius
                 and supdist(pos.x - dist_map.pos.x,
                         pos.y - dist_map.pos.y) > dist_map.radius)
+            -- Untraversable cells don't need propogated updates.
             or not traversal_map[pos.x][pos.y] then
         return
     end
 
     local unexcluded = exclusion_map[pos.x][pos.y]
-    local center_dist = dist_map.map[center.x][center.y]
-    local center_excluded_dist = dist_map.excluded_map[center.x][center.y]
-    local dist = dist_map.map[pos.x][pos.y]
-    local excluded_dist = dist_map.excluded_map[pos.x][pos.y]
-    local best_dist, best_excluded_dist, update_pos
-    if center.became_traversable
-            and (not dist or dist > center_dist + 1) then
-        dist_map.map[pos.x][pos.y] = center_dist + 1
-        update_pos = pos
-        update_pos.became_traversable = true
-    elseif center.became_untraversable then
+    local center_dist, dist, best_dist, best_excluded_dist, update_pos
+    if center.propagate_traversable then
+        center_dist = dist_map.map[center.x][center.y]
+        dist = dist_map.map[pos.x][pos.y]
+        if not dist or dist > center_dist + 1 then
+            dist_map.map[pos.x][pos.y] = center_dist + 1
+            update_pos = pos
+            update_pos.propagate_traversable = true
+        end
+    elseif center.propagate_untraversable then
         best_dist, best_excluded_dist = distance_map_best_adjacent(pos,
-            dist_map)
+            dist_map, true, center.propagate_unexcluded)
         if dist and dist ~= best_dist + 1 then
             dist_map.map[pos.x][pos.y] = best_dist + 1
-            pos.became_untraversable = true
+            pos.propagate_untraversable = true
         end
     end
 
-    if center.became_unexcluded
-            and unexcluded
-            and (not excluded_dist
-                or excluded_dist > center_excluded_dist + 1) then
-        dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
-        if not update_pos then
-            update_pos = pos
+    if center.propagate_unexcluded and unexcluded then
+        center_dist = dist_map.excluded_map[center.x][center.y]
+        dist = dist_map.excluded_map[pos.x][pos.y]
+        if not dist or dist > center_dist + 1 then
+            dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
+            if not update_pos then
+                update_pos = pos
+            end
+            update_pos.came_unexcluded = true
         end
-        update_pos.became_unexcluded = true
-    elseif center.became_excluded and unexcluded then
+    elseif center.propagate_excluded and unexcluded then
         if not best_excluded_dist then
-            best_excluded_dist = select(2,
-                distance_map_best_adjacent(pos, dist_map))
+            best_excluded_dist = distance_map_best_adjacent(pos, dist_map,
+                false, true)
         end
         if excluded_dist ~= best_excluded_dist + 1 then
             dist_map.excluded_map[pos.x][pos.y] = best_excluded_dist + 1
             if not update_pos then
                 update_pos = pos
             end
-            update_pos.became_excluded = true
+            update_pos.propagate_excluded = true
         end
     end
 
@@ -281,12 +283,7 @@ function handle_item_searches(pos, dist_queues)
     -- before our turn update and hance might require careful coordination, we
     -- do it this way for now.
     local searches = item_searches[waypoint_parity]
-    local have_search = false
-    for name, _ in pairs(searches) do
-        have_search = true
-        break
-    end
-    if not have_search then
+    if #searches == 0 then
         return
     end
 
@@ -321,19 +318,17 @@ function distance_map_update_pos(pos, dist_map)
         local dist, excluded_dist = distance_map_best_adjacent(pos, dist_map)
         dist_map.map[pos.x][pos.y] = dist + 1
         update_pos = pos
-        update_pos.became_traversable = true
-    -- If we're not traversable yet have a map distance, we just became
+        update_pos.propagate_traversable = true
+    -- If we're not traversable yet have a map distance, we just propagate
     -- untraversable, so nil both map distances.
     elseif not traversable and dist_map.map[pos.x][pos.y] then
         dist_map.map[pos.x][pos.y] = nil
         dist_map.excluded_map[pos.x][pos.y] = nil
         update_pos = pos
-        update_pos.became_untraversable = true
+        update_pos.propagate_untraversable = true
     end
 
     -- We're traversable and not excluded, yet have no excluded distance.
-    -- Propogate an update for this reason if we're not already propogating for
-    -- traversal.
     if traversable
             and unexcluded
             and not dist_map.excluded_map[pos.x][pos.y] then
@@ -344,16 +339,15 @@ function distance_map_update_pos(pos, dist_map)
         if not update_pos then
             update_pos = pos
         end
-        update_pos.became_unexcluded = true
-    -- We're excluded yet have an excluded distance, so we just became
-    -- excluded. If update_pos isn't set, the regular map needs no update, so
-    -- we're only propogating an update to the excluded map.
+        update_pos.propagate_unexcluded = true
+    -- We're excluded yet have an excluded distance, so we propagate the
+    -- exclusion.
     elseif excluded and dist_map.excluded_map[pos.x][pos.y] then
         dist_map.excluded_map[pos.x][pos.y] = nil
         if not update_pos then
             update_pos = pos
         end
-        update_pos.became_excluded = true
+        update_pos.propagate_excluded = true
     end
 
     if update_pos then
@@ -370,6 +364,8 @@ function los_map_update()
             record_stairs(where_branch, where_depth, feat, los_state(pos))
         elseif feat:find("enter_") then
             record_branch(pos)
+        elseif feat:find("exit_") then
+            record_feature_position(pos)
         elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
             record_altar(pos)
         end
@@ -461,30 +457,32 @@ function get_distance_map(pos, radius)
     return distance_maps[hash]
 end
 
-function best_move_towards(positions, radius)
-    local dist = INF_DIST
-    local move = {}
+function best_move_towards(positions, radius, ignore_exclusions)
+    local best_dist = INF_DIST
+    local best_dest
+    local best_move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
+        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
         for dpos in adjacent_iter(waypoint) do
-            if dist_map.map[dpos.x][dpos.y]
-                    and dist_map.map[dpos.x][dpos.y] < dist then
+            local dist = map[dpos.x][dpos.y]
+            if dist and dist < best_dist then
                 move.x = dpos.x - waypoint.x
                 move.y = dpos.y - waypoint.y
-                dist = dist_map.map[dpos.x][dpos.y]
+                best_dist = dist
+                best_dest = pos
             end
         end
     end
 
-    if dist < INF_DIST then
-        return move
+    if best_dist < INF_DIST then
+        return best_move, best_dest
     end
 end
 
 function best_move_towards_position(pos, radius)
     return best_move_towards({ pos }, radius)
 end
-
 
 function get_feature_positions(feat)
     local positions = {}
@@ -500,7 +498,7 @@ function get_feature_positions(feat)
     return positions
 end
 
-function best_move_towards_features(feats)
+function best_move_towards_features(feats, ignore_exclusions)
     local positions = get_feature_positions(feats)
     if #positions == 0 then
         add_feature_search(feats)
@@ -508,7 +506,9 @@ function best_move_towards_features(feats)
         positions = get_feature_positions(feats)
     end
 
-    return best_move_towards(positions)
+    if #positions > 0 then
+        return best_move_towards(positions, ignore_exclusions)
+    end
 end
 
 function record_feature_position(pos)
@@ -524,8 +524,6 @@ function record_feature_position(pos)
 end
 
 function handle_exclusions()
-    in_exclusion = travel.is_excluded(0, 0)
-
     if incoming_melee_turn == turn_count - 1 or not hp_is_low(50) then
         return
     end

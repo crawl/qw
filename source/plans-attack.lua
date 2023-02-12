@@ -432,5 +432,6 @@ function set_plan_attack()
         {plan_throw, "try_throw"},
         {plan_wait_for_enemy, "try_wait_for_enemy"},
         {plan_move_towards_enemy, "try_move_towards_enemy"},
+        {plan_disturbance_random_step, "disturbance_random_step"},
     }
 end

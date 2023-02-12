@@ -5,13 +5,16 @@ function should_rest()
     if you.confused() or you.berserk() or transformed() then
         return true
     end
+
     if dangerous_to_rest() then
         return false
     end
+
     if you.turns() < hiding_turn_count + 10 then
         dsay("Waiting for ranged monster.")
         return true
     end
+
     return reason_to_rest(99.9)
         or you.god() == "Makhleb"
             and you.turns() <= greater_servant_timer + 100

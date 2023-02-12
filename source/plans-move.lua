@@ -118,7 +118,11 @@ function plan_stuck_initial()
     return false
 end
 
-function plan_stuck_clear_exclusions()
+function plan_stuck_leave_exclusion()
+    if not exclusion_map[0][0] then
+        return false
+    end
+
     local n = clear_exclusion_count[where] or 0
     if n > 20 then
         return false
@@ -377,35 +381,64 @@ function plan_swamp_clouds_hack()
     return plan_stuck_teleport()
 end
 
-function plan_stuck_move_to_target()
+function move_to_next_destination(ignore_exclusions)
     local move
     if gameplan_travel.first_dir then
-        if gameplan_travel.first_dir == DIR.UP then
-            move = best_move_towards_features(upstairs_features)
-        else
-            move = best_move_towards_features(downstairs_features)
-        end
+        local feats = level_stairs_features(where_branch, where_depth,
+            gameplan_travel.first_dir)
+        move = best_move_towards_features(feats, ignore_exclusions)
     elseif gameplan_travel.first_branch then
         move = best_move_towards_features(
-            branch_entrance(gameplan_travel.first_branch))
+            branch_entrance(gameplan_travel.first_branch),
+                ignore_exclusions)
     elseif gameplan_status:find("^God:") then
         local god = gameplan_god(gameplan_status)
-        move = best_move_to_features(god_altar(god))
-    end
-
-    if not move then
-        local mons_targets = {}
-        for pos in square_iter(origin) do
-            if has_enemy(pos)
-                    and not you.see_cell_no_trans(pos.x, pos.y) then
-                table.insert(mons_targets, { x = pos.x + waypoint.x,
-                    y = pos.y + waypoint.y })
-            end
-        end
-        move = best_move_towards(mons_targets)
+        move = best_move_to_features(god_altar(god), ignore_exclusions)
     end
 
     if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_exclusion_move()
+    if not exclusion_map[0][0] then
+        return false
+    end
+
+    if move_to_next_destination(true) then
+        return true
+    end
+
+    local feats = level_stairs_features(gameplan_branch, gameplan_depth,
+        DIR.UP)
+    local move = best_move_to_features(feats, true)
+
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_move_to_monster()
+    local mons_targets = {}
+    for pos in square_iter(origin) do
+        local monster =  monster.get_monster_at(pos.x, pos.y)
+        if monster and Monster(monster):is_enemy() then
+            table.insert(mons_targets,
+                { x = pos.x + waypoint.x, y = pos.y + waypoint.y })
+        end
+    end
+    local move, dest = best_move_towards(mons_targets)
+
+    if move then
+        move_destination = dest
+        move_reason = "monster"
         move_to(move)
         return true
     end
@@ -425,7 +458,6 @@ function set_plan_move()
         {plan_rest, "rest"},
         {plan_pre_explore, "pre_explore"},
         {plan_step_towards_branch, "step_towards_branch"},
-        {plan_continue_tab, "continue_tab"},
         {plan_unwield_weapon, "unwield_weapon"},
         {plan_explore, "explore"},
         {plan_pre_explore2, "pre_explore2"},
@@ -436,8 +468,9 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
-        {plan_stuck_move_to_target, "stuck_move_to_target"},
-        {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
+        {plan_move_to_next_destination, "stuck_move_to_target"},
+        {plan_stuck_move_to_monster, "stuck_move_to_monster"},
+        {plan_stuck_leave_exclusion, "try_stuck_leave_exclusion"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_forget_map, "try_stuck_forget_map"},

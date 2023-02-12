@@ -1,4 +1,4 @@
-------------------
+----------------------
 -- Movement evaluation
 
 function can_move_to(pos)
