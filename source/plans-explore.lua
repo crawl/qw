@@ -11,6 +11,8 @@ function plan_autoexplore()
 end
 
 function send_travel(branch, depth)
+    remove_exclusions()
+
     local depth_str
     if depth == nil or branch_depth(branch) == 1 then
         depth_str = ""

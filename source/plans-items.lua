@@ -69,7 +69,7 @@ function plan_wield_weapon()
     if is_melee_weapon(weap) or you.berserk() or transformed() then
         return false
     end
-    if wskill() == "Unarmed Combat" then
+    if weapon_skill() == "Unarmed Combat" then
         return false
     end
     for it in inventory() do
@@ -444,7 +444,8 @@ function plan_upgrade_armour()
 end
 
 function plan_unwield_weapon()
-    if wskill() ~= "Unarmed Combat" or not items.equipped_at("Weapon") then
+    if weapon_skill() ~= "Unarmed Combat"
+           or not items.equipped_at("Weapon") then
         return false
     end
 

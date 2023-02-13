@@ -118,7 +118,7 @@ local wait_count = 0
 local turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
-local monster_array
+local monster_map
 local enemy_list
 
 local upgrade_phase = false
@@ -151,6 +151,7 @@ local waypoint = {}
 local feature_searches
 local feature_positions
 local traversal_maps
+local exclusion_maps
 local distance_maps
 local good_stairs
 local target_stair

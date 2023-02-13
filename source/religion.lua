@@ -158,11 +158,11 @@ function can_finesse()
 end
 
 function can_recall()
-    return (you.god() == "Yredelemnul" and you.piety_rank() >= 2)
-                    or (you.god() == "Beogh" and you.piety_rank() >= 4)
-                 and not you.status("recalling")
-                 and you.mp() >= 2
-                 and can_invoke()
+    return you.god() == "Yredelemnul"
+            or you.god() == "Beogh" and you.piety_rank() >= 4
+        and not you.status("recalling")
+        and you.mp() >= 2
+        and can_invoke()
 end
 
 function can_drain_life()
@@ -276,7 +276,7 @@ function count_brothers_in_arms(radius)
 
     local i = 0
     for pos in square_iter(origin, radius) do
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         if mons and mons:is_safe()
                 and mons:is("berserk")
                 and contains_string_in(mons:name(),

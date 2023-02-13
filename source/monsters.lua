@@ -781,26 +781,26 @@ function sense_sigmund()
     end
 end
 
-function initialize_monster_array()
-    monster_array = {}
+function initialize_monster_map()
+    monster_map = {}
     for x = -los_radius, los_radius do
-        monster_array[x] = {}
+        monster_map[x] = {}
     end
 end
 
-function update_monster_array()
+function update_monster_map()
     enemy_list = {}
     for pos in radius_iter(origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons then
-                monster_array[pos.x][pos.y] = Monster(mons)
-                if monster_array[pos.x][pos.y]:is_enemy() then
-                    table.insert(enemy_list, monster_array[pos.x][pos.y])
+                monster_map[pos.x][pos.y] = Monster(mons)
+                if monster_map[pos.x][pos.y]:is_enemy() then
+                    table.insert(enemy_list, monster_map[pos.x][pos.y])
                 end
             end
         else
-            monster_array[pos.x][pos.y] = nil
+            monster_map[pos.x][pos.y] = nil
         end
     end
 

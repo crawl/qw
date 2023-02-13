@@ -112,7 +112,6 @@ function plan_exit_pan()
             and not want_to_be_in_pan()
             and not you.mesmerised()
             and can_move() then
-        magic("<")
         return true
     end
 

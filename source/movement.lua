@@ -10,8 +10,8 @@ end
 function tabbable_square(pos)
     if view.feature_at(pos.x, pos.y) ~= "unseen"
             and view.is_safe_square(pos.x, pos.y) then
-        if not monster_array[pos.x][pos.y]
-                or not monster_array[pos.x][pos.y]:is_firewood() then
+        if not monster_map[pos.x][pos.y]
+                or not monster_map[pos.x][pos.y]:is_firewood() then
             return true
         end
     end
@@ -20,7 +20,7 @@ end
 
 -- Should only be called for adjacent squares.
 function monster_in_way(pos)
-    local mons = monster_array[pos.x][pos.y]
+    local mons = monster_map[pos.x][pos.y]
     local feat = view.feature_at(0, 0)
     return mons and (mons:attitude() <= enum_att_neutral
             and not branch_step_mode

@@ -33,17 +33,28 @@ function update_waypoint_data()
     item_searches = level_item_searches[waypoint_parity]
     map_mode_searches = level_map_mode_searches[waypoint_parity]
 
-    local place = in_portal and "Portal" or where
+    local where = you.where()
+    local portal = is_portal_branch(where)
+    local place = portal and "Portal" or where
+    local new_waypoint
     if not c_persist.waypoints[place] then
         c_persist.waypoints[place] = c_persist.waypoint_count
         c_persist.waypoint_count = c_persist.waypoint_count + 1
-        did_waypoint = true
-        magic(control('w') .. waypoint_parity)
-        coroutine.yield()
+        travel.set_waypoint(waypoint_num, 0, 0)
+        new_waypoint = true
+    end
+    local waypoint_num = c_persist.waypoints[place]
+
+    waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_num)
+    -- The waypoint became invalid due to entering a new Portal, a new Pan
+    -- level, or an Abyss shift, etc.
+    if not waypoint.x then
+        travel.set_waypoint(waypoint_num, 0, 0)
+        new_waypoint = true
+        waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_num)
     end
 
-    waypoint.x, waypoint.y = travel.waypoint_delta(c_persist.waypoints[place])
-
+    return new_waypoint
 end
 
 function record_map_mode_search(key, start_hash, count, end_hash)
@@ -523,11 +534,21 @@ function record_feature_position(pos)
     end
 end
 
-function handle_exclusions()
-    if incoming_melee_turn == turn_count - 1 or not hp_is_low(50) then
-        return
+function remove_exclusions()
+    for hash, _ in c_persist.exclusions[where] do
+        local pos = unhash_position(hash)
+        travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
+    end
+    c_persist.exclusions[where] = {}
+end
+
+function handle_exclusions(new_waypoint)
+    if new_waypoint then
+        remove_exclusions()
     end
 
+    -- If we have any incoming melee, we're not fighting only unreachable
+    -- monsters and have no reason to start excluding.
     for _, enemy in ipairs(enemy_list) do
         if enemy:can_melee_player() or enemy:can_move_to_melee_player() then
             incoming_melee_turn = you.turns()
@@ -535,7 +556,19 @@ function handle_exclusions()
         end
     end
 
+    -- We want to exclude any unreachable monsters who get us to low HP while
+    -- we're trying to kill them with ranged attacks. We also require that
+    -- we've healed to full HP since having only unreachable monsters. This way
+    -- if we fight a mix of reachable and unreachable monsters, kill all the
+    -- reachable ones but get to low HP we'll retreat and heal up once before
+    -- attempting to kill the unreachable ones.
+    if full_hp_turn < incoming_melee_turn or not hp_is_low(50) then
+        return
+    end
+
     for _, enemy in ipairs(enemy_list) do
-        travel.set_exclude(enemy.x_pos(), enemy.y_pos())
+        local pos = enemy:pos()
+        travel.set_exclude(pos.x, pos.y)
+        c_persist.exclusions[where][hash_position(pos)] = true
     end
 end

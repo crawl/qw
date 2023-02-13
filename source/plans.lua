@@ -7,6 +7,8 @@ function magic(command)
 end
 
 function magicfind(target, secondary)
+    remove_exclusions()
+
     if secondary then
         crawl.sendkeys(control('f') .. target .. "\r", arrowkey('d'), "\r\r" ..
             string.char(27) .. string.char(27) .. string.char(27))

@@ -6,33 +6,16 @@ function initialize_c_persist()
         c_persist.waypoint_count = 0
     end
 
-    if not c_persist.waypoints then
-        c_persist.waypoints = {}
-    end
+    local tables = {
+        "waypoints", "exclusions", "portals", "branches", "altars",
+        "autoexplore", "upstairs", "downstairs", "seen_items",
+        "plan_fail_count"
+    }
 
-    if not c_persist.portals then
-        c_persist.portals = {}
-    end
-    if not c_persist.plan_fail_count then
-        c_persist.plan_fail_count = {}
-    end
-    if not c_persist.branches then
-        c_persist.branches = {}
-    end
-    if not c_persist.altars then
-        c_persist.altars = {}
-    end
-    if not c_persist.autoexplore then
-        c_persist.autoexplore = {}
-    end
-    if not c_persist.upstairs then
-        c_persist.upstairs = {}
-    end
-    if not c_persist.downstairs then
-        c_persist.downstairs = {}
-    end
-    if not c_persist.seen_items then
-        c_persist.seen_items = {}
+    for _, table in ipairs(tables) do
+        if not c_persist[table] then
+            c_persist[table] = {}
+        end
     end
 end
 
@@ -56,7 +39,7 @@ function initialize()
     initialize_god_data()
 
     calc_los_radius()
-    initialize_monster_array()
+    initialize_monster_map()
 
     make_initial_gameplans()
     where = "nowhere"

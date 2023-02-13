@@ -16,13 +16,16 @@ function buffed()
             or you.corrosion() >= 2 + base_corrosion then
         return false
     end
-    if you.god() == "Okawaru" and
-         (you.status("heroic") or you.status("finesse-ful")) then
+
+    if you.god() == "Okawaru"
+            and (you.status("heroic") or you.status("finesse-ful")) then
         return true
     end
+
     if you.extra_resistant() then
         return true
     end
+
     return false
 end
 
@@ -140,9 +143,13 @@ function plan_recite()
 end
 
 function plan_grand_finale()
-    if not danger or not can_grand_finale() then
+    if not danger
+            or not attacking_is_safe()
+            or you.teleporting
+            or not can_grand_finale() then
         return false
     end
+
     local invo = you.skill("Invocations")
     -- fail rate potentially too high, need to add ability failure rate lua
     if invo < 10 or you.piety_rank() < 6 and invo < 15 then
@@ -208,8 +215,7 @@ function fiery_armour()
 end
 
 function plan_resistance()
-    if not you.extra_resistant() and not you.teleporting()
-         and want_resistance() then
+    if want_resistance() then
         return drink_by_name("resistance")
     end
     return false
@@ -245,6 +251,7 @@ function plan_cure_bad_poison()
     if not danger then
         return false
     end
+
     if you.poison_survival() <= you.hp() - 60 then
         if drink_by_name("curing") then
             say("(to cure bad poison)")
@@ -298,7 +305,7 @@ function plan_blinking()
 
     local cur_count = 0
     for pos in adjacent_iter(origin) do
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         if mons and mons:name() == "floating eye" then
             cur_count = cur_count + 3
         elseif mons and mons:name() == "starcursed mass" then
@@ -314,14 +321,14 @@ function plan_blinking()
     for pos in square_iter(origin) do
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
-                and not monster_array[pos.x][pos.y]
+                and not monster_map[pos.x][pos.y]
                 and view.is_safe_square(pos.x, pos.y)
                 and not view.withheld(pos.x, pos.y)
                 and you.see_cell_no_trans(pos.x, pos.y) then
             local count = 0
             for dpos in adjacent_iter(pos) do
                 if supdist(dpos) <= los_radius then
-                    local mons = monster_array[dpos.x][dpos.y]
+                    local mons = monster_map[dpos.x][dpos.y]
                     if mons
                             and mons:is_enemy()
                             and mons:name() == "floating eye" then
@@ -493,7 +500,7 @@ function plan_fiery_armour()
 end
 
 function want_to_brothers_in_arms()
-    if not danger then
+    if not danger or not attacking_is_safe() or you.teleporting() then
         return false
     end
 
@@ -505,41 +512,47 @@ function want_to_brothers_in_arms()
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
                         or check_monster_list(los_radius, nasty_monsters)))
-            and count_brothers_in_arms(4) == 0
-            and not you.teleporting() then
+            and count_brothers_in_arms(4) == 0 then
         return true
     end
+
     return false
 end
 
 function want_to_finesse()
-    if danger
+    if danger and attacking_is_safe()
             and in_branch("Zig")
             and hp_is_low(80)
             and count_enemies(los_radius) >= 5 then
         return true
     end
-    if danger and check_monster_list(los_radius, nasty_monsters)
-            and not you.teleporting() then
+
+    if danger and attacking_is_safe()
+            and not you.teleporting()
+            and check_monster_list(los_radius, nasty_monsters) then
         return true
     end
+
     return false
 end
 
 function want_to_slouch()
-    if danger and you.piety_rank() == 6 and not you.teleporting()
+    if danger and not you.teleporting()
+            and attacking_is_safe()
+            and you.piety_rank() == 6
             and estimate_slouch_damage() >= 6 then
         return true
     end
+
     return false
 end
 
 function want_to_drain_life()
-    if not danger then
-        return false
-    end
-    return count_enemies(los_radius,
-        function(mons) return mons:res_draining() == 0 end)
+    return danger
+        and attacking_is_safe()
+        and not you.teleporting()
+        and count_enemies(los_radius,
+            function(mons) return mons:res_draining() == 0 end)
 end
 
 function want_to_greater_servant()
@@ -554,9 +567,14 @@ function want_to_greater_servant()
 end
 
 function want_to_cleansing_flame()
+    if not danger or you.teleporting() or not attacking_is_safe() then
+        return false
+    end
+
     if not check_monster_list(1, scary_monsters, mons_is_holy_vulnerable)
-            and check_monster_list(2, scary_monsters, mons_is_holy_vulnerable)
-        or count_enemies(2, mons_is_holy_vulnerable) > 8 then
+                and check_monster_list(2, scary_monsters,
+                    mons_is_holy_vulnerable)
+            or count_enemies(2, mons_is_holy_vulnerable) > 8 then
         return true
     end
 
@@ -577,15 +595,18 @@ function want_to_cleansing_flame()
 end
 
 function want_to_divine_warrior()
-    return you.skill("Invocations") >= 8
+    return danger
+        and attacking_is_safe()
+        and not you.teleporting()
+        and you.skill("Invocations") >= 8
         and (check_monster_list(los_radius, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warriors(4) == 0
-        and not you.teleporting()
 end
 
 function want_to_fiery_armour()
     return danger
+        and attacking_is_safe()
         and (hp_is_low(50)
             or count_monster_list(los_radius, scary_monsters) >= 2
             or check_monster_list(los_radius, nasty_monsters)
@@ -593,6 +614,10 @@ function want_to_fiery_armour()
 end
 
 function want_to_apocalypse()
+    if not danger or not attacking_is_safe() or you.teleporting() then
+        return false
+    end
+
     local dlevel = drain_level()
     return dlevel == 0 and check_monster_list(los_radius, scary_monsters)
         or dlevel <= 2
@@ -606,8 +631,8 @@ function bad_corrosion()
     elseif in_branch("Slime") then
         return you.corrosion() >= 6 + base_corrosion and hp_is_low(70)
     else
-        return (you.corrosion() >= 3 + base_corrosion and hp_is_low(50)
-            or you.corrosion() >= 4 + base_corrosion and hp_is_low(70))
+        return you.corrosion() >= 3 + base_corrosion and hp_is_low(50)
+            or you.corrosion() >= 4 + base_corrosion and hp_is_low(70)
     end
 end
 
@@ -673,6 +698,10 @@ function want_to_serious_buff()
         return true
     end
 
+    if not danger or not attacking_is_safe() then
+        return false
+    end
+
     -- These gods have their own buffs.
     if you.god() == "Okawaru" or you.god() == "Trog" then
         return false
@@ -700,22 +729,28 @@ function want_to_serious_buff()
 end
 
 function want_resistance()
-    return check_monster_list(los_radius, fire_resistance_monsters)
-            and you.res_fire() < 3
-        or check_monster_list(los_radius, cold_resistance_monsters)
-            and you.res_cold() < 3
-        or check_monster_list(los_radius, elec_resistance_monsters)
-            and you.res_shock() < 1
-        or check_monster_list(los_radius, pois_resistance_monsters)
-            and you.res_poison() < 1
-        or in_branch("Zig")
-            and check_monster_list(los_radius, acid_resistance_monsters)
-            and not you.res_corr()
+    return danger
+        and attacking_is_safe()
+        and not you.teleporting()
+        and not you.extra_resistant()
+        and (check_monster_list(los_radius, fire_resistance_monsters)
+                and you.res_fire() < 3
+            or check_monster_list(los_radius, cold_resistance_monsters)
+                and you.res_cold() < 3
+            or check_monster_list(los_radius, elec_resistance_monsters)
+                and you.res_shock() < 1
+            or check_monster_list(los_radius, pois_resistance_monsters)
+                and you.res_poison() < 1
+            or in_branch("Zig")
+                and check_monster_list(los_radius, acid_resistance_monsters)
+                and not you.res_corr())
 end
 
 function want_magic_points()
-    -- No point trying to restore MP with ghost moths around.
-    return count_enemies_by_name(los_radius, "ghost moth") == 0
+    return danger
+        and attacking_is_safe()
+        -- No point trying to restore MP with ghost moths around.
+        and count_enemies_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or you.have_orb() or in_extended())
         -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
@@ -727,17 +762,22 @@ function want_magic_points()
 end
 
 function want_to_hand()
-    return check_monster_list(los_radius, hand_monsters)
+    return danger
+        and attacking_is_safe()
+        and check_monster_list(los_radius, hand_monsters)
 end
 
 function want_to_berserk()
-    return (hp_is_low(50) and sense_danger(2, true)
-        or check_monster_list(2, scary_monsters)
-        or invis_sigmund and not options.autopick_on)
+    return danger
+        and melee_is_safe()
+        and (hp_is_low(50) and sense_danger(2, true)
+            or check_monster_list(2, scary_monsters)
+            or invis_sigmund and not options.autopick_on)
 end
 
 function want_to_heroism()
     return danger
+        and attacking_is_safe()
         and (hp_is_low(70)
             or check_monster_list(los_radius, scary_monsters)
             or count_(0, 0, los_radius) >= 4)

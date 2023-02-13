@@ -99,11 +99,7 @@ function run_qw()
     end
 
     if do_dummy_action then
-        if not did_waypoint then
-            crawl.process_keys(":" .. string.char(27) .. string.char(27))
-        else
-            did_waypoint = false
-        end
+        crawl.process_keys(":" .. string.char(27) .. string.char(27))
     end
 end
 

@@ -657,20 +657,20 @@ function weapon_value(it, cur, it2, sit)
     local value = 1000
     local weap = items.equipped_at("Weapon")
     -- The evaluating weapon doesn't match our desired skill...
-    if it.weap_skill ~= wskill()
+    if it.weap_skill ~= weapon_skill()
             -- ...and our current weapon already matches our desired skill or
             -- we use UC or the evaluating weapon is not a melee weapon
-            and (weap and weap.weap_skill == wskill()
-                or wskill() == "Unarmed Combat"
+            and (weap and weap.weap_skill == weapon_skill()
+                or weapon_skill() == "Unarmed Combat"
                 or it.weap_skill == "Ranged Weapons")
             -- ...and we either don't need a hydra swap weapon or the
             -- evaluating weapon isn't a hydra swap weapon for our desired
             -- skill.
             and (not hydra_swap
                 or not (it.weap_skill == "Maces & Flails"
-                            and wskill() == "Axes"
+                            and weapon_skill() == "Axes"
                         or it.weap_skill == "Short Blades"
-                            and wskill() == "Long Blades")) then
+                            and weapon_skill() == "Long Blades")) then
         return -1, -1
     end
 
@@ -819,7 +819,7 @@ function weapon_value(it, cur, it2, sit)
         value = value - 120 * (it.delay - 17)
     end
 
-    if it.weap_skill ~= wskill() then
+    if it.weap_skill ~= weapon_skill() then
         value = value / 10
         val1 = val1 / 10
         val2 = val2 / 10
@@ -994,7 +994,7 @@ function should_upgrade(it, old_it, sit)
     end
 
     if not it.fully_identified and not should_drop(it) then
-        if equip_slot(it) == "Weapon" and it.weap_skill ~= wskill() then
+        if equip_slot(it) == "Weapon" and it.weap_skill ~= weapon_skill() then
             return true
         end
 
@@ -1154,7 +1154,7 @@ end
 
 function have_two_hander()
     for it in inventory() do
-        if it.class(true) == "weapon" and it.weap_skill == wskill()
+        if it.class(true) == "weapon" and it.weap_skill == weapon_skill()
              and it.hands == 2 then
             return true
         end
@@ -1264,7 +1264,7 @@ function min_delay_skill()
     if not weap then
         return 27
     end
-    if weap.weap_skill ~= wskill() then
+    if weap.weap_skill ~= weapon_skill() then
         return last_min_delay_skill
     end
     if weap.weap_skill == "Short Blades" and weap.delay == 12 then
@@ -1280,7 +1280,7 @@ function min_delay_skill()
 end
 
 function at_min_delay()
-    return you.base_skill(wskill()) >= min(27,
+    return you.base_skill(weapon_skill()) >= min(27,
         min_delay_skill() + (you.god() == "Ru" and 1 or 0))
 end
 

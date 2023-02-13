@@ -80,11 +80,12 @@ function armour_plan()
     local sp = you.race()
     if sp == "Ogre" or sp == "Troll" then
         return "large"
-    elseif sp == "Deep Elf" or sp == "Kobold"
-                 or sp == "Merfolk" then
+    elseif sp == "Deep Elf" or sp == "Kobold" or sp == "Merfolk" then
         return "dodgy"
-    elseif sp:find("Draconian") or sp == "Felid" or sp == "Octopode"
-                 or sp == "Spriggan" then
+    elseif sp:find("Draconian")
+            or sp == "Felid"
+            or sp == "Octopode"
+            or sp == "Spriggan" then
         return "light"
     else
         return "heavy"
@@ -109,29 +110,17 @@ end
 
 function want_buckler()
     local sp = you.race()
-    if sp == "Felid" then
-        return false
-    end
-    if SHIELD_CRAZY then
-        return true
-    end
-    if wskill() == "Short Blades" or wskill() == "Unarmed Combat" then
-        return true
-    end
-    if sp == "Formicid" or sp == "Kobold" then
-        return true
-    end
-    return false
+    return sp ~= "Felid"
+        and (SHIELD_CRAZY
+            or sp == "Formicid"
+            or sp == "Kobold"
+            or weapon_skill() == "Short Blades"
+            or weapon_skill() == "Unarmed Combat")
 end
 
 function want_shield()
-    if not want_buckler() then
-        return false
-    end
-    if SHIELD_CRAZY then
-        return true
-    end
-    return (you.race() == "Troll" or you.race() == "Formicid")
+    return want_buckler()
+        and (SHIELD_CRAZY or you.race() == "Troll" or you.race() == "Formicid")
 end
 
 -- used for backgrounds who don't get to choose a weapon
@@ -150,15 +139,16 @@ function weapon_choice()
     end
 end
 
-function wskill()
+function weapon_skill()
     -- cache in case you unwield a weapon somehow
     if c_persist.cached_wskill then
         return c_persist.cached_wskill
     end
+
     weap = items.equipped_at("Weapon")
     if weap and weap.class(true) == "weapon"
-         and weap.weap_skill ~= "Short Blades"
-         and you.class() ~= "Wanderer" then
+            and weap.weap_skill ~= "Short Blades"
+            and you.class() ~= "Wanderer" then
         c_persist.cached_wskill = weap.weap_skill
     else
         c_persist.cached_wskill = weapon_choice()
@@ -178,18 +168,25 @@ end
 
 function hp_is_low(percentage)
     local hp, mhp = you.hp()
-    return (100 * hp <= percentage * mhp)
+    return 100 * hp <= percentage * mhp
+end
+
+function hp_is_full()
+    local hp, mhp = you.hp()
+    return hp == mhp
 end
 
 function meph_immune()
     -- should also check clarity and unbreathing
-    return (you.res_poison() >= 1)
+    return you.res_poison() >= 1
 end
 
 function miasma_immune()
     -- this isn't all the cases, I know
-    return (you.race() == "Gargoyle" or you.race() == "Vine Stalker"
-                    or you.race() == "Ghoul" or you.race() == "Mummy")
+    return you.race() == "Gargoyle"
+        or you.race() == "Vine Stalker"
+        or you.race() == "Ghoul"
+        or you.race() == "Mummy"
 end
 
 function transformed()
@@ -205,13 +202,10 @@ function can_read()
 end
 
 function can_drink()
-    if you.berserk()
-            or you.race() == "Mummy"
-            or you.transform() == "lich"
-            or you.status("unable to drink") then
-        return false
-    end
-    return true
+    return not (you.berserk()
+        or you.race() == "Mummy"
+        or you.transform() == "lich"
+        or you.status("unable to drink"))
 end
 
 function can_zap()
@@ -349,22 +343,20 @@ function player_can_melee_mons(mons)
     return
 end
 
-function melee_is_unsafe()
-    if melee_unsafe ~= nil then
-        return melee_unsafe
+function melee_is_safe()
+    if melee_safe == nil then
+        melee_safe = attacking_is_safe()
+            -- Don't attempt melee with summoned allies adjacent.
+            and not (you.confused()
+                and (count_brothers_in_arms(1) > 0
+                    or count_greater_servants(1) > 0
+                    or count_divine_warriors(1) > 0))
     end
 
-    melee_unsafe = attacking_is_unsafe()
-        -- Don't attempt melee with summoned allies adjacent.
-        or you.confused()
-            and (count_brothers_in_arms(1) > 0
-                or count_greater_servants(1) > 0
-                or count_divine_warriors(1) > 0)
-
-    return melee_unsafe
+    return melee_safe
 end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
-function attacking_is_unsafe()
-    return not exclusion_map[waypoint.x][waypoint.y]
+function attacking_is_safe()
+    return exclusion_map[waypoint.x][waypoint.y]
 end

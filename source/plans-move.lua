@@ -65,6 +65,16 @@ function move_to(pos)
     magic(delta_to_vi(pos) .. "YY")
 end
 
+function go_upstairs(confirm)
+    remove_exclusions()
+    magic("<" .. confirm and "Y" or "")
+end
+
+function go_downstairs(confirm)
+    remove_exclusions()
+    magic(">" .. confirm and "Y" or "")
+end
+
 function random_step(reason)
     if you.mesmerised() then
         say("Waiting to end mesmerise (" .. reason .. ").")
@@ -256,7 +266,7 @@ function move_towards(pos)
                 and not branch_step_mode
                 and view.feature_at(pos.x, pos.y) ~= "closed_door" then
             did_move = true
-            if monster_array[pos.x][pos.y] or did_move_towards_monster > 0 then
+            if monster_map[pos.x][pos.y] or did_move_towards_monster > 0 then
                 local mpos = vi_to_delta(move)
                 target_memory = { x = pos.x - mpos.x,  y = pos.y - mpos.y }
                 did_move_towards_monster = 2
@@ -309,6 +319,7 @@ function plan_swamp_clear_exclusions()
     if not at_branch_end("Swamp") then
         return false
     end
+
     magic("X" .. control('e'))
     return true
 end
@@ -404,6 +415,9 @@ function move_to_next_destination(ignore_exclusions)
     return false
 end
 
+function plan_stuck_move_to_next_destination()
+end
+
 function plan_exclusion_move()
     if not exclusion_map[0][0] then
         return false
@@ -425,7 +439,7 @@ function plan_exclusion_move()
     return false
 end
 
-function plan_move_to_monster()
+function plan_stuck_move_to_monster()
     local mons_targets = {}
     for pos in square_iter(origin) do
         local monster =  monster.get_monster_at(pos.x, pos.y)
@@ -454,7 +468,9 @@ function set_plan_move()
         {plan_shop, "shop"},
         {plan_stairdance_up, "stairdance_up"},
         {plan_emergency, "emergency"},
+        {plan_exclusion_move, "exclusion_move"},
         {plan_attack, "attack"},
+        {plan_exclusion_move, "exclusion_move"},
         {plan_rest, "rest"},
         {plan_pre_explore, "pre_explore"},
         {plan_step_towards_branch, "step_towards_branch"},
@@ -468,7 +484,7 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
-        {plan_move_to_next_destination, "stuck_move_to_target"},
+        {plan_stuck_move_to_next_destination, "stuck_move_to_target"},
         {plan_stuck_move_to_monster, "stuck_move_to_monster"},
         {plan_stuck_leave_exclusion, "try_stuck_leave_exclusion"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},

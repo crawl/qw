@@ -69,7 +69,7 @@ function skill_value(sk)
         else
             return 0
         end
-    elseif sk == wskill() then
+    elseif sk == weapon_skill() then
         return at_min_delay() and 0.5 or 1.5
     end
 end
@@ -78,8 +78,8 @@ function choose_skills()
     local skills = {}
     -- Choose one martial skill to train.
     local martial_skills = {
-        wskill(), "Fighting", "Shields", "Armour", "Dodging", "Invocations",
-        "Throwing"
+        weapon_skill(), "Fighting", "Shields", "Armour", "Dodging",
+        "Invocations", "Throwing"
     }
 
     local best_sk
@@ -136,7 +136,7 @@ function choose_skills()
             and you.god() ~= "No God"
             and mp_skill_level < 12
             and (at_min_delay()
-                 or you.base_skill(wskill()) >= 3 * mp_skill_level) then
+                 or you.base_skill(weapon_skill()) >= 3 * mp_skill_level) then
         table.insert(skills, mp_skill)
     end
 

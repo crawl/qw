@@ -25,7 +25,7 @@ function level_stairs_features(branch, depth, dir)
                 or util.contains(hell_branches, branch)
                 or depth == 1 then
             feats = { branch_exit(branch) }
-        elseif depth > 1 then
+        else
             feats = upstairs_features
         end
     elseif dir == DIR.DOWN then
@@ -33,22 +33,12 @@ function level_stairs_features(branch, depth, dir)
             feats = { "abyssal_stair" }
         elseif branch == "Pan" then
             feats = { "transit_pandemonium" }
-        elseif util.contains(hell_branches, branch) then
+        elseif util.contains(hell_branches, branch)
+                and depth < branch_depth(branch)then
             feats = { downstairs_features[1] }
         elseif depth < branch_depth(branch) then
             feats = downstairs_features
         end
-    end
-    return feats
-end
-
-function level_upstairs_features(branch, depth)
-    local feats
-    if depth == 1 then
-        local feat = branch_entrance(branch)
-        feats = { feat:gsub("enter_", "exit_") }
-    else
-        feats = upstairs_features
     end
     return feats
 end

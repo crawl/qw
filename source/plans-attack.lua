@@ -136,7 +136,7 @@ function plan_melee()
         return false
     end
 
-    local enemy = monster_array[melee_target.x][melee_target.y]
+    local enemy = monster_map[melee_target.x][melee_target.y]
     if not enemy:player_can_melee() then
         return false
     end
@@ -158,7 +158,7 @@ function assess_explosion(attack, target)
             return
         end
 
-        local mons = monster_array[epos.x][epos.y]
+        local mons = monster_map[epos.x][epos.y]
         if mons then
             if mons:is_friendly()
                 and not mons:ignores_player_projectiles() then
@@ -178,7 +178,7 @@ function assess_ranged_target(attack, target)
     local past_target, at_target_result
     for i, pos in ipairs(positions) do
         local hit_target = pos.x == target.x and pos.y == target.y
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         -- Non-penetrating attacks must reach the target before reaching any
         -- other monster, otherwise they're considered blocked and unusable.
         if not attack.is_penetrating
@@ -418,7 +418,7 @@ function plan_move_towards_enemy()
         return false
     end
 
-    local move = monster_array[target.x][target.y]:get_player_move_towards()
+    local move = monster_map[target.x][target.y]:get_player_move_towards()
     magic(delta_to_vi(move))
     return true
 end

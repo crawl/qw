@@ -28,21 +28,15 @@ function turn_update()
         handle_skills()
     end
 
-    if did_move then
-        move_count = move_count + 1
-    else
-        move_count = 0
+    if hp_is_full() then
+        full_hp_turn = turn_count
     end
 
-    did_move = false
-    if did_move_towards_monster > 0 then
-        did_move_towards_monster = did_move_towards_monster - 1
-    end
-
+    local new_waypoint = false
     if you.where() ~= where then
-        update_waypoint_data()
+        new_waypoint = update_waypoint_data()
 
-        if you.where() ~= previous_where then
+        if you.where() ~= previous_where or new_waypoint then
             clear_map_data(waypoint_parity)
         end
         previous_where = where
@@ -88,6 +82,17 @@ function turn_update()
         end
     end
 
+    if did_move then
+        move_count = move_count + 1
+    else
+        move_count = 0
+    end
+
+    did_move = false
+    if did_move_towards_monster > 0 then
+        did_move_towards_monster = did_move_towards_monster - 1
+    end
+
     transp_search = nil
     if can_use_transporters() then
         local feat = view.feature_at(0, 0)
@@ -107,7 +112,7 @@ function turn_update()
         end
     end
 
-    handle_exclusions()
+    handle_exclusions(new_waypoint)
     update_map_data()
 
     if want_gameplan_update then
@@ -124,7 +129,7 @@ function turn_update()
     stash_travel_attempts = 0
     map_mode_search_attempts = 0
 
-    update_monster_array()
+    update_monster_map()
     danger = sense_danger(los_radius)
     immediate_danger = sense_immediate_danger()
     sense_sigmund()
