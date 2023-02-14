@@ -410,3 +410,7 @@ function check_expired_portals()
         end
     end
 end
+
+function level_is_temporary()
+    return in_portal() or in_branch("Pan") or in_branch("Abyss")
+end

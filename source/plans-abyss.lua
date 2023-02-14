@@ -23,7 +23,7 @@ end
 function plan_enter_abyss()
     if view.feature_at(0, 0) == "enter_abyss"
             and want_to_stay_in_abyss() then
-        magic(">Y")
+        go_downstairs(true, true)
         return true
     end
 
@@ -45,7 +45,7 @@ function plan_go_down_abyss()
     if view.feature_at(0, 0) == "abyssal_stair"
             and want_to_stay_in_abyss()
             and where_depth < 3 then
-        magic(">")
+        go_downstairs()
         return true
     end
     return false
@@ -64,7 +64,7 @@ function plan_exit_abyss()
             and not want_to_stay_in_abyss()
             and not you.mesmerised()
             and can_move() then
-        magic("<")
+        go_upstairs()
         return true
     end
 

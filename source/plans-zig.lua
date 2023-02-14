@@ -121,10 +121,10 @@ function plan_zig_leave_level()
             and view.feature_at(0, 0) == "exit_ziggurat" then
         local parent, depth = parent_branch(where_branch)
         remove_portal(make_level(parent, depth), where_branch, true)
-        magic("<Y")
+        go_upstairs(true)
         return true
     elseif string.find(view.feature_at(0, 0), "stone_stairs_down") then
-        magic(">")
+        go_downstairs()
         return true
     end
 

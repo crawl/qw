@@ -98,7 +98,7 @@ function plan_enter_portal()
         return false
     end
 
-    magic(">" .. (gameplan_branch == "Zig" and "Y" or ""))
+    go_downstairs(gameplan_branch == "Zig", true)
     return true
 end
 
@@ -114,7 +114,7 @@ function plan_exit_portal()
     local parent, depth = parent_branch(where_branch)
     remove_portal(make_level(parent, depth), where_branch, true)
 
-    magic("<")
+    go_upstairs()
     return true
 end
 

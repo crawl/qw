@@ -113,7 +113,11 @@ function plan_take_unexplored_stairs()
     c_persist.autoexplore[make_level(where_branch, where_depth + dir)]
         = AUTOEXP.NEEDED
 
-    magic("G" .. dir_key(dir))
+    if dir == DIR.UP then
+        go_upstairs()
+    else
+        go_downstairs()
+    end
     return true
 end
 
@@ -203,11 +207,7 @@ end
 function plan_stairdance_up()
     if want_to_stairdance_up() then
         say("STAIRDANCE")
-        if you.status("spiked") then
-            magic("<Y")
-        else
-            magic("<")
-        end
+        go_upstairs(you.status("spiked"))
         return true
     end
     return false

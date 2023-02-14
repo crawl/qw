@@ -65,13 +65,19 @@ function move_to(pos)
     magic(delta_to_vi(pos) .. "YY")
 end
 
-function go_upstairs(confirm)
-    remove_exclusions()
+function go_upstairs(confirm, keep_exclusions)
+    if not keep_exclusions then
+        remove_exclusions(level_is_temporary())
+    end
+
     magic("<" .. confirm and "Y" or "")
 end
 
-function go_downstairs(confirm)
-    remove_exclusions()
+function go_downstairs(confirm, keep_exclusions)
+    if not keep_exclusions then
+        remove_exclusions(level_is_temporary())
+    end
+
     magic(">" .. confirm and "Y" or "")
 end
 
@@ -128,16 +134,14 @@ function plan_stuck_initial()
     return false
 end
 
-function plan_stuck_leave_exclusion()
-    if not exclusion_map[0][0] then
-        return false
-    end
-
+function plan_stuck_clear_exclusions()
     local n = clear_exclusion_count[where] or 0
     if n > 20 then
         return false
     end
+
     clear_exclusion_count[where] = n + 1
+    remove_exclusions(true)
     magic("X" .. control('e'))
     return true
 end
@@ -486,7 +490,7 @@ function set_plan_move()
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
         {plan_stuck_move_to_next_destination, "stuck_move_to_target"},
         {plan_stuck_move_to_monster, "stuck_move_to_monster"},
-        {plan_stuck_leave_exclusion, "try_stuck_leave_exclusion"},
+        {plan_stuck_clear_exclusions, "try_stuck_leave_exclusion"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_forget_map, "try_stuck_forget_map"},

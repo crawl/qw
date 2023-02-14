@@ -3,14 +3,14 @@ function plan_tomb_use_hatch()
             or where == "Tomb:1")
          and view.feature_at(0, 0) == "escape_hatch_down" then
         prev_hatch_dist = 1000
-        magic(">")
+        go_downstairs()
         return true
     end
     if (where == "Tomb:3" and have_branch_runes("Tomb")
             or where == "Tomb:2")
          and view.feature_at(0, 0) == "escape_hatch_up" then
         prev_hatch_dist = 1000
-        magic("<")
+        go_upstairs()
         return true
     end
     return false

@@ -534,11 +534,14 @@ function record_feature_position(pos)
     end
 end
 
-function remove_exclusions()
-    for hash, _ in c_persist.exclusions[where] do
-        local pos = unhash_position(hash)
-        travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
+function remove_exclusions(record_only)
+    if not record_only then
+        for hash, _ in c_persist.exclusions[where] do
+            local pos = unhash_position(hash)
+            travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
+        end
     end
+
     c_persist.exclusions[where] = {}
 end
 

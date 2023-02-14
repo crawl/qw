@@ -111,24 +111,27 @@ function plan_orbrun_teleport()
     if can_teleport() and want_to_orbrun_teleport() then
         return teleport()
     end
+
     return false
 end
 
 function plan_gd1()
-    magic("GD1\rY")
+    send_travel("D", 1)
     return true
 end
 
 function plan_go_up()
     local feat = view.feature_at(0, 0)
-    if feat:find("stone_stairs_up") or feat == "escape_hatch_up"
-         or feat == "exit_zot" or feat == "exit_dungeon"
-         or feat == "exit_depths" then
+    if feat:find("stone_stairs_up")
+            or feat == "escape_hatch_up"
+            or feat == "exit_zot"
+            or feat == "exit_dungeon"
+            or feat == "exit_depths" then
         if you.mesmerised() then
             return false
         end
 
-        magic("<")
+        go_upstairs()
         return true
     end
 
