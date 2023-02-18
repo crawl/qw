@@ -507,7 +507,7 @@ function total_resist_value(it, cur, it2)
 end
 
 function resist_vec(it)
-    local vec = { }
+    local vec = {}
     for _, str in ipairs(nonlinear_resists) do
         local a, b = resist_value(str, it)
         table.insert(vec, b > 0 and b or a)
@@ -540,17 +540,6 @@ function resist_dominated(it, it2)
         end
     end
     return diff >= 0
-end
-
-function easy_runes()
-    local branches = {"Swamp", "Snake", "Shoals", "Spider"}
-    local count = 0
-    for _, br in ipairs(branches) do
-        if have_branch_runes(br) then
-            count = count + 1
-        end
-    end
-    return count
 end
 
 -- A list of armour slots, this is used to normalize names for them and also to
@@ -880,6 +869,8 @@ function want_wand(it)
     if sub and sub == "digging" then
         return true
     end
+
+    return false
 end
 
 function want_potion(it)
@@ -1077,9 +1068,6 @@ function autopickup(it, name)
     end
 end
 
-clear_autopickup_funcs()
-add_autopickup_func(autopickup)
-
 -----------------------------------------
 -- item functions
 
@@ -1189,18 +1177,18 @@ function have_item(cls, name)
     end
 end
 
+local missile_ratings = {
+    ["boomerang"] = 1,
+    ["javelin"] = 2,
+    ["large rock"] = 3
+}
 function missile_rating(missile)
-    local ratings = {
-        ["boomerang"] = 1,
-        ["javelin"] = 2,
-        ["large rock"] = 3
-    }
-
-    for name, rating in ipairs(ratings) do
-        if missile.name():find(name) then
-            if it.ego() then
+    for name, rating in pairs(missile_ratings) do
+        if missile:name():find(name) then
+            if missile:ego() then
                 rating = rating + 0.5
             end
+
             return rating
         end
     end
@@ -1211,7 +1199,7 @@ function best_missile()
     local best_missile
     for it in inventory() do
         local rating = missile_rating(it)
-        if rating > best_rating then
+        if rating and rating > best_rating then
             best_rating = rating
             best_missile = it
         end

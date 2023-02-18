@@ -38,7 +38,7 @@ function monster_in_way(pos)
                 or feat  == "trap_zot"))
 end
 
-function assess_square_enemies(a, cx, cy)
+function assess_square_enemies(a, pos)
     local best_dist = 10
     a.enemy_distance = 0
     a.followers_to_land = false
@@ -48,9 +48,9 @@ function assess_square_enemies(a, cx, cy)
     a.unalert = 0
     a.longranged = 0
     for _, enemy in ipairs(enemy_list) do
-        local pos = enemy:pos()
         local dist = enemy:distance()
-        local see_cell = view.cell_see_cell(cx, cy, pos.x, pos.y)
+        local see_cell = view.cell_see_cell(pos.x, pos.y,
+            enemy:x_pos(), enemy:y_pos())
         local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
 
@@ -134,26 +134,26 @@ function assess_square(pos)
     a = {}
 
     -- Distance to current square
-    a.supdist = supdist(pos.x, pos.y)
+    a.supdist = supdist(pos)
 
     -- Is current square near a BiA/SGD?
     if a.supdist == 0 then
-        a.near_ally = count_bia(3) + count_greater_demons(3)
-            + count_divine_warrior(3) > 0
+        a.near_ally = count_brothers_in_arms(3) + count_greater_servants(3)
+            + count_divine_warriors(3) > 0
     end
 
     -- Can we move there?
     a.can_move = a.supdist == 0
-        or can_movenot view.withheld(pos.x, pos.y)
-                      and not monster_in_way(pos)
-                      and is_traversable_at(pos)
-                      and not is_solid_at(pos)
+        or not view.withheld(pos.x, pos.y)
+            and not monster_in_way(pos)
+            and is_traversable_at(pos)
+            and not is_solid_at(pos)
     if not a.can_move then
         return a
     end
 
     -- Count various classes of monsters from the enemy list.
-    assess_square_monsters(a, pos)
+    assess_square_enemies(a, pos)
 
     -- Avoid corners if possible.
     a.cornerish = is_cornerish_at(pos)
@@ -305,7 +305,7 @@ function choose_tactical_step()
             or you.status("spiked") then
         return
     end
-    local a0 = assess_square(0, 0)
+    local a0 = assess_square(origin)
     if a0.cloud_safe
             and not (a0.fumble and sense_danger(3))
             and (not have_reaching() or a0.slow_adjacent == 0)

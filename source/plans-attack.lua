@@ -15,16 +15,26 @@ function plan_flail_at_invis()
         end
     end
 
-    if sigmund_pos.x ~= 0 or sigmund_pos. ~= 0 then
+    if supdist(sigmund_pos) > 0 then
         if is_adjacent(sigmund_pos) and is_traversable(sigmund_pos) then
             magic(control(delta_to_vi(sigmund_pos)))
             return true
-        elseif x == 0 and is_traversable(0, sign(y)) then
-            magic(delta_to_vi({ x = 0, y = sign(y) }))
-            return true
-        elseif y == 0 and is_traversable(sign(x),0) then
-            magic(delta_to_vi({ x = sign(x), y = 0 }))
-            return true
+        end
+
+        if sigmund_pos.x == 0 then
+            local apos = { x = 0, y = sign(sigmund_pos.y) }
+            if is_traversable(apos) then
+                magic(delta_to_vi())
+                return true
+            end
+        end
+
+        if sigmund_pos.y == 0 then
+            local apos = { x = sign(sigmund_pos.x), y = 0 }
+            if is_traversable(apos) then
+                magic(delta_to_vi())
+                return true
+            end
         end
     end
 
@@ -33,7 +43,7 @@ function plan_flail_at_invis()
     while not success and tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if (pos.x ~= 0 or pos.y ~= 0)
+        if supdist(pos) > 0
                 and is_traversable_at(pos)
                 and not is_solid_at(pos) then
             success = true
@@ -163,7 +173,8 @@ function assess_explosion(attack, target)
         if mons then
             if mons:is_friendly()
                 and not mons:ignores_player_projectiles() then
-            return
+                return
+            end
 
             if mons:is_enemy() then
                 add_enemy_hit_props(result, mons, attack.props)
@@ -243,6 +254,34 @@ function assess_explosion_targets(attack, target)
         end
     end
     return best_result
+end
+
+function weapon_test_spell(weapon)
+    if weapon.class(true) == "missile" then
+        if item:name():find("javelin") then
+            return "Dispelling Breath"
+        else
+            return "Magic Dart"
+        end
+    end
+end
+
+function weapon_range(weapon)
+    if weapon.class(true) == "missile" then
+        return los_radius
+    end
+end
+
+function is_exploding_weapon(weapon)
+    return false
+end
+
+function is_penetrating_weapon(weapon)
+    if item:name():find("javelin") then
+        return true
+    end
+
+    return false
 end
 
 function get_ranged_target(weapon)

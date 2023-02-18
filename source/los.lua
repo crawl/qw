@@ -122,3 +122,12 @@ function unhash_position(hash)
     local y = hash - 2 * GXM * x
     return { x = x, y = y }
 end
+
+function is_adjacent(pos, center)
+    if not center then
+        center = origin
+    end
+
+    local diff = { x = pos.x - center.x, y = pos.y - center.y }
+    return supdist(diff) > 0 and abs(diff.x) <= 1 and abs(diff.y) <= 1
+end

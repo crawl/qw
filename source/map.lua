@@ -36,11 +36,11 @@ function update_waypoint_data()
     local where = you.where()
     local portal = is_portal_branch(where)
     local place = portal and "Portal" or where
-    local new_waypoint
+    local waypoint_num, new_waypoint
     if not c_persist.waypoints[place] then
         c_persist.waypoints[place] = c_persist.waypoint_count
         c_persist.waypoint_count = c_persist.waypoint_count + 1
-        travel.set_waypoint(waypoint_num, 0, 0)
+        travel.set_waypoint(c_persist.waypoints[place], 0, 0)
         new_waypoint = true
     end
     local waypoint_num = c_persist.waypoints[place]
@@ -85,7 +85,7 @@ function clear_map_data(num)
         exclusion_maps[num][x] = {}
     end
 
-    map_mode_searches[num] = {}
+    level_map_mode_searches[num] = {}
 end
 
 function add_feature_search(feats)
@@ -133,10 +133,12 @@ function distance_map_initialize(pos, hash, radius)
         dist_map.map[x] = {}
     end
     dist_map.map[pos.x][pos.y] = 0
+
+    dist_map.excluded_map = {}
     for x = -GXM, GXM do
-        dist_map.unexcluded_map[x] = {}
+        dist_map.excluded_map[x] = {}
     end
-    dist_map.unexcluded_map[pos.x][pos.y] = 0
+    dist_map.excluded_map[pos.x][pos.y] = 0
 
     dist_map.queue = { { x = pos.x, y = pos.y, propagate_traversable = true,
         propagate_unexcluded = true } }
@@ -195,9 +197,9 @@ end
 
 function distance_map_update_adjacent_pos(center, pos, dist_map)
     if (dist_map.radius
-                and supdist(pos.x - dist_map.pos.x,
-                        pos.y - dist_map.pos.y) > dist_map.radius)
-            -- Untraversable cells don't need propogated updates.
+                and supdist({ x = pos.x - dist_map.pos.x,
+                    y = pos.y - dist_map.pos.y }) > dist_map.radius)
+            -- Untraversable cells don't need updates.
             or not traversal_map[pos.x][pos.y] then
         return
     end
@@ -293,8 +295,7 @@ function handle_item_searches(pos, dist_queues)
     -- function so that this optimization is more accurate. Since that happens
     -- before our turn update and hance might require careful coordination, we
     -- do it this way for now.
-    local searches = item_searches[waypoint_parity]
-    if #searches == 0 then
+    if #item_searches == 0 then
         return
     end
 
@@ -305,7 +306,7 @@ function handle_item_searches(pos, dist_queues)
 
     for _, it in ipairs(floor_items) do
         local name = it:name()
-        if searches[name] then
+        if item_searches[name] then
             record_map_item(name, pos, dist_queues)
             return
         end
@@ -382,7 +383,8 @@ function los_map_update()
         end
 
         local gpos = { x = pos.x + waypoint.x, y = pos.y + waypoint.y }
-        if gpos.x == move_destination.x
+        if move_destination
+                and gpos.x == move_destination.x
                 and gpos.y == move_destination.y
                 and (move_reason == "monster"
                         and you.see_cell_no_trans(pos.x, pos.y)
@@ -430,8 +432,8 @@ function update_map_data()
         feature_searches[exit] = true
     end
 
-    if where_depth >= branch_rune_depth(where_branch)
-            and not have_branch_runes(where_branch) then
+    if not have_branch_runes(where_branch)
+            and where_depth >= branch_rune_depth(where_branch) then
         local rune = branch_rune(where_branch)
         if type(rune) == "string" then
             if c_persist.seen_items[rune] then
@@ -504,12 +506,12 @@ function best_move_towards_position(pos, radius)
     return best_move_towards({ pos }, radius)
 end
 
-function get_feature_positions(feat)
+function get_feature_positions(feats)
     local positions = {}
     for _, feat in ipairs(feats) do
         if feature_positions[feat] then
             for _, pos in pairs(feature_positions[feat]) do
-                if not radius or supdist(pos.x, pos.y) <= radius then
+                if not radius or supdist(pos) <= radius then
                     table.insert(positions, pos)
                 end
             end
@@ -544,7 +546,7 @@ function record_feature_position(pos)
 end
 
 function remove_exclusions(record_only)
-    if not record_only then
+    if not record_only and c_persist.exclusions[where] then
         for hash, _ in c_persist.exclusions[where] do
             local pos = unhash_position(hash)
             travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
@@ -565,7 +567,7 @@ function handle_exclusions(new_waypoint)
     -- monsters so we can successfully exclude unreachable summoning monsters
     -- that can continuously make summons that are able to reach us.
     for _, enemy in ipairs(enemy_list) do
-        if not enemy:is_summoned
+        if not enemy:is_summoned()
                 and (enemy:can_melee_player()
                     or enemy:can_move_to_melee_player()) then
             incoming_melee_turn = you.turns()

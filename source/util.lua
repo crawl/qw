@@ -20,7 +20,7 @@ function contains_string_in(name, t)
 end
 
 function split(str, del)
-    local res = { }
+    local res = {}
     local v
     for v in string.gmatch(str, "([^" .. del .. "]+)") do
         table.insert(res, v)
@@ -46,8 +46,8 @@ function control(c)
     return string.char(string.byte(c) - string.byte('a') + 1)
 end
 
+local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
 function arrowkey(c)
-    local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
     return a2c[c]
 end
 
@@ -56,7 +56,7 @@ local d2v = {
     [0]  = { [-1] = 'k', [1] = 'j' },
     [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
 }
-local v2d = { }
+local v2d = {}
 for x, _ in pairs(d2v) do
     for y, c in pairs(d2v[x]) do
         v2d[c] = { x = x, y = y }

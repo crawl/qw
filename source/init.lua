@@ -41,6 +41,9 @@ function initialize()
     calc_los_radius()
     initialize_monster_map()
 
+    clear_autopickup_funcs()
+    add_autopickup_func(autopickup)
+
     make_initial_gameplans()
     where = "nowhere"
     where_branch = "nowhere"
@@ -49,16 +52,17 @@ function initialize()
     if not waypoint_parity then
         traversal_maps = {}
         exclusion_maps = {}
+
         level_distance_maps = {}
         level_feature_searches = {}
         level_feature_positions = {}
         level_item_searches = {}
         level_map_mode_searches = {}
+
         clear_map_data(1)
         clear_map_data(2)
 
         waypoint_parity = 1
-        waypoint = {}
         previous_where = "nowhere"
     end
 
@@ -153,7 +157,7 @@ function first_turn_initialize()
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
             local plan_parts = split(combo_parts[2], "!")
-            c_persist.next_god_list = { }
+            c_persist.next_god_list = {}
             for g in plan_parts[1]:gmatch(".") do
                 table.insert(c_persist.next_god_list, god_full_name(g))
             end

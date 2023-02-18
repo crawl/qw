@@ -95,9 +95,9 @@ function level_stair_reset(branch, depth, dir)
 
     local lev = make_level(branch, depth)
     if lev == where then
-        map_mode_searches[waypoint_parity][dir_key(dir)] = nil
+        map_mode_searches[dir_key(dir)] = nil
     elseif lev == previous_where then
-        map_mode_searches[3 - waypoint_parity][dir_key(dir)] = nil
+        level_map_mode_searches[3 - waypoint_parity][dir_key(dir)] = nil
     end
 
     if where ~= lev then
@@ -187,7 +187,7 @@ function have_all_stairs(branch, depth, dir, state)
 end
 
 function find_good_stairs()
-    good_stairs = { }
+    good_stairs = {}
 
     if not level_has_upstairs then
         return
@@ -200,7 +200,7 @@ function find_good_stairs()
     end
     local stair_positions = get_feature_positions(feats)
 
-    local pspeed = player_speed_num()
+    local pspeed = player_speed()
     for _, pos in ipairs(stair_positions) do
         local dist_map = get_distance_map(pos)
         local pdist = dist_map.map[waypoint.x][waypoint.y]
@@ -240,7 +240,7 @@ function stair_improvement(pos)
         return 10000
     end
 
-    if x == 0 and y == 0 then
+    if supdist(pos) == 0 then
         if feature_is_upstairs(view.feature_at(0, 0)) then
             return 0
         else
@@ -251,7 +251,7 @@ function stair_improvement(pos)
     local min_val = 10000
     for _, stair_pos in ipairs(good_stairs) do
         local dist_map = get_distance_map(stair_pos)
-        local val = dist_map.map[waypoint.x + x][waypoint.y + y]
+        local val = dist_map.map[waypoint.x + pos.x][waypoint.y + pos.y]
         if val and val < dist_map.map[waypoint.x][waypoint.y]
                 and val < min_val then
             min_val = val

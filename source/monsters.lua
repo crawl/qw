@@ -147,7 +147,7 @@ end
 
 function Monster:is(flag)
     if not self.props.flags then
-        self.props.flags = { }
+        self.props.flags = {}
     end
 
     if self.props.flags[flag] == nil then
@@ -159,7 +159,7 @@ end
 
 function Monster:status(status)
     if not self.props.status then
-        self.props.status = { }
+        self.props.status = {}
     end
 
     if self.props.status[status] == nil then
@@ -765,7 +765,7 @@ function sense_danger(radius, moveable)
         local pos = enemy:pos()
         if (moveable and you.see_cell_solid_see(pos.x, pos.y)
                     or not moveable)
-                and supdist(pos.x, pos.y) <= radius then
+                and supdist(pos) <= radius then
             return true
         end
     end

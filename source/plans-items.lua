@@ -678,17 +678,18 @@ function plan_use_id_scrolls()
     if not can_read() then
         return false
     end
+
     local id_scroll
     for it in inventory() do
         if it.class(true) == "scroll" and it.name():find("identify") then
             id_scroll = it
+            break
         end
     end
     if not id_scroll then
         return false
     end
-    local oldslots = { }
-    local newslots = {[0] = 'B', [1] = 'N', [2] = 'Y'} -- harmless keys
+
     local count = 0
     if id_scroll.quantity > 1 then
         for it in inventory() do
@@ -701,6 +702,7 @@ function plan_use_id_scrolls()
             end
         end
     end
+
     return false
 end
 

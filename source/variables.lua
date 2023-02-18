@@ -22,6 +22,24 @@ local AUTOEXP
 local FEAT_LOS
 local DIR
 
+-- Plan functions. These must later be initialized as cascades.
+local plan_abyss_rest
+local plan_abyss_move
+
+local plan_emergency
+local plan_attack
+local plan_rest
+local plan_handle_acquirement_result
+local plan_pre_explore
+local plan_pre_explore2
+local plan_explore
+local plan_explore2
+local plan_move
+
+local plan_orbrun_rest
+local plan_orbrun_emergency
+local plan_orbrun_move
+
 -- All variables past this point are qw state.
 local initialized = false
 local branch_data = {}
@@ -77,25 +95,66 @@ local where_depth
 
 local los_radius
 local base_corrosion
-local disable_autoexplore
 local level_has_upstairs
-local base_corrosion
 local open_runed_doors
 local permanent_bazaar
-local ignore_traps
 local dislike_pan_level = false
 
-local branch_step_mode = false
-local stepped_on_lair = false
-local stepped_on_tomb = false
+local disable_autoexplore
+local last_wait = 0
+local wait_count = 0
+local turn_count = you.turns() - 1
+local hiding_turn_count = -100
 
-local stairs_travel
+local waypoint_parity
+local waypoint = {}
+local level_feature_searches
+local feature_searches
+local level_feature_positions
+local feature_positions
+local level_item_searches
+local item_searches
+local traversal_maps
+local traversal_map
+local exclusion_maps
+local exclusion_map
+local level_distance_maps
+local distance_maps
+local good_stairs
+local target_stair
+local last_flee_turn = -100
+
+local level_map_mode_searches
+local map_mode_searches
+local map_mode_search_key
+local map_mode_search_hash
+local map_mode_search_zone
+local map_mode_search_count
+local map_mode_search_attempts = 0
+
+local transp_map = {}
+local transp_search_zone
+local transp_search_count
+local transp_zone
+local transp_orient
+local transp_search
+
+local prev_hatch_dist = 1000
+local prev_hatch
+
+local monster_map
+local enemy_list
 local danger
 local immediate_danger
+
+local ignore_traps
+local stairs_travel
 local cloudy
 local move_unsafe
+local melee_safe
+local incoming_melee_turn = -1
+local full_hp_turn = 0
 
-local ignore_list = {}
 local failed_move = {}
 local invisi_count = 0
 local next_delay = 100
@@ -103,21 +162,13 @@ local is_waiting
 
 local sigmund_pos
 local invis_sigmund = false
-
 local greater_servant_timer = -200
 
+local move_destination
+local move_reason
 local stuck_turns = 0
-
 local did_move_towards_monster = 0
 local target_memory
-
-local last_wait = 0
-local wait_count = 0
-local turn_count = you.turns() - 1
-local hiding_turn_count = -100
-
-local monster_map
-local enemy_list
 
 local upgrade_phase = false
 local acquirement_pickup = false
@@ -143,48 +194,3 @@ local last_min_delay_skill = 18
 local only_linear_resists = false
 
 local no_spells = false
-
-local waypoint_parity
-local waypoint = {}
-local feature_searches
-local feature_positions
-local traversal_maps
-local exclusion_maps
-local distance_maps
-local good_stairs
-local target_stair
-local last_flee_turn = -100
-
-local map_mode_searches
-local map_mode_search_key
-local map_mode_search_hash
-local map_mode_search_zone
-local map_mode_search_count
-local map_mode_search_attempts = 0
-
-local transp_map = {}
-local transp_search_zone
-local transp_search_count
-local transp_zone
-local transp_orient
-local transp_search
-
-local prev_hatch_dist = 1000
-local prev_hatch
-
-local plan_abyss_rest
-local plan_abyss_move
-
-local plan_emergency
-local plan_attack
-local plan_rest
-local plan_handle_acquirement_result
-local plan_pre_explore
-local plan_pre_explore2
-local plan_explore
-local plan_explore2
-local plan_move
-
-local plan_orbrun_rest
-local plan_orbrun_emergency
-local plan_orbrun_move

@@ -35,6 +35,7 @@ function turn_update()
     local new_waypoint = false
     if you.where() ~= where then
         new_waypoint = update_waypoint_data()
+        dsay(item_searches)
 
         if you.where() ~= previous_where or new_waypoint then
             clear_map_data(waypoint_parity)
@@ -105,6 +106,7 @@ function turn_update()
         end
     end
 
+    update_monster_map()
     handle_exclusions(new_waypoint)
     update_map_data()
 
@@ -122,14 +124,15 @@ function turn_update()
     stash_travel_attempts = 0
     map_mode_search_attempts = 0
 
-    update_monster_map()
     danger = sense_danger(los_radius)
+    immediate_danger = sense_immediate_danger()
+    melee_target = nil
+
     if danger then
         move_destination = nil
         move_reason = nil
     end
 
-    immediate_danger = sense_immediate_danger()
     sense_sigmund()
     find_good_stairs()
 

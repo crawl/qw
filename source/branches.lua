@@ -414,3 +414,14 @@ end
 function level_is_temporary()
     return in_portal() or in_branch("Pan") or in_branch("Abyss")
 end
+
+function easy_runes()
+    local branches = {"Swamp", "Snake", "Shoals", "Spider"}
+    local count = 0
+    for _, br in ipairs(branches) do
+        if have_branch_runes(br) then
+            count = count + 1
+        end
+    end
+    return count
+end
