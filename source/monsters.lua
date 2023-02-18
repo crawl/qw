@@ -169,6 +169,22 @@ function Monster:status(status)
     return self.props.status[status]
 end
 
+function Monster:get_player_move_towards(assume_flight)
+    if not self.props.player_move then
+        self.props.player_move = {}
+    end
+
+    local ind = tonumber(assume_flight)
+    if self.props.player_move[ind] == nil then
+        local move_func = assume_flight and flight_tabbable_square
+            or tabbable_square
+        self.props.player_move[ind] = get_move_towards(origin, self:pos(),
+            move_func, reach_range(), failed_moves_towards)
+    end
+
+    return self.props.player_move[ind]
+end
+
 -- functions for use in the monster lists below
 function in_desc(lev, str)
     return function (mons)

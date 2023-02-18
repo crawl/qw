@@ -118,6 +118,20 @@ function plan_exit_portal()
     return true
 end
 
+function plan_continue_move_to_next_destination()
+    if not move_destination or danger or moving_is_unsafe() then
+        return false
+    end
+
+    local move = best_move_towards_position(move_destination)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
 function set_plan_pre_explore()
     plan_pre_explore = cascade {
         {plan_ancestor_life, "ancestor_life"},
@@ -146,6 +160,7 @@ function set_plan_explore()
     plan_explore = cascade {
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
+        {plan_continue_move_to_next_destination, "try_move_to_next_destination"},
         {plan_autoexplore, "try_autoexplore"},
     }
 end

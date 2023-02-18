@@ -8,14 +8,17 @@ function can_move_to(pos)
 end
 
 function tabbable_square(pos)
-    if view.feature_at(pos.x, pos.y) ~= "unseen"
-            and view.is_safe_square(pos.x, pos.y) then
-        if not monster_map[pos.x][pos.y]
-                or not monster_map[pos.x][pos.y]:is_firewood() then
-            return true
-        end
-    end
-    return false
+    return view.feature_at(pos.x, pos.y) ~= "unseen"
+        and view.is_safe_square(pos.x, pos.y)
+        and (not monster_map[pos.x][pos.y]
+            or monster_map[pos.x][pos.y]:is_firewood())
+end
+
+function flight_tabbable_square(pos)
+    return view.feature_at(pos.x, pos.y) ~= "unseen"
+        and view.is_safe_square(pos.x, pos.y, true)
+        and (not monster_map[pos.x][pos.y]
+            or monster_map[pos.x][pos.y]:is_firewood())
 end
 
 -- Should only be called for adjacent squares.
@@ -447,4 +450,22 @@ function mons_can_move_to_melee_player(mons)
         and (melee_range < 2
             or attack_range() > 1
             or player_can_move_closer(pos))
+end
+
+function get_move_to_next_destination(ignore_exclusions)
+    local move, dest
+    if gameplan_travel.first_dir then
+        local feats = level_stairs_features(where_branch, where_depth,
+            gameplan_travel.first_dir)
+        move, dest = best_move_towards_features(feats, ignore_exclusions)
+    elseif gameplan_travel.first_branch then
+        move, dest = best_move_towards_features(
+            branch_entrance(gameplan_travel.first_branch),
+                ignore_exclusions)
+    elseif gameplan_status:find("^God:") then
+        local god = gameplan_god(gameplan_status)
+        move, dest = best_move_to_features(god_altar(god), ignore_exclusions)
+    end
+
+    return move, dest
 end

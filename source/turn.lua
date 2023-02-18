@@ -82,13 +82,6 @@ function turn_update()
         end
     end
 
-    if did_move then
-        move_count = move_count + 1
-    else
-        move_count = 0
-    end
-
-    did_move = false
     if did_move_towards_monster > 0 then
         did_move_towards_monster = did_move_towards_monster - 1
     end
@@ -131,6 +124,11 @@ function turn_update()
 
     update_monster_map()
     danger = sense_danger(los_radius)
+    if danger then
+        move_destination = nil
+        move_reason = nil
+    end
+
     immediate_danger = sense_immediate_danger()
     sense_sigmund()
     find_good_stairs()

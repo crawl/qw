@@ -381,11 +381,20 @@ function los_map_update()
             record_altar(pos)
         end
 
-        traversal_map[pos.x][pos.y] = feature_is_traversable(feat)
-        exclusion_map[pos.x][pos.y] = travel.is_excluded(pos.x, pos.y)
+        local gpos = { x = pos.x + waypoint.x, y = pos.y + waypoint.y }
+        if gpos.x == move_destination.x
+                and gpos.y == move_destination.y
+                and (move_reason == "monster"
+                        and you.see_cell_no_trans(pos.x, pos.y)
+                    or pos.x == 0 and pos.y == 0) then
+            move_destination = nil
+            move_reason = nil
+        end
 
-        table.insert(map_queue, { x = pos.x + waypoint.x,
-            y = pos.y + waypoint.y })
+        traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
+        exclusion_map[gpos.x][gpos.y] = travel.is_excluded(pos.x, pos.y)
+
+        table.insert(map_queue, gpos)
     end
 
     for i, pos in ipairs(map_queue) do
@@ -550,21 +559,26 @@ function handle_exclusions(new_waypoint)
         remove_exclusions()
     end
 
-    -- If we have any incoming melee, we're not fighting only unreachable
-    -- monsters and have no reason to start excluding.
+    -- We only exclude monsters when we have no incoming melee. Incoming melee
+    -- is satisfied by any non-summoned monster that can either melee us now or
+    -- is able to move into melee range given LOS terrain. We exclude summoned
+    -- monsters so we can successfully exclude unreachable summoning monsters
+    -- that can continuously make summons that are able to reach us.
     for _, enemy in ipairs(enemy_list) do
-        if enemy:can_melee_player() or enemy:can_move_to_melee_player() then
+        if not enemy:is_summoned
+                and (enemy:can_melee_player()
+                    or enemy:can_move_to_melee_player()) then
             incoming_melee_turn = you.turns()
             return
         end
     end
 
     -- We want to exclude any unreachable monsters who get us to low HP while
-    -- we're trying to kill them with ranged attacks. We also require that
-    -- we've healed to full HP since having only unreachable monsters. This way
-    -- if we fight a mix of reachable and unreachable monsters, kill all the
-    -- reachable ones but get to low HP we'll retreat and heal up once before
-    -- attempting to kill the unreachable ones.
+    -- we're trying to kill them with ranged attacks. We additionally require
+    -- that we've been at full HP since the last turn were we had reachable
+    -- monsters. This way if we fight a mix of reachable and unreachable
+    -- monsters and kill all the reachable ones but get to low HP, we'll
+    -- retreat and heal up once before attempting to kill the unreachable ones.
     if full_hp_turn < incoming_melee_turn or not hp_is_low(50) then
         return
     end

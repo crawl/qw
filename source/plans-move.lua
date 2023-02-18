@@ -204,121 +204,6 @@ function try_move(pos)
     end
 end
 
-function move_towards(pos)
-    if not can_move()
-            or you.confused()
-                and (count_brothers_in_arms(1) > 0
-                    or count_greater_servants(1) > 0
-                    or count_divine_warriors(1) > 0) then
-        magic("s")
-        return true
-    end
-
-    local move
-    if abs(pos.x) > abs(pos.y) then
-        if abs(pos.y) == 1 then
-            move = try_move({ x = sign(pos.x), y = 0 })
-        end
-        if not move then
-            move = try_move({ x = sign(pos.x), y = sign(pos.y) })
-        end
-        if not move then
-            move = try_move({ x = sign(pos.x), y = 0 })
-        end
-        if not move and abs(pos.x) > abs(pos.y) + 1 then
-            move = try_move({ x = sign(pos.x), y = 1 })
-        end
-        if not move and abs(pos.x) > abs(pos.y) + 1 then
-            move = try_move({ x = sign(pos.x), y = -1 })
-        end
-        if not move then
-            move = try_move({ x = 0, y = sign(pos.y) })
-        end
-    elseif abs(pos.x) == abs(pos.y) then
-        move = try_move({ x = sign(pos.x), y = sign(pos.y) })
-        if not move then
-            move = try_move({ x = sign(pos.x), y = 0 })
-        end
-        if not move then
-            move = try_move({ x = 0, y = sign(pos.y) })
-        end
-    else
-        if abs(pos.x) == 1 then
-            move = try_move({ x = 0, y = sign(pos.y) })
-        end
-        if not move then
-            move = try_move({ x = sign(pos.x), y = sign(pos.y) })
-        end
-        if not move then
-            move = try_move({ x = 0, y = sign(pos.y) })
-        end
-        if not move and abs(pos.y) > abs(pos.x) + 1 then
-            move = try_move({ x = 1, y = sign(pos.y) })
-        end
-        if not move and abs(pos.y) > abs(pos.x) + 1 then
-            move = try_move({ x = -1, y = sign(pos.y) })
-        end
-        if not move then
-            move = try_move({ x = sign(pos.x), y = 0 })
-        end
-    end
-    if not move or move_count >= 10 then
-        failed_moves[hash_position(pos)] = true
-        return false
-    else
-        if (abs(pos.x) > 1 or abs(pos.y) > 1)
-                and not branch_step_mode
-                and view.feature_at(pos.x, pos.y) ~= "closed_door" then
-            did_move = true
-            if monster_map[pos.x][pos.y] or did_move_towards_monster > 0 then
-                local mpos = vi_to_delta(move)
-                target_memory = { x = pos.x - mpos.x,  y = pos.y - mpos.y }
-                did_move_towards_monster = 2
-            end
-        end
-        if branch_step_mode then
-            local mpos = vi_to_delta(move)
-            if view.feature_at(mpos.x, mpos.y) == "shallow_water" then
-                return false
-            end
-        end
-        magic(move .. "Y")
-        return true
-    end
-end
-
-function plan_step_towards_branch()
-    if (stepped_on_lair
-            or not branch_found("Lair"))
-                and (at_branch_end("Crypt")
-                    or stepped_on_tomb
-                    or not branch_found("Tomb")) then
-        return false
-    end
-
-    for pos in square_iter(origin, los_radius, true) do
-        local feat = view.feature_at(pos.x, pos.y)
-        if (feat == "enter_lair" or feat == "enter_tomb")
-                and you.see_cell_no_trans(pos.x, pos.y) then
-            if x == 0 and y == 0 then
-                if feat == "enter_lair" then
-                    stepped_on_lair = true
-                else
-                    stepped_on_tomb = true
-                end
-                return false
-            else
-                branch_step_mode = true
-                local result = move_towards(pos)
-                branch_step_mode = false
-                return result
-            end
-        end
-    end
-
-    return false
-end
-
 function plan_swamp_clear_exclusions()
     if not at_branch_end("Swamp") then
         return false
@@ -396,22 +281,15 @@ function plan_swamp_clouds_hack()
     return plan_stuck_teleport()
 end
 
-function move_to_next_destination(ignore_exclusions)
-    local move
-    if gameplan_travel.first_dir then
-        local feats = level_stairs_features(where_branch, where_depth,
-            gameplan_travel.first_dir)
-        move = best_move_towards_features(feats, ignore_exclusions)
-    elseif gameplan_travel.first_branch then
-        move = best_move_towards_features(
-            branch_entrance(gameplan_travel.first_branch),
-                ignore_exclusions)
-    elseif gameplan_status:find("^God:") then
-        local god = gameplan_god(gameplan_status)
-        move = best_move_to_features(god_altar(god), ignore_exclusions)
+function plan_stuck_move_to_next_destination()
+    if moving_is_unsafe() then
+        return false
     end
 
+    local move, dest = get_move_to_next_destination()
     if move then
+        move_destination = dest
+        move_reason = "travel"
         move_to(move)
         return true
     end
@@ -419,22 +297,22 @@ function move_to_next_destination(ignore_exclusions)
     return false
 end
 
-function plan_stuck_move_to_next_destination()
-end
-
 function plan_exclusion_move()
-    if not exclusion_map[0][0] then
+    if moving_is_unsafe() or not exclusion_map[0][0] then
         return false
     end
 
-    if move_to_next_destination(true) then
+    local move, dest = move_to_next_destination(true)
+    if move then
+        move_destination = dest
+        move_reason = "travel"
+        move_to(move)
         return true
     end
 
     local feats = level_stairs_features(gameplan_branch, gameplan_depth,
         DIR.UP)
-    local move = best_move_to_features(feats, true)
-
+    move = best_move_to_features(feats, true)
     if move then
         move_to(move)
         return true
@@ -444,6 +322,10 @@ function plan_exclusion_move()
 end
 
 function plan_stuck_move_to_monster()
+    if moving_is_unsafe() then
+        return false
+    end
+
     local mons_targets = {}
     for pos in square_iter(origin) do
         local monster =  monster.get_monster_at(pos.x, pos.y)
@@ -474,10 +356,8 @@ function set_plan_move()
         {plan_emergency, "emergency"},
         {plan_exclusion_move, "exclusion_move"},
         {plan_attack, "attack"},
-        {plan_exclusion_move, "exclusion_move"},
         {plan_rest, "rest"},
         {plan_pre_explore, "pre_explore"},
-        {plan_step_towards_branch, "step_towards_branch"},
         {plan_unwield_weapon, "unwield_weapon"},
         {plan_explore, "explore"},
         {plan_pre_explore2, "pre_explore2"},
@@ -488,7 +368,7 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
-        {plan_stuck_move_to_next_destination, "stuck_move_to_target"},
+        {plan_stuck_move_to_next_destination, "stuck_move_to_next_destination"},
         {plan_stuck_move_to_monster, "stuck_move_to_monster"},
         {plan_stuck_clear_exclusions, "try_stuck_leave_exclusion"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},

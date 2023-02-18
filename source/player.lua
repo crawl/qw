@@ -229,10 +229,10 @@ end
 
 function can_invoke()
     return not (you.berserk()
-            or you.confused()
-            or you.silenced()
-            or you.under_penance(you.god())
-            or you.status("engulfed (cannot breathe)"))
+        or you.confused()
+        or you.silenced()
+        or you.under_penance(you.god())
+        or you.status("engulfed (cannot breathe)"))
 end
 
 function can_berserk()
@@ -327,6 +327,17 @@ end
 function can_move()
     return not (you.transform() == "tree"
         or you.transform() == "fungus" and danger)
+end
+
+function moving_is_unsafe()
+    if move_unsafe == nil then
+        move_unsafe = you.confused()
+            and (count_brothers_in_arms(1) > 0
+                or count_greater_servants(1) > 0
+                or count_divine_warriors(1) > 0)
+    end
+
+    return move_unsafe
 end
 
 function player_can_melee_mons(mons)

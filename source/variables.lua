@@ -93,6 +93,7 @@ local stairs_travel
 local danger
 local immediate_danger
 local cloudy
+local move_unsafe
 
 local ignore_list = {}
 local failed_move = {}
@@ -106,9 +107,6 @@ local invis_sigmund = false
 local greater_servant_timer = -200
 
 local stuck_turns = 0
-
-local did_move = false
-local move_count = 0
 
 local did_move_towards_monster = 0
 local target_memory

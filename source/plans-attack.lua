@@ -86,7 +86,7 @@ function add_enemy_hit_props(result, enemy, props)
     end
 end
 
-function get_melee_target()
+function get_melee_target(assume_flight)
     if melee_target then
         return melee_target
     end
@@ -101,7 +101,8 @@ function get_melee_target()
 
     local best_result
     for _, enemy in ipairs(enemy_list) do
-        if enemy:player_can_melee() or enemy:get_player_move_towards() then
+        if enemy:player_can_melee()
+                or enemy:get_player_move_towards(assume_flight) then
             local result = assess_melee_target(attack, enemy:pos())
             if result_improves_attack(attack, result, best_result) then
                 best_result = result
@@ -203,8 +204,8 @@ function assess_ranged_target(attack, target)
                 and not attack.is_explosion
                 and attack.uses_ammunition
                 and i == #positions
-                and not destroys_items_at(attack.target)
-                and destroys_items_at(pos) then
+                and destroys_items_at(pos)
+                and not destroys_items_at(attack.target) then
             return at_target_result
         end
 
@@ -406,19 +407,43 @@ function plan_poison_spit()
     return false
 end
 
-function plan_use_flight()
-    if melee_enemy then
+function plan_flight_move_towards_enemy()
+    local slot = find_item("potion", "flight")
+    if not slot then
         return false
+    end
+
+    local target = get_melee_target(true)
+    if not target then
+        return false
+    end
+
+    local move = monster_map[target.x][target.y]:get_player_move_towards(true)
+    local feat = view.feature_at(move.x, move.y)
+    -- Only quaff flight when we finally reach an impassable square.
+    if feat == "deep_water" and not currently_amphibious()
+            or feat == "lava" then
+        return drink_by_name("flight")
+    else
+        magic(delta_to_vi(move))
+        return true
     end
 end
 
 function plan_move_towards_enemy()
+    if not safe_to_move() then
+        return false
+    end
+
     local target = get_melee_target()
     if not target then
         return false
     end
 
-    local move = monster_map[target.x][target.y]:get_player_move_towards()
+    local mons = monster_map[target.x][target.y]
+    local move = mons:get_player_move_towards()
+    target_memory = { x = pos.x - mons:x_pos(),  y = pos.y - mons:y_pos() }
+    did_move_towards_monster = 2
     magic(delta_to_vi(move))
     return true
 end
@@ -431,8 +456,8 @@ function set_plan_attack()
         {plan_melee, "try_melee"},
         {plan_throw, "try_throw"},
         {plan_wait_for_enemy, "try_wait_for_enemy"},
-        {plan_use_flight, "try_use_flight"},
         {plan_move_towards_enemy, "try_move_towards_enemy"},
+        {plan_flight_move_towards_enemy, "try_flight_move_towards_enemy"},
         {plan_disturbance_random_step, "disturbance_random_step"},
     }
 end
