@@ -228,9 +228,9 @@ function plan_magic_points()
     return false
 end
 
-function plan_hand()
-    if can_hand() and want_to_hand() and not you.teleporting() then
-        hand()
+function plan_trogs_hand()
+    if can_trogs_hand() and want_to_trogs_hand() and not you.teleporting() then
+        trogs_hand()
         return true
     end
     return false
@@ -975,7 +975,7 @@ function set_plan_emergency()
         {plan_tomb2_arrival, "tomb2_arrival"},
         {plan_tomb3_arrival, "tomb3_arrival"},
         {plan_cloud_step, "cloud_step"},
-        {plan_hand, "hand"},
+        {plan_trogs_hand, "trogs_hand"},
         {plan_haste, "haste"},
         {plan_resistance, "resistance"},
         {plan_magic_points, "magic_points"},

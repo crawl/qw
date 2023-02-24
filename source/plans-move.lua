@@ -286,7 +286,7 @@ function plan_stuck_move_to_next_destination()
         return false
     end
 
-    local move, dest = get_move_to_next_destination()
+    local move, dest = get_move_towards_next_destination()
     if move then
         move_destination = dest
         move_reason = "travel"
@@ -302,7 +302,7 @@ function plan_exclusion_move()
         return false
     end
 
-    local move, dest = move_to_next_destination(true)
+    local move, dest = get_move_towards_next_destination(true)
     if move then
         move_destination = dest
         move_reason = "travel"
@@ -312,7 +312,7 @@ function plan_exclusion_move()
 
     local feats = level_stairs_features(gameplan_branch, gameplan_depth,
         DIR.UP)
-    move = best_move_to_features(feats, true)
+    move = best_move_towards_features(feats, true)
     if move then
         move_to(move)
         return true
@@ -321,7 +321,7 @@ function plan_exclusion_move()
     return false
 end
 
-function plan_stuck_move_to_monster()
+function plan_stuck_move_towards_monster()
     if moving_is_unsafe() then
         return false
     end

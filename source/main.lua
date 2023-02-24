@@ -106,3 +106,7 @@ end
 function ready()
     run_qw()
 end
+
+function hit_closest()
+    startstop()
+end

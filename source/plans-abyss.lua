@@ -84,8 +84,8 @@ end
 
 function plan_abyss_hand()
     local hp, mhp = you.hp()
-    if mhp - hp >= 30 and can_hand() then
-        hand()
+    if mhp - hp >= 30 and can_trogs_hand() then
+        trogs_hand()
         return true
     end
     return false

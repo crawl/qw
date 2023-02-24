@@ -11,7 +11,6 @@ function initialize_c_persist()
         "autoexplore", "upstairs", "downstairs", "seen_items",
         "plan_fail_count"
     }
-
     for _, table in ipairs(tables) do
         if not c_persist[table] then
             c_persist[table] = {}

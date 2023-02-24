@@ -74,7 +74,7 @@ end
 function plan_orbrun_hand()
     local hp, mhp = you.hp()
     if mhp - hp >= 30 and can_hand() then
-        hand()
+        trogs_hand()
         return true
     end
     return false
@@ -155,7 +155,7 @@ function set_plan_orbrun_emergency()
         {plan_orbrun_haste, "orbrun_haste"},
         {plan_orbrun_heroism, "orbrun_heroism"},
         {plan_orbrun_divine_warrior, "orbrun_divine_warrior"},
-        {plan_hand, "hand"},
+        {plan_trogs_hand, "trogs_hand"},
         {plan_resistance, "resistance"},
         {plan_wield_weapon, "wield_weapon"},
         {plan_orbrun_might, "orbrun_might"},

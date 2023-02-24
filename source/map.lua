@@ -34,8 +34,10 @@ function update_waypoint_data()
     map_mode_searches = level_map_mode_searches[waypoint_parity]
 
     local where = you.where()
-    local portal = is_portal_branch(where)
-    local place = portal and "Portal" or where
+    local place = where
+    if is_portal_branch(you.branch()) then
+        place = "Portal"
+    end
     local waypoint_num, new_waypoint
     if not c_persist.waypoints[place] then
         c_persist.waypoints[place] = c_persist.waypoint_count
@@ -367,6 +369,11 @@ function distance_map_update_pos(pos, dist_map)
     end
 end
 
+function is_unexcluded(pos)
+    return not (view.in_known_map_bounds(pos.x, pos.y)
+        and travel.is_excluded(pos.x, pos.y))
+end
+
 function los_map_update()
     local map_queue = {}
     for pos in square_iter(origin, los_radius, true) do
@@ -394,7 +401,7 @@ function los_map_update()
         end
 
         traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
-        exclusion_map[gpos.x][gpos.y] = travel.is_excluded(pos.x, pos.y)
+        exclusion_map[gpos.x][gpos.y] = is_unexcluded(pos)
 
         table.insert(map_queue, gpos)
     end
@@ -479,13 +486,13 @@ function get_distance_map(pos, radius)
     return distance_maps[hash]
 end
 
-function best_move_towards(positions, radius, ignore_exclusions)
+function best_move_towards(positions, radius, no_exclusions)
     local best_dist = INF_DIST
     local best_dest
     local best_move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
-        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
+        local map = no_exclusions and dist_map.map or dist_map.excluded_map
         for dpos in adjacent_iter(waypoint) do
             local dist = map[dpos.x][dpos.y]
             if dist and dist < best_dist then
@@ -502,11 +509,11 @@ function best_move_towards(positions, radius, ignore_exclusions)
     end
 end
 
-function best_move_towards_position(pos, radius)
-    return best_move_towards({ pos }, radius)
+function best_move_towards_position(pos, radius, no_exclusions)
+    return best_move_towards({ pos }, radius, no_exclusions)
 end
 
-function get_feature_positions(feats)
+function get_feature_positions(feats, radius)
     local positions = {}
     for _, feat in ipairs(feats) do
         if feature_positions[feat] then
@@ -520,16 +527,16 @@ function get_feature_positions(feats)
     return positions
 end
 
-function best_move_towards_features(feats, ignore_exclusions)
-    local positions = get_feature_positions(feats)
+function best_move_towards_features(feats, radius, no_exclusions)
+    local positions = get_feature_positions(feats, radius)
     if #positions == 0 then
         add_feature_search(feats)
         find_features(radius)
-        positions = get_feature_positions(feats)
+        positions = get_feature_positions(feats, radius)
     end
 
     if #positions > 0 then
-        return best_move_towards(positions, ignore_exclusions)
+        return best_move_towards(positions, radius, no_exclusions)
     end
 end
 

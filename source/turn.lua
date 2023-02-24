@@ -35,7 +35,6 @@ function turn_update()
     local new_waypoint = false
     if you.where() ~= where then
         new_waypoint = update_waypoint_data()
-        dsay(item_searches)
 
         if you.where() ~= previous_where or new_waypoint then
             clear_map_data(waypoint_parity)
