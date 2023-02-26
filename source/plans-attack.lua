@@ -3,7 +3,7 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_sigmund or melee_is_unsafe() then
+    if not invis_sigmund or not melee_is_safe() then
         return false
     end
 
@@ -105,9 +105,8 @@ function get_melee_target(assume_flight)
     attack.props = { "player_can_melee", "distance", "constricting_you",
         "very_stabbable", "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = {}
-    attack.reversed_props.distance = true
     -- We favor closer monsters.
-    reversed.distance = true
+    attack.reversed_props.distance = true
 
     local best_result
     for _, enemy in ipairs(enemy_list) do
@@ -138,16 +137,16 @@ function attack_reach(pos)
 end
 
 function plan_melee()
-    if not danger or melee_is_unsafe() then
+    if not danger or not melee_is_safe() then
         return false
     end
 
-    melee_target = get_melee_target()
-    if not melee_target then
+    local target = get_melee_target()
+    if not target then
         return false
     end
 
-    local enemy = monster_map[melee_target.x][melee_target.y]
+    local enemy = monster_map[target.x][target.y]
     if not enemy:player_can_melee() then
         return false
     end
@@ -333,7 +332,7 @@ function throw_missile(missile, pos)
 end
 
 function plan_throw()
-    if not danger or attacking_is_unsafe() then
+    if not danger or dangerous_to_attack() then
         return false
     end
 
@@ -350,19 +349,20 @@ function plan_throw()
     return throw_missile(missile, target)
 end
 
-function do_wait()
+function wait_combat()
     last_wait = you.turns()
     wait_count = wait_count + 1
-    magic("s")
+    wait_one_turn()
 end
 
 function plan_wait_for_enemy()
-    if not danger or attacking_is_unsafe() then
+    if not danger or dangerous_to_attack() then
         return false
     end
 
-    if melee_target and melee_is_unsafe() then
-        do_wait()
+    local target = get_melee_target(true)
+    if target and not melee_is_safe() then
+        wait_combat()
         return true
     end
 
@@ -391,7 +391,7 @@ function plan_wait_for_enemy()
 
     -- Hack to wait when we enter the Vaults end, so we don't move off stairs.
     if vaults_end_entry_turn and you.turns() <= vaults_end_entry_turn + 2 then
-        do_wait()
+        wait_combat()
         return true
     end
 
@@ -402,21 +402,21 @@ function plan_wait_for_enemy()
             return false
         end
 
-        if not need_wait and enemy:can_move_to_melee_player() then
+        if not need_wait and enemy:can_move_to_player_melee() then
             need_wait = true
         end
     end
-    if not need_wait then
-        return false
+    if need_wait then
+        wait_combat()
+        return true
     end
 
-    do_wait()
-    return true
+    return false
 end
 
 function plan_poison_spit()
     if not danger
-        or attacking_is_unsafe()
+        or dangerous_to_attack()
         or you.xl() > 11
         or you.mutation("spit poison") < 1
         or you.breath_timeout()
@@ -447,6 +447,10 @@ function plan_poison_spit()
 end
 
 function plan_flight_move_towards_enemy()
+    if not danger or dangerous_to_move() then
+        return false
+    end
+
     local slot = find_item("potion", "flight")
     if not slot then
         return false
@@ -470,7 +474,7 @@ function plan_flight_move_towards_enemy()
 end
 
 function plan_move_towards_enemy()
-    if not safe_to_move() then
+    if not danger or dangerous_to_move() then
         return false
     end
 
@@ -481,10 +485,20 @@ function plan_move_towards_enemy()
 
     local mons = monster_map[target.x][target.y]
     local move = mons:get_player_move_towards()
-    target_memory = { x = pos.x - mons:x_pos(),  y = pos.y - mons:y_pos() }
-    did_move_towards_monster = 2
+    enemy_memory = { x = mons:x_pos() - move.x,  y = mons:y_pos() - move.y }
+    turns_left_moving_towards_enemy = 2
     magic(delta_to_vi(move))
     return true
+end
+
+function plan_continue_move_towards_enemy()
+    if turns_left_moving_towards_enemy == 0
+            or supdist(enemy_memory) == 0
+            or not options.autopick_on then
+        return false
+    end
+
+    return get_move_towards(origin, enemy_memory, tabbable_square)
 end
 
 function set_plan_attack()
@@ -496,6 +510,7 @@ function set_plan_attack()
         {plan_throw, "try_throw"},
         {plan_wait_for_enemy, "try_wait_for_enemy"},
         {plan_move_towards_enemy, "try_move_towards_enemy"},
+        {plan_continue_move_towards_enemy, "try_continue_move_towards_enemy"},
         {plan_flight_move_towards_enemy, "try_flight_move_towards_enemy"},
         {plan_disturbance_random_step, "disturbance_random_step"},
     }

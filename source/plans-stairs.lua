@@ -147,12 +147,13 @@ function plan_find_upstairs()
 end
 
 function want_to_stairdance_up()
+    local feat = view.feature_at(0, 0)
     if where == "D:1"
             or in_portal()
             or in_hell_branch()
             or in_branch("Abyss")
             or in_branch("Pan")
-            or not feature_is_upstairs(view.feature_at(0, 0)) then
+            or not feature_is_upstairs(feat) then
         return false
     end
 

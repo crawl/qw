@@ -294,7 +294,7 @@ function count_elliptic(radius)
 
     local i = 0
     for pos in square_iter(origin, radius) do
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"elliptic"}) then
             i = i + 1
@@ -315,7 +315,7 @@ function count_greater_servants(radius)
 
     local i = 0
     for pos in square_iter(origin, radius) do
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         if mons and mons:is_safe()
                 and mons:is("summoned")
                 and mons_is_greater_servant(m) then
@@ -332,9 +332,25 @@ function count_divine_warriors(radius)
 
     local i = 0
     for pos in square_iter(origin, radius) do
-        local mons = monster_array[pos.x][pos.y]
+        local mons = monster_map[pos.x][pos.y]
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"angel", "daeva"}) then
+            i = i + 1
+        end
+    end
+    return i
+end
+
+function count_beogh_allies(radius)
+    if you.god() ~= "Beogh" then
+        return 0
+    end
+
+    local i = 0
+    for pos in square_iter(origin, radius) do
+        local mons = monster_map[pos.x][pos.y]
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"orc "}) then
             i = i + 1
         end
     end

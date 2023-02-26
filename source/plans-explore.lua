@@ -118,8 +118,8 @@ function plan_exit_portal()
     return true
 end
 
-function plan_continue_move_to_next_destination()
-    if not move_destination or danger or moving_is_unsafe() then
+function plan_continue_move_towards_destination()
+    if not move_destination or danger or dangerous_to_move() then
         return false
     end
 
@@ -160,7 +160,8 @@ function set_plan_explore()
     plan_explore = cascade {
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
-        {plan_continue_move_to_next_destination, "try_move_to_next_destination"},
+        {plan_continue_move_towards_destination,
+            "try_continue_move_towards_destination"},
         {plan_autoexplore, "try_autoexplore"},
     }
 end

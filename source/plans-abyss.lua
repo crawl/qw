@@ -71,14 +71,20 @@ function plan_exit_abyss()
     return false
 end
 
-function plan_abyss_rest()
+function plan_abyss_long_rest()
     local hp, mhp = you.hp()
-    if you.confused() or you.slowed() or
-         you.berserk() or you.teleporting() or you.silencing() or
-         transformed() or hp < mhp and you.regenerating() then
-        rest()
+    if you.confused()
+            or transformed()
+            or you.slowed()
+            or you.berserk()
+            or you.teleporting()
+            or you.silencing()
+            or you.status("spiked")
+            or hp < mhp and you.regenerating() then
+        long_rest()
         return true
     end
+
     return false
 end
 
@@ -105,11 +111,16 @@ function plan_lugonu_exit_abyss()
     return true
 end
 
+function plan_abyss_wait_one_turn()
+    wait_one_turn()
+    return true
+end
+
 function set_plan_abyss_rest()
     plan_abyss_rest = cascade {
         {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
         {plan_abyss_hand, "abyss_hand"},
-        {plan_abyss_rest, "rest"},
+        {plan_abyss_long_rest, "rest"},
         {plan_go_down_abyss, "go_down_abyss"},
         {plan_go_to_abyss_downstairs, "try_go_to_abyss_downstairs"},
     }
@@ -124,12 +135,11 @@ function set_plan_abyss_move()
         {plan_recite, "try_recite"},
         {plan_attack, "attack"},
         {plan_cure_poison, "cure_poison"},
-        {plan_flail_at_invis, "try_flail_at_invis"},
-        {plan_abyss_rest, "abyss_rest"},
+        {plan_abyss_rest, "abyss_long_rest"},
         {plan_pre_explore, "pre_explore"},
         {plan_autoexplore, "try_autoexplore"},
         {plan_pre_explore2, "pre_explore2"},
         {plan_stuck_cloudy, "stuck_cloudy"},
-        {plan_wait, "wait"},
+        {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
     }
 end

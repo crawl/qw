@@ -144,7 +144,7 @@ end
 
 function plan_grand_finale()
     if not danger
-            or not attacking_is_safe()
+            or dangerous_to_attack()
             or you.teleporting
             or not can_grand_finale() then
         return false
@@ -262,6 +262,7 @@ function plan_cure_bad_poison()
             return true
         end
     end
+
     return false
 end
 
@@ -291,7 +292,8 @@ function plan_blinking()
 
     local para_danger = false
     for _, enemy in ipairs(enemy_list) do
-        if enemy.name == "floating eye" or enemy.name == "starcursed mass" then
+        if enemy:name() == "floating eye"
+                or enemy:name() == "starcursed mass" then
             para_danger = true
         end
     end
@@ -500,7 +502,7 @@ function plan_fiery_armour()
 end
 
 function want_to_brothers_in_arms()
-    if not danger or not attacking_is_safe() or you.teleporting() then
+    if not danger or dangerous_to_attack() or you.teleporting() then
         return false
     end
 
@@ -520,15 +522,17 @@ function want_to_brothers_in_arms()
 end
 
 function want_to_finesse()
-    if danger and attacking_is_safe()
-            and in_branch("Zig")
+    if not danger or dangerous_to_attack() then
+        return false
+    end
+
+    if in_branch("Zig")
             and hp_is_low(80)
             and count_enemies(los_radius) >= 5 then
         return true
     end
 
-    if danger and attacking_is_safe()
-            and not you.teleporting()
+    if not you.teleporting()
             and check_monster_list(los_radius, nasty_monsters) then
         return true
     end
@@ -537,19 +541,16 @@ function want_to_finesse()
 end
 
 function want_to_slouch()
-    if danger and not you.teleporting()
-            and attacking_is_safe()
-            and you.piety_rank() == 6
-            and estimate_slouch_damage() >= 6 then
-        return true
-    end
-
-    return false
+    return danger
+        and not dangerous_to_attack()
+        and not you.teleporting()
+        and you.piety_rank() == 6
+        and estimate_slouch_damage() >= 6
 end
 
 function want_to_drain_life()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         and not you.teleporting()
         and count_enemies(los_radius,
             function(mons) return mons:res_draining() == 0 end)
@@ -567,7 +568,7 @@ function want_to_greater_servant()
 end
 
 function want_to_cleansing_flame()
-    if not danger or you.teleporting() or not attacking_is_safe() then
+    if not danger or dangerous_to_attack() or you.teleporting() then
         return false
     end
 
@@ -596,7 +597,7 @@ end
 
 function want_to_divine_warrior()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         and not you.teleporting()
         and you.skill("Invocations") >= 8
         and (check_monster_list(los_radius, nasty_monsters)
@@ -606,7 +607,7 @@ end
 
 function want_to_fiery_armour()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         and (hp_is_low(50)
             or count_monster_list(los_radius, scary_monsters) >= 2
             or check_monster_list(los_radius, nasty_monsters)
@@ -614,7 +615,7 @@ function want_to_fiery_armour()
 end
 
 function want_to_apocalypse()
-    if not danger or not attacking_is_safe() or you.teleporting() then
+    if not danger or dangerous_to_attack() or you.teleporting() then
         return false
     end
 
@@ -692,14 +693,14 @@ function count_nasty_hell_monsters(radius)
 end
 
 function want_to_serious_buff()
-    if danger and in_branch("Zig")
+    if not danger or dangerous_to_attack() then
+        return false
+    end
+
+    if in_branch("Zig")
             and hp_is_low(50)
             and count_enemies(los_radius) >= 5 then
         return true
-    end
-
-    if not danger or not attacking_is_safe() then
-        return false
     end
 
     -- These gods have their own buffs.
@@ -730,7 +731,7 @@ end
 
 function want_resistance()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         and not you.teleporting()
         and not you.extra_resistant()
         and (check_monster_list(los_radius, fire_resistance_monsters)
@@ -748,7 +749,7 @@ end
 
 function want_magic_points()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         -- No point trying to restore MP with ghost moths around.
         and count_enemies_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or you.have_orb() or in_extended())
@@ -763,13 +764,13 @@ end
 
 function want_to_hand()
     return danger
-        and attacking_is_safe()
+        and not dangerous_to_attack()
         and check_monster_list(los_radius, hand_monsters)
 end
 
 function want_to_berserk()
     return danger
-        and melee_is_safe()
+        and not dangerous_to_melee()
         and (hp_is_low(50) and sense_danger(2, true)
             or check_monster_list(2, scary_monsters)
             or invis_sigmund and not options.autopick_on)
@@ -777,7 +778,7 @@ end
 
 function want_to_heroism()
     return danger
-        and attacking_is_safe()
+        and dangerous_to_attack()
         and (hp_is_low(70)
             or check_monster_list(los_radius, scary_monsters)
             or count_(0, 0, los_radius) >= 4)
@@ -840,39 +841,46 @@ function plan_full_inventory_panic()
 end
 
 function plan_cure_confusion()
-    if you.confused() and (danger or not options.autopick_on) then
-        if view.cloud_at(0, 0) == "noxious fumes" and not meph_immune() then
-            if you.god() == "Beogh" then
-                magic("s") -- avoid Beogh penance
-                return true
-            end
-            return false
-        end
-        if drink_by_name("curing") then
-            say("(to cure confusion)")
-            return true
-        end
-        if can_purification() then
-            purification()
-            return true
-        end
-        if you.god() == "Beogh" then
-            magic("s") -- avoid Beogh penance
-            return true
-        end
+    if not you.confused()
+            or not (danger or options.autopick_on)
+            or view.cloud_at(0, 0) == "noxious fumes"
+                and not meph_immune() then
+        return false
     end
+
+    if drink_by_name("curing") then
+        say("(to cure confusion)")
+        return true
+    end
+
+    if can_purification() then
+        purification()
+        return true
+    end
+
     return false
 end
 
--- curing poison/confusion with purification is handled elsewhere
+function plan_wait_confusion()
+    if not you.confused() or not (danger or options.autopick_on) then
+        return false
+    end
+
+    wait_one_turn()
+    return true
+end
+
+-- Curing poison/confusion with purification is handled elsewhere.
 function plan_special_purification()
     if not can_purification() then
         return false
     end
+
     if you.slowed() or you.petrifying() then
         purification()
         return true
     end
+
     local str, mstr = you.strength()
     local int, mint = you.intelligence()
     local dex, mdex = you.dexterity()
@@ -882,6 +890,7 @@ function plan_special_purification()
         purification()
         return true
     end
+
     return false
 end
 
@@ -907,7 +916,7 @@ function plan_dig_grate()
 
     for _, enemy in ipairs(enemy_list) do
         if contains_string_in(enemy:name(), grate_mon_list)
-                and not enemy:can_move_to_melee_player() then
+                and not enemy:can_move_to_player_melee() then
             local grate_count = 0
             local grate_offset = 20
             local grate_pos
@@ -937,29 +946,6 @@ function plan_dig_grate()
     return false
 end
 
-function plan_cure_poison()
-    if not you.poisoned() or you.poison_survival() > 1 then
-        return false
-    end
-
-    if drink_by_name("curing") then
-        say("(to cure poison)")
-        return true
-    end
-
-    if can_trogs_hand() then
-        trogs_hand()
-        return true
-    end
-
-    if can_purification() then
-        purification()
-        return true
-    end
-
-    return false
-end
-
 function set_plan_emergency()
     plan_emergency = cascade {
         {plan_special_purification, "special_purification"},
@@ -979,6 +965,7 @@ function set_plan_emergency()
         {plan_haste, "haste"},
         {plan_resistance, "resistance"},
         {plan_magic_points, "magic_points"},
+        {plan_wait_confusion, "wait_confusion"},
         {plan_heroism, "heroism"},
         {plan_cleansing_flame, "try_cleansing_flame"},
         {plan_brothers_in_arms, "brothers_in_arms"},

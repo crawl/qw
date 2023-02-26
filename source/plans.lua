@@ -60,6 +60,10 @@ function cascade(plans)
     return function ()
         for i, plandata in ipairs(plans) do
             local plan = plandata[1]
+            if plan == nil then
+                error("No plan function for " .. plandata[2])
+            end
+
             if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
                 local result = plan()
                 if not automatic then

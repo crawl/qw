@@ -68,6 +68,7 @@ function plan_orbrun_might()
     if want_to_orbrun_buff() then
         return might()
     end
+
     return false
 end
 
@@ -77,6 +78,7 @@ function plan_orbrun_hand()
         trogs_hand()
         return true
     end
+
     return false
 end
 
@@ -84,6 +86,7 @@ function plan_orbrun_heroism()
     if can_heroism() and want_to_orbrun_buff() then
         return heroism()
     end
+
     return false
 end
 
@@ -91,19 +94,22 @@ function plan_orbrun_finesse()
     if can_finesse() and want_to_orbrun_buff() then
         return finesse()
     end
+
     return false
 end
 
 function plan_orbrun_rest()
     if you.confused()
+            or transformed()
             or you.slowed()
             or you.berserk()
             or you.teleporting()
-            or you.silencing()
-            or transformed() then
-        rest()
+            or you.status("spiked")
+            or you.silencing() then
+        long_rest()
         return true
     end
+
     return false
 end
 

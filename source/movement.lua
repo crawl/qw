@@ -34,7 +34,7 @@ function monster_in_way(pos)
                 or mons:status("paralysed")
                 or mons:status("constricted by roots")
                 or mons:is("sleeping")
-                or not mons:can_traverse(0, 0)
+                or not mons:can_traverse(origin)
                 or feat  == "trap_zot"))
 end
 
@@ -101,7 +101,7 @@ function assess_square_enemies(a, pos)
                     or enemy:desc():find("stupefied")
                     or liquid_bound
                     or enemy:is_stationary())
-                and enemy:can_move_to_melee_player() then
+                and enemy:can_move_to_player_melee() then
             a.longranged = a.longranged + 1
         end
 
@@ -124,7 +124,7 @@ function distance_to_tabbable_enemy()
     local best_dist = 10
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() < best_dist
-                and enemy:can_move_to_melee_player() then
+                and enemy:can_move_to_player_melee() then
             best_dist = enemy:distance()
         end
     end
@@ -343,15 +343,7 @@ function player_can_move_closer(pos)
     return false
 end
 
-function get_move_towards(center, target, square_func, min_dist, failed_moves)
-    local hash
-    if failed_moves then
-        hash = hash_position(target)
-        if failed_moves[hash] then
-            return
-        end
-    end
-
+function get_move_towards(center, target, square_func, min_dist)
     if not min_dist then
         min_dist = 0
     end
@@ -362,14 +354,13 @@ function get_move_towards(center, target, square_func, min_dist, failed_moves)
     end
 
     local function attempt_move(pos)
-        if pos.x == 0 and pos.y == 0 then
+        if supdist(pos) == 0 then
             return
         end
 
         local new_pos = { x = center.x + pos.x, y = center.y + pos.y }
-        if square_func(newpos) then
-            return get_move_towards_target(newpos, target, square_func,
-                min_dist, failed_moves)
+        if square_func(new_pos) then
+            return get_move_towards(new_pos, target, square_func, min_dist)
         end
     end
 
@@ -385,10 +376,10 @@ function get_move_towards(center, target, square_func, min_dist, failed_moves)
             move = attempt_move({ x = sign(dpos.x), y = 0 })
         end
         if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-             move = attempt_move({ x = sign(dpos.x), y = 1 })
+            move = attempt_move({ x = sign(dpos.x), y = 1 })
         end
         if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-             move = attempt_move({ x = sign(dpos.x), y = -1 })
+            move = attempt_move({ x = sign(dpos.x), y = -1 })
         end
         if not move then
             move = attempt_move({ x = 0, y = sign(dpos.y) })
@@ -412,28 +403,30 @@ function get_move_towards(center, target, square_func, min_dist, failed_moves)
             move = attempt_move({ x = 0, y = sign(dpos.y) })
         end
         if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-             move = attempt_move({ x = 1, y = sign(dpos.y) })
+            move = attempt_move({ x = 1, y = sign(dpos.y) })
         end
         if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-             move = attempt_move({ x = -1, y = sign(dpos.y) })
+            move = attempt_move({ x = -1, y = sign(dpos.y) })
         end
         if not move then
             move = attempt_move({ x = sign(dpos.x), y = 0 })
         end
     end
 
-    if not move and failed_moves then
-        failed_moves[hash] = true
-    end
-
     return move
 end
 
-function mons_can_move_to_melee_player(mons)
+function mons_can_move_to_player_melee(mons)
+    local player_range = reach_range()
+    -- The monster is already in range.
+    if mons:distance() <= player_range then
+        return true
+    end
+
     local name = mons:name()
     if name == "wandering mushroom"
             or name:find("vortex")
-            or mons:desc():find("fleeing")
+            or mons:is("fleeing")
             or mons:status("paralysed")
             or mons:status("confused")
             or mons:status("petrified") then
@@ -441,29 +434,31 @@ function mons_can_move_to_melee_player(mons)
     end
 
     local tab_func = function(pos)
-        return mons:can_traverse(pos.x, pos.y)
+        return mons:can_traverse(pos)
     end
-    local melee_range = mons:reach_range()
-    return get_move_towards(mons:pos(), origin, tab_func, melee_range)
+    local monster_range = mons:reach_range()
+    return get_move_towards(mons:pos(), origin, tab_func, monster_range)
         -- If the monster can reach attack and we can't, be sure we can
         -- close the final 1-square gap.
-        and (melee_range < 2
-            or attack_range() > 1
+        and (monster_range < 2
+            or player_range > 1
             or player_can_move_closer(pos))
 end
 
-function get_move_towards_next_destination(radius, no_exclusions)
+function best_move_towards_destination(no_exclusions, radius)
     local move, dest
     if gameplan_travel.first_dir then
         local feats = level_stairs_features(where_branch, where_depth,
             gameplan_travel.first_dir)
-        move, dest = best_move_towards_features(feats, radius, no_exclusions)
+        move, dest = best_move_towards_features(feats, no_exclusions, radius)
     elseif gameplan_travel.first_branch then
         move, dest = best_move_towards_features(
-            branch_entrance(gameplan_travel.first_branch), no_exclusions)
+            branch_entrance(gameplan_travel.first_branch), no_exclusions,
+            radius)
     elseif gameplan_status:find("^God:") then
         local god = gameplan_god(gameplan_status)
-        move, dest = best_move_towards_features(god_altar(god), no_exclusions)
+        move, dest = best_move_towards_features(god_altar(god), no_exclusions,
+            radius)
     end
 
     return move, dest

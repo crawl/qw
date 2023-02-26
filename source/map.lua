@@ -92,8 +92,8 @@ end
 
 function add_feature_search(feats)
     for _, feat in ipairs(feats) do
-        if not feature_search[feat] then
-            feature_search[feat] = true
+        if not feature_searches[feat] then
+            feature_searches[feat] = true
         end
     end
 end
@@ -486,7 +486,7 @@ function get_distance_map(pos, radius)
     return distance_maps[hash]
 end
 
-function best_move_towards(positions, radius, no_exclusions)
+function best_move_towards(positions, no_exclusions, radius)
     local best_dist = INF_DIST
     local best_dest
     local best_move = {}
@@ -496,9 +496,9 @@ function best_move_towards(positions, radius, no_exclusions)
         for dpos in adjacent_iter(waypoint) do
             local dist = map[dpos.x][dpos.y]
             if dist and dist < best_dist then
-                move.x = dpos.x - waypoint.x
-                move.y = dpos.y - waypoint.y
                 best_dist = dist
+                best_move.x = dpos.x - waypoint.x
+                best_move.y = dpos.y - waypoint.y
                 best_dest = pos
             end
         end
@@ -509,8 +509,8 @@ function best_move_towards(positions, radius, no_exclusions)
     end
 end
 
-function best_move_towards_position(pos, radius, no_exclusions)
-    return best_move_towards({ pos }, radius, no_exclusions)
+function best_move_towards_position(pos, no_exclusions, radius)
+    return best_move_towards({ pos }, no_exclusions, radius)
 end
 
 function get_feature_positions(feats, radius)
@@ -527,7 +527,7 @@ function get_feature_positions(feats, radius)
     return positions
 end
 
-function best_move_towards_features(feats, radius, no_exclusions)
+function best_move_towards_features(feats, no_exclusions, radius)
     local positions = get_feature_positions(feats, radius)
     if #positions == 0 then
         add_feature_search(feats)
@@ -536,7 +536,7 @@ function best_move_towards_features(feats, radius, no_exclusions)
     end
 
     if #positions > 0 then
-        return best_move_towards(positions, radius, no_exclusions)
+        return best_move_towards(positions, no_exclusions, radius)
     end
 end
 
@@ -574,9 +574,7 @@ function handle_exclusions(new_waypoint)
     -- monsters so we can successfully exclude unreachable summoning monsters
     -- that can continuously make summons that are able to reach us.
     for _, enemy in ipairs(enemy_list) do
-        if not enemy:is_summoned()
-                and (enemy:can_melee_player()
-                    or enemy:can_move_to_melee_player()) then
+        if not enemy:is_summoned() and enemy:can_move_to_player_melee() then
             incoming_melee_turn = you.turns()
             return
         end

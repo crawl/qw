@@ -1,6 +1,29 @@
 ------------------
 -- The rest plan cascade.
 
+function plan_cure_poison()
+    if not you.poisoned() or you.poison_survival() > 1 then
+        return false
+    end
+
+    if drink_by_name("curing") then
+        say("(to cure poison)")
+        return true
+    end
+
+    if can_trogs_hand() then
+        trogs_hand()
+        return true
+    end
+
+    if can_purification() then
+        purification()
+        return true
+    end
+
+    return false
+end
+
 function should_rest()
     if you.confused() or you.berserk() or transformed() then
         return true
@@ -31,12 +54,14 @@ function reason_to_rest(percentage)
             return true
         end
     end
+
     if you.god() == "Elyvilon" and you.piety_rank() >= 4 then
         local mp, mmp = you.mp()
         if mp < mmp and mp < 10 then
             return true
         end
     end
+
     return you.confused()
         or transformed()
         or hp_is_low(percentage)
@@ -71,26 +96,28 @@ function should_ally_rest()
     return false
 end
 
-function rest()
+function wait_one_turn(short_delay)
     magic("s")
-    next_delay = 5
+    if short_delay then
+        next_delay = 5
+    end
 end
 
-function easy_rest()
+function long_rest()
     magic("5")
 end
 
-function plan_easy_rest()
+function plan_long_rest()
     if should_rest() then
-        easy_rest()
+        long_rest()
         return true
     end
     return false
 end
 
-function plan_rest()
+function plan_rest_one_turn()
     if should_rest() then
-        rest()
+        wait_one_turn(true)
         return true
     end
     return false
@@ -98,7 +125,8 @@ end
 
 function set_plan_rest()
     plan_rest = cascade {
-        {plan_easy_rest, "try_easy_rest"},
-        {plan_rest, "rest"},
+        {plan_cure_poison, "cure_poison"},
+        {plan_long_rest, "try_long_rest"},
+        {plan_rest_one_turn, "rest_one_turn"},
     }
 end

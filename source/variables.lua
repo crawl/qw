@@ -50,7 +50,6 @@ local good_gods
 local upstairs_features
 local downstairs_features
 
-local time_passed
 local automatic = false
 local update_coroutine
 local do_dummy_action
@@ -93,6 +92,10 @@ local where
 local where_branch
 local where_depth
 
+local turn_count = you.turns() - 1
+local time_passed
+local memos
+
 local los_radius
 local base_corrosion
 local level_has_upstairs
@@ -103,7 +106,6 @@ local dislike_pan_level = false
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0
-local turn_count = you.turns() - 1
 local hiding_turn_count = -100
 
 local waypoint_parity
@@ -150,12 +152,12 @@ local immediate_danger
 local ignore_traps
 local stairs_travel
 local cloudy
-local move_unsafe
-local melee_safe
+local moving_unsafe
+local melee_unsafe
+local melee_target
 local incoming_melee_turn = -1
 local full_hp_turn = 0
 
-local failed_move = {}
 local invisi_count = 0
 local next_delay = 100
 local is_waiting
@@ -164,11 +166,12 @@ local sigmund_pos
 local invis_sigmund = false
 local greater_servant_timer = -200
 
+local enemy_memory
+local turns_left_moving_towards_enemy = 0
+
+local stuck_turns = 0
 local move_destination
 local move_reason
-local stuck_turns = 0
-local did_move_towards_monster = 0
-local target_memory
 
 local upgrade_phase = false
 local acquirement_pickup = false

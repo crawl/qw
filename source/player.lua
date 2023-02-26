@@ -329,15 +329,15 @@ function can_move()
         or you.transform() == "fungus" and danger)
 end
 
-function moving_is_unsafe()
-    if move_unsafe == nil then
-        move_unsafe = you.confused()
-            and (count_brothers_in_arms(1) > 0
-                or count_greater_servants(1) > 0
-                or count_divine_warriors(1) > 0)
-    end
-
-    return move_unsafe
+function dangerous_to_move()
+    return turn_memo("dangerous_to_move",
+        function()
+            return you.confused()
+                and (count_brothers_in_arms(1) > 0
+                    or count_greater_servants(1) > 0
+                    or count_divine_warriors(1) > 0
+                    or count_beogh_allies(1) > 0)
+        end)
 end
 
 function player_can_melee_mons(mons)
@@ -354,20 +354,19 @@ function player_can_melee_mons(mons)
     return
 end
 
-function melee_is_safe()
-    if melee_safe == nil then
-        melee_safe = attacking_is_safe()
-            -- Don't attempt melee with summoned allies adjacent.
-            and not (you.confused()
-                and (count_brothers_in_arms(1) > 0
-                    or count_greater_servants(1) > 0
-                    or count_divine_warriors(1) > 0))
-    end
-
-    return melee_safe
+function dangerous_to_melee()
+    return turn_memo("dangerous_to_melee",
+        function()
+            return dangerous_to_attack()
+                -- Don't attempt melee with summoned allies adjacent.
+                or you.confused()
+                    and (count_brothers_in_arms(1) > 0
+                        or count_greater_servants(1) > 0
+                        or count_divine_warriors(1) > 0)
+        end)
 end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
-function attacking_is_safe()
-    return exclusion_map[waypoint.x][waypoint.y]
+function dangerous_to_attack()
+    return not exclusion_map[waypoint.x][waypoint.y]
 end

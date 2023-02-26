@@ -4,6 +4,14 @@
 -- A value for sorting last when comparing turns.
 INF_TURNS = 200000000
 
+function turn_memo(name, func)
+    if memo[name] == nil then
+        memo[name] = func()
+    end
+
+    return memo[name]
+end
+
 -- We want to call this exactly once each turn.
 function turn_update()
     if not initialized then
@@ -18,6 +26,7 @@ function turn_update()
 
     time_passed = true
     turn_count = turns
+    memos = {}
     if you.turns() >= dump_count then
         dump_count = dump_count + 100
         crawl.dump_char()
@@ -82,10 +91,6 @@ function turn_update()
         end
     end
 
-    if did_move_towards_monster > 0 then
-        did_move_towards_monster = did_move_towards_monster - 1
-    end
-
     transp_search = nil
     if can_use_transporters() then
         local feat = view.feature_at(0, 0)
@@ -119,12 +124,14 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    go_travel_attempts = 0
-    stash_travel_attempts = 0
-    map_mode_search_attempts = 0
+    if turns_left_moving_towards_enemy > 0 then
+        turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
+    end
 
     danger = sense_danger(los_radius)
     immediate_danger = sense_immediate_danger()
+    moving_unsafe = nil
+    melee_unsafe = nil
     melee_target = nil
 
     if danger then
@@ -135,8 +142,12 @@ function turn_update()
     sense_sigmund()
     find_good_stairs()
 
-    cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
     choose_tactical_step()
+
+    cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
+    go_travel_attempts = 0
+    stash_travel_attempts = 0
+    map_mode_search_attempts = 0
 
     if collectgarbage("count") > 7000 then
         collectgarbage()

@@ -40,7 +40,7 @@ function destroys_items_at(pos)
 end
 
 function feature_is_upstairs(feat)
-    return feat:find("stone_stairs_up")
+    return feat:find("^stone_stairs_up")
         or feat:find("^exit_") and not feat == "exit_dungeon"
 end
 
