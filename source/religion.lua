@@ -303,7 +303,7 @@ function count_elliptic(radius)
     return i
 end
 
-function mons_is_greater_servant(mons)
+function monster_is_greater_servant(mons)
     return contains_string_in(mons:name(), { "Executioner", "green death",
         "blizzard demon", "balrug", "cacodemon" })
 end
@@ -318,7 +318,7 @@ function count_greater_servants(radius)
         local mons = monster_map[pos.x][pos.y]
         if mons and mons:is_safe()
                 and mons:is("summoned")
-                and mons_is_greater_servant(m) then
+                and monster_is_greater_servant(m) then
             i = i + 1
         end
     end

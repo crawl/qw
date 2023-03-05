@@ -5,11 +5,11 @@
 INF_TURNS = 200000000
 
 function turn_memo(name, func)
-    if memo[name] == nil then
-        memo[name] = func()
+    if memos[name] == nil then
+        memos[name] = func()
     end
 
-    return memo[name]
+    return memos[name]
 end
 
 -- We want to call this exactly once each turn.

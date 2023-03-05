@@ -3,7 +3,7 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_sigmund or not melee_is_safe() then
+    if not invis_sigmund or dangerous_to_melee() then
         return false
     end
 
@@ -82,18 +82,31 @@ function result_improves_attack(attack, result, best_result)
     return false
 end
 
-function add_enemy_hit_props(result, enemy, props)
+function score_enemy_hit(result, enemy, props)
     for _, prop in ipairs(props) do
         if not result[prop] then
             result[prop] = 0
         end
 
+        local value
         if prop == "hit" then
-            result.hit = result.hit + 1
+            value = 1
         else
-            result[prop] = result[prop] + tonumber(enemy[prop]())
+            value = enemy[prop](enemy)
+            if value == true then
+                value = 1
+            elseif value == false then
+                value = 0
+            end
         end
+        result[prop] = result[prop] + value
     end
+end
+
+function assess_melee_target(attack, enemy)
+    local result = { pos = enemy:pos() }
+    score_enemy_hit(result, enemy, attack.props)
+    return result
 end
 
 function get_melee_target(assume_flight)
@@ -102,23 +115,25 @@ function get_melee_target(assume_flight)
     end
 
     local attack = {}
-    attack.props = { "player_can_melee", "distance", "constricting_you",
-        "very_stabbable", "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = {}
+    attack.props = { "player_can_melee", "distance", "is_constricting_you",
+        "stabbability", "damage_level", "threat", "is_orc_priest_wizard" }
     -- We favor closer monsters.
-    attack.reversed_props.distance = true
+    attack.reversed_props = { distance = true }
 
     local best_result
     for _, enemy in ipairs(enemy_list) do
         if enemy:player_can_melee()
                 or enemy:get_player_move_towards(assume_flight) then
-            local result = assess_melee_target(attack, enemy:pos())
+            local result = assess_melee_target(attack, enemy)
             if result_improves_attack(attack, result, best_result) then
                 best_result = result
             end
         end
     end
-    melee_target = best_result.pos
+
+    if best_result then
+        melee_target = best_result.pos
+    end
     return melee_target
 end
 
@@ -137,7 +152,7 @@ function attack_reach(pos)
 end
 
 function plan_melee()
-    if not danger or not melee_is_safe() then
+    if not danger or dangerous_to_melee() then
         return false
     end
 
@@ -176,7 +191,7 @@ function assess_explosion(attack, target)
             end
 
             if mons:is_enemy() then
-                add_enemy_hit_props(result, mons, attack.props)
+                score_enemy_hit(result, mons, attack.props)
             end
         end
     end
@@ -189,22 +204,22 @@ function assess_ranged_target(attack, target)
     local past_target, at_target_result
     for i, pos in ipairs(positions) do
         local hit_target = pos.x == target.x and pos.y == target.y
-        local mons = monster_map[pos.x][pos.y]
+        local enemy = monster_map[pos.x][pos.y]
         -- Non-penetrating attacks must reach the target before reaching any
-        -- other monster, otherwise they're considered blocked and unusable.
+        -- other enemyter, otherwise they're considered blocked and unusable.
         if not attack.is_penetrating
                 and not past_target
                 and not hit_target
-                and mons
-                and not mons:ignores_player_projectiles() then
+                and enemy
+                and not enemy:ignores_player_projectiles() then
             return
         end
 
         -- Never potentially hit friendlies. If at_target_result is defined,
         -- we'll be using '.', otherwise we haven't yet reached our target and
         -- the attack is unusable.
-        if mons and mons:is_friendly()
-                and not mons:ignores_player_projectiles() then
+        if enemy and enemy:is_friendly()
+                and not enemy:ignores_player_projectiles() then
             return at_target_result
         end
 
@@ -219,14 +234,14 @@ function assess_ranged_target(attack, target)
             return at_target_result
         end
 
-        if mons and not mons:ignores_player_projectiles() then
+        if enemy and not enemy:ignores_player_projectiles() then
             if attack.is_explosion then
                 return assess_explosion(attack, target)
-            elseif mons:is_enemy()
+            elseif enemy:is_enemy()
                     -- Non-penetrating attacks only get the values from the
                     -- target.
                     and (attack.is_penetrating or hit_target) then
-                add_enemy_hit_props(result, mons, attack.props)
+                score_enemy_hit(result, enemy, attack.props)
             end
         end
 
@@ -289,7 +304,7 @@ function get_ranged_target(weapon)
     attack.is_penetrating = is_penetrating_weapon(weapon)
     attack.is_explosion = is_exploding_weapon(weapon)
     attack.test_spell = weapon_test_spell(weapon)
-    attack.props = { "hit", "distance", "constricting_you", "damage_level",
+    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
         "threat", "is_orc_priest_wizard" }
     attack.reversed_props = {}
     attack.reversed_props.distance = true
@@ -360,8 +375,8 @@ function plan_wait_for_enemy()
         return false
     end
 
-    local target = get_melee_target(true)
-    if target and not melee_is_safe() then
+    local target = get_melee_target()
+    if target and dangerous_to_melee() then
         wait_combat()
         return true
     end
@@ -464,8 +479,8 @@ function plan_flight_move_towards_enemy()
     local move = monster_map[target.x][target.y]:get_player_move_towards(true)
     local feat = view.feature_at(move.x, move.y)
     -- Only quaff flight when we finally reach an impassable square.
-    if feat == "deep_water" and not currently_amphibious()
-            or feat == "lava" then
+    if (feat == "deep_water" or feat == "lava")
+            and not feature_is_traversable(feat) then
         return drink_by_name("flight")
     else
         magic(delta_to_vi(move))

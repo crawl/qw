@@ -23,8 +23,9 @@ function is_cornerish_at(pos)
             or is_traversable_at({ x = pos.x - 1, y = pos.y - 1 }) then
         return false
     end
-    return (is_traversable_at({ x = pos.x + 1, y = y })
-            or is_traversable_at({ x = pos.x - 1, y = y }))
+
+    return (is_traversable_at({ x = pos.x + 1, y = pos.y })
+            or is_traversable_at({ x = pos.x - 1, y = pos.y }))
         and (is_traversable_at({ x = pos.x, y = pos.y + 1 })
             or is_traversable_at({ x = pos.x, y = pos.y - 1 }))
 end

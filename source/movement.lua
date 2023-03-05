@@ -2,7 +2,7 @@
 -- Movement evaluation
 
 function can_move_to(pos)
-    return is_traversable(pos)
+    return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
         and not monster_in_way(pos)
 end
@@ -336,11 +336,140 @@ function player_can_move_closer(pos)
     local orig_dist = supdist(pos)
     for dpos in adjacent_iter(origin) do
         if supdist({ x = pos.x - dpos.x, y = pos.y - dpos.y }) < orig_dist
-                and feature_is_traversable(view.feature_at(dpos.x, dpos.y)) then
+                and is_traversable_at(dpos) then
             return true
         end
     end
     return false
+end
+
+function position_is_new(search, pos)
+    return not (search.attempted[pos.x] and search.attempted[pos.x][pos.y])
+end
+
+function next_position(search, current, diff)
+    local pos
+    if abs(diff.x) > abs(diff.y) then
+        if abs(diff.y) == 1 then
+            pos = { x = current.x + sign(diff.x), y = current.y }
+            if position_is_new(search, pos) then
+                return pos
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        if abs(diff.x) > abs(diff.y) + 1 then
+            pos = { x = current.x + sign(diff.x), y = current.y + 1 }
+            if position_is_new(search, pos) then
+                return pos
+            end
+
+            pos = { x = current.x + sign(diff.x), y = current.y - 1 }
+            if position_is_new(search, pos) then
+                return pos
+            end
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+    elseif abs(diff.x) == abs(diff.y) then
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+    else
+        if abs(diff.x) == 1 then
+            pos = { x = current.x, y = current.y + sign(diff.y) }
+            if position_is_new(search, pos) then
+                return pos
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if position_is_new(search, pos) then
+            return pos
+        end
+
+        if abs(diff.y) > abs(diff.x) + 1 then
+            pos = { x = current.x + 1, y = current.y + sign(diff.y) }
+            if position_is_new(search, pos) then
+                return pos
+            end
+
+            pos = { x = current.x - 1, y = current.y + sign(diff.y) }
+            if position_is_new(search, pos) then
+                return pos
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if position_is_new(search, pos) then
+            return pos
+        end
+    end
+end
+
+function move_search(search, current)
+    local diff = { x = target.x - current.x, y = target.y - current.y }
+    if supdist(diff) <= min_dist then
+        search.result = { x = search.first_pos.x - search.center.x,
+            y = search.first_pos.y - search.center.y }
+        return
+    end
+
+    if current.x == search.center.x and current.y == search.center.y  then
+        search.first_pos = nil
+    end
+
+    while true do
+        local pos = next_position(search, current, diff)
+        if not pos then
+            break
+        end
+
+        if not search.first_pos then
+            search.first_pos = pos
+        end
+
+        if search.square_func(pos) then
+            if not search.attempted[pos.x] then
+                search.attempted[pos.x] = {}
+            end
+            search.attempted[pos.x][pos.y] = true
+
+            move_search(search, pos)
+        end
+
+        if move_search.result then
+            break
+        end
+    end
 end
 
 function get_move_towards(center, target, square_func, min_dist)
@@ -348,75 +477,17 @@ function get_move_towards(center, target, square_func, min_dist)
         min_dist = 0
     end
 
-    local dpos = { x = target.x - center.x, y = target.y - center.y }
-    if supdist(dpos) <= min_dist then
-        return center
-    end
+    search = {
+        center = center, target = target, square_func = square_func,
+        min_dist = min_dist
+    }
+    search.attempted = { [center.x] = { [center.y] = false } }
 
-    local function attempt_move(pos)
-        if supdist(pos) == 0 then
-            return
-        end
-
-        local new_pos = { x = center.x + pos.x, y = center.y + pos.y }
-        if square_func(new_pos) then
-            return get_move_towards(new_pos, target, square_func, min_dist)
-        end
-    end
-
-    local move
-    if abs(dpos.x) > abs(dpos.y) then
-        if abs(dpos.y) == 1 then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-            move = attempt_move({ x = sign(dpos.x), y = 1 })
-        end
-        if not move and abs(dpos.x) > abs(dpos.y) + 1 then
-            move = attempt_move({ x = sign(dpos.x), y = -1 })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-    elseif abs(dpos.x) == abs(dpos.y) then
-        move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-    else
-        if abs(dpos.x) == 1 then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = 0, y = sign(dpos.y) })
-        end
-        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-            move = attempt_move({ x = 1, y = sign(dpos.y) })
-        end
-        if not move and abs(dpos.y) > abs(dpos.x) + 1 then
-            move = attempt_move({ x = -1, y = sign(dpos.y) })
-        end
-        if not move then
-            move = attempt_move({ x = sign(dpos.x), y = 0 })
-        end
-    end
-
-    return move
+    move_search(search, center)
+    return search.result
 end
 
-function mons_can_move_to_player_melee(mons)
+function monster_can_move_to_player_melee(mons)
     local player_range = reach_range()
     -- The monster is already in range.
     if mons:distance() <= player_range then

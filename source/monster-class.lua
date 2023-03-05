@@ -27,36 +27,22 @@ function Monster:x_pos()
     return self:get_property("x_pos")
 end
 
---function Monster:x_pos()
---    if self.props["x_pos"] == nil then
---        self.props["x_pos"] = self.minfo:x_pos()
---    end
---
---    return self.props["x_pos"]
---end
-
 function Monster:y_pos()
-    if self.props["y_pos"] == nil then
-        self.props["y_pos"] = self.minfo:y_pos()
-    end
-
-    return self.props["y_pos"]
+    return self:get_property("y_pos")
 end
 
 function Monster:pos()
-    if self.props["pos"] == nil then
-        self.props["pos"] = { x = self:x_pos(), y = self:y_pos() }
-    end
-
-    return self.props["pos"]
+    return self:get_property("pos",
+        function()
+            return { x = self:x_pos(), y = self:y_pos() }
+        end)
 end
 
 function Monster:distance()
-    if self.props["distance"] == nil then
-        self.props["distance"] = supdist(self:pos())
-    end
-
-    return self.props["distance"]
+    return self:get_property("distance",
+        function()
+            return supdist(self:pos())
+        end)
 end
 
 function Monster:can_traverse(pos)
@@ -75,164 +61,112 @@ function Monster:can_traverse(pos)
 end
 
 function Monster:name()
-    if self.props["name"] == nil then
-        self.props["name"] = self.minfo:name()
-    end
-
-    return self.props["name"]
+    return self:get_property("name")
 end
 
 function Monster:desc()
-    if self.props["desc"] == nil then
-        self.props["desc"] = self.minfo:desc()
-    end
-
-    return self.props["desc"]
+    return self:get_property("desc")
 end
 
 function Monster:speed()
-    if self.props["speed"] == nil then
-        self.props["speed"] = mons_speed_number(self.minfo)
-    end
-
-    return self.props["speed"]
+    return self:get_property("speed",
+        function()
+            return monster_speed_number(self.minfo)
+        end)
 end
 
 function Monster:is_fast()
-    if self.props["is_fast"] == nil then
-        self.props["is_fast"] = self:speed() > player_speed()
-    end
-
-    return self.props["is_fast"]
+    return self:get_property("is_fast",
+        function()
+            return self:speed() > player_speed()
+        end)
 end
 
 function Monster:type()
-    if self.props["type"] == nil then
-        self.props["type"] = self.minfo:type()
-    end
-
-    return self.props["type"]
+    return self:get_property("type")
 end
 
 function Monster:attitude()
-    if self.props["attitude"] == nil then
-        self.props["attitude"] = self.minfo:attitude()
-    end
-
-    return self.props["attitude"]
+    return self:get_property("attitude")
 end
 
 function Monster:holiness()
-    if self.props["holiness"] == nil then
-        self.props["holiness"] = self.minfo:holiness()
-    end
-
-    return self.props["holiness"]
+    return self:get_property("holiness")
 end
 
 function Monster:res_poison()
-    if self.props["res_poison"] == nil then
-        self.props["res_poison"] = self.minfo:res_poison()
-    end
-
-    return self.props["res_poison"]
+    return self:get_property("res_poison")
 end
 
 function Monster:res_draining()
-    if self.props["res_draining"] == nil then
-        self.props["res_draining"] = self.minfo:res_draining()
-    end
-
-    return self.props["res_draining"]
+    return self:get_property("res_draining")
 end
 
 function Monster:is_holy_vulnerable()
-    if self.props["is_holy_vulnerable"] == nil then
-        local holiness = self:holiness()
-        self.props["is_holy_vulnerable"] = holiness == "undead"
-            or holiness == "demonic"
-    end
-
-    return self.props["is_holy_vulnerable"]
+    return self:get_property("is_holy_vulnerable",
+        function()
+            local holiness = self:holiness()
+            return holiness == "undead" or holiness == "demonic"
+        end)
 end
 
 function Monster:is_firewood()
-    if self.props["is_firewood"] == nil then
-        self.props["is_firewood"] = self.minfo:is_firewood()
-    end
-
-    return self.props["is_firewood"]
+    return self:get_property("is_firewood")
 end
 
 function Monster:is_safe()
-    if self.props["is_safe"] == nil then
-        self.props["is_safe"] = self.minfo:is_safe()
-    end
-
-    return self.props["is_safe"]
+    return self:get_property("is_safe")
 end
 
 function Monster:is_friendly()
-    if self.props["is_friendly"] == nil then
-        self.props["is_friendly"] = self:attitude() == enum_att_friendly
-    end
-
-    return self.props["is_friendly"]
+    return self:get_property("is_friendly",
+        function()
+            return self:attitude() == enum_att_friendly
+        end)
 end
 
-function Monster:is_is_orc_priest_wizard()
-    if self.props["is_is_orc_priest_wizard"] == nil then
-        self.props["is_is_orc_priest_wizard"] = self:name() == "orc priest"
-            or self:name() == "orc wizard"
-    end
-
-    return self.props["is_is_orc_priest_wizard"]
+function Monster:is_orc_priest_wizard()
+    return self:get_property("is_orc_priest_wizard",
+        function()
+            local name = self:name()
+            return name == "orc priest" or name == "orc wizard"
+        end)
 end
 
 function Monster:ignores_player_projectiles()
-    if self.props["ignores_player_projectiles"] == nil then
-        self.props["ignores_player_projectiles"] = self:name() == "bush"
-            or self:holiness() == "plant" and you.god() == "Fedhas"
-    end
-
-    return self.props["ignores_player_projectiles"]
+    return self:get_property("ignores_player_projectiles",
+        function()
+            return self:name() == "bush"
+                or self:holiness() == "plant" and you.god() == "Fedhas"
+        end)
 end
 
 function Monster:threat()
-    if self.props["threat"] == nil then
-        self.props["threat"] = self.minfo:threat()
-    end
-
-    return self.props["threat"]
+    return self:get_property("threat")
 end
 
 function Monster:is_stationary()
-    if self.props["is_stationary"] == nil then
-        self.props["is_stationary"] = self.minfo:is_stationary()
-    end
-
-    return self.props["is_stationary"]
+    return self:get_property("is_stationary")
 end
 
 -- Adding some clua for this would be better.
 function Monster:is_liquid_bound()
-    if self.props["is_liquid_bound"] == nil then
-        local name = self:name()
-        self.props["is_liquid_bound"] = name == "electric eel"
-            or name == "kraken"
-            or name == "elemental wellspring"
-            or name == "lava snake"
-    end
-
-    return self.props["is_liquid_bound"]
+    return self:get_property("is_liquid_bound",
+        function()
+            local name = self:name()
+            return name == "electric eel"
+                or name == "kraken"
+                or name == "elemental wellspring"
+                or name == "lava snake"
+        end)
 end
 
 -- Adding some clua for this too would be better.
 function Monster:can_use_stairs()
-    if self.props["can_use_stairs"] == nil then
-        local name = self:name()
-        self.props["can_use_stairs"] =
-            not (self:is_stationary()
+    return self:get_property("is_liquid_bound",
+        function()
+            local name = self:name()
+            return not (self:is_stationary()
                 or self:is_liquid_bound()
                 or self:is_summoned()
                 or name:find("zombie")
@@ -247,90 +181,64 @@ function Monster:can_use_stairs()
                 or name == "bat"
                 or name == "unseen horror"
                 or name == "harpy")
-    end
-
-    return self.props["can_use_stairs"]
+        end)
 end
 
 function Monster:damage_level()
-    if self.props["damage_level"] == nil then
-        self.props["damage_level"] = self.minfo:damage_level()
-    end
-
-    return self.props["damage_level"]
+    return self:get_property("damage_level")
 end
 
 function Monster:is_caught()
-    if self.props["is_caught"] == nil then
-        self.props["is_caught"] = self.minfo:is_caught()
-    end
-
-    return self.props["is_caught"]
+    return self:get_property("is_caught")
 end
 
 function Monster:is_summoned()
-    if self.props["is_summoned"] == nil then
-        self.props["is_summoned"] = self:is("summoned")
-    end
-
-    return self.props["is_summoned"]
+    return self:get_property("is_summoned",
+        function()
+            return self:is("summoned")
+        end)
 end
 
 function Monster:reach_range()
-    if self.props["reach_range"] == nil then
-        self.props["reach_range"] = self.minfo:reach_range()
-    end
-
-    return self.props["reach_range"]
+    return self:get_property("reach_range")
 end
 
-function Monster:constricting_you()
-    if self.props["constricting_you"] == nil then
-        self.props["constricting_you"] = self.minfo:constricting_you()
-    end
-
-    return self.props["constricting_you"]
+function Monster:is_constricting_you()
+    return self:get_property("is_constricting_you")
 end
 
 function Monster:stabbability()
-    if self.props["stabbability"] == nil then
-        self.props["stabbability"] = self.minfo:stabbability()
-    end
-
-    return self.props["stabbability"]
+    return self:get_property("stabbability")
 end
 
 function Monster:is_ranged()
-    if self.props["is_ranged"] == nil then
-        self.props["is_ranged"] = self.minfo:has_known_ranged_attack()
-            and not (self:name():find("kraken")
-                or self:name() == "lost soul")
-    end
-
-    return self.props["is_ranged"]
+    return self:get_property("is_ranged",
+        function()
+            return self.minfo:has_known_ranged_attack()
+                and not (self:name():find("kraken")
+                    or self:name() == "lost soul")
+        end)
 end
 
--- Whether we'd ever want to attack this monster, and hence whether it's in
--- the enemy_list.
+-- Whether we'd ever want to attack this monster, and hence whether it'll be
+-- put in enemy_list.
 function Monster:is_enemy()
-    if self.props["is_enemy"] == nil then
-        self.props["is_enemy"] = not self:is_safe()
-            and self:attitude() < enum_att_neutral
-            and self:name() ~= "orb of destruction"
-            and not (self:name():find("kraken")
-                or self:name() == "lost soul")
-    end
-
-    return self.props["is_enemy"]
+    return self:get_property("is_enemy",
+        function()
+            return not self:is_safe()
+                and self:attitude() < enum_att_neutral
+                and self:name() ~= "orb of destruction"
+                and not (self:name():find("kraken")
+                    or self:name() == "lost soul")
+        end)
 end
 
 -- Whether the player can melee this monster right now.
 function Monster:player_can_melee()
-    if self.props["player_can_melee"] == nil then
-        self.props["player_can_melee"] = player_can_melee_mons(self)
-    end
-
-    return self.props["player_can_melee"]
+    return self:get_property("player_can_melee",
+        function()
+            return player_can_melee_mons(self)
+        end)
 end
 
 -- Whether this monster could move close enough for the player to melee it
@@ -342,12 +250,10 @@ end
 -- monster, should that be necessary. This is based on the respective melee
 -- attack ranges of the monster and the player.
 function Monster:can_move_to_player_melee()
-    if self.props["can_move_to_player_melee"] == nil then
-        self.props["can_move_to_player_melee"] =
-            mons_can_move_to_player_melee(self)
-    end
-
-    return self.props["can_move_to_player_melee"]
+    return self:get_property("can_move_to_player_melee",
+        function()
+            return monster_can_move_to_player_melee(self)
+        end)
 end
 
 function Monster:is(flag)
@@ -379,7 +285,7 @@ function Monster:get_player_move_towards(assume_flight)
         self.props.player_move = {}
     end
 
-    local ind = tonumber(assume_flight)
+    local ind = assume_flight and 2 or 1
     if self.props.player_move[ind] == nil then
         local move_func = assume_flight and flight_tabbable_square
             or tabbable_square

@@ -525,43 +525,6 @@ local acid_resistance_monsters = {
     ["acid blob"] = 100,
 }
 
-function mons_speed_num(mons)
-    local sdesc = mons:speed_description()
-    local num
-    if sdesc == "extremely fast" then
-        num = 6
-    elseif sdesc == "very fast" then
-        num = 5
-    elseif sdesc == "fast" then
-        num = 4
-    elseif sdesc == "normal" then
-        num = 3
-    elseif sdesc == "slow" then
-        num = 2
-    elseif sdesc == "very slow" then
-        num = 1
-    end
-
-    if mons:status("fast") then
-        num = num + 1
-    end
-    if mons:status("slow") then
-        num = num - 1
-    end
-
-    local name = mons:name()
-    if name:find("boulder beetle") then
-        num = num + 3
-    end
-    if name:find("spriggan") or name == "the Enchantress" then
-        num = num + 1
-    elseif name:find("naga") or name == "Vashnia" then
-        num = num - 1
-    end
-
-    return num
-end
-
 function sense_immediate_danger()
     for _, enemy in ipairs(enemy_list) do
         local dist = enemy:distance()
@@ -614,6 +577,43 @@ function sense_sigmund()
     end
 end
 
+function monster_speed_number(mons)
+    local desc = mons:speed_description()
+    local num
+    if desc == "extremely fast" then
+        num = 6
+    elseif desc == "very fast" then
+        num = 5
+    elseif desc == "fast" then
+        num = 4
+    elseif desc == "normal" then
+        num = 3
+    elseif desc == "slow" then
+        num = 2
+    elseif desc == "very slow" then
+        num = 1
+    end
+
+    if mons:status("fast") then
+        num = num + 1
+    end
+    if mons:status("slow") then
+        num = num - 1
+    end
+
+    local name = mons:name()
+    if name:find("boulder beetle") then
+        num = num + 3
+    end
+    if name:find("spriggan") or name == "the Enchantress" then
+        num = num + 1
+    elseif name:find("naga") or name == "Vashnia" then
+        num = num - 1
+    end
+
+    return num
+end
+
 function initialize_monster_map()
     monster_map = {}
     for x = -los_radius, los_radius do
@@ -643,7 +643,7 @@ function update_monster_map()
     end
 end
 
-function mons_in_list(mons, mlist)
+function monster_in_list(mons, mlist)
     local entry = mlist[mons:name()]
     if type(entry) == "number" and you.xl() < entry then
         return true
@@ -652,7 +652,7 @@ function mons_in_list(mons, mlist)
     end
 
     for _, entry in ipairs(mlist["*"]) do
-        if entry(m) then
+        if entry(mons) then
             return true
         end
     end
@@ -664,7 +664,7 @@ function check_monster_list(radius, mons_list, filter)
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() <= radius
                 and (not filter or filter(enemy))
-                and mons_in_list(enemy, mons_list) then
+                and monster_in_list(enemy, mons_list) then
             return true
         end
     end
@@ -691,11 +691,11 @@ function count_enemies(radius, filter)
     return count_enemies_near(origin, radius, filter)
 end
 
-function count_enemies_in_mons_list(radius, mons_list, filter)
+function count_enemies_in_monster_list(radius, mons_list, filter)
     return count_enemies(radius,
         function(enemy)
             return (not filter or filter(enemy))
-                and mons_in_list(enemy, mons_list)
+                and monster_in_list(enemy, mons_list)
         end)
 end
 
@@ -711,7 +711,7 @@ function count_hostile_greater_servants(radius)
 
     return count_enemies(radius,
         function(enemy) return enemy:is_summoned()
-            and mons_is_greater_servant(enemy) end)
+            and monster_is_greater_servant(enemy) end)
 end
 
 function count_big_slimes(radius)

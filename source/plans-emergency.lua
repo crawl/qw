@@ -572,19 +572,17 @@ function want_to_cleansing_flame()
         return false
     end
 
-    if not check_monster_list(1, scary_monsters, mons_is_holy_vulnerable)
-                and check_monster_list(2, scary_monsters,
-                    mons_is_holy_vulnerable)
-            or count_enemies(2, mons_is_holy_vulnerable) > 8 then
+    local holy_check = function(mons)
+            return mons:is_holy_vulnerable()
+        end
+    if not check_monster_list(1, scary_monsters, holy_check)
+                and check_monster_list(2, scary_monsters, holy_check)
+            or count_enemies(2, holy_check) > 8 then
         return true
     end
 
     local filter = function(mons)
-        local holiness = mons:holiness()
-        return not mons:desc():find("summoned")
-            and (holiness == "undead"
-                or holiness == "demonic"
-                or holiness == "evil")
+        return mons:is_holy_vulnerable() and not mons:is_summoned()
     end
     if hp_is_low(50) and immediate_danger then
         local flame_restore_count = count_enemies(2, filter)
@@ -687,7 +685,7 @@ function count_nasty_hell_monsters(radius)
         or items.equipped_at("weapon")
             and items.equipped_at("weapon").ego() == "holy wrath"
     local filter = function(mons)
-        return not (have_holy_wrath and mons_is_holy_vulnerable(mons))
+        return not (have_holy_wrath and mons:is_holy_vulnerable())
     end
     return count_monster_list(radius, nasty_monsters, filter)
 end
