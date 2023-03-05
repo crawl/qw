@@ -186,6 +186,34 @@ function have_all_stairs(branch, depth, dir, state)
     return true
 end
 
+function minimum_enemy_stair_distance(dist_map, pspeed)
+    local min_dist = 1000
+    for _, enemy in ipairs(enemy_list) do
+        local x = waypoint.x + enemy:x_pos()
+        local y = waypoint.y + enemy:y_pos()
+        local dist = dist_map.map[x][y]
+        if dist == nil then
+            dist = 10000
+        end
+
+        local speed_diff = enemy:speed() - pspeed
+        if speed_diff > 1 then
+            dist = dist / 2
+        elseif speed_diff > 0 then
+            dist = dist / 1.5
+        end
+
+        if enemy:is_ranged() then
+            dist = dist - 4
+        end
+
+        if dist < min_dist then
+            min_dist = dist
+        end
+    end
+    return min_dist
+end
+
 function find_good_stairs()
     good_stairs = {}
 
@@ -208,28 +236,7 @@ function find_good_stairs()
             pdist = 10000
         end
 
-        local minmdist = 1000
-        for _, enemy in ipairs(enemy_list) do
-            local mdist =
-                dist_map.map[waypoint.x + enemy.pos.x][waypoint.y + enemy.pos.y]
-            if mdist == nil then
-                mdist = 10000
-            end
-
-            local speed_diff = enemy:speed() - pspeed
-            if speed_diff > 1 then
-                mdist = mdist / 2
-            elseif speed_diff > 0 then
-                mdist = mdist / 1.5
-            end
-            if enemy:is_ranged() then
-                mdist = mdist - 4
-            end
-            if mdist < minmdist then
-                minmdist = mdist
-            end
-        end
-        if pdist < minmdist then
+        if pdist < minimum_enemy_stair_distance(dist_map, pspeed) then
             table.insert(good_stairs, pos)
         end
     end

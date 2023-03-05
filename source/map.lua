@@ -554,7 +554,7 @@ end
 
 function remove_exclusions(record_only)
     if not record_only and c_persist.exclusions[where] then
-        for hash, _ in c_persist.exclusions[where] do
+        for hash, _ in pairs(c_persist.exclusions[where]) do
             local pos = unhash_position(hash)
             travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
         end

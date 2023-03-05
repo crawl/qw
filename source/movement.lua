@@ -340,117 +340,26 @@ function player_can_move_closer(pos)
             return true
         end
     end
+
     return false
 end
 
-function position_is_new(search, pos)
-    return not (search.attempted[pos.x] and search.attempted[pos.x][pos.y])
-end
-
-function next_position(search, current, diff)
-    local pos
-    if abs(diff.x) > abs(diff.y) then
-        if abs(diff.y) == 1 then
-            pos = { x = current.x + sign(diff.x), y = current.y }
-            if position_is_new(search, pos) then
-                return pos
-            end
-        end
-
-        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        pos = { x = current.x + sign(diff.x), y = current.y }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        if abs(diff.x) > abs(diff.y) + 1 then
-            pos = { x = current.x + sign(diff.x), y = current.y + 1 }
-            if position_is_new(search, pos) then
-                return pos
-            end
-
-            pos = { x = current.x + sign(diff.x), y = current.y - 1 }
-            if position_is_new(search, pos) then
-                return pos
-            end
-        end
-
-        pos = { x = current.x, y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-    elseif abs(diff.x) == abs(diff.y) then
-        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        pos = { x = current.x + sign(diff.x), y = current.y }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        pos = { x = current.x, y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-    else
-        if abs(diff.x) == 1 then
-            pos = { x = current.x, y = current.y + sign(diff.y) }
-            if position_is_new(search, pos) then
-                return pos
-            end
-        end
-
-        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        pos = { x = current.x, y = current.y + sign(diff.y) }
-        if position_is_new(search, pos) then
-            return pos
-        end
-
-        if abs(diff.y) > abs(diff.x) + 1 then
-            pos = { x = current.x + 1, y = current.y + sign(diff.y) }
-            if position_is_new(search, pos) then
-                return pos
-            end
-
-            pos = { x = current.x - 1, y = current.y + sign(diff.y) }
-            if position_is_new(search, pos) then
-                return pos
-            end
-        end
-
-        pos = { x = current.x + sign(diff.x), y = current.y }
-        if position_is_new(search, pos) then
-            return pos
-        end
-    end
-end
-
 function move_search(search, current)
-    local diff = { x = target.x - current.x, y = target.y - current.y }
-    if supdist(diff) <= min_dist then
+    local diff = { x = search.target.x - current.x,
+        y = search.target.y - current.y }
+    if supdist(diff) <= search.min_dist then
         search.result = { x = search.first_pos.x - search.center.x,
             y = search.first_pos.y - search.center.y }
-        return
+        return true
     end
 
     if current.x == search.center.x and current.y == search.center.y  then
         search.first_pos = nil
     end
 
-    while true do
-        local pos = next_position(search, current, diff)
-        if not pos then
-            break
+    local function search_from(pos)
+        if search.attempted[pos.x] and search.attempted[pos.x][pos.y] then
+            return false
         end
 
         if not search.first_pos then
@@ -463,13 +372,99 @@ function move_search(search, current)
             end
             search.attempted[pos.x][pos.y] = true
 
-            move_search(search, pos)
+            return move_search(search, pos)
         end
 
-        if move_search.result then
-            break
+        return false
+    end
+
+    local pos
+    if abs(diff.x) > abs(diff.y) then
+        if abs(diff.y) == 1 then
+            pos = { x = current.x + sign(diff.x), y = current.y }
+            if search_from(pos) then
+                return true
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if search_from(pos) then
+            return true
+        end
+
+        if abs(diff.x) > abs(diff.y) + 1 then
+            pos = { x = current.x + sign(diff.x), y = current.y + 1 }
+            if search_from(pos) then
+                return true
+            end
+
+            pos = { x = current.x + sign(diff.x), y = current.y - 1 }
+            if search_from(pos) then
+                return true
+            end
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+    elseif abs(diff.x) == abs(diff.y) then
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if search_from(pos) then
+            return true
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+    else
+        if abs(diff.x) == 1 then
+            pos = { x = current.x, y = current.y + sign(diff.y) }
+            if search_from(pos) then
+                return true
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+
+        pos = { x = current.x, y = current.y + sign(diff.y) }
+        if search_from(pos) then
+            return true
+        end
+
+        if abs(diff.y) > abs(diff.x) + 1 then
+            pos = { x = current.x + 1, y = current.y + sign(diff.y) }
+            if search_from(pos) then
+                return true
+            end
+
+            pos = { x = current.x - 1, y = current.y + sign(diff.y) }
+            if search_from(pos) then
+                return true
+            end
+        end
+
+        pos = { x = current.x + sign(diff.x), y = current.y }
+        if search_from(pos) then
+            return true
         end
     end
+
+    return false
 end
 
 function get_move_towards(center, target, square_func, min_dist)
@@ -483,8 +478,9 @@ function get_move_towards(center, target, square_func, min_dist)
     }
     search.attempted = { [center.x] = { [center.y] = false } }
 
-    move_search(search, center)
-    return search.result
+    if move_search(search, center) then
+        return search.result
+    end
 end
 
 function monster_can_move_to_player_melee(mons)
