@@ -291,7 +291,7 @@ function is_exploding_weapon(weapon)
 end
 
 function is_penetrating_weapon(weapon)
-    if item:name():find("javelin") then
+    if weapon:name():find("javelin") then
         return true
     end
 

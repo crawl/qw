@@ -70,7 +70,7 @@ function go_upstairs(confirm, keep_exclusions)
         remove_exclusions(level_is_temporary())
     end
 
-    magic("<" .. confirm and "Y" or "")
+    magic("<" .. (confirm and "Y" or ""))
 end
 
 function go_downstairs(confirm, keep_exclusions)
@@ -78,7 +78,7 @@ function go_downstairs(confirm, keep_exclusions)
         remove_exclusions(level_is_temporary())
     end
 
-    magic(">" .. confirm and "Y" or "")
+    magic(">" .. (confirm and "Y" or ""))
 end
 
 function random_step(reason)
@@ -293,7 +293,7 @@ function plan_stuck_move_towards_destination()
 end
 
 function plan_exclusion_move()
-    if dangerous_to_move() or exclusion_map[0][0] then
+    if dangerous_to_move() or exclusion_map[waypoint.x][waypoint.y] then
         return false
     end
 
