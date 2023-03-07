@@ -202,7 +202,8 @@ function assess_ranged_target(attack, target)
     local positions = spells.path(attack.test_spell, target.x, target.y, false)
     local result = { pos = target }
     local past_target, at_target_result
-    for i, pos in ipairs(positions) do
+    for i, coords in ipairs(positions) do
+        pos = { x = coords[1], y = coords[2] }
         local hit_target = pos.x == target.x and pos.y == target.y
         local enemy = monster_map[pos.x][pos.y]
         -- Non-penetrating attacks must reach the target before reaching any
@@ -248,7 +249,7 @@ function assess_ranged_target(attack, target)
         -- We've reached the target, so make a copy of the results up to this
         -- point in case we later decide to use '.'.
         if hit_target then
-            at_target_result = util.copy(result)
+            at_target_result = util.copy_table(result)
             at_target_result.stop_at_target = true
             past_target = true
         end
@@ -261,7 +262,7 @@ function assess_explosion_targets(attack, target)
     for _, pos in adjacent_iter(target, true) do
         if not attack.seen_pos[target.x][target.y] then
             local result = assess_ranged_target(attack, pos)
-            if compare_attack_results(attack, result, best_result) then
+            if result_improves_attack(attack, result, best_result) then
                 best_result = result
             end
             attack.seen_pos[pos.x][pos.y] = true
@@ -272,7 +273,7 @@ end
 
 function weapon_test_spell(weapon)
     if weapon.class(true) == "missile" then
-        if item:name():find("javelin") then
+        if weapon:name():find("javelin") then
             return "Dispelling Breath"
         else
             return "Magic Dart"
@@ -316,7 +317,6 @@ function get_ranged_target(weapon)
         end
     end
 
-    reversed.distance = true
     local best_result
     for _, enemy in ipairs(enemy_list) do
         local pos = enemy:pos()
@@ -329,7 +329,7 @@ function get_ranged_target(weapon)
                 result = assess_ranged_target(attack, pos)
             end
 
-            if compare_attack_results(attack, result, best_result) then
+            if result_improves_attack(attack, result, best_result) then
                 best_result = result
             end
         end
