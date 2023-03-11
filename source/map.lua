@@ -110,7 +110,7 @@ function find_features(radius)
         end
 
         local feat = view.feature_at(pos.x, pos.y)
-        local dpos = { x = pos.x + waypoint.x,  y = pos.y + waypoint.y }
+        local dpos = position_sum(waypoint, pos)
         if feature_searches[feat] then
             if not feature_positions[feat] then
                 feature_positions[feat] = {}
@@ -162,7 +162,7 @@ function handle_feature_searches(pos, dist_queues)
         if not distance_maps[hash] then
             distance_maps[hash] = distance_map_initialize(pos, hash)
         end
-        table.insert(distance_maps[hash].queue, { x = pos.x, y = pos.y })
+        table.insert(distance_maps[hash].queue, pos)
     end
 end
 
@@ -199,8 +199,8 @@ end
 
 function distance_map_update_adjacent_pos(center, pos, dist_map)
     if (dist_map.radius
-                and supdist({ x = pos.x - dist_map.pos.x,
-                    y = pos.y - dist_map.pos.y }) > dist_map.radius)
+                and supdist(position_difference(pos, dist_map.pos))
+                    > dist_map.radius)
             -- Untraversable cells don't need updates.
             or not traversal_map[pos.x][pos.y] then
         return
@@ -277,7 +277,7 @@ function record_map_item(name, pos, dist_queues)
         item_positions[name] = {}
     end
 
-    local pos = { x = waypoint.x + x, y = waypoint.y + y }
+    local pos = position_sum(waypoint, pos)
     local pos_hash = hash_position(pos)
     for hash, _ in pairs(item_positions[name]) do
         if hash ~= pos_hash then
@@ -317,8 +317,8 @@ end
 
 function distance_map_update_pos(pos, dist_map)
     if dist_map.radius
-            and supdist({ x = dist_map.pos.x - pos.x,
-                y = dist_map.pos.y - pos.y }) > dist_map.radius then
+            and supdist(position_difference(dist_map.pos, pos))
+                > dist_map.radius then
         return false
     end
 
@@ -389,7 +389,7 @@ function los_map_update()
             record_altar(pos)
         end
 
-        local gpos = { x = pos.x + waypoint.x, y = pos.y + waypoint.y }
+        local gpos = position_sum(waypoint, pos)
         if move_destination
                 and gpos.x == move_destination.x
                 and gpos.y == move_destination.y
@@ -497,8 +497,7 @@ function best_move_towards(positions, no_exclusions, radius)
             local dist = map[dpos.x][dpos.y]
             if dist and dist < best_dist then
                 best_dist = dist
-                best_move.x = dpos.x - waypoint.x
-                best_move.y = dpos.y - waypoint.y
+                best_move = position_difference(dpos, waypoint)
                 best_dest = pos
             end
         end
@@ -545,7 +544,7 @@ function record_feature_position(pos)
     if not feature_positions[feat] then
         feature_positions[feat] = {}
     end
-    local gpos = { x = waypoint.x + pos.x, y = waypoint.y + pos.y }
+    local gpos = position_sum(waypoint, pos)
     local hash = hash_position(gpos)
     if not feature_positions[feat][hash] then
         feature_positions[feat][hash] = gpos

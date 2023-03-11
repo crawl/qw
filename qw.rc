@@ -19,25 +19,25 @@
 name = qw
 
 # Make sure this is true when playing online.
-: DELAYED = true
+: local DELAYED = true
 
 # Delay per action in milliseconds. Set this to at least 125 or so when playing
 # on a public server.
-: DELAY_TIME = 125
+: local DELAY_TIME = 125
 
 # Whether to start playing immediately when a new game is started.
 # Unfortunately this doesn't work if the game starts with a -more-.
-: AUTO_START = false
+: local AUTO_START = false
 
 ################
 ### Gameplay ###
 ################
 
 # Set to true to cycle through the combos in COMBO_CYCLE_LIST.
-: COMBO_CYCLE = false
+: local COMBO_CYCLE = false
 
 # The combos to cycle through. Here are some sample choices:
-: COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
+: local COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
 
 # Choose randomly between these combos. This will not apply if the COMBO_CYCLE
 # option was on in your _previous_ game.
@@ -56,32 +56,32 @@ combo = GrBe.handaxe
 # include += hyperqwcombo.rc
 
 # The default acceptable gods; we join whichever one we find first.
-: GOD_LIST = { "Trog", "Okawaru", "Makhleb"}
+: local GOD_LIST = { "Trog", "Okawaru", "Makhleb"}
 
 # Use faded altar, abandoning if we don't get one of the gods in GOD_LIST.
-: FADED_ALTAR = false
+: local FADED_ALTAR = false
 
 # Should Chaos Knight abandon Xom on turn 0.
-: CK_ABANDON_XOM = true
+: local CK_ABANDON_XOM = true
 
 # Use a shield at all cost.
-: SHIELD_CRAZY = true
+: local SHIELD_CRAZY = true
 
 # Do second lair rune branch before depths.
-: EARLY_SECOND_RUNE = true
+: local EARLY_SECOND_RUNE = true
 
 # Wait to do Orc until after D:15.
-: LATE_ORC = true
+: local LATE_ORC = true
 
 # Lair rune preferences, current options are:
 # * random - no preference, chooses randomly
 # * nowater - does Snake/Spider first
 # * smart - currently prefers Spider > Snake/Swamp > Shoals
 # * dsmart - Swamp/Spider > Snake > Shoals (DsBe data)
-: RUNE_PREFERENCE = "random"
+: local RUNE_PREFERENCE = "random"
 
 # A table of possible gameplans.
-: GAMEPLANS = {
+: local GAMEPLANS = {
 :     ["3 Runes"]  = "Normal",
 :     ["15 Runes"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Pan, Slime:5"
 :                    .. ", Hells, Abyss, Orb",
@@ -91,17 +91,17 @@ combo = GrBe.handaxe
 : }
 
 # The default gameplan.
-: DEFAULT_GAMEPLAN = "3 Runes"
+: local DEFAULT_GAMEPLAN = "3 Runes"
 
 # Timed portals we're allowed to attempt.
-: ALLOWED_PORTALS = {"Bazaar", "Sewer", "Ossuary", "Gauntlet", "WizLab",
+: local ALLOWED_PORTALS = {"Bazaar", "Sewer", "Ossuary", "Gauntlet", "WizLab",
 :                    "Desolation"}
 
 # Panic (stop) at full inventory.
-: FULL_INVENTORY_PANIC = true
+: local FULL_INVENTORY_PANIC = true
 
 # Quit after this number of turns while stuck.
-: QUIT_TURNS = 1000
+: local QUIT_TURNS = 1000
 
 #############################
 ### Miscellaneous options ###
@@ -180,23 +180,23 @@ autopickup =
 autopickup_exceptions =
 
 # Use the coroutine to break up execution so as to avoid lua throttling.
-: COROUTINE_THROTTLE = true
+: local COROUTINE_THROTTLE = true
 
 #################
 ### Debugging ###
 #################
 
 # Enable debug output.
-: DEBUG_MODE = false
+: local DEBUG_MODE = false
 
 # Which debug message channels to output.
-: DEBUG_CHANNELS = {"main", "explore"}
+: local DEBUG_CHANNELS = {"main", "explore"}
 
 # Tab just takes a single action (for testing).
-: SINGLE_STEP = false
+: local SINGLE_STEP = false
 
 # Enable to allow death in Wizard mode.
-: WIZMODE_DEATH = false
+: local WIZMODE_DEATH = false
 
 # See README.md for details on using make-qw.sh to either set up a qw.lua file
 # or include the lua from the line below.

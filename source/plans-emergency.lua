@@ -820,7 +820,9 @@ function plan_continue_flee()
             local dist_map = get_distance_map(target_stair)
             local val = dist_map[waypoint.x + pos.x][waypoint.y + pos.y]
             if val and val < dist_map[waypoint.x][waypoint.y] then
-                dsay("STILL FLEEEEING.")
+                if debug_channel("main") then
+                    dsay("STILL FLEEEEING.")
+                end
                 move_to(pos)
                 return true
             end

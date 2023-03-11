@@ -154,7 +154,7 @@ function plan_stuck_dig_grate()
         end
     end
 
-    if closest_grate < 20 then
+    if grate_offset < 20 then
         local c = find_item("wand", "digging")
         if c and can_zap() then
             say("ZAPPING " .. item(c).name() .. ".")
@@ -250,8 +250,7 @@ function plan_swamp_clouds_hack()
     for pos in adjacent_iter(origin) do
         if can_move_to(pos) and view.is_safe_square(pos.x, pos.y) then
             for dpos in radius_iter(pos) do
-                local dist = supdist({ x = dpos.x - pos.x,
-                    y = dpos.y - pos.y })
+                local dist = supdist(position_difference(dpos, pos))
                 if is_swamp_end_cloud(dpos) and dist < best_dist then
                     best_pos = pos
                     best_dist = dist
@@ -323,16 +322,14 @@ function plan_stuck_move_towards_monster()
 
     local mons_targets = {}
     for _, enemy in ipairs(enemy_list) do
-        table.insert(mons_targets,
-            { x = pos.x + waypoint.x, y = pos.y + waypoint.y })
+        table.insert(mons_targets, position_sum(waypoint, enemy:pos()))
     end
 
     if #mons_targets == 0 then
         for pos in square_iter(origin) do
             local monster = Monster:new(monster.get_monster_at(pos.x, pos.y))
             if monster and monster:is_enemy() then
-                table.insert(mons_targets,
-                    { x = pos.x + waypoint.x, y = pos.y + waypoint.y })
+                table.insert(mons_targets, position_sum(waypoint, pos))
             end
         end
     end

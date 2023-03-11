@@ -25,6 +25,7 @@ end
 
 function initialize()
     initialize_enums()
+    initialize_debug()
 
     if you.turns() == 0 then
         initialize_c_persist()

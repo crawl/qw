@@ -350,12 +350,15 @@ function record_portal(level, portal, permanent)
         return
     end
 
+    if debug_channel("explore") then
+        dsay("Found " .. portal)
+    end
+
     -- Permanent portals go at the beginning, so they'll always be chosen last.
     -- We can't have multiple timed portals of the same type on the same level,
     -- so this scheme puts portals in the correct order. For timed portals,
     -- record the turns to allow prioritizing among timed portals across
     -- levels.
-    dsay("Found " .. portal .. ".", "explore")
     if permanent then
         table.insert(c_persist.portals[level][portal], 1, INF_TURNS)
     else

@@ -202,17 +202,23 @@ function assess_ranged_target(attack, target)
     local positions = spells.path(attack.test_spell, target.x, target.y, false)
     local result = { pos = target }
     local past_target, at_target_result
+    if debug_channel("ranged") then
+        dsay("Targeting " .. pos_string(target))
+    end
     for i, coords in ipairs(positions) do
         pos = { x = coords[1], y = coords[2] }
         local hit_target = pos.x == target.x and pos.y == target.y
         local enemy = monster_map[pos.x][pos.y]
         -- Non-penetrating attacks must reach the target before reaching any
-        -- other enemyter, otherwise they're considered blocked and unusable.
+        -- other enemy, otherwise they're considered blocked and unusable.
         if not attack.is_penetrating
                 and not past_target
                 and not hit_target
                 and enemy
                 and not enemy:ignores_player_projectiles() then
+            if debug_channel("ranged") then
+                dsay("Aborted target: blocking monster at " .. pos_string(pos))
+            end
             return
         end
 
@@ -221,6 +227,9 @@ function assess_ranged_target(attack, target)
         -- the attack is unusable.
         if enemy and enemy:is_friendly()
                 and not enemy:ignores_player_projectiles() then
+            if debug_channel("ranged") then
+                dsay("Aborted target: blocking monster at " .. pos_string(pos))
+            end
             return at_target_result
         end
 
@@ -232,6 +241,10 @@ function assess_ranged_target(attack, target)
                 and i == #positions
                 and destroys_items_at(pos)
                 and not destroys_items_at(attack.target) then
+            if debug_channel("ranged") then
+                dsay("Using at-target key due to destructive terrain at "
+                    .. pos_string(pos))
+            end
             return at_target_result
         end
 
@@ -243,6 +256,10 @@ function assess_ranged_target(attack, target)
                     -- target.
                     and (attack.is_penetrating or hit_target) then
                 score_enemy_hit(result, enemy, attack.props)
+                if debug_channel("ranged") then
+                    dsay("Attack scores after enemy at " .. pos_string(pos)
+                        .. ": " .. stringify_table(result))
+                end
             end
         end
 
@@ -299,7 +316,7 @@ function is_penetrating_weapon(weapon)
     return false
 end
 
-function get_ranged_target(weapon)
+function get_ranged_target(weapon, prefer_melee)
     local attack = {}
     attack.range = weapon_range(weapon)
     attack.is_penetrating = is_penetrating_weapon(weapon)
@@ -307,8 +324,7 @@ function get_ranged_target(weapon)
     attack.test_spell = weapon_test_spell(weapon)
     attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
         "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = {}
-    attack.reversed_props.distance = true
+    attack.reversed_props = { distance = true }
 
     if explosion then
         attack.seen_pos = {}
@@ -321,7 +337,12 @@ function get_ranged_target(weapon)
     for _, enemy in ipairs(enemy_list) do
         local pos = enemy:pos()
         if enemy:distance() <= attack.range
-                and you.see_cell_solid_see(pos.x, pos.y) then
+                and you.see_cell_solid_see(pos.x, pos.y)
+                -- Don't try this ranged attack if we prefer melee and could
+                -- use the turn to move into melee range.
+                and not (prefer_melee
+                    and enemy:distance() == reach_range() - 1
+                    and enemy:get_player_move_towards()) then
             local result
             if explosion then
                 result = assess_explosion_targets(attack, pos)
@@ -334,7 +355,7 @@ function get_ranged_target(weapon)
             end
         end
     end
-    return best_result
+    return best_result.pos
 end
 
 function throw_missile(missile, pos)
@@ -500,7 +521,7 @@ function plan_move_towards_enemy()
 
     local mons = monster_map[target.x][target.y]
     local move = mons:get_player_move_towards()
-    enemy_memory = { x = mons:x_pos() - move.x,  y = mons:y_pos() - move.y }
+    enemy_memory = position_difference(mons:pos(), move)
     turns_left_moving_towards_enemy = 2
     magic(delta_to_vi(move))
     return true
@@ -513,7 +534,9 @@ function plan_continue_move_towards_enemy()
         return false
     end
 
-    return get_move_towards(origin, enemy_memory, tabbable_square)
+    local move = get_move_towards(origin, enemy_memory, tabbable_square)
+    magic(delta_to_vi(move))
+    return true
 end
 
 function set_plan_attack()

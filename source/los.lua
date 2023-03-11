@@ -119,8 +119,7 @@ end
 
 function unhash_position(hash)
     local x = math.floor(hash / (2 * GXM) + 0.5)
-    local y = hash - 2 * GXM * x
-    return { x = x, y = y }
+    return { x = x, y = hash - 2 * GXM * x }
 end
 
 function is_adjacent(pos, center)
@@ -130,4 +129,12 @@ function is_adjacent(pos, center)
 
     local diff = { x = pos.x - center.x, y = pos.y - center.y }
     return supdist(diff) > 0 and abs(diff.x) <= 1 and abs(diff.y) <= 1
+end
+
+function position_difference(a, b)
+    return { x = a.x - b.x, y = a.y - b.y }
+end
+
+function position_sum(a, b)
+    return { x = a.x + b.x, y = a.y + b.y }
 end

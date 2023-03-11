@@ -62,9 +62,9 @@ function record_stairs(branch, depth, feat, state, force)
     local old_state = not data[level][num] and FEAT_LOS.NONE
         or data[level][num]
     if old_state < state or force then
-        if DEBUG_MODE then
+        if debug_channel("explore") then
             dsay("Updating " .. level .. " stair " .. feat .. " from "
-                .. old_state .. " to " .. state, "explore")
+                .. old_state .. " to " .. state)
         end
         data[level][num] = state
 

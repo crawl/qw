@@ -15,24 +15,40 @@ function restore_gameplans()
     run_update()
 end
 
+function initialize_debug()
+    if not DEBUG_MODE then
+        return
+    end
+
+    debug_channels = {}
+    for _, channel in ipairs(DEBUG_CHANNELS) do
+        debug_channels[channel] = true
+    end
+end
+
 function toggle_debug()
     DEBUG_MODE = not DEBUG_MODE
 end
 
 function toggle_debug_channel(channel)
-    if util.contains(DEBUG_CHANNELS, channel) then
-        local list = util.copy_table(DEBUG_CHANNELS)
-        for i, e in ipairs(DEBUG_CHANNELS) do
-            if e == "plans" then
-                table.remove(list, i)
-            end
-        end
-        DEBUG_CHANNELS = list
-    else
-        table.insert(DEBUG_CHANNELS, channel)
-    end
+    debug_channels[channel] = not debug_channels[channel]
 end
 
+function debug_channel(channel)
+    return DEBUG_MODE and debug_channels[channel]
+end
+
+function dsay(x, channel)
+    local str
+    if type(x) == "table" then
+        str = stringify_table(x)
+    else
+        str = tostring(x)
+    end
+    -- Convert x to string to make debugging easier. We don't do this for
+    -- say() and note() so we can catch errors.
+    crawl.mpr(you.turns() .. " ||| " .. str)
+end
 function toggle_coroutine()
     USE_COROUTINE = not USE_COROUTINE
 end
@@ -123,22 +139,4 @@ function set_counter()
     local res = crawl.c_input_line()
     c_persist.record.counter = tonumber(res)
     note("Game counter set to " .. c_persist.record.counter)
-end
-
-function dsay(x, channel)
-    if not channel then
-        channel = "main"
-    end
-
-    if DEBUG_MODE and util.contains(DEBUG_CHANNELS, channel) then
-        local str
-        if type(x) == "table" then
-            str = stringify_table(x)
-        else
-            str = tostring(x)
-        end
-        -- Convert x to string to make debugging easier. We don't do this for
-        -- say() and note() so we can catch errors.
-        crawl.mpr(you.turns() .. " ||| " .. str)
-    end
 end

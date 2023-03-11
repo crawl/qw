@@ -345,11 +345,9 @@ function player_can_move_closer(pos)
 end
 
 function move_search(search, current)
-    local diff = { x = search.target.x - current.x,
-        y = search.target.y - current.y }
+    local diff = position_difference(search.target, current)
     if supdist(diff) <= search.min_dist then
-        search.result = { x = search.first_pos.x - search.center.x,
-            y = search.first_pos.y - search.center.y }
+        search.result = position_difference(search.first_pos, search.center)
         return true
     end
 
@@ -472,11 +470,15 @@ function get_move_towards(center, target, square_func, min_dist)
         min_dist = 0
     end
 
+    if supdist(position_difference(center, target)) <= min_dist then
+        return
+    end
+
     search = {
         center = center, target = target, square_func = square_func,
         min_dist = min_dist
     }
-    search.attempted = { [center.x] = { [center.y] = false } }
+    search.attempted = { [center.x] = { [center.y] = true } }
 
     if move_search(search, center) then
         return search.result

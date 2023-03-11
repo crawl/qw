@@ -113,3 +113,7 @@ end
 function is_adjacent(pos)
     return abs(pos.x) <= 1 and abs(pos.y) <= 1
 end
+
+function pos_string(pos)
+    return tostring(pos.x) .. ", " .. tostring(pos.y)
+end

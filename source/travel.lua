@@ -368,25 +368,20 @@ function update_gameplan_travel()
         -- and off of our intermediate stair/altar/etc. where we need to be.
             or (gameplan_travel.branch and not gameplan_travel.want_go))
 
-    if DEBUG_MODE then
+    if debug_channel("explore") then
         dsay("Travel branch: " .. tostring(gameplan_travel.branch)
-            ..  ", depth: " .. tostring(gameplan_travel.depth), "explore")
+            ..  ", depth: " .. tostring(gameplan_travel.depth))
         if gameplan_travel.stairs_dir then
-            dsay("Stairs search dir: " .. tostring(gameplan_travel.stairs_dir),
-                "explore")
+            dsay("Stairs search dir: " .. tostring(gameplan_travel.stairs_dir))
         end
         if gameplan_travel.first_dir then
-            dsay("First dir: " .. tostring(gameplan_travel.first_dir),
-                "explore")
+            dsay("First dir: " .. tostring(gameplan_travel.first_dir))
         end
         if gameplan_travel.first_branch then
-            dsay("First branch: " .. tostring(gameplan_travel.first_branch),
-                "explore")
+            dsay("First branch: " .. tostring(gameplan_travel.first_branch))
         end
-        dsay("Want stash travel: " .. bool_string(want_stash), "explore")
-        dsay("Want go travel: " .. bool_string(gameplan_travel.want_go),
-            "explore")
-        dsay("Disable autoexplore: " .. bool_string(disable_autoexplore),
-            "explore")
+        dsay("Want stash travel: " .. bool_string(want_stash))
+        dsay("Want go travel: " .. bool_string(gameplan_travel.want_go))
+        dsay("Disable autoexplore: " .. bool_string(disable_autoexplore))
     end
 end

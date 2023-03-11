@@ -631,6 +631,8 @@ function update_monster_map()
                 if monster_map[pos.x][pos.y]:is_enemy() then
                     table.insert(enemy_list, monster_map[pos.x][pos.y])
                 end
+            else
+                monster_map[pos.x][pos.y] = nil
             end
         else
             monster_map[pos.x][pos.y] = nil

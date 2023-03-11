@@ -20,7 +20,7 @@ end
 function use_ability(name, extra, mute)
     for letter, abil in pairs(you.ability_table()) do
         if abil == name then
-            if not mute or DEBUG_MODE then
+            if not mute then
                 say("INVOKING " .. name .. ".")
             end
             magic("a" .. letter .. (extra or ""))
@@ -73,9 +73,8 @@ function cascade(plans)
                 plan_turns[plan] = you.turns()
                 plan_result[plan] = result
 
-                if DEBUG_MODE then
-                    dsay("Ran " .. plandata[2] .. ": " .. tostring(result),
-                        "plans")
+                if debug_channel("plans") then
+                    dsay("Ran " .. plandata[2] .. ": " .. tostring(result))
                 end
 
                 if result == nil or result == true then

@@ -50,6 +50,8 @@ local good_gods
 local upstairs_features
 local downstairs_features
 
+local debug_channels = {}
+
 local automatic = false
 local update_coroutine
 local do_dummy_action

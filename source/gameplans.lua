@@ -799,11 +799,11 @@ function set_gameplan(status, gameplan)
         end
     end
 
-    if DEBUG_MODE then
-        dsay("Gameplan status: " .. gameplan_status, "explore")
+    if debug_channel("explore") then
+        dsay("Gameplan status: " .. gameplan_status)
         if gameplan_branch then
             dsay("Gameplan branch: " .. tostring(gameplan_branch), ", depth: "
-                .. tostring(gameplan_depth), "explore")
+                .. tostring(gameplan_depth))
         end
     end
 end

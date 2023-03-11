@@ -100,9 +100,8 @@ function choose_skills()
         end
     end
     if best_utility > 0 then
-        if DEBUG_MODE then
-            dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility,
-                "skills")
+        if debug_channel("skills") then
+            dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility)
         end
 
         table.insert(skills, best_sk)
