@@ -327,8 +327,8 @@ function plan_stuck_move_towards_monster()
 
     if #mons_targets == 0 then
         for pos in square_iter(origin) do
-            local monster = Monster:new(monster.get_monster_at(pos.x, pos.y))
-            if monster and monster:is_enemy() then
+            local mons = monster.get_monster_at(pos.x, pos.y)
+            if mons and Monster:new(mons):is_enemy() then
                 table.insert(mons_targets, position_sum(waypoint, pos))
             end
         end

@@ -14,16 +14,14 @@ function plan_go_to_unexplored_stairs()
 
     local key = dir_key(gameplan_travel.stairs_dir)
     local hash = hash_position(waypoint)
-    local searches = map_mode_searches[waypoint_parity]
+    local searches = map_mode_searches[key]
     local count = 1
-    while searches[key]
-            and searches[key][hash]
-            and searches[key][hash][count] do
+    while searches and searches[hash] and searches[hash][count] do
         -- Trying to go one past this count lands us at the same destination as
         -- the count, so there are no more accessible unexplored stairs to be
         -- found from where we are, and we stop the search. The backtrack plan
         -- can take over from here.
-        if searches[key][hash][count] == searches[key][hash][count + 1] then
+        if searches[hash][count] == searches[hash][count + 1] then
             return false
         end
 

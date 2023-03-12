@@ -190,7 +190,7 @@ autopickup_exceptions =
 : local DEBUG_MODE = false
 
 # Which debug message channels to output.
-: local DEBUG_CHANNELS = {"main", "explore"}
+: local DEBUG_CHANNELS = { "main", "explore" }
 
 # Tab just takes a single action (for testing).
 : local SINGLE_STEP = false

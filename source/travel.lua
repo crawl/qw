@@ -33,7 +33,7 @@ end
 
 function travel_branch_levels(result, dest_depth)
     local dir = sign(dest_depth - result.depth)
-    if not result.first_dir then
+    if dir ~= 0 and not result.first_dir and not result.first_branch then
         result.first_dir = dir
     end
 
@@ -48,7 +48,7 @@ function travel_branch_levels(result, dest_depth)
 end
 
 function travel_up_branches(result, parents, entries, dest_branch)
-    if not result.first_dir then
+    if not result.first_dir and not result.first_branch then
         result.first_dir = DIR.UP
     end
 
@@ -77,10 +77,6 @@ end
 
 function travel_down_branches(result, dest_branch, dest_depth, parents,
         entries)
-    if not result.first_dir then
-        result.first_branch = parents[#parents]
-    end
-
     local i = #parents
     for i = #parents, 1, -1 do
         result.branch = parents[i]
@@ -105,6 +101,10 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
 
         result.branch = next_branch
         result.depth = 1
+        if not result.first_dir and not result.first_branch then
+            result.first_branch = result.branch
+        end
+
         travel_branch_levels(result, next_depth)
         if result.depth ~= next_depth then
             break
@@ -209,6 +209,9 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
 end
 
 function finalize_depth_dir(result, dir)
+    assert(type(dir) == "number" and abs(dir) == 1,
+        "Invalid stair direction: " .. tostring(dir))
+
     local dir_depth = result.depth + dir
     -- We can already reach all required stairs in this direction on our level.
     if count_stairs(result.branch, result.depth, dir, FEAT_LOS.REACHABLE)
@@ -234,22 +237,24 @@ function finalize_depth_dir(result, dir)
         end
 
         result.stairs_dir = dir
-        if not result.first_dir then
+        if not result.first_dir and not result.first_branch then
             result.first_dir = dir
         end
         return true
     end
 
-    if not result.first_dir then
+    if not result.first_dir and not result.first_branch then
         result.first_dir = dir
     end
     result.depth = dir_depth
+
     -- Only try a stair search on the adjacent level if we know there are
     -- unexplored stairs we could take. Otherwise explore the adjacent level,
     -- looking for relevant stairs.
     if dir_depth_stairs then
         result.stairs_dir = -dir
     end
+
     return true
 end
 
@@ -282,7 +287,7 @@ function finalize_travel_depth(result)
                     or result.depth < branch_rune_depth(result.branch)) then
             level_stair_reset(result.branch, result.depth, DIR.UP)
             level_stair_reset(result.branch, result.depth - 1, DIR.DOWN)
-            if not result.first_dir then
+            if not result.first_dir and not result.first_branch then
                 result.first_dir = DIR.UP
             end
             result.depth = result.depth - 1
@@ -293,9 +298,11 @@ function finalize_travel_depth(result)
         if down_reachable then
             level_stair_reset(result.branch, result.depth, DIR.DOWN)
             level_stair_reset(result.branch, result.depth + 1, DIR.UP)
+            -- If we've just reset up stairs, that direction gets priority as
+            -- the first search destination.
             if not finished then
                 result.depth = result.depth + 1
-                if not result.first_dir then
+                if not result.first_dir and not result.first_branch then
                     result.first_dir = DIR.DOWN
                 end
                 result.stairs_dir = DIR.UP

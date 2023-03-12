@@ -49,8 +49,8 @@ function assess_square_enemies(a, pos)
     a.longranged = 0
     for _, enemy in ipairs(enemy_list) do
         local dist = enemy:distance()
-        local see_cell = view.cell_see_cell(pos.x, pos.y,
-            enemy:x_pos(), enemy:y_pos())
+        local see_cell = view.cell_see_cell(pos.x, pos.y, enemy:x_pos(),
+            enemy:y_pos())
         local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
 
@@ -85,20 +85,19 @@ function assess_square_enemies(a, pos)
 
         if dist > 1
                 and see_cell
-                and (enemy:desc():find("wandering")
-                        and not enemy:desc():find("mushroom")
-                    or enemy:desc():find("sleeping")
-                    or enemy:desc():find("dormant")) then
+                and (enemy:is("wandering")
+                    or enemy:is("sleeping")
+                    or enemy:is("dormant")) then
             a.unalert = a.unalert + 1
         end
 
         if dist >= 4
                 and see_cell
                 and ranged
-                and not (enemy:desc():find("wandering")
-                    or enemy:desc():find("sleeping")
-                    or enemy:desc():find("dormant")
-                    or enemy:desc():find("stupefied")
+                and not (enemy:is("wandering")
+                    or enemy:is("sleeping")
+                    or enemy:is("dormant")
+                    or enemy:is("dumb")
                     or liquid_bound
                     or enemy:is_stationary())
                 and enemy:can_move_to_player_melee() then
@@ -130,6 +129,7 @@ function distance_to_tabbable_enemy()
     end
     return best_dist
 end
+
 function assess_square(pos)
     a = {}
 
@@ -505,13 +505,12 @@ function monster_can_move_to_player_melee(mons)
     local tab_func = function(pos)
         return mons:can_traverse(pos)
     end
-    local monster_range = mons:reach_range()
-    return get_move_towards(mons:pos(), origin, tab_func, monster_range)
+    return get_move_towards(mons:pos(), origin, tab_func, mons:reach_range())
         -- If the monster can reach attack and we can't, be sure we can
         -- close the final 1-square gap.
-        and (monster_range < 2
+        and (mons:reach_range() < 2
             or player_range > 1
-            or player_can_move_closer(pos))
+            or player_can_move_closer(mons:pos()))
 end
 
 function best_move_towards_destination(no_exclusions, radius)
@@ -521,12 +520,12 @@ function best_move_towards_destination(no_exclusions, radius)
             gameplan_travel.first_dir)
         move, dest = best_move_towards_features(feats, no_exclusions, radius)
     elseif gameplan_travel.first_branch then
-        move, dest = best_move_towards_features(
+        move, dest = best_move_towards_feature(
             branch_entrance(gameplan_travel.first_branch), no_exclusions,
             radius)
     elseif gameplan_status:find("^God:") then
         local god = gameplan_god(gameplan_status)
-        move, dest = best_move_towards_features(god_altar(god), no_exclusions,
+        move, dest = best_move_towards_feature(god_altar(god), no_exclusions,
             radius)
     end
 

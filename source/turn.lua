@@ -126,6 +126,8 @@ function turn_update()
 
     if turns_left_moving_towards_enemy > 0 then
         turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
+    else
+        enemy_memory = nil
     end
 
     danger = sense_danger(los_radius)

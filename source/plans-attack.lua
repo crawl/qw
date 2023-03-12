@@ -199,6 +199,9 @@ function assess_explosion(attack, target)
 end
 
 function assess_ranged_target(attack, target)
+    if debug_channel("ranged") then
+        dsay("Targeting " .. pos_string(target))
+    end
     local positions = spells.path(attack.test_spell, target.x, target.y, false)
     local result = { pos = target }
     local past_target, at_target_result
@@ -291,7 +294,7 @@ end
 function weapon_test_spell(weapon)
     if weapon.class(true) == "missile" then
         if weapon:name():find("javelin") then
-            return "Dispelling Breath"
+            return "Quicksilver Bolt"
         else
             return "Magic Dart"
         end
@@ -341,7 +344,7 @@ function get_ranged_target(weapon, prefer_melee)
                 -- Don't try this ranged attack if we prefer melee and could
                 -- use the turn to move into melee range.
                 and not (prefer_melee
-                    and enemy:distance() == reach_range() - 1
+                    and enemy:distance() == reach_range() + 1
                     and enemy:get_player_move_towards()) then
             local result
             if explosion then
@@ -355,7 +358,9 @@ function get_ranged_target(weapon, prefer_melee)
             end
         end
     end
-    return best_result.pos
+    if best_result then
+        return best_result.pos
+    end
 end
 
 function throw_missile(missile, pos)
@@ -377,7 +382,7 @@ function plan_throw()
         return false
     end
 
-    local target = get_ranged_target(missile)
+    local target = get_ranged_target(missile, true)
     if not target then
         return false
     end

@@ -233,7 +233,7 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
             if not update_pos then
                 update_pos = pos
             end
-            update_pos.came_unexcluded = true
+            update_pos.propagate_unexcluded = true
         end
     elseif center.propagate_excluded and unexcluded then
         if not best_excluded_dist then
@@ -537,6 +537,10 @@ function best_move_towards_features(feats, no_exclusions, radius)
     if #positions > 0 then
         return best_move_towards(positions, no_exclusions, radius)
     end
+end
+
+function best_move_towards_feature(feat, no_exclusions, radius)
+    return best_move_towards_features({ feat })
 end
 
 function record_feature_position(pos)
