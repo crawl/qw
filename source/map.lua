@@ -594,8 +594,10 @@ function handle_exclusions(new_waypoint)
     end
 
     for _, enemy in ipairs(enemy_list) do
-        local pos = enemy:pos()
-        travel.set_exclude(pos.x, pos.y)
-        c_persist.exclusions[where][hash_position(pos)] = true
+        if not enemy:is_summoned() then
+            local pos = enemy:pos()
+            travel.set_exclude(pos.x, pos.y)
+            c_persist.exclusions[where][hash_position(pos)] = true
+        end
     end
 end

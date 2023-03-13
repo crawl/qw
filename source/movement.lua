@@ -356,7 +356,9 @@ function move_search(search, current)
     end
 
     local function search_from(pos)
-        if search.attempted[pos.x] and search.attempted[pos.x][pos.y] then
+        if search.attempted[pos.x] and search.attempted[pos.x][pos.y]
+                -- Our search should never leave LOS.
+                or supdist(pos) > los_radius then
             return false
         end
 
