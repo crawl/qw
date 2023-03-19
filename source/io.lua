@@ -64,10 +64,10 @@ end
 -- variables managed by turn_update(). Use the clua interfaces like you.where()
 -- directly to get info about game status.
 function c_message(text, channel)
-    if text:find("Sigmund flickers and vanishes") then
-        invis_sigmund = true
+    if text:find("Sigmund flickers and vanishes") and you.xl() < 10 then
+        invis_caster = true
     elseif text:find("Your surroundings suddenly seem different") then
-        invis_sigmund = false
+        invis_caster = false
     elseif text:find("Your pager goes off") then
         have_message = true
     elseif text:find("Done exploring") then

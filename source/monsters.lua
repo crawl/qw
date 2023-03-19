@@ -57,7 +57,7 @@ function hydra_check_flaming(lev)
     return function (mons)
         return you.xl() < lev
             and mons:desc():find("hydra")
-            and not contains_string_in(enemy:name(),
+            and not contains_string_in(mons:name(),
                 { "skeleton", "zombie", "simulacrum", "spectral" })
             and hydra_weapon_status(items.equipped_at("Weapon")) ~= 1
     end
@@ -553,27 +553,30 @@ function sense_danger(radius, moveable)
     return false
 end
 
-function sense_sigmund()
-    local see_sigmund = false
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:name() == "Sigmund" then
-            sigmund_pos = enemy:pos()
-            see_sigmund = true
-            break
+function handle_invis_monsters()
+    local see_caster = false
+    if you.xl() < 10 then
+        for _, enemy in ipairs(enemy_list) do
+            if enemy:name() == "Sigmund" then
+                invis_caster_pos = enemy:pos()
+                see_caster = true
+                break
+            end
         end
     end
 
-    if invis_sigmund and invis_sigmund_count > 100 then
-        say("Invisible monster not found???")
+    if invis_caster and invis_caster_turns > 100 then
+        say("Invisibility caster not found???")
         if not options.autopick_on then
             magic(control('a'))
             coroutine.yield()
         end
     end
 
-    if see_sigmund or options.autopick_on then
-        invis_sigmund_count = 0
-        invis_sigmund = false
+    if see_caster or options.autopick_on then
+        invis_caster = false
+        invis_caster_turns = 0
+        invis_caster_pos = nil
     end
 end
 

@@ -760,7 +760,7 @@ function want_magic_points()
                 and want_to_divine_warrior())
 end
 
-function want_to_hand()
+function want_to_trogs_hand()
     return danger
         and not dangerous_to_attack()
         and check_monster_list(los_radius, hand_monsters)
@@ -771,7 +771,7 @@ function want_to_berserk()
         and not dangerous_to_melee()
         and (hp_is_low(50) and sense_danger(2, true)
             or check_monster_list(2, scary_monsters)
-            or invis_sigmund and not options.autopick_on)
+            or invis_caster and not options.autopick_on)
 end
 
 function want_to_heroism()
@@ -895,6 +895,11 @@ function plan_special_purification()
 end
 
 function plan_dig_grate()
+    local wand = find_item("wand", "digging")
+    if not wand or not can_zap() then
+        return false
+    end
+
     local grate_mon_list
     local grate_count_needed = 3
     if in_branch("Zot") then
@@ -920,7 +925,7 @@ function plan_dig_grate()
             local grate_count = 0
             local grate_offset = 20
             local grate_pos
-            for pos in adjacent_iterator(enemy:pos()) do
+            for pos in adjacent_iter(enemy:pos()) do
                 if supdist(pos) <= los_radius
                         and view.feature_at(pos.x, pos.y) == "iron_grate" then
                     grate_count = grate_count + 1
@@ -932,13 +937,10 @@ function plan_dig_grate()
                 end
             end
             if grate_count >= grate_count_needed and grate_offset < 20 then
-                local wand = find_item("wand", "digging")
-                if wand and can_zap() then
-                    say("ZAPPING " .. item(wand).name() .. ".")
-                    magic("V" .. letter(wand) .. "r" .. vector_move(grate_pos)
-                        .. "\r")
-                    return true
-                end
+                say("ZAPPING " .. item(wand).name() .. ".")
+                magic("V" .. letter(wand) .. "r" .. vector_move(grate_pos)
+                    .. "\r")
+                return true
             end
         end
     end

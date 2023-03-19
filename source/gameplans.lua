@@ -153,6 +153,22 @@ end
 
 function choose_gameplan()
     local next_gameplan, chosen_gameplan, normal_gameplan
+
+    if debug_gameplan then
+        if debug_gameplan == "Normal" then
+            normal_gameplan = gameplan_normal_next(false)
+            if normal_gameplan then
+                chosen_gameplan = debug_gameplan
+            else
+                debug_gameplan = nil
+            end
+        elseif gameplan_complete(debug_gameplan) then
+            debug_gameplan = nil
+        else
+            chosen_gameplan = debug_gameplan
+        end
+    end
+
     while not chosen_gameplan and which_gameplan <= #gameplan_list do
         chosen_gameplan = gameplan_list[which_gameplan]
         next_gameplan = gameplan_list[which_gameplan + 1]
@@ -441,7 +457,7 @@ end
 -- @number      first  The first level in the range.
 -- @number[opt] last   The last level in the range, defaulting to the branch end.
 --                     If negative, the range stops that many levels from the
---                     end of the end of the branch
+--                     end of the branch.
 -- @treturn string The level range.
 function make_level_range(branch, first, last)
     local max_depth = branch_depth(branch)

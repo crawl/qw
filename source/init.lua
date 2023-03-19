@@ -32,6 +32,8 @@ function initialize()
         initialize_branch_data()
         initialize_god_data()
         first_turn_initialize()
+    else
+        global_map_update = true
     end
 
     initialize_c_persist()
@@ -40,6 +42,7 @@ function initialize()
 
     calc_los_radius()
     initialize_monster_map()
+    map_update_radius = GXM
 
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)

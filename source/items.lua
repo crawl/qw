@@ -866,7 +866,11 @@ function want_wand(it)
     end
 
     local sub = it.subtype()
-    if sub and sub == "digging" then
+    if sub == nil then
+        return true
+    end
+
+    if sub == "digging" then
         return true
     end
 

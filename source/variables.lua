@@ -61,8 +61,8 @@ local have_message = false
 local read_message = true
 
 local gameplan_list
-local override_gameplans
 local which_gameplan = 1
+local debug_gameplan
 local gameplan_status
 local gameplan_branch
 local gameplan_depth
@@ -94,22 +94,13 @@ local where
 local where_branch
 local where_depth
 
-local turn_count = you.turns() - 1
-local time_passed
-local memos
-
-local los_radius
 local base_corrosion
 local level_has_upstairs
 local open_runed_doors
 local permanent_bazaar
 local dislike_pan_level = false
 
-local disable_autoexplore
-local last_wait = 0
-local wait_count = 0
-local hiding_turn_count = -100
-
+local global_map_update = false
 local waypoint_parity
 local waypoint = {}
 local level_feature_searches
@@ -143,6 +134,16 @@ local transp_zone
 local transp_orient
 local transp_search
 
+local turn_count = you.turns() - 1
+local time_passed
+local memos
+
+local los_radius
+local disable_autoexplore
+local last_wait = 0
+local wait_count = 0
+local hiding_turn_count = -100
+
 local prev_hatch_dist = 1000
 local prev_hatch
 
@@ -160,12 +161,13 @@ local melee_target
 local incoming_melee_turn = -1
 local full_hp_turn = 0
 
-local invisi_count = 0
 local next_delay = 100
 local is_waiting
 
-local sigmund_pos
-local invis_sigmund = false
+local invis_caster = false
+local invis_caster_pos
+local invis_caster_turns = 0
+
 local greater_servant_timer = -200
 
 local enemy_memory

@@ -72,6 +72,10 @@ function record_map_mode_search(key, start_hash, count, end_hash)
 end
 
 function clear_map_data(num)
+    if not num then
+        num = waypoint_parity
+    end
+
     level_feature_searches[num] = {}
     level_feature_positions[num] = {}
     level_item_searches[num] = {}
@@ -110,14 +114,14 @@ function find_features(radius)
         end
 
         local feat = view.feature_at(pos.x, pos.y)
-        local dpos = position_sum(waypoint, pos)
+        local gpos = position_sum(waypoint, pos)
         if feature_searches[feat] then
             if not feature_positions[feat] then
                 feature_positions[feat] = {}
             end
-            local hash = hash_position(dpos)
+            local hash = hash_position(gpos)
             if not feature_positions[feat][hash] then
-                feature_positions[feat][hash] = dpos
+                feature_positions[feat][hash] = gpos
             end
         end
         i = i + 1
@@ -147,8 +151,7 @@ function distance_map_initialize(pos, hash, radius)
     return dist_map
 end
 
-function handle_feature_searches(pos, dist_queues)
-    local feat = view.feature_at(pos.x, pos.y)
+function handle_feature_searches(feat, pos)
     if feature_searches[feat] then
         if not feature_positions[feat] then
             feature_positions[feat] = {}
@@ -272,7 +275,7 @@ function distance_map_queue_update(dist_map)
     dist_map.queue = {}
 end
 
-function record_map_item(name, pos, dist_queues)
+function record_map_item(name, pos)
     if not item_positions[name] then
         item_positions[name] = {}
     end
@@ -291,7 +294,7 @@ function record_map_item(name, pos, dist_queues)
     table.insert(distance_maps[pos_hash].queue, pos)
 end
 
-function handle_item_searches(pos, dist_queues)
+function handle_item_searches(pos)
     -- Don't do an expensive iteration over all items if we don't have an
     -- active search. TODO: Maybe move the search trigger to the autopickup
     -- function so that this optimization is more accurate. Since that happens
@@ -301,7 +304,8 @@ function handle_item_searches(pos, dist_queues)
         return
     end
 
-    local floor_items = items.get_items_at(pos.x, pos.y)
+    local floor_items = items.get_items_at(pos.x - waypoint.x,
+        pos.y - waypoint.y)
     if not floor_items then
         return
     end
@@ -309,7 +313,7 @@ function handle_item_searches(pos, dist_queues)
     for _, it in ipairs(floor_items) do
         local name = it:name()
         if item_searches[name] then
-            record_map_item(name, pos, dist_queues)
+            record_map_item(name, pos)
             return
         end
     end
@@ -333,7 +337,7 @@ function distance_map_update_pos(pos, dist_map)
         dist_map.map[pos.x][pos.y] = dist + 1
         update_pos = pos
         update_pos.propagate_traversable = true
-    -- If we're not traversable yet have a map distance, we just propagate
+    -- If we're not traversable yet have a map distance, we just became
     -- untraversable, so nil both map distances.
     elseif not traversable and dist_map.map[pos.x][pos.y] then
         dist_map.map[pos.x][pos.y] = nil
@@ -354,8 +358,8 @@ function distance_map_update_pos(pos, dist_map)
             update_pos = pos
         end
         update_pos.propagate_unexcluded = true
-    -- We're excluded yet have an excluded distance, so we propagate the
-    -- exclusion.
+    -- We're excluded yet have an excluded distance, so we just became
+    -- excluded.
     elseif excluded and dist_map.excluded_map[pos.x][pos.y] then
         dist_map.excluded_map[pos.x][pos.y] = nil
         if not update_pos then
@@ -369,42 +373,59 @@ function distance_map_update_pos(pos, dist_map)
     end
 end
 
+--[[
+Are the given player coordinates unexcluded? See the variables
+exclusion_maps/exclusion_map to check a cache of this for global coordinates.
+@table pos The position
+@treturn boolean True if coordinates are unexcluded, false otherwise.
+--]]
 function is_unexcluded(pos)
     return not (view.in_known_map_bounds(pos.x, pos.y)
         and travel.is_excluded(pos.x, pos.y))
 end
 
-function los_map_update()
-    local map_queue = {}
-    for pos in square_iter(origin, los_radius, true) do
-        local feat = view.feature_at(pos.x, pos.y)
-        if feat:find("stone_stairs") then
-            record_feature_position(pos)
-            record_stairs(where_branch, where_depth, feat, los_state(pos))
-        elseif feat:find("enter_") then
-            record_branch(pos)
-        elseif feat:find("exit_") then
-            record_feature_position(pos)
-        elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
-            record_altar(pos)
-        end
-
-        local gpos = position_sum(waypoint, pos)
-        if move_destination
-                and gpos.x == move_destination.x
-                and gpos.y == move_destination.y
-                and (move_reason == "monster"
-                        and you.see_cell_no_trans(pos.x, pos.y)
-                    or pos.x == 0 and pos.y == 0) then
-            move_destination = nil
-            move_reason = nil
-        end
-
-        traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
-        exclusion_map[gpos.x][gpos.y] = is_unexcluded(pos)
-
-        table.insert(map_queue, gpos)
+function update_map_position(pos, map_queue)
+    local gpos = position_sum(waypoint, pos)
+    if supdist(gpos) > GXM then
+        return
     end
+
+    local feat = view.feature_at(pos.x, pos.y)
+    if feat:find("stone_stairs") then
+        record_feature_position(pos)
+        record_stairs(where_branch, where_depth, feat, los_state(pos))
+    elseif feat:find("enter_") then
+        record_branch(pos)
+    elseif feat:find("exit_") then
+        record_feature_position(pos)
+    elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
+        record_altar(pos)
+    end
+
+    if move_destination
+            and gpos.x == move_destination.x
+            and gpos.y == move_destination.y
+            and (move_reason == "monster"
+                    and you.see_cell_no_trans(pos.x, pos.y)
+                or pos.x == 0 and pos.y == 0) then
+        move_destination = nil
+        move_reason = nil
+    end
+
+    traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
+    exclusion_map[gpos.x][gpos.y] = is_unexcluded(pos)
+
+    table.insert(map_queue, gpos)
+end
+
+function map_update()
+    local radius = global_map_update and GXM or los_radius
+    local map_queue = {}
+    for pos in square_iter(origin, radius, true) do
+        update_map_position(pos, map_queue)
+    end
+
+    global_map_update = false
 
     for i, pos in ipairs(map_queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
@@ -413,7 +434,7 @@ function los_map_update()
 
         local feat = view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y)
         if feat ~= "unseen" then
-            handle_feature_searches(pos)
+            handle_feature_searches(feat, pos)
             handle_item_searches(pos)
 
             for _, dist_map in pairs(distance_maps) do
@@ -461,7 +482,7 @@ function update_map_data()
         item_searches["the orb of Zot"] = true
     end
 
-    los_map_update()
+    map_update()
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)
@@ -540,7 +561,7 @@ function best_move_towards_features(feats, no_exclusions, radius)
 end
 
 function best_move_towards_feature(feat, no_exclusions, radius)
-    return best_move_towards_features({ feat })
+    return best_move_towards_features({ feat }, no_exclusions, radius)
 end
 
 function record_feature_position(pos)
@@ -558,8 +579,11 @@ end
 function remove_exclusions(record_only)
     if not record_only and c_persist.exclusions[where] then
         for hash, _ in pairs(c_persist.exclusions[where]) do
-            local pos = unhash_position(hash)
-            travel.del_exclude(pos.x - waypoint.x, pos.y - waypoint.y)
+            local pos = position_difference(unhash_position(hash), waypoint)
+            if debug_channel("combat") then
+                dsay("Unexcluding position " .. pos_string(pos))
+            end
+            travel.del_exclude(pos.x, pos.y)
         end
     end
 
@@ -596,8 +620,12 @@ function handle_exclusions(new_waypoint)
     for _, enemy in ipairs(enemy_list) do
         if not enemy:is_summoned() then
             local pos = enemy:pos()
+            if debug_channel("combat") then
+                dsay("Excluding " .. enemy:name() .. " at " .. pos_string(pos))
+            end
             travel.set_exclude(pos.x, pos.y)
-            c_persist.exclusions[where][hash_position(pos)] = true
+            local hash = hash_position(position_sum(waypoint, pos))
+            c_persist.exclusions[where][hash] = true
         end
     end
 end

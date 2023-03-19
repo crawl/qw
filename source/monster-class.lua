@@ -203,6 +203,10 @@ function Monster:reach_range()
     return self:get_property("reach_range")
 end
 
+function Monster:is_constricted()
+    return self:get_property("is_constricted")
+end
+
 function Monster:is_constricting_you()
     return self:get_property("is_constricting_you")
 end

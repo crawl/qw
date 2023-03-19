@@ -114,23 +114,25 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
     end
 end
 
--- Search branch and stair data from a starting level to a destination level,
--- returning the furthest point to which we know we can travel.
--- @string  start_branch The starting branch. Defaults to the current branch.
--- @int     start_depth  The starting depth. Defaults to the current depth.
--- @string  dest_branch  The destination branch.
--- @int     dest_depth   The destination depth.
--- @treturn table        The travel search results. A table that always
---                       contains keys 'branch' and 'depth' containing the
---                       furthest level reached. If a 'stairs_dir' key is
---                       present, we should do a map mode stairs search to take
---                       unexplored stairs in the given direction. If the
---                       travel destination is not the current level, the table
---                       will have either a key of 'first_dir' indicating the
---                       first stair direction we should take during travel, or
---                       a key of 'first_branch' indicating that we should
---                       first proceed into the given branch. These two values
---                       are used by movement plans when we're stuck.
+--[[
+Search branch and stair data from a starting level to a destination level,
+returning the furthest point to which we know we can travel.
+@string  start_branch The starting branch. Defaults to the current branch.
+@int     start_depth  The starting depth. Defaults to the current depth.
+@string  dest_branch  The destination branch.
+@int     dest_depth   The destination depth.
+@treturn table        The travel search results. A table that always
+                      contains keys 'branch' and 'depth' containing the
+                      furthest level reached. If a 'stairs_dir' key is
+                      present, we should do a map mode stairs search to take
+                      unexplored stairs in the given direction. If the
+                      travel destination is not the current level, the table
+                      will have either a key of 'first_dir' indicating the
+                      first stair direction we should take during travel, or
+                      a key of 'first_branch' indicating that we should
+                      first proceed into the given branch. These two values
+                      are used by movement plans when we're stuck.
+--]]
 function travel_destination_search(dest_branch, dest_depth, start_branch,
         start_depth)
     if not start_branch then

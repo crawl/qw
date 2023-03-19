@@ -141,7 +141,7 @@ function turn_update()
         move_reason = nil
     end
 
-    sense_sigmund()
+    handle_invis_monsters()
     find_good_stairs()
 
     choose_tactical_step()

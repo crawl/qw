@@ -334,14 +334,22 @@ function plan_stuck_move_towards_monster()
         end
     end
 
-    if #mons_targets > 0 then
-        local move, dest = best_move_towards(mons_targets)
-        if move then
-            move_destination = dest
-            move_reason = "monster"
-            move_to(move)
-            return true
-        end
+    if #mons_targets == 0 then
+        return false
+    end
+
+    local move, dest = best_move_towards(mons_targets)
+    if move then
+        move_destination = dest
+        move_reason = "monster"
+        move_to(move)
+        return true
+    end
+
+    move = get_move_closer(mons_targets)
+    if move then
+        move_to(move)
+        return true
     end
 
     return false

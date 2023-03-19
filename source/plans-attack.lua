@@ -3,11 +3,11 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_sigmund or dangerous_to_melee() then
+    if options.autopick_on or dangerous_to_melee() then
         return false
     end
 
-    invis_sigmund_count = invis_sigmund_count + 1
+    invis_caster_turns = invis_caster_turns + 1
     for pos in adjacent_iter(origin) do
         if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
             magic(control(delta_to_vi(pos)))
@@ -15,46 +15,41 @@ function plan_flail_at_invis()
         end
     end
 
-    if supdist(sigmund_pos) > 0 then
-        if is_adjacent(sigmund_pos) and is_traversable(sigmund_pos) then
-            magic(control(delta_to_vi(sigmund_pos)))
+    if invis_caster and supdist(invis_caster_pos) > 0 then
+        if is_adjacent(invis_caster_pos)
+                and not is_solid_at(invis_caster_pos) then
+            magic(control(delta_to_vi(invis_caster_pos)))
             return true
         end
 
-        if sigmund_pos.x == 0 then
-            local apos = { x = 0, y = sign(sigmund_pos.y) }
-            if is_traversable(apos) then
-                magic(delta_to_vi())
+        if invis_caster_pos.x == 0 then
+            local apos = { x = 0, y = sign(invis_caster_pos.y) }
+            if not is_solid_at(apos) then
+                magic(delta_to_vi(apos))
                 return true
             end
         end
 
-        if sigmund_pos.y == 0 then
-            local apos = { x = sign(sigmund_pos.x), y = 0 }
-            if is_traversable(apos) then
-                magic(delta_to_vi())
+        if invis_caster_pos.y == 0 then
+            local apos = { x = sign(invis_caster_pos.x), y = 0 }
+            if not is_solid_at(apos) then
+                magic(delta_to_vi(apos))
                 return true
             end
         end
     end
 
-    local success = false
     local tries = 0
-    while not success and tries < 100 do
+    while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0
-                and is_traversable_at(pos)
-                and not is_solid_at(pos) then
-            success = true
+        if supdist(pos) > 0 and not is_solid_at(pos) then
+            magic(control(delta_to_vi(pos)))
+            return true
         end
     end
-    if not success then
-        return false
-    end
 
-    magic(control(delta_to_vi(pos)))
-    return true
+    return false
 end
 
 -- Is the result from an attack on the first target better than the current
@@ -488,7 +483,7 @@ function plan_poison_spit()
 end
 
 function plan_flight_move_towards_enemy()
-    if not danger or dangerous_to_move() then
+    if not danger or dangerous_to_attack() or dangerous_to_move() then
         return false
     end
 
@@ -515,7 +510,7 @@ function plan_flight_move_towards_enemy()
 end
 
 function plan_move_towards_enemy()
-    if not danger or dangerous_to_move() then
+    if not danger or dangerous_to_attack() or dangerous_to_move() then
         return false
     end
 

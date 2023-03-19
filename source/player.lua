@@ -3,29 +3,23 @@
 
 function intrinsic_rpois()
     local sp = you.race()
-    if sp == "Gargoyle" or sp == "Naga" or sp == "Ghoul" or sp == "Mummy" then
-        return true
-    end
-    return false
+    return sp == "Gargoyle" or sp == "Naga" or sp == "Ghoul" or sp == "Mummy"
 end
 
 function intrinsic_relec()
-    local sp = you.race()
-    if sp == "Gargoyle" then
-        return true
-    end
-    return false
+    return sp == "Gargoyle"
 end
 
 function intrinsic_sinv()
     local sp = you.race()
-    if sp == "Naga" or sp == "Felid" or sp == "Formicid"
+    if sp == "Naga"
+            or sp == "Felid"
+            or sp == "Formicid"
             or sp == "Vampire" then
         return true
     end
 
-    -- We assume TSO piety won't drop below 2* and that we won't change gods
-    -- away from TSO.
+    -- We assume that we won't change gods away from TSO.
     if you.god() == "the Shining One" and you.piety_rank() >= 2 then
         return true
     end
@@ -35,7 +29,8 @@ end
 
 function intrinsic_flight()
     local sp = you.race()
-    return (sp == "Gargoyle" or sp == "Black Draconian") and you.xl() >= 14
+    return (sp == "Gargoyle"
+        or sp == "Black Draconian") and you.xl() >= 14
         or sp == "Tengu" and you.xl() >= 5
 end
 

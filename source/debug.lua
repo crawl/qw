@@ -39,6 +39,10 @@ function debug_channel(channel)
 end
 
 function dsay(x, channel)
+    if not channel then
+        channel = "main"
+    end
+
     local str
     if type(x) == "table" then
         str = stringify_table(x)
@@ -139,4 +143,9 @@ function set_counter()
     local res = crawl.c_input_line()
     c_persist.record.counter = tonumber(res)
     note("Game counter set to " .. c_persist.record.counter)
+end
+
+function override_gameplan(gameplan)
+    debug_gameplan = gameplan
+    update_gameplan()
 end
