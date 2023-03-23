@@ -211,6 +211,12 @@ function step_reason(a1, a2)
             -- attacked.
             and a1.adjacent == 0
             and a2.adjacent == 0
+            -- At low XL, we want to flee to known stairs when autoexplore is
+            -- disabled, instead of engaging in combat. Since autoexplore is
+            -- disabled, we don't want to explore the current level and will be
+            -- taking stairs to some new destination, which is usually a level
+            -- above us. This rule makes Delvers to climb upwards if they
+            -- can, instead of fighting dangerous monsters.
             and (reason_to_rest(90) or you.xl() <= 8 and disable_autoexplore)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then

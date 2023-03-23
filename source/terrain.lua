@@ -42,7 +42,7 @@ end
 
 function feature_is_upstairs(feat)
     return feat:find("^stone_stairs_up")
-        or feat:find("^exit_") and not feat == "exit_dungeon"
+        or feat:find("^exit_") and feat ~= "exit_dungeon"
 end
 
 function feature_is_runed_door(feat)
@@ -86,11 +86,6 @@ function stone_stair_type(feat)
 
     return dir, feat:gsub("stone_stairs_"
         .. (dir == DIR.DOWN and "down_" or "up_"), "")
-end
-
-function feature_is_upstairs(feat)
-    return feat:find("stone_stairs_up")
-        or feat:find("^exit_") and not feat == "exit_dungeon"
 end
 
 function cloud_is_dangerous(cloud)

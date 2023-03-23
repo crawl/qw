@@ -143,11 +143,14 @@ function branch_exit(branch)
         error("Unknown branch: " .. tostring(branch))
     end
 
+    local result
     if branch_data[branch].entrance then
-        return branch_data[branch].entrance:gsub("enter", "exit", 1)
+        -- We want only the first result from string.gsub().
+        result = branch_data[branch].entrance:gsub("enter", "exit", 1)
     else
-        return "exit_dungeon"
+        result = "exit_dungeon"
     end
+    return result
 end
 
 function portal_entrance_description(portal)

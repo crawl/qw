@@ -39,7 +39,9 @@ end
 
 -- Remove leading and trailing whitespace.
 function trim(str)
-    return str:gsub("^%s+", ""):gsub("%s+$", "")
+    -- We do this to avoid returning multiple results from string.gsub().
+    local result = str:gsub("^%s+", ""):gsub("%s+$", "")
+    return result
 end
 
 function control(c)
