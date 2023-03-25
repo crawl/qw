@@ -105,9 +105,9 @@ end
 function plan_exit_portal()
     if not in_portal()
             -- Zigs have their own exit rules.
-            or gameplan_branch == "Zig"
+            or where_branch == "Zig"
             or you.mesmerised()
-            or not view.feature_at(0, 0):find("exit_" .. where:lower()) then
+            or not view.feature_at(0, 0) == branch_exit(where_branch) then
         return false
     end
 

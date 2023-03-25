@@ -13,7 +13,7 @@ function plan_go_to_unexplored_stairs()
     end
 
     local key = dir_key(gameplan_travel.stairs_dir)
-    local hash = hash_position(waypoint)
+    local hash = hash_position(global_pos)
     local searches = map_mode_searches[key]
     local count = 1
     while searches and searches[hash] and searches[hash][count] do
@@ -33,11 +33,6 @@ function plan_go_to_unexplored_stairs()
     map_mode_search_count = count
     map_mode_search_attempts = 1
     magic("X" .. key:rep(count) .. "\r")
-end
-
-function can_use_transporters()
-    return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
-        and (in_branch("Temple") or in_portal())
 end
 
 function plan_go_to_transporter()

@@ -98,16 +98,15 @@ function ttt()
 end
 
 function print_traversal_map()
-    local traversal_map = traversal_maps[waypoint_parity]
     local str
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            if traversal_map[waypoint.x + x][waypoint.y + y] == nil then
+            if traversal_map[global_pos.x + x][global_pos.y + y] == nil then
                 str = str .. " "
             else
-                str = str .. (traversal_map[waypoint.x + x][waypoint.y + y]
+                str = str .. (traversal_map[global_pos.x + x][global_pos.y + y]
                     and "." or "#")
             end
         end
@@ -116,21 +115,20 @@ function print_traversal_map()
 end
 
 function print_distance_maps()
-    local dist_maps = distance_maps[waypoint_parity]
-    for hash, dist_map in pairs(dist_maps) do
+    for hash, dist_map in pairs(distance_maps) do
         local pos = unhash_position(hash)
         say("---------------------------------------")
         say("feature: "
-            .. view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y))
+            .. view.feature_at(pos.x - global_pos.x, pos.y - global_pos.y))
         -- This needs to iterate by row then column for display purposes.
         for y = -20, 20 do
             local str = ""
             for x = -20, 20 do
-                if dist_map[waypoint.x + x][waypoint.y + y] == nil then
+                if dist_map[global_pos.x + x][global_pos.y + y] == nil then
                     str = str .. " "
                 else
                     str = str .. string.char(string.byte('A')
-                        + dist_map[waypoint.x + x][waypoint.y + y])
+                        + dist_map[global_pos.x + x][global_pos.y + y])
                 end
             end
             say(str)
@@ -148,4 +146,24 @@ end
 function override_gameplan(gameplan)
     debug_gameplan = gameplan
     update_gameplan()
+end
+
+function pos_string(pos)
+    return "(" .. tostring(pos.x) .. "," .. tostring(pos.y) .. ")"
+end
+
+function cell_string(pos, global)
+    if global then
+        pos = position_difference(pos, global_pos)
+    end
+
+    local str = ""
+    if supdist(pos) <= los_radius then
+        local mons = monster.get_monster_at(pos.x, pos.y)
+        if mons then
+            str = mons:name() .. "; "
+        end
+    end
+
+    return str .. view.feature_at(pos.x, pos.y)
 end

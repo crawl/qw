@@ -553,7 +553,7 @@ function sense_danger(radius, moveable)
     return false
 end
 
-function handle_invis_monsters()
+function update_invis_monsters()
     local see_caster = false
     if you.xl() < 10 then
         for _, enemy in ipairs(enemy_list) do
@@ -624,7 +624,7 @@ function initialize_monster_map()
     end
 end
 
-function update_monster_map()
+function update_monsters()
     enemy_list = {}
     for pos in radius_iter(origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
@@ -646,6 +646,8 @@ function update_monster_map()
         move_target = nil
         move_reason = nil
     end
+
+    update_invis_monsters()
 end
 
 function monster_in_list(mons, mlist)

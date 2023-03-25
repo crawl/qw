@@ -58,7 +58,7 @@ function plan_go_to_pan_exit()
 end
 
 function plan_enter_pan()
-    if view.feature_at(0, 0) == "enter_pandemonium"
+    if view.feature_at(0, 0) == branch_entrance("Pan")
             and want_to_be_in_pan() then
         magic(">Y")
         return true
@@ -70,7 +70,7 @@ end
 local pan_stair_turn = -100
 function plan_go_down_pan()
     if view.feature_at(0, 0) == "transit_pandemonium"
-            or view.feature_at(0, 0) == "exit_pandemonium" then
+            or view.feature_at(0, 0) == branch_exit("Pan") then
         if pan_stair_turn == you.turns() then
             magic("X" .. control('f'))
             return true
@@ -91,7 +91,7 @@ function plan_dive_pan()
     end
 
     if view.feature_at(0, 0) == "transit_pandemonium"
-            or view.feature_at(0, 0) == "exit_pandemonium" then
+            or view.feature_at(0, 0) == branch_exit("Pan") then
         if pan_stair_turn == you.turns() then
             pan_failed_rune_count = you.num_runes()
             return false
@@ -108,7 +108,7 @@ function plan_dive_pan()
 end
 
 function plan_exit_pan()
-    if view.feature_at(0, 0) == "exit_pandemonium"
+    if view.feature_at(0, 0) == branch_exit("Pan")
             and not want_to_be_in_pan()
             and not you.mesmerised()
             and can_move() then

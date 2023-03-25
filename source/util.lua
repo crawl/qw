@@ -22,7 +22,7 @@ end
 function split(str, del)
     local res = {}
     local v
-    for v in string.gmatch(str, "([^" .. del .. "]+)") do
+    for v in str:gmatch("([^" .. del .. "]+)") do
         table.insert(res, v)
     end
     return res
@@ -114,8 +114,4 @@ end
 
 function is_adjacent(pos)
     return abs(pos.x) <= 1 and abs(pos.y) <= 1
-end
-
-function pos_string(pos)
-    return tostring(pos.x) .. ", " .. tostring(pos.y)
 end

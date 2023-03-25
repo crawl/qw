@@ -818,8 +818,8 @@ function plan_continue_flee()
                 and not is_solid_at(pos)
                 and view.is_safe_square(pos.x, pos.y) then
             local dist_map = get_distance_map(target_stair)
-            local val = dist_map[waypoint.x + pos.x][waypoint.y + pos.y]
-            if val and val < dist_map[waypoint.x][waypoint.y] then
+            local val = dist_map[global_pos.x + pos.x][global_pos.y + pos.y]
+            if val and val < dist_map[global_pos.x][global_pos.y] then
                 if debug_channel("main") then
                     dsay("STILL FLEEEEING.")
                 end

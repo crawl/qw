@@ -292,12 +292,15 @@ function plan_stuck_move_towards_destination()
 end
 
 function plan_exclusion_move()
-    if dangerous_to_move() or exclusion_map[waypoint.x][waypoint.y] then
+    if dangerous_to_move() or exclusion_map[global_pos.x][global_pos.y] then
         return false
     end
 
     local move, dest = best_move_towards_destination(true)
     if move then
+        if debug_channel("map") then
+            dsay("Found best move: " .. pos_string(move))
+        end
         move_destination = dest
         move_reason = "travel"
         move_to(move)
@@ -322,14 +325,14 @@ function plan_stuck_move_towards_monster()
 
     local mons_targets = {}
     for _, enemy in ipairs(enemy_list) do
-        table.insert(mons_targets, position_sum(waypoint, enemy:pos()))
+        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
     end
 
     if #mons_targets == 0 then
         for pos in square_iter(origin) do
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons and Monster:new(mons):is_enemy() then
-                table.insert(mons_targets, position_sum(waypoint, pos))
+                table.insert(mons_targets, position_sum(global_pos, pos))
             end
         end
     end

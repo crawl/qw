@@ -96,7 +96,7 @@ function god_altar(god)
         god = you.god()
     end
 
-    return "altar_" .. string.gsub(string.lower(god), " ", "_")
+    return "altar_" .. god:lower():gsub(" ", "_")
 end
 
 function god_uses_invocations(god)

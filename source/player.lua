@@ -363,5 +363,5 @@ end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
 function dangerous_to_attack()
-    return not exclusion_map[waypoint.x][waypoint.y]
+    return not exclusion_map[global_pos.x][global_pos.y]
 end

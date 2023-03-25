@@ -41,24 +41,28 @@ function turn_update()
         full_hp_turn = turn_count
     end
 
-    local new_waypoint = false
+    local new_level
+    local keep_map_cache = true
     if you.where() ~= where then
-        new_waypoint = update_waypoint_data()
+        new_level = true
+        level_parity = 3 - level_parity
 
-        if you.where() ~= previous_where or new_waypoint then
-            clear_map_data(waypoint_parity)
+        if you.where() ~= previous_where then
+            keep_map_cache = false
         end
+
         previous_where = where
         where = you.where()
         where_branch = you.branch()
         where_depth = you.depth()
         want_gameplan_update = true
 
-        level_has_upstairs = not in_portal()
-            and not in_branch("Abyss")
-            and not in_branch("Pan")
-            and (not in_branch("Tomb") or where_depth == 1)
-            and not in_hell_branch(where_branch)
+        can_retreat_upstairs = not (in_branch("D") and where_depth == 1
+            or in_portal()
+            or in_branch("Abyss")
+            or in_branch("Pan")
+            or in_branch("Tomb") and where_depth > 1
+            or in_hell_branch(where_branch))
         base_corrosion = in_branch("Dis") and 2 or 0
 
         local pan_parent, min_depth, max_depth = parent_branch("Pan")
@@ -72,15 +76,8 @@ function turn_update()
 
         target_stair = nil
         transp_zone = 0
-        zone_counts = {}
 
         stuck_turns = 0
-
-        if you.have_orb() and where == zot_end then
-            ignore_traps = true
-        else
-            ignore_traps = false
-        end
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
             vaults_end_entry_turn = turn_count
@@ -91,28 +88,14 @@ function turn_update()
         end
     end
 
-    transp_search = nil
-    if can_use_transporters() then
-        local feat = view.feature_at(0, 0)
-        if feature_uses_map_key(">", feat) and transp_search_zone then
-            if not transp_map[transp_search_zone] then
-                transp_map[transp_search_zone] = {}
-            end
-            transp_map[transp_search_zone][transp_search_count] = transp_zone
-            transp_search_zone = nil
-            transp_search_count = nil
-            if feat == "transporter" then
-                transp_search = transp_zone
-            end
-        elseif feat == "exit_" .. where_branch:lower() then
-            transp_zone = 0
-            transp_orient = false
-        end
+    if you.have_orb() and where == zot_end then
+        ignore_traps = true
+    else
+        ignore_traps = false
     end
 
-    update_monster_map()
-    handle_exclusions(new_waypoint)
-    update_map_data()
+    update_monsters()
+    update_map(new_level, keep_map_cache)
 
     if want_gameplan_update then
         update_gameplan()
@@ -141,7 +124,6 @@ function turn_update()
         move_reason = nil
     end
 
-    handle_invis_monsters()
     find_good_stairs()
 
     choose_tactical_step()

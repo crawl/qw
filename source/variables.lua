@@ -95,14 +95,13 @@ local where_branch
 local where_depth
 
 local base_corrosion
-local level_has_upstairs
+local can_retreat_upstairs
 local open_runed_doors
 local permanent_bazaar
 local dislike_pan_level = false
 
 local global_map_update = false
-local waypoint_parity
-local waypoint = {}
+local level_parity
 local level_feature_searches
 local feature_searches
 local level_feature_positions
@@ -115,9 +114,6 @@ local exclusion_maps
 local exclusion_map
 local level_distance_maps
 local distance_maps
-local good_stairs
-local target_stair
-local last_flee_turn = -100
 
 local level_map_mode_searches
 local map_mode_searches
@@ -133,6 +129,11 @@ local transp_search_count
 local transp_zone
 local transp_orient
 local transp_search
+
+local global_pos = {}
+local good_stairs
+local target_stair
+local last_flee_turn = -100
 
 local turn_count = you.turns() - 1
 local time_passed

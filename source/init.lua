@@ -52,7 +52,7 @@ function initialize()
     where_branch = "nowhere"
     where_depth = nil
 
-    if not waypoint_parity then
+    if not level_parity then
         traversal_maps = {}
         exclusion_maps = {}
 
@@ -62,10 +62,10 @@ function initialize()
         level_item_searches = {}
         level_map_mode_searches = {}
 
-        clear_map_data(1)
-        clear_map_data(2)
+        clear_level_map_cache(1, true)
+        clear_level_map_cache(2, true)
 
-        waypoint_parity = 1
+        level_parity = 1
         previous_where = "nowhere"
     end
 

@@ -97,7 +97,7 @@ function level_stair_reset(branch, depth, dir)
     if lev == where then
         map_mode_searches[dir_key(dir)] = nil
     elseif lev == previous_where then
-        level_map_mode_searches[3 - waypoint_parity][dir_key(dir)] = nil
+        level_map_mode_searches[3 - level_parity][dir_key(dir)] = nil
     end
 
     if where ~= lev then
@@ -189,9 +189,8 @@ end
 function minimum_enemy_stair_distance(dist_map, pspeed)
     local min_dist = 1000
     for _, enemy in ipairs(enemy_list) do
-        local x = waypoint.x + enemy:x_pos()
-        local y = waypoint.y + enemy:y_pos()
-        local dist = dist_map.map[x][y]
+        local gpos = position_sum(global_pos, enemy:pos())
+        local dist = dist_map.map[gpos.x][gpos.y]
         if dist == nil then
             dist = 10000
         end
@@ -217,7 +216,7 @@ end
 function find_good_stairs()
     good_stairs = {}
 
-    if not level_has_upstairs then
+    if not can_retreat_upstairs then
         return
     end
 
@@ -231,7 +230,7 @@ function find_good_stairs()
     local pspeed = player_speed()
     for _, pos in ipairs(stair_positions) do
         local dist_map = get_distance_map(pos)
-        local pdist = dist_map.map[waypoint.x][waypoint.y]
+        local pdist = dist_map.map[global_pos.x][global_pos.y]
         if pdist == nil then
             pdist = 10000
         end
@@ -243,7 +242,7 @@ function find_good_stairs()
 end
 
 function stair_improvement(pos)
-    if not level_has_upstairs then
+    if not can_retreat_upstairs then
         return 10000
     end
 
@@ -258,8 +257,8 @@ function stair_improvement(pos)
     local min_val = 10000
     for _, stair_pos in ipairs(good_stairs) do
         local dist_map = get_distance_map(stair_pos)
-        local val = dist_map.map[waypoint.x + pos.x][waypoint.y + pos.y]
-        if val and val < dist_map.map[waypoint.x][waypoint.y]
+        local val = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
+        if val and val < dist_map.map[global_pos.x][global_pos.y]
                 and val < min_val then
             min_val = val
         end
@@ -273,8 +272,8 @@ function set_stair_target(c)
     local best_stair
     for _, stair_pos in ipairs(good_stairs) do
         local dist_map = get_distance_map(stair_pos)
-        local val = dist_map.map[waypoint.x + pos.x][waypoint.y + pos.y]
-        if val and val < dist_map.map[waypoint.x][waypoint.y]
+        local val = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
+        if val and val < dist_map.map[global_pos.x][global_pos.y]
                 and val < min_val then
             min_val = val
             best_stair = hash

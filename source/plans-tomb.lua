@@ -38,27 +38,27 @@ function plan_tomb_go_to_hatch()
             return false
         end
         if view.feature_at(0, 0) == "escape_hatch_up" then
-            local new_hatch_dist = supdist(waypoint)
+            local new_hatch_dist = supdist(global_pos)
             if new_hatch_dist >= prev_hatch_dist
-                 and (waypoint.x ~= prev_hatch.x
-                     or waypoint.y ~= prev_hatch.y) then
+                 and (global_pos.x ~= prev_hatch.x
+                     or global_pos.y ~= prev_hatch.y) then
                 return false
             end
             prev_hatch_dist = new_hatch_dist
-            prev_hatch = waypoint
+            prev_hatch = global_pos
         end
         magic("X<\r")
         return true
     elseif where == "Tomb:1" then
         if view.feature_at(0, 0) == "escape_hatch_down" then
-            local new_hatch_dist = supdist(waypoint)
+            local new_hatch_dist = supdist(global_pos)
             if new_hatch_dist >= prev_hatch_dist
-                 and (waypoint.x ~= prev_hatch.x
-                     or waypoint.y ~= prev_hatch.y) then
+                 and (global_pos.x ~= prev_hatch.x
+                     or global_pos.y ~= prev_hatch.y) then
                 return false
             end
             prev_hatch_dist = new_hatch_dist
-            prev_hatch = waypoint
+            prev_hatch = global_pos
         end
         magic("X>\r")
         return true

@@ -128,11 +128,7 @@ end
 
 function plan_go_up()
     local feat = view.feature_at(0, 0)
-    if feat:find("stone_stairs_up")
-            or feat == "escape_hatch_up"
-            or feat == "exit_zot"
-            or feat == "exit_dungeon"
-            or feat == "exit_depths" then
+    if feature_is_upstairs(feat) or feat == "escape_hatch_up" then
         if you.mesmerised() then
             return false
         end

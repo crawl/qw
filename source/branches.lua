@@ -145,9 +145,9 @@ function branch_exit(branch)
 
     local result
     if branch_data[branch].entrance then
-        -- We want only the first result from string.gsub().
+        -- We want only the first result from gsub().
         result = branch_data[branch].entrance:gsub("enter", "exit", 1)
-    else
+    elseif branch == "D" then
         result = "exit_dungeon"
     end
     return result

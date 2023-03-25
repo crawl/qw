@@ -23,37 +23,30 @@ function dir_key(dir)
     return dir == DIR.DOWN and ">" or (dir == DIR.UP and "<" or nil)
 end
 
-function update_waypoint_data()
-    waypoint_parity = 3 - waypoint_parity
-    traversal_map = traversal_maps[waypoint_parity]
-    exclusion_map = exclusion_maps[waypoint_parity]
-    distance_maps = level_distance_maps[waypoint_parity]
-    feature_searches = level_feature_searches[waypoint_parity]
-    feature_positions = level_feature_positions[waypoint_parity]
-    item_searches = level_item_searches[waypoint_parity]
-    map_mode_searches = level_map_mode_searches[waypoint_parity]
-
-    local where = you.where()
+function update_waypoint()
     local place = where
-    if is_portal_branch(you.branch()) then
+    if in_portal() then
         place = "Portal"
     end
-    local waypoint_num, new_waypoint
-    if not c_persist.waypoints[place] then
-        c_persist.waypoints[place] = c_persist.waypoint_count
-        c_persist.waypoint_count = c_persist.waypoint_count + 1
-        travel.set_waypoint(c_persist.waypoints[place], 0, 0)
-        new_waypoint = true
-    end
-    local waypoint_num = c_persist.waypoints[place]
 
-    waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_num)
-    -- The waypoint became invalid due to entering a new Portal, a new Pan
-    -- level, or an Abyss shift, etc.
-    if not waypoint.x then
+    local new_waypoint = false
+    local waypoint_num = c_persist.waypoints[place]
+    if not waypoint_num then
+        waypoint_num = c_persist.waypoint_count
+        c_persist.waypoints[place] = waypoint_num
+        c_persist.waypoint_count = waypoint_num + 1
         travel.set_waypoint(waypoint_num, 0, 0)
         new_waypoint = true
-        waypoint.x, waypoint.y = travel.waypoint_delta(waypoint_num)
+    end
+
+    global_pos.x, global_pos.y = travel.waypoint_delta(waypoint_num)
+
+    -- The waypoint can become invalid due to entering a new Portal, a new Pan
+    -- level, or due to an Abyss shift, etc.
+    if not global_pos.x then
+        travel.set_waypoint(waypoint_num, 0, 0)
+        global_pos.x, global_pos.y = travel.waypoint_delta(waypoint_num)
+        new_waypoint = true
     end
 
     return new_waypoint
@@ -71,27 +64,26 @@ function record_map_mode_search(key, start_hash, count, end_hash)
     map_mode_searches[key][start_hash][count] = end_hash
 end
 
-function clear_map_data(num)
-    if not num then
-        num = waypoint_parity
+function clear_level_map_cache(parity, full_clear)
+    if full_clear then
+        level_feature_searches[parity] = {}
+        level_item_searches[parity] = {}
+
+        level_map_mode_searches[parity] = {}
     end
 
-    level_feature_searches[num] = {}
-    level_feature_positions[num] = {}
-    level_item_searches[num] = {}
-    level_distance_maps[num] = {}
+    level_feature_positions[parity] = {}
+    level_distance_maps[parity] = {}
 
-    traversal_maps[num] = {}
+    traversal_maps[parity] = {}
     for x = -GXM, GXM do
-        traversal_maps[num][x] = {}
+        traversal_maps[parity][x] = {}
     end
 
-    exclusion_maps[num] = {}
+    exclusion_maps[parity] = {}
     for x = -GXM, GXM do
-        exclusion_maps[num][x] = {}
+        exclusion_maps[parity][x] = {}
     end
-
-    level_map_mode_searches[num] = {}
 end
 
 function add_feature_search(feats)
@@ -114,7 +106,7 @@ function find_features(radius)
         end
 
         local feat = view.feature_at(pos.x, pos.y)
-        local gpos = position_sum(waypoint, pos)
+        local gpos = position_sum(global_pos, pos)
         if feature_searches[feat] then
             if not feature_positions[feat] then
                 feature_positions[feat] = {}
@@ -129,6 +121,11 @@ function find_features(radius)
 end
 
 function distance_map_initialize(pos, hash, radius)
+    if debug_channel("map") then
+        dsay("Creating distance map at " .. pos_string(pos)
+            .. " (" .. cell_string(pos, true) .. ")")
+    end
+
     local dist_map = {}
     dist_map.pos = pos
     dist_map.hash = hash
@@ -151,7 +148,7 @@ function distance_map_initialize(pos, hash, radius)
     return dist_map
 end
 
-function handle_feature_searches(feat, pos)
+function handle_feature_search(feat, pos)
     if feature_searches[feat] then
         if not feature_positions[feat] then
             feature_positions[feat] = {}
@@ -159,6 +156,9 @@ function handle_feature_searches(feat, pos)
 
         local hash = hash_position(pos)
         if not feature_positions[feat][hash] then
+            if debug_channel("map") then
+                dsay("New position for " .. feat .. " feature.")
+            end
             feature_positions[feat][hash] = pos
         end
 
@@ -280,7 +280,7 @@ function record_map_item(name, pos)
         item_positions[name] = {}
     end
 
-    local pos = position_sum(waypoint, pos)
+    local pos = position_sum(global_pos, pos)
     local pos_hash = hash_position(pos)
     for hash, _ in pairs(item_positions[name]) do
         if hash ~= pos_hash then
@@ -304,8 +304,8 @@ function handle_item_searches(pos)
         return
     end
 
-    local floor_items = items.get_items_at(pos.x - waypoint.x,
-        pos.y - waypoint.y)
+    local floor_items = items.get_items_at(pos.x - global_pos.x,
+        pos.y - global_pos.y)
     if not floor_items then
         return
     end
@@ -385,20 +385,20 @@ function is_unexcluded(pos)
 end
 
 function update_map_position(pos, map_queue)
-    local gpos = position_sum(waypoint, pos)
+    local gpos = position_sum(global_pos, pos)
     if supdist(gpos) > GXM then
         return
     end
 
     local feat = view.feature_at(pos.x, pos.y)
-    if feat:find("stone_stairs") then
+    if feat:find("^stone_stairs") then
         record_feature_position(pos)
         record_stairs(where_branch, where_depth, feat, los_state(pos))
-    elseif feat:find("enter_") then
+    elseif feat:find("^enter_") then
         record_branch(pos)
-    elseif feat:find("exit_") then
+    elseif feat:find("^exit_") then
         record_feature_position(pos)
-    elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
+    elseif feat:find("^altar_") and feat ~= "altar_ecumenical" then
         record_altar(pos)
     end
 
@@ -418,23 +418,16 @@ function update_map_position(pos, map_queue)
     table.insert(map_queue, gpos)
 end
 
-function map_update()
-    local radius = global_map_update and GXM or los_radius
-    local map_queue = {}
-    for pos in square_iter(origin, radius, true) do
-        update_map_position(pos, map_queue)
-    end
-
-    global_map_update = false
-
+function update_distance_maps()
     for i, pos in ipairs(map_queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
 
-        local feat = view.feature_at(pos.x - waypoint.x, pos.y - waypoint.y)
+        local feat = view.feature_at(pos.x - global_pos.x,
+            pos.y - global_pos.y)
         if feat ~= "unseen" then
-            handle_feature_searches(feat, pos)
+            handle_feature_search(feat, pos)
             handle_item_searches(pos)
 
             for _, dist_map in pairs(distance_maps) do
@@ -448,7 +441,25 @@ function map_update()
     end
 end
 
-function update_map_data()
+function update_map(new_level, full_clear)
+    local new_waypoint = update_waypoint()
+
+    if new_waypoint or full_clear then
+        clear_level_map_cache(level_parity, full_clear)
+    end
+
+    if new_level or new_waypoint or full_clear then
+        traversal_map = traversal_maps[level_parity]
+        exclusion_map = exclusion_maps[level_parity]
+        distance_maps = level_distance_maps[level_parity]
+        feature_searches = level_feature_searches[level_parity]
+        feature_positions = level_feature_positions[level_parity]
+        item_searches = level_item_searches[level_parity]
+        map_mode_searches = level_map_mode_searches[level_parity]
+    end
+
+    update_exclusions(new_waypoint)
+
     if num_required_stairs(where_branch, where_dir, DIR.UP) > 0 then
         for _, feat in ipairs(upstairs_features) do
             feature_searches[feat] = true
@@ -482,7 +493,14 @@ function update_map_data()
         item_searches["the orb of Zot"] = true
     end
 
-    map_update()
+    local radius = global_map_update and GXM or los_radius
+    local map_queue = {}
+    for pos in square_iter(origin, radius, true) do
+        update_map_position(pos, map_queue)
+    end
+    global_map_update = false
+
+    update_distance_maps()
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)
@@ -490,12 +508,14 @@ function update_map_data()
         -- cycle because the feature at our position uses that key.
         if feature_uses_map_key(map_mode_search_key, feat) then
             record_map_mode_search(map_mode_search_key, map_mode_search_hash,
-                map_mode_search_count, hash_position(waypoint))
+                map_mode_search_count, hash_position(global_pos))
         end
         map_mode_search_key = nil
         map_mode_search_hash = nil
         map_mode_search_count = nil
     end
+
+    update_transporters()
 end
 
 function get_distance_map(pos, radius)
@@ -514,11 +534,11 @@ function best_move_towards(positions, no_exclusions, radius)
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
         local map = no_exclusions and dist_map.map or dist_map.excluded_map
-        for dpos in adjacent_iter(waypoint) do
+        for dpos in adjacent_iter(global_pos) do
             local dist = map[dpos.x][dpos.y]
             if dist and dist < best_dist then
                 best_dist = dist
-                best_move = position_difference(dpos, waypoint)
+                best_move = position_difference(dpos, global_pos)
                 best_dest = pos
             end
         end
@@ -569,7 +589,7 @@ function record_feature_position(pos)
     if not feature_positions[feat] then
         feature_positions[feat] = {}
     end
-    local gpos = position_sum(waypoint, pos)
+    local gpos = position_sum(global_pos, pos)
     local hash = hash_position(gpos)
     if not feature_positions[feat][hash] then
         feature_positions[feat][hash] = gpos
@@ -579,7 +599,7 @@ end
 function remove_exclusions(record_only)
     if not record_only and c_persist.exclusions[where] then
         for hash, _ in pairs(c_persist.exclusions[where]) do
-            local pos = position_difference(unhash_position(hash), waypoint)
+            local pos = position_difference(unhash_position(hash), global_pos)
             if debug_channel("combat") then
                 dsay("Unexcluding position " .. pos_string(pos))
             end
@@ -590,7 +610,7 @@ function remove_exclusions(record_only)
     c_persist.exclusions[where] = {}
 end
 
-function handle_exclusions(new_waypoint)
+function update_exclusions(new_waypoint)
     if new_waypoint then
         remove_exclusions()
     end
@@ -624,8 +644,34 @@ function handle_exclusions(new_waypoint)
                 dsay("Excluding " .. enemy:name() .. " at " .. pos_string(pos))
             end
             travel.set_exclude(pos.x, pos.y)
-            local hash = hash_position(position_sum(waypoint, pos))
+            local hash = hash_position(position_sum(global_pos, pos))
             c_persist.exclusions[where][hash] = true
+        end
+    end
+end
+
+function can_use_transporters()
+    return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
+        and (in_branch("Temple") or in_portal())
+end
+
+function update_transporters()
+    transp_search = nil
+    if can_use_transporters() then
+        local feat = view.feature_at(0, 0)
+        if feature_uses_map_key(">", feat) and transp_search_zone then
+            if not transp_map[transp_search_zone] then
+                transp_map[transp_search_zone] = {}
+            end
+            transp_map[transp_search_zone][transp_search_count] = transp_zone
+            transp_search_zone = nil
+            transp_search_count = nil
+            if feat == "transporter" then
+                transp_search = transp_zone
+            end
+        elseif branch_exit(where_branch) then
+            transp_zone = 0
+            transp_orient = false
         end
     end
 end

@@ -60,7 +60,7 @@ function plan_go_to_abyss_exit()
 end
 
 function plan_exit_abyss()
-    if view.feature_at(0, 0) == "exit_abyss"
+    if view.feature_at(0, 0) == branch_exit("Abyss")
             and not want_to_stay_in_abyss()
             and not you.mesmerised()
             and can_move() then
