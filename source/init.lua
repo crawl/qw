@@ -62,8 +62,8 @@ function initialize()
         level_item_searches = {}
         level_map_mode_searches = {}
 
-        clear_level_map_cache(1, true)
-        clear_level_map_cache(2, true)
+        clear_level_map_data(1, true)
+        clear_level_map_data(2, true)
 
         level_parity = 1
         previous_where = "nowhere"

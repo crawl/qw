@@ -526,21 +526,25 @@ function monster_can_move_to_player_melee(mons)
             or get_move_closer({ mons:pos() }))
 end
 
-function best_move_towards_destination(no_exclusions, radius)
-    local move, dest
+function destination_features()
     if gameplan_travel.first_dir then
-        local feats = level_stairs_features(where_branch, where_depth,
+        return level_stairs_features(where_branch, where_depth,
             gameplan_travel.first_dir)
-        move, dest = best_move_towards_features(feats, no_exclusions, radius)
     elseif gameplan_travel.first_branch then
-        move, dest = best_move_towards_feature(
-            branch_entrance(gameplan_travel.first_branch), no_exclusions,
-            radius)
-    elseif gameplan_status:find("^God:") then
+        return { branch_entrance(gameplan_travel.first_branch) }
+    else
         local god = gameplan_god(gameplan_status)
-        move, dest = best_move_towards_feature(god_altar(god), no_exclusions,
-            radius)
+        if god then
+            return { god_altar(god) }
+        end
+    end
+end
+
+function best_move_towards_destination(no_exclusions, radius)
+    local feats = destination_features()
+    if not feats then
+        return
     end
 
-    return move, dest
+    return best_move_towards_features(feats, no_exclusions, radius)
 end

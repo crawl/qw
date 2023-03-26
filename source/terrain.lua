@@ -12,10 +12,6 @@ function feature_is_traversable(feat)
         and travel.feature_traversable(feat)
 end
 
-function is_traversable_at(pos)
-    return feature_is_traversable(view.feature_at(pos.x, pos.y))
-end
-
 function is_cornerish_at(pos)
     if is_traversable_at({ x = pos.x + 1, y = pos.y + 1 })
             or is_traversable_at({ x = pos.x + 1, y = pos.y - 1 })

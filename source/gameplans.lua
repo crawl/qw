@@ -250,7 +250,7 @@ function check_portal_gameplan()
     return chosen_portal, chosen_turns == INF_TURNS
 end
 
-function want_altar()
+function want_god()
     return you.race() ~= "Demigod"
         and you.god() == "No God"
         and god_options()[1] ~= "No God"
@@ -279,7 +279,7 @@ function determine_gameplan()
 
     -- If we're configured to join a god, prioritize finding one from our god
     -- list, possibly exploring Temple once it's found.
-    if want_altar() then
+    if want_god() then
         local found = {}
         local gods = god_options()
         for _, g in ipairs(gods) do
@@ -570,7 +570,7 @@ function explored_level_range(range)
 end
 
 function ready_for_lair()
-    if want_altar()
+    if want_god()
             or gameplan_branch
                 and gameplan_branch == "D"
                 and gameplan_depth <= 11

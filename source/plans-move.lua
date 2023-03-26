@@ -291,16 +291,35 @@ function plan_stuck_move_towards_destination()
     return false
 end
 
+function plan_exclusion_use_stairs()
+    if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
+        return false
+    end
+
+    local feats = destination_features()
+    local feat = view.feature_at(0, 0)
+    if not feats or not util.contains(feats, feat) then
+        return false
+    end
+
+    if feature_uses_map_key(">", feat) then
+        go_downstairs()
+        return true
+    elseif feature_uses_map_key("<", feat) then
+        go_upstairs()
+        return true
+    end
+
+    return false
+end
+
 function plan_exclusion_move()
-    if dangerous_to_move() or exclusion_map[global_pos.x][global_pos.y] then
+    if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
         return false
     end
 
     local move, dest = best_move_towards_destination(true)
     if move then
-        if debug_channel("map") then
-            dsay("Found best move: " .. pos_string(move))
-        end
         move_destination = dest
         move_reason = "travel"
         move_to(move)
@@ -366,6 +385,8 @@ function set_plan_move()
         {plan_shop, "shop"},
         {plan_stairdance_up, "stairdance_up"},
         {plan_emergency, "emergency"},
+        {plan_exclusion_use_altar, "exclusion_use_altar"},
+        {plan_exclusion_use_stairs, "exclusion_use_stairs"},
         {plan_exclusion_move, "exclusion_move"},
         {plan_attack, "attack"},
         {plan_rest, "rest"},

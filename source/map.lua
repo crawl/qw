@@ -64,7 +64,12 @@ function record_map_mode_search(key, start_hash, count, end_hash)
     map_mode_searches[key][start_hash][count] = end_hash
 end
 
-function clear_level_map_cache(parity, full_clear)
+function clear_level_map_data(parity, full_clear)
+    if debug_channel("map") then
+        dsay((full_clear and "Full clearing" or "Clearing")
+            .. " map data for slot " .. tostring(parity))
+    end
+
     if full_clear then
         level_feature_searches[parity] = {}
         level_item_searches[parity] = {}
@@ -169,11 +174,21 @@ function handle_feature_search(feat, pos)
     end
 end
 
+function is_traversable_at(pos)
+    local gpos = position_sum(global_pos, pos)
+    return traversal_map[gpos.x][gpos.y]
+end
+
+function is_map_traversable_at(pos)
+    return traversal_map[pos.x][pos.y]
+end
+
+
 function distance_map_best_adjacent(pos, dist_map, use_map, use_excluded_map)
     local best_dist = INF_DIST
     local best_excluded_dist = INF_DIST
     for apos in adjacent_iter(pos) do
-        if traversal_map[apos.x][apos.y] then
+        if is_map_traversable_at(apos) then
             local dist
             if use_map then
                 dist = dist_map.map[apos.x][apos.y]
@@ -182,7 +197,7 @@ function distance_map_best_adjacent(pos, dist_map, use_map, use_excluded_map)
                 end
             end
 
-            if use_excluded_map and exclusion_map[apos.x][apos.y] then
+            if use_excluded_map and map_is_unexcluded_at(apos) then
                 dist = dist_map.excluded_map[apos.x][apos.y]
                 if dist and (not best_excluded_dist
                         or best_excluded_dist > dist) then
@@ -205,11 +220,11 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
                 and supdist(position_difference(pos, dist_map.pos))
                     > dist_map.radius)
             -- Untraversable cells don't need updates.
-            or not traversal_map[pos.x][pos.y] then
+            or not is_map_traversable_at(pos) then
         return
     end
 
-    local unexcluded = exclusion_map[pos.x][pos.y]
+    local unexcluded = map_is_unexcluded_at(pos)
     local center_dist, dist, best_dist, best_excluded_dist, update_pos
     if center.propagate_traversable then
         center_dist = dist_map.map[center.x][center.y]
@@ -326,8 +341,8 @@ function distance_map_update_pos(pos, dist_map)
         return false
     end
 
-    local traversable = traversal_map[pos.x][pos.y]
-    local unexcluded = exclusion_map[pos.x][pos.y]
+    local traversable = is_map_traversable_at(pos)
+    local unexcluded = map_is_unexcluded_at(pos)
     local dist, excluded_dist
     local update_pos
     -- If we're traversable and don't have a map distance, we just became
@@ -374,14 +389,13 @@ function distance_map_update_pos(pos, dist_map)
 end
 
 --[[
-Are the given player coordinates unexcluded? See the variables
-exclusion_maps/exclusion_map to check a cache of this for global coordinates.
-@table pos The position
+Are the given player coordinates unexcluded according to the exclusion map
+cache?
+@table gpos The global position
 @treturn boolean True if coordinates are unexcluded, false otherwise.
 --]]
-function is_unexcluded(pos)
-    return not (view.in_known_map_bounds(pos.x, pos.y)
-        and travel.is_excluded(pos.x, pos.y))
+function map_is_unexcluded_at(gpos)
+    return exclusion_map[gpos.x][gpos.y]
 end
 
 function update_map_position(pos, map_queue)
@@ -413,13 +427,14 @@ function update_map_position(pos, map_queue)
     end
 
     traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
-    exclusion_map[gpos.x][gpos.y] = is_unexcluded(pos)
+    exclusion_map[gpos.x][gpos.y] = not (view.in_known_map_bounds(pos.x, pos.y)
+        and travel.is_excluded(pos.x, pos.y))
 
     table.insert(map_queue, gpos)
 end
 
-function update_distance_maps()
-    for i, pos in ipairs(map_queue) do
+function update_distance_maps(pos_queue)
+    for i, pos in ipairs(pos_queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
@@ -441,11 +456,11 @@ function update_distance_maps()
     end
 end
 
-function update_map(new_level, full_clear)
+function update_map(new_level, clear_map)
     local new_waypoint = update_waypoint()
 
-    if new_waypoint or full_clear then
-        clear_level_map_cache(level_parity, full_clear)
+    if new_waypoint or clear_map then
+        clear_level_map_data(level_parity, clear_map)
     end
 
     if new_level or new_waypoint or full_clear then
@@ -494,13 +509,13 @@ function update_map(new_level, full_clear)
     end
 
     local radius = global_map_update and GXM or los_radius
-    local map_queue = {}
+    local pos_queue = {}
     for pos in square_iter(origin, radius, true) do
-        update_map_position(pos, map_queue)
+        update_map_position(pos, pos_queue)
     end
     global_map_update = false
 
-    update_distance_maps()
+    update_distance_maps(pos_queue)
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)
@@ -640,7 +655,7 @@ function update_exclusions(new_waypoint)
     for _, enemy in ipairs(enemy_list) do
         if not enemy:is_summoned() then
             local pos = enemy:pos()
-            if debug_channel("combat") then
+            if debug_channel("map") then
                 dsay("Excluding " .. enemy:name() .. " at " .. pos_string(pos))
             end
             travel.set_exclude(pos.x, pos.y)

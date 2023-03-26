@@ -103,11 +103,12 @@ function print_traversal_map()
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            if traversal_map[global_pos.x + x][global_pos.y + y] == nil then
+            local pos = position_sum(global_pos, { x = x, y = y })
+            local traversable = is_map_traversable_at(pos)
+            if traversable == nil then
                 str = str .. " "
             else
-                str = str .. (traversal_map[global_pos.x + x][global_pos.y + y]
-                    and "." or "#")
+                str = str .. (traversable and "." or "#")
             end
         end
         say(str)

@@ -501,7 +501,7 @@ function plan_flight_move_towards_enemy()
     local feat = view.feature_at(move.x, move.y)
     -- Only quaff flight when we finally reach an impassable square.
     if (feat == "deep_water" or feat == "lava")
-            and not feature_is_traversable(feat) then
+            and not is_traversable_at(move) then
         return drink_by_name("flight")
     else
         magic(delta_to_vi(move))

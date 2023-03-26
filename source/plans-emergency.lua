@@ -142,6 +142,7 @@ function plan_recite()
     return false
 end
 
+-- XXX: This plan is broken due to changes to combat assessment.
 function plan_grand_finale()
     if not danger
             or dangerous_to_attack()
@@ -161,7 +162,7 @@ function plan_grand_finale()
     local best_info, best_pos
     for _, enemy in ipairs(enemy_list) do
         local pos = enemy:pos()
-        if is_traversable(pos)
+        if is_traversable_at(pos)
                 and not cloud_is_dangerous(view.cloud_at(pos.x, pos.y)) then
             if new_info.safe == 0
                     and (not best_info

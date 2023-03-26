@@ -222,6 +222,12 @@ function can_teleport()
             or in_branch("Gauntlet"))
 end
 
+function can_use_altars()
+    return not (you.berserk()
+        or you.silenced()
+        or you.status("engulfed (cannot breathe)"))
+end
+
 function can_invoke()
     return not (you.berserk()
         or you.confused()
@@ -363,5 +369,5 @@ end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
 function dangerous_to_attack()
-    return not exclusion_map[global_pos.x][global_pos.y]
+    return not map_is_unexcluded_at(global_pos)
 end

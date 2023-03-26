@@ -2,26 +2,8 @@
 -- Plans for god worship and abilities.
 
 function plan_find_altar()
-    if not want_altar() then
-        return false
-    end
-
-    str = "altar&&<<of " .. table.concat(god_options(), "||of ")
-    if FADED_ALTAR then
-        str = str .. "||of an unknown god"
-    end
-    str = str .. ">>"
-    magicfind(str)
-    return true
-end
-
-function plan_find_conversion_altar()
-    if not gameplan_status:find("^God:") then
-        return false
-    end
-
     local god = gameplan_god(gameplan_status)
-    if you.god() == god then
+    if not god then
         return false
     end
 
@@ -30,8 +12,7 @@ function plan_find_conversion_altar()
 end
 
 function plan_abandon_god()
-    local want_god = gameplan_god(gameplan_status)
-    if want_god == "No God"
+    if gameplan_god(gameplan_status) == "No God"
             or you.class() == "Chaos Knight"
                 and you.god() == "Xom"
                 and CK_ABANDON_XOM then
@@ -44,71 +25,43 @@ function plan_abandon_god()
 end
 
 function plan_join_beogh()
-    if you.race() ~= "Hill Orc" or not want_altar() or you.confused() then
-        return false
-    end
-    for _, god in ipairs(god_options()) do
-        if god == "Beogh" and use_ability("Convert to Beogh", "YY") then
-            want_gameplan_update = true
-            return true
-        end
-    end
-    return false
-end
-
-function plan_convert()
-    if not gameplan_status:find("^God:") then
+    if you.race() ~= "Hill Orc"
+            or gameplan_status ~= "God:Beogh"
+            or you.confused()
+            or you.silenced() then
         return false
     end
 
-    local god = gameplan_god(gameplan_status)
-    if you.god() == god then
-        return false
-    end
-
-    if view.feature_at(0, 0) ~= god_altar(god) then
-        return false
-    end
-
-    if you.silenced() then
-        rest()
-    else
-        magic("<JY")
-        want_gameplan_update = true
-    end
-
-    return true
-end
-
-function plan_join_god()
-    if not want_altar() then
-        return false
-    end
-
-    feat = view.feature_at(0, 0)
-    for _, god in ipairs(god_options()) do
-        if feat == god_altar(god) then
-            if you.silenced() then
-                rest()
-            else
-                magic("<J")
-            end
-            want_gameplan_update = true
-            return true
-        end
-    end
-
-    if FADED_ALTAR and feat == "altar_ecumenical" then
-        if you.silenced() then
-            rest()
-        else
-            magic("<J")
-        end
+    if use_ability("Convert to Beogh", "YY") then
         want_gameplan_update = true
         return true
     end
 
     return false
+end
+
+function plan_use_altar()
+    local god = gameplan_god(gameplan_status)
+    local feat = view.feature_at(0, 0)
+    if not (FADED_ALTAR and feat == "altar_ecumenical")
+            or not god
+            or feat ~= god_altar(god)
+            or not can_use_altars() then
+        return false
+    end
+
+    magic("<JY")
+    want_gameplan_update = true
+
+    return true
+end
+
+function plan_exclusion_use_altar()
+    if map_is_unexcluded_at(global_pos) then
+        return false
+    end
+
+    return plan_use_altar()
 end
 
 function plan_sacrifice()

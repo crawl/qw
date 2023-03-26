@@ -42,13 +42,13 @@ function turn_update()
     end
 
     local new_level
-    local keep_map_cache = true
+    local clear_map = false
     if you.where() ~= where then
         new_level = true
         level_parity = 3 - level_parity
 
         if you.where() ~= previous_where then
-            keep_map_cache = false
+            clear_map = true
         end
 
         previous_where = where
@@ -95,7 +95,7 @@ function turn_update()
     end
 
     update_monsters()
-    update_map(new_level, keep_map_cache)
+    update_map(new_level, clear_map)
 
     if want_gameplan_update then
         update_gameplan()

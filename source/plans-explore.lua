@@ -169,12 +169,10 @@ end
 function set_plan_explore2()
     plan_explore2 = cascade {
         {plan_abandon_god, "abandon_god"},
-        {plan_join_god, "try_join_god"},
+        {plan_use_altar, "use_altar"},
         {plan_find_altar, "try_find_altar"},
-        {plan_convert, "convert"},
-        {plan_find_conversion_altar, "try_find_conversion_altar"},
         {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
-        {plan_use_zigfig, "try_use_zigfig"},
+        {plan_use_zigfig, "use_zigfig"},
         {plan_zig_dig, "zig_dig"},
         {plan_go_to_zig_dig, "try_go_to_zig_dig"},
         {plan_enter_portal, "enter_portal"},
