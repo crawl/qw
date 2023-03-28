@@ -10,6 +10,14 @@ function enum(tbl)
     return e
 end
 
+function enum_string(val, tbl)
+    for k, v in tbl do
+        if v == val then
+            return k
+        end
+    end
+end
+
 function contains_string_in(name, t)
     for _, value in ipairs(t) do
         if string.find(name, value) then

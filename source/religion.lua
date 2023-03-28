@@ -357,11 +357,10 @@ function count_beogh_allies(radius)
     return i
 end
 
-function record_altar(pos)
-    record_feature_position(pos)
-    local feat = view.feature_at(pos.x, pos.y)
-    local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
+function record_altar(feat, pos)
+    record_feature_position(feat, pos)
 
+    local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
     local state = los_state(pos)
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}

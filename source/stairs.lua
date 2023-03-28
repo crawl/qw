@@ -43,6 +43,25 @@ function level_stairs_features(branch, depth, dir)
     return feats
 end
 
+function stair_state_string(state)
+    str = ""
+
+    if state.los == nil then
+        los_val = 0
+    end
+    str = enum_string(los_val, FEAT_LOS) .. "/"
+
+    if state.safe == nil then
+        str = str .. "nil"
+    elseif state.safe then
+        str = str .. "safe"
+    else
+        str = str .. "unsafe"
+    end
+
+    return str
+end
+
 function record_stairs(branch, depth, feat, state, force)
     local dir, num
     dir, num = stone_stair_type(feat)
@@ -57,6 +76,17 @@ function record_stairs(branch, depth, feat, state, force)
     local level = make_level(branch, depth)
     if not data[level] then
         data[level] = {}
+    end
+
+    if not data[level][num] then
+        data[level][num] = {}
+    end
+
+    local old_safe
+    if state.safe ~= nil and data[level][num].safe ~= state.safe then
+        old_safe = data[level][num].safe
+        data[level][num].safe = state.safe
+        changed = true
     end
 
     local old_state = not data[level][num] and FEAT_LOS.NONE
@@ -280,4 +310,35 @@ function set_stair_target(c)
         end
     end
     target_stair = best_stair
+end
+
+function mark_stairs_unsafe(branch, depth, feat)
+    local dir, num
+    dir, num = stone_stair_type(feat)
+
+    local data
+    if dir == DIR.DOWN then
+        data = c_persist.downstairs
+    else
+        data = c_persist.upstairs
+    end
+
+    local level = make_level(branch, depth)
+    if not data[level] then
+        data[level] = {}
+    end
+
+    local old_state = not data[level][num] and FEAT_LOS.NONE
+        or data[level][num]
+    if old_state < state or force then
+        if debug_channel("explore") then
+            dsay("Updating " .. level .. " stair " .. feat .. " from "
+                .. old_state .. " to " .. state)
+        end
+        data[level][num] = state
+
+        if not force then
+            want_gameplan_update = true
+        end
+    end
 end

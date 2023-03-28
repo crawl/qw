@@ -179,7 +179,7 @@ function is_traversable_at(pos)
     return traversal_map[gpos.x][gpos.y]
 end
 
-function is_map_traversable_at(pos)
+function map_is_traversable_at(pos)
     return traversal_map[pos.x][pos.y]
 end
 
@@ -188,7 +188,7 @@ function distance_map_best_adjacent(pos, dist_map, use_map, use_excluded_map)
     local best_dist = INF_DIST
     local best_excluded_dist = INF_DIST
     for apos in adjacent_iter(pos) do
-        if is_map_traversable_at(apos) then
+        if map_is_traversable_at(apos) then
             local dist
             if use_map then
                 dist = dist_map.map[apos.x][apos.y]
@@ -220,7 +220,7 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
                 and supdist(position_difference(pos, dist_map.pos))
                     > dist_map.radius)
             -- Untraversable cells don't need updates.
-            or not is_map_traversable_at(pos) then
+            or not map_is_traversable_at(pos) then
         return
     end
 
@@ -341,7 +341,7 @@ function distance_map_update_pos(pos, dist_map)
         return false
     end
 
-    local traversable = is_map_traversable_at(pos)
+    local traversable = map_is_traversable_at(pos)
     local unexcluded = map_is_unexcluded_at(pos)
     local dist, excluded_dist
     local update_pos
@@ -405,15 +405,28 @@ function update_map_position(pos, map_queue)
     end
 
     local feat = view.feature_at(pos.x, pos.y)
+    traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
+    exclusion_map[gpos.x][gpos.y] = not (view.in_known_map_bounds(pos.x, pos.y)
+        and travel.is_excluded(pos.x, pos.y))
+
     if feat:find("^stone_stairs") then
-        record_feature_position(pos)
         record_stairs(where_branch, where_depth, feat, los_state(pos))
+        record_feature_position(pos)
+
+        if not map_is_unexcluded(gpos) then
+            record_stairs_excluded(where_branch, where_depth, feat)
+        end
     elseif feat:find("^enter_") then
         record_branch(pos)
+        record_feature_position(feat, pos)
     elseif feat:find("^exit_") then
-        record_feature_position(pos)
+        record_feature_position(feat, pos)
     elseif feat:find("^altar_") and feat ~= "altar_ecumenical" then
         record_altar(pos)
+        record_feature_position(feat, pos)
+    end
+
+    if record_pos then
     end
 
     if move_destination
@@ -425,10 +438,6 @@ function update_map_position(pos, map_queue)
         move_destination = nil
         move_reason = nil
     end
-
-    traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
-    exclusion_map[gpos.x][gpos.y] = not (view.in_known_map_bounds(pos.x, pos.y)
-        and travel.is_excluded(pos.x, pos.y))
 
     table.insert(map_queue, gpos)
 end
@@ -599,8 +608,7 @@ function best_move_towards_feature(feat, no_exclusions, radius)
     return best_move_towards_features({ feat }, no_exclusions, radius)
 end
 
-function record_feature_position(pos)
-    local feat = view.feature_at(pos.x, pos.y)
+function record_feature_position(feat, pos)
     if not feature_positions[feat] then
         feature_positions[feat] = {}
     end

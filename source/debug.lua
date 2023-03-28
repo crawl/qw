@@ -104,7 +104,7 @@ function print_traversal_map()
         str = ""
         for x = -20, 20 do
             local pos = position_sum(global_pos, { x = x, y = y })
-            local traversable = is_map_traversable_at(pos)
+            local traversable = map_is_traversable_at(pos)
             if traversable == nil then
                 str = str .. " "
             else
