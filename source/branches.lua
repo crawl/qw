@@ -300,36 +300,63 @@ function portal_allowed(portal)
     return util.contains(ALLOWED_PORTALS, portal)
 end
 
-function record_branch(feat)
-    for br, entry in pairs(branch_data) do
-        if entry.entrance == feat then
+function record_branch_stairs(branch, depth, feat, state)
+    local dest_branch, dir = branch_stair_type(feat)
+    if not branch then
+        return
+    end
 
-            if not c_persist.branches[br] then
-                c_persist.branches[br] = {}
-            end
-            local state = los_state(pos)
-            -- We already have a suitable entry recorded.
-            if c_persist.branches[br][where]
-                    and c_persist.branches[br][where] >= state then
-                return
-            end
+    local data = dir == DIR.DOWN and c_persist.branch_entries
+        or c_persist.branch_exits
+    if not data[dest_branch] then
+        data[dest_branch] = {}
+    end
 
-            c_persist.branches[br][where] = state
+    local level = make_level(branch, depth)
+    if not data[dest_branch][level] then
+        data[dest_branch][level] = {}
+    end
 
-            -- Update the entry depth in the branch data with the depth where
-            -- we found this entry if the entry depth is currently unconfirmed
-            -- or if the found depth is higher.
-            local cur_br, cur_depth = parse_level_range(where)
-            local parent_br, parent_min, parent_max = parent_branch(br)
-            if cur_br == parent_br
-                    and (parent_min ~= parent_max
-                        or cur_depth < parent_min) then
-                branch_data[br].parent_min_depth = cur_depth
-                branch_data[br].parent_max_depth = cur_depth
-            end
+    local current = data[dest_branch][level]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
 
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            dsay("Updating " .. level .. " stairs " .. feat .. " from "
+                .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
             want_gameplan_update = true
-            return
+        end
+    end
+
+    if dir == DIR.DOWN then
+        -- Update the entry depth in the branch data with the depth where
+        -- we found this entry if the entry depth is currently unconfirmed
+        -- or if the found depth is higher.
+        local parent_br, parent_min, parent_max = parent_branch(dest_branch)
+        if branch == parent_br
+                and (parent_min ~= parent_max or depth < parent_min) then
+            branch_data[dest_branch].parent_min_depth = depth
+            branch_data[dest_branch].parent_max_depth = depth
         end
     end
 end

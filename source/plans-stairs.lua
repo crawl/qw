@@ -127,8 +127,8 @@ function plan_unexplored_stairs_backtrack()
     end
 
     local next_depth = where_depth + gameplan_travel.stairs_dir
-    level_stair_reset(where_branch, where_depth, gameplan_travel.stairs_dir)
-    level_stair_reset(where_branch, next_depth, -gameplan_travel.stairs_dir)
+    stairs_reset(where_branch, where_depth, gameplan_travel.stairs_dir)
+    stairs_reset(where_branch, next_depth, -gameplan_travel.stairs_dir)
     want_gameplan_update = true
     send_travel(where_branch, next_depth)
     return true

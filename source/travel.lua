@@ -287,8 +287,8 @@ function finalize_travel_depth(result)
                 -- follow.
                 and (have_branch_runes(result.branch)
                     or result.depth < branch_rune_depth(result.branch)) then
-            level_stair_reset(result.branch, result.depth, DIR.UP)
-            level_stair_reset(result.branch, result.depth - 1, DIR.DOWN)
+            stairs_reset(result.branch, result.depth, DIR.UP)
+            stairs_reset(result.branch, result.depth - 1, DIR.DOWN)
             if not result.first_dir and not result.first_branch then
                 result.first_dir = DIR.UP
             end
@@ -298,8 +298,8 @@ function finalize_travel_depth(result)
         end
 
         if down_reachable then
-            level_stair_reset(result.branch, result.depth, DIR.DOWN)
-            level_stair_reset(result.branch, result.depth + 1, DIR.UP)
+            stairs_reset(result.branch, result.depth, DIR.DOWN)
+            stairs_reset(result.branch, result.depth + 1, DIR.UP)
             -- If we've just reset up stairs, that direction gets priority as
             -- the first search destination.
             if not finished then

@@ -87,6 +87,24 @@ function stone_stair_type(feat)
         .. (dir == DIR.DOWN and "down_" or "up_"), "")
 end
 
+function branch_stair_type(feat)
+    local dir
+    if feat:find("^enter_") then
+        dir = DIR.DOWN
+    elseif feat:find("^exit_") then
+        dir = DIR.UP
+    else
+        return
+    end
+
+    local entry_feat = feat:gsub("exit", "enter", 1)
+    for branch, entry in pairs(branch_data) do
+        if entry.entrance == entry_feat then
+            return branch, dir
+        end
+    end
+end
+
 function cloud_is_dangerous(cloud)
     if cloud == "flame" or cloud == "fire" then
         return (you.res_fire() < 1)
@@ -104,4 +122,9 @@ function cloud_is_dangerous(cloud)
         return true
     end
     return false
+end
+
+function stairs_branch_name(feat)
+    for br, entry in pairs(branch_data) do
+        if entry.entrance == entry_feat then
 end

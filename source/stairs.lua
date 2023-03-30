@@ -43,26 +43,16 @@ function level_stairs_features(branch, depth, dir)
     return feats
 end
 
-function stair_state_string(state)
-    str = ""
-
-    if state.los == nil then
-        los_val = 0
-    end
-    str = enum_string(los_val, FEAT_LOS) .. "/"
-
-    if state.safe == nil then
-        str = str .. "nil"
-    elseif state.safe then
-        str = str .. "safe"
-    else
-        str = str .. "unsafe"
-    end
-
-    return str
+function stairs_state_string(state)
+    return enum_string(state.los, FEAT_LOS) .. "/"
+        .. (state.safe and "safe" or "unsafe")
 end
 
 function record_stairs(branch, depth, feat, state, force)
+    if not state.safe and not state.los then
+        error("Undefined stairs state.")
+    end
+
     local dir, num
     dir, num = stone_stair_type(feat)
 
@@ -82,46 +72,58 @@ function record_stairs(branch, depth, feat, state, force)
         data[level][num] = {}
     end
 
-    local old_safe
-    if state.safe ~= nil and data[level][num].safe ~= state.safe then
-        old_safe = data[level][num].safe
-        data[level][num].safe = state.safe
-        changed = true
+    if data[level][num].safe == nil then
+        data[level][num].safe = true
+    end
+    if data[level][num].los == nil then
+        data[level][num].los = FEAT_LOS.NONE
     end
 
-    local old_state = not data[level][num] and FEAT_LOS.NONE
-        or data[level][num]
-    if old_state < state or force then
-        if debug_channel("explore") then
-            dsay("Updating " .. level .. " stair " .. feat .. " from "
-                .. old_state .. " to " .. state)
-        end
-        data[level][num] = state
+    if state.safe == nil then
+        state.safe = data[level][num].safe
+    end
 
-        if not force then
+    if state.los == nil then
+        state.los = data[level][num].los
+    end
+
+    local los_changed = data[level][num].los < state.los
+            or force and data[level][num].los ~= state.los
+    if state.safe ~= data[level][num].safe or los_changed then
+        if debug_channel("explore") then
+            dsay("Updating " .. level .. " stairs " .. feat .. " from "
+                .. stairs_state_string(data[level][num]) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        data[level][num].safe = state.safe
+
+        if los_changed and not force then
+            data[level][num].los = state.los
             want_gameplan_update = true
         end
+
     end
 end
 
-function set_stairs(branch, depth, dir, feat_los, min_feat_los)
+function set_stairs(branch, depth, dir, state, min_los)
     local level = make_level(branch, depth)
 
-    if not min_feat_los then
-        min_feat_los = feat_los
+    if not min_los then
+        min_los = state.los
     end
 
     for i = 1, num_required_stairs(branch, depth, dir) do
-        if stairs_state(branch, depth, dir, num) >= min_feat_los then
+        if stairs_state(branch, depth, dir, num).los >= min_los then
             local feat = "stone_stairs_"
                 .. (dir == DIR.DOWN and "down_" or "up_") .. ("i"):rep(i)
-            record_stairs(branch, depth, feat, feat_los, true)
+            record_stairs(branch, depth, feat, state, true)
         end
     end
 end
 
-function level_stair_reset(branch, depth, dir)
-    set_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
+function stairs_reset(branch, depth, dir)
+    set_stairs(branch, depth, dir, { los = FEAT_LOS.REACHABLE })
 
     local lev = make_level(branch, depth)
     if lev == where then
@@ -141,18 +143,22 @@ function stairs_state(branch, depth, dir, num)
     if dir == DIR.UP then
         if not c_persist.upstairs[level]
                 or not c_persist.upstairs[level][num] then
-            return FEAT_LOS.NONE
+            return { safe = true, los = FEAT_LOS.NONE }
         end
 
         return c_persist.upstairs[level][num]
     elseif dir == DIR.DOWN then
         if not c_persist.downstairs[level]
                 or not c_persist.downstairs[level][num] then
-            return FEAT_LOS.NONE
+            return { safe = true, los = FEAT_LOS.NONE }
         end
 
         return c_persist.downstairs[level][num]
     end
+end
+
+function destination_stairs_state(branch, depth, dir, num)
+    return stairs_state(branch, depth + dir, -dir, num)
 end
 
 function num_required_stairs(branch, depth, dir)
@@ -182,7 +188,7 @@ function num_required_stairs(branch, depth, dir)
     end
 end
 
-function count_stairs(branch, depth, dir, state)
+function count_stairs(branch, depth, dir, los)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required == 0 then
         return 0
@@ -193,21 +199,21 @@ function count_stairs(branch, depth, dir, state)
     for i = 1, num_required do
         num = "i"
         num = num:rep(i)
-        if stairs_state(branch, depth, dir, num) >= state then
+        if stairs_state(branch, depth, dir, num).los >= los then
             count = count + 1
         end
     end
     return count
 end
 
-function have_all_stairs(branch, depth, dir, state)
+function have_all_stairs(branch, depth, dir, los)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required > 0 then
         local num
         for i = 1, num_required do
             num = "i"
             num = num:rep(i)
-            if stairs_state(branch, depth, dir, num) < state then
+            if stairs_state(branch, depth, dir, num).los < los then
                 return false
             end
         end

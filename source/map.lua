@@ -410,12 +410,9 @@ function update_map_position(pos, map_queue)
         and travel.is_excluded(pos.x, pos.y))
 
     if feat:find("^stone_stairs") then
-        record_stairs(where_branch, where_depth, feat, los_state(pos))
+        record_stairs(where_branch, where_depth, feat,
+            { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
         record_feature_position(pos)
-
-        if not map_is_unexcluded(gpos) then
-            record_stairs_excluded(where_branch, where_depth, feat)
-        end
     elseif feat:find("^enter_") then
         record_branch(pos)
         record_feature_position(feat, pos)

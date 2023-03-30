@@ -101,9 +101,9 @@ function c_message(text, channel)
             if travel_dir and dir and travel_dir == -dir
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
-                record_stairs(branch, depth, feat, FEAT_LOS.EXPLORED)
+                record_stairs(branch, depth, feat, { los = FEAT_LOS.EXPLORED })
                 record_stairs(branch, depth + dir, stairs_travel,
-                    FEAT_LOS.EXPLORED)
+                    { los = FEAT_LOS.EXPLORED })
             end
         end
         stairs_travel = nil
