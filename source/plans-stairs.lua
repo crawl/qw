@@ -93,7 +93,7 @@ function plan_take_unexplored_stairs()
     end
 
     local dir, num
-    dir, num = stone_stair_type(view.feature_at(0, 0))
+    dir, num = stone_stairs_type(view.feature_at(0, 0))
     if not dir or dir ~= gameplan_travel.stairs_dir
             or stairs_state(where_branch, where_depth, dir, num)
                 >= FEAT_LOS.EXPLORED then

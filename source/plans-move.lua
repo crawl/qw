@@ -44,7 +44,7 @@ end
 function plan_flee_step()
     if tactical_reason == "fleeing" then
         say("FLEEEEING.")
-        set_stair_target(tactical_step)
+        set_stairs_target(tactical_step)
         last_flee_turn = you.turns()
         magic(tactical_step .. "Y")
         return true
@@ -328,6 +328,10 @@ function plan_exclusion_move()
 
     local feats = level_stairs_features(gameplan_branch, gameplan_depth,
         DIR.UP)
+    if not feats then
+        return false
+    end
+
     move = best_move_towards_features(feats, true)
     if move then
         move_to(move)

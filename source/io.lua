@@ -95,14 +95,14 @@ function c_message(text, channel)
     elseif text:find("There is a stone staircase") then
         if stairs_travel then
             local feat = view.feature_at(0, 0)
-            local dir, num = stone_stair_type(feat)
-            local travel_dir, travel_num = stone_stair_type(stairs_travel)
+            local dir, num = stone_stairs_type(feat)
+            local travel_dir, travel_num = stone_stairs_type(stairs_travel)
             -- Sanity check to make sure the stairs correspond.
             if travel_dir and dir and travel_dir == -dir
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
-                record_stairs(branch, depth, feat, { los = FEAT_LOS.EXPLORED })
-                record_stairs(branch, depth + dir, stairs_travel,
+                update_stairs(branch, depth, feat, { los = FEAT_LOS.EXPLORED })
+                update_stairs(branch, depth + dir, stairs_travel,
                     { los = FEAT_LOS.EXPLORED })
             end
         end

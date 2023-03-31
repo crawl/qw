@@ -101,18 +101,18 @@ local permanent_bazaar
 local dislike_pan_level = false
 
 local global_map_update = false
-local level_parity
-local level_feature_searches
+local cache_parity
+local feature_searches_cache
 local feature_searches
-local level_feature_positions
-local feature_positions
-local level_item_searches
+local feature_map_positions_cache
+local feature_map_positions
+local item_searches_cache
 local item_searches
-local traversal_maps
+local traversal_maps_cache
 local traversal_map
-local exclusion_maps
+local exclusion_maps_cache
 local exclusion_map
-local level_distance_maps
+local distance_maps_cache
 local distance_maps
 
 local level_map_mode_searches

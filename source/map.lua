@@ -71,23 +71,23 @@ function clear_level_map_data(parity, full_clear)
     end
 
     if full_clear then
-        level_feature_searches[parity] = {}
-        level_item_searches[parity] = {}
+        feature_searches_cache[parity] = {}
+        item_searches_cache[parity] = {}
 
-        level_map_mode_searches[parity] = {}
+        map_mode_searches_cache[parity] = {}
     end
 
-    level_feature_positions[parity] = {}
-    level_distance_maps[parity] = {}
+    feature_map_positions_cache[parity] = {}
+    distance_maps_cache[parity] = {}
 
-    traversal_maps[parity] = {}
+    traversal_maps_cache[parity] = {}
     for x = -GXM, GXM do
-        traversal_maps[parity][x] = {}
+        traversal_maps_cache[parity][x] = {}
     end
 
-    exclusion_maps[parity] = {}
+    exclusion_maps_cache[parity] = {}
     for x = -GXM, GXM do
-        exclusion_maps[parity][x] = {}
+        exclusion_maps_cache[parity][x] = {}
     end
 end
 
@@ -113,12 +113,12 @@ function find_features(radius)
         local feat = view.feature_at(pos.x, pos.y)
         local gpos = position_sum(global_pos, pos)
         if feature_searches[feat] then
-            if not feature_positions[feat] then
-                feature_positions[feat] = {}
+            if not feature_map_positions[feat] then
+                feature_map_positions[feat] = {}
             end
             local hash = hash_position(gpos)
-            if not feature_positions[feat][hash] then
-                feature_positions[feat][hash] = gpos
+            if not feature_map_positions[feat][hash] then
+                feature_map_positions[feat][hash] = gpos
             end
         end
         i = i + 1
@@ -155,16 +155,16 @@ end
 
 function handle_feature_search(feat, pos)
     if feature_searches[feat] then
-        if not feature_positions[feat] then
-            feature_positions[feat] = {}
+        if not feature_map_positions[feat] then
+            feature_map_positions[feat] = {}
         end
 
         local hash = hash_position(pos)
-        if not feature_positions[feat][hash] then
+        if not feature_map_positions[feat][hash] then
             if debug_channel("map") then
                 dsay("New position for " .. feat .. " feature.")
             end
-            feature_positions[feat][hash] = pos
+            feature_map_positions[feat][hash] = pos
         end
 
         if not distance_maps[hash] then
@@ -291,20 +291,20 @@ function distance_map_queue_update(dist_map)
 end
 
 function record_map_item(name, pos)
-    if not item_positions[name] then
-        item_positions[name] = {}
+    if not item_map_positions[name] then
+        item_map_positions[name] = {}
     end
 
     local pos = position_sum(global_pos, pos)
     local pos_hash = hash_position(pos)
-    for hash, _ in pairs(item_positions[name]) do
+    for hash, _ in pairs(item_map_positions[name]) do
         if hash ~= pos_hash then
-            item_positions[name][hash] = nil
+            item_map_positions[name][hash] = nil
             distance_maps[hash] = nil
         end
     end
 
-    item_positions[name][pos_hash] = pos
+    item_map_positions[name][pos_hash] = pos
     distance_maps[pos_hash] = distance_map_initialize(pos, pos_hash)
     table.insert(distance_maps[pos_hash].queue, pos)
 end
@@ -410,17 +410,16 @@ function update_map_position(pos, map_queue)
         and travel.is_excluded(pos.x, pos.y))
 
     if feat:find("^stone_stairs") then
-        record_stairs(where_branch, where_depth, feat,
+        update_stairs(where_branch, where_depth, feat,
             { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
-        record_feature_position(pos)
-    elseif feat:find("^enter_") then
-        record_branch(pos)
-        record_feature_position(feat, pos)
-    elseif feat:find("^exit_") then
-        record_feature_position(feat, pos)
+        update_feature_map_position(feat, gpos)
+    elseif feat:find("^enter_") or feat:find("^exit_")then
+        update_branch_stairs(where_branch, where_depth, feat,
+            { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
+        update_feature_map_position(feat, gpos)
     elseif feat:find("^altar_") and feat ~= "altar_ecumenical" then
-        record_altar(pos)
-        record_feature_position(feat, pos)
+        update_altar(where, feat, los_state(pos))
+        update_feature_map_position(feat, gpos)
     end
 
     if record_pos then
@@ -466,17 +465,17 @@ function update_map(new_level, clear_map)
     local new_waypoint = update_waypoint()
 
     if new_waypoint or clear_map then
-        clear_level_map_data(level_parity, clear_map)
+        clear_level_map_data(cache_parity, clear_map)
     end
 
     if new_level or new_waypoint or full_clear then
-        traversal_map = traversal_maps[level_parity]
-        exclusion_map = exclusion_maps[level_parity]
-        distance_maps = level_distance_maps[level_parity]
-        feature_searches = level_feature_searches[level_parity]
-        feature_positions = level_feature_positions[level_parity]
-        item_searches = level_item_searches[level_parity]
-        map_mode_searches = level_map_mode_searches[level_parity]
+        traversal_map = traversal_maps_cache[cache_parity]
+        exclusion_map = exclusion_maps_cache[cache_parity]
+        distance_maps = distance_maps_cache[cache_parity]
+        feature_searches = feature_searches_cache[cache_parity]
+        feature_map_positions = feature_map_positions_cache[cache_parity]
+        item_searches = item_searches_cache[cache_parity]
+        map_mode_searches = map_mode_searches_cache[cache_parity]
     end
 
     update_exclusions(new_waypoint)
@@ -570,15 +569,11 @@ function best_move_towards(positions, no_exclusions, radius)
     end
 end
 
-function best_move_towards_position(pos, no_exclusions, radius)
-    return best_move_towards({ pos }, no_exclusions, radius)
-end
-
-function get_feature_positions(feats, radius)
+function get_feature_map_positions(feats, radius)
     local positions = {}
     for _, feat in ipairs(feats) do
-        if feature_positions[feat] then
-            for _, pos in pairs(feature_positions[feat]) do
+        if feature_map_positions[feat] then
+            for _, pos in pairs(feature_map_positions[feat]) do
                 if not radius or supdist(pos) <= radius then
                     table.insert(positions, pos)
                 end
@@ -589,11 +584,11 @@ function get_feature_positions(feats, radius)
 end
 
 function best_move_towards_features(feats, no_exclusions, radius)
-    local positions = get_feature_positions(feats, radius)
+    local positions = get_feature_map_positions(feats, radius)
     if #positions == 0 then
         add_feature_search(feats)
         find_features(radius)
-        positions = get_feature_positions(feats, radius)
+        positions = get_feature_map_positions(feats, radius)
     end
 
     if #positions > 0 then
@@ -605,14 +600,14 @@ function best_move_towards_feature(feat, no_exclusions, radius)
     return best_move_towards_features({ feat }, no_exclusions, radius)
 end
 
-function record_feature_position(feat, pos)
-    if not feature_positions[feat] then
-        feature_positions[feat] = {}
+function update_feature_map_position(feat, pos)
+    if not feature_map_positions[feat] then
+        feature_map_positions[feat] = {}
     end
-    local gpos = position_sum(global_pos, pos)
-    local hash = hash_position(gpos)
-    if not feature_positions[feat][hash] then
-        feature_positions[feat][hash] = gpos
+
+    local hash = hash_position(pos)
+    if not feature_map_positions[feat][hash] then
+        feature_map_positions[feat][hash] = pos
     end
 end
 

@@ -183,7 +183,7 @@ function assess_square(pos)
 
     -- Equal to 10000 if the move is not closer to any stair in good_stairs,
     -- otherwise equal to the (min) dist to such a stair
-    a.stair_closer = stair_improvement(pos)
+    a.stairs_closer = stairs_improvement(pos)
 
     return a
 end
@@ -204,8 +204,8 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.stair_closer < 10000
-            and a1.stair_closer > 0
+            and a2.stairs_closer < 10000
+            and a1.stairs_closer > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
             -- attacked.
@@ -281,17 +281,17 @@ function step_improvement(bestreason, reason, a1, a2)
         return true
     elseif a2.adjacent + a2.ranged == 0 and a2.unalert > a1.unalert then
         return false
-    elseif reason == "fleeing" and a2.stair_closer < a1.stair_closer then
+    elseif reason == "fleeing" and a2.stairs_closer < a1.stairs_closer then
         return true
-    elseif reason == "fleeing" and a2.stair_closer > a1.stair_closer then
+    elseif reason == "fleeing" and a2.stairs_closer > a1.stairs_closer then
         return false
     elseif a2.enemy_distance < a1.enemy_distance then
         return true
     elseif a2.enemy_distance > a1.enemy_distance then
         return false
-    elseif a2.stair_closer < a1.stair_closer then
+    elseif a2.stairs_closer < a1.stairs_closer then
         return true
-    elseif a2.stair_closer > a2.stair_closer then
+    elseif a2.stairs_closer > a2.stairs_closer then
         return false
     elseif a1.cornerish and not a2.cornerish then
         return true

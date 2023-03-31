@@ -45,7 +45,7 @@ function turn_update()
     local clear_map = false
     if you.where() ~= where then
         new_level = true
-        level_parity = 3 - level_parity
+        cache_parity = 3 - cache_parity
 
         if you.where() ~= previous_where then
             clear_map = true

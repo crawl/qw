@@ -495,6 +495,7 @@ end
 
 -- Parse components of a level range.
 -- @string      range The level range.
+--
 -- @treturn string The branch. Will be nil if the level is invalid.
 -- @treturn int    The starting level.
 -- @treturn int    The ending level.

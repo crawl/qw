@@ -11,7 +11,7 @@ function enum(tbl)
 end
 
 function enum_string(val, tbl)
-    for k, v in tbl do
+    for k, v in pairs(tbl) do
         if v == val then
             return k
         end

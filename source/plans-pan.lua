@@ -67,16 +67,16 @@ function plan_enter_pan()
     return false
 end
 
-local pan_stair_turn = -100
+local pan_stairs_turn = -100
 function plan_go_down_pan()
     if view.feature_at(0, 0) == "transit_pandemonium"
             or view.feature_at(0, 0) == branch_exit("Pan") then
-        if pan_stair_turn == you.turns() then
+        if pan_stairs_turn == you.turns() then
             magic("X" .. control('f'))
             return true
         end
 
-        pan_stair_turn = you.turns()
+        pan_stairs_turn = you.turns()
         magic(">Y")
         -- In case we are trying to leave a rune level.
         return nil
@@ -92,12 +92,12 @@ function plan_dive_pan()
 
     if view.feature_at(0, 0) == "transit_pandemonium"
             or view.feature_at(0, 0) == branch_exit("Pan") then
-        if pan_stair_turn == you.turns() then
+        if pan_stairs_turn == you.turns() then
             pan_failed_rune_count = you.num_runes()
             return false
         end
 
-        pan_stair_turn = you.turns()
+        pan_stairs_turn = you.turns()
         dislike_pan_level = false
         magic(">Y")
         -- In case we are trying to leave a rune level.

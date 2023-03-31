@@ -65,7 +65,7 @@ local portal_data_values = {
 
 function initialize_branch_data()
     for _, entry in ipairs(branch_data_values) do
-        local br = entry[1]
+        local branch = entry[1]
         local data = {}
         data["travel"] = entry[2]
         data["depth"] = entry[3]
@@ -78,8 +78,8 @@ function initialize_branch_data()
         -- Update the parent entry depth with that of an entry found in the
         -- parent either if the entry depth is unconfirmed our the found entry
         -- is at a lower depth.
-        if c_persist.branches[br] then
-            for level, _ in pairs(c_persist.branches[br]) do
+        if c_persist.branch_entries[branch] then
+            for level, _ in pairs(c_persist.branch_entries[branch]) do
                 local parent, depth = parse_level_range(level)
                 if parent == data.parent
                         and (not data.parent_min_depth
@@ -92,7 +92,7 @@ function initialize_branch_data()
             end
         end
 
-        branch_data[br] = data
+        branch_data[branch] = data
     end
 
     for _, entry in ipairs(portal_data_values) do
@@ -204,12 +204,12 @@ function branch_exists(branch)
         or not branch_data[branch])
 end
 
-function branch_found(branch, los_state)
+function branch_found(branch, min_los)
     if branch == "D" then
         return {"D:0"}
     end
 
-    if not los_state then
+    if not min_los then
         -- Hack. Temple entries sometimes restrict access when they reveal the
         -- branch, requiring entry via stairs inside the vault. Requiring
         -- reachable means we won't try to access temple until we've explored
@@ -218,19 +218,19 @@ function branch_found(branch, los_state)
         -- initially spotted behind e.g. statues, so we allow only seeing them
         -- to consider them found.
         if branch == "Temple" then
-            los_state = FEAT_LOS.REACHABLE
+            min_los = FEAT_LOS.REACHABLE
         else
-            los_state = FEAT_LOS.SEEN
+            min_los = FEAT_LOS.SEEN
         end
     end
 
-    if not c_persist.branches[branch] then
+    if not c_persist.branch_entries[branch] then
         return
     end
 
-    for w, s in pairs(c_persist.branches[branch]) do
-        if s >= los_state then
-            return w
+    for level, state in pairs(c_persist.branch_entries[branch]) do
+        if state.los >= min_los then
+            return level
         end
     end
 end
@@ -298,67 +298,6 @@ end
 
 function portal_allowed(portal)
     return util.contains(ALLOWED_PORTALS, portal)
-end
-
-function record_branch_stairs(branch, depth, feat, state)
-    local dest_branch, dir = branch_stair_type(feat)
-    if not branch then
-        return
-    end
-
-    local data = dir == DIR.DOWN and c_persist.branch_entries
-        or c_persist.branch_exits
-    if not data[dest_branch] then
-        data[dest_branch] = {}
-    end
-
-    local level = make_level(branch, depth)
-    if not data[dest_branch][level] then
-        data[dest_branch][level] = {}
-    end
-
-    local current = data[dest_branch][level]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
-    end
-
-    if state.safe == nil then
-        state.safe = current.safe
-    end
-    if state.los == nil then
-        state.los = current.los
-    end
-
-    local los_changed = current.los < state.los
-    if state.safe ~= current.safe or los_changed then
-        if debug_channel("explore") then
-            dsay("Updating " .. level .. " stairs " .. feat .. " from "
-                .. stairs_state_string(current) .. " to "
-                .. stairs_state_string(state))
-        end
-
-        current.safe = state.safe
-
-        if los_changed then
-            current.los = state.los
-            want_gameplan_update = true
-        end
-    end
-
-    if dir == DIR.DOWN then
-        -- Update the entry depth in the branch data with the depth where
-        -- we found this entry if the entry depth is currently unconfirmed
-        -- or if the found depth is higher.
-        local parent_br, parent_min, parent_max = parent_branch(dest_branch)
-        if branch == parent_br
-                and (parent_min ~= parent_max or depth < parent_min) then
-            branch_data[dest_branch].parent_min_depth = depth
-            branch_data[dest_branch].parent_max_depth = depth
-        end
-    end
 end
 
 function record_portal(level, portal, permanent)

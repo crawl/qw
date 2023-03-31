@@ -357,21 +357,18 @@ function count_beogh_allies(radius)
     return i
 end
 
-function record_altar(feat, pos)
-    record_feature_position(feat, pos)
-
+function update_altar(level, feat, los)
     local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
-    local state = los_state(pos)
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}
     end
 
-    if c_persist.altars[god][where]
-            and c_persist.altars[god][where] >= state then
+    if c_persist.altars[god][level]
+            and c_persist.altars[god][level] >= los then
         return
     end
 
-    c_persist.altars[god][where] = state
+    c_persist.altars[god][level] = los
     want_gameplan_update = true
 end
 

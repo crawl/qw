@@ -7,9 +7,9 @@ function initialize_c_persist()
     end
 
     local tables = {
-        "waypoints", "exclusions", "portals", "branches", "altars",
-        "autoexplore", "upstairs", "downstairs", "seen_items",
-        "plan_fail_count"
+        "waypoints", "exclusions", "portals", "branch_entries",
+        "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
+        "seen_items", "plan_fail_count"
     }
     for _, table in ipairs(tables) do
         if not c_persist[table] then
@@ -52,20 +52,20 @@ function initialize()
     where_branch = "nowhere"
     where_depth = nil
 
-    if not level_parity then
-        traversal_maps = {}
-        exclusion_maps = {}
+    if not cache_parity then
+        traversal_maps_cache = {}
+        exclusion_maps_cache = {}
 
-        level_distance_maps = {}
-        level_feature_searches = {}
-        level_feature_positions = {}
-        level_item_searches = {}
-        level_map_mode_searches = {}
+        distance_maps_cache = {}
+        feature_searches_cache = {}
+        feature_map_positions_cache = {}
+        item_searches_cache = {}
+        map_mode_searches_cache = {}
 
         clear_level_map_data(1, true)
         clear_level_map_data(2, true)
 
-        level_parity = 1
+        cache_parity = 1
         previous_where = "nowhere"
     end
 

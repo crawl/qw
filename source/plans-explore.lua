@@ -123,7 +123,7 @@ function plan_continue_move_towards_destination()
         return false
     end
 
-    local move = best_move_towards_position(move_destination)
+    local move = best_move_towards({ move_destination })
     if move then
         move_to(move)
         return true

@@ -73,7 +73,7 @@ function feature_is_critical(feat)
         or feat:find("abyss")
 end
 
-function stone_stair_type(feat)
+function stone_stairs_type(feat)
     local dir
     if feat:find("stone_stairs_down") then
         dir = DIR.DOWN
@@ -87,7 +87,7 @@ function stone_stair_type(feat)
         .. (dir == DIR.DOWN and "down_" or "up_"), "")
 end
 
-function branch_stair_type(feat)
+function branch_stairs_type(feat)
     local dir
     if feat:find("^enter_") then
         dir = DIR.DOWN
@@ -95,6 +95,10 @@ function branch_stair_type(feat)
         dir = DIR.UP
     else
         return
+    end
+
+    if feat == "exit_dungeon" then
+        return dir, "D"
     end
 
     local entry_feat = feat:gsub("exit", "enter", 1)
@@ -122,9 +126,4 @@ function cloud_is_dangerous(cloud)
         return true
     end
     return false
-end
-
-function stairs_branch_name(feat)
-    for br, entry in pairs(branch_data) do
-        if entry.entrance == entry_feat then
 end
