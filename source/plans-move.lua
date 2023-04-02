@@ -275,22 +275,6 @@ function plan_swamp_clouds_hack()
     return plan_stuck_teleport()
 end
 
-function plan_stuck_move_towards_destination()
-    if dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_destination()
-    if move then
-        move_destination = dest
-        move_reason = "travel"
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
 function plan_exclusion_use_stairs()
     if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
         return false
@@ -334,6 +318,44 @@ function plan_exclusion_move()
 
     move = best_move_towards_features(feats, true)
     if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_stuck_use_stairs()
+    if dangerous_to_move() then
+        return false
+    end
+
+    local feats = destination_features()
+    local feat = view.feature_at(0, 0)
+    if not feats or not util.contains(feats, feat) then
+        return false
+    end
+
+    if feature_uses_map_key(">", feat) then
+        go_downstairs()
+        return true
+    elseif feature_uses_map_key("<", feat) then
+        go_upstairs()
+        return true
+    end
+
+    return false
+end
+
+function plan_stuck_move_towards_destination()
+    if dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_destination()
+    if move then
+        move_destination = dest
+        move_reason = "travel"
         move_to(move)
         return true
     end
@@ -405,6 +427,7 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
+        {plan_stuck_use_stairs, "stuck_use_stairs"},
         {plan_stuck_move_towards_destination,
             "stuck_move_towards_destination"},
         {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},

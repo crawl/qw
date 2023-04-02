@@ -260,6 +260,25 @@ function Monster:can_move_to_player_melee()
         end)
 end
 
+function Monster:have_line_of_fire()
+    return self:get_property("player_can_ranged_attack",
+        function()
+            return you.see_cell_solid_see(self:x_pos(), self:y_pos())
+        end)
+end
+
+function Monster:adjacent_cells_known()
+    return self:get_property("adjacent_cells_known",
+        function()
+            for pos in adjacent_iter(self:pos()) do
+                if view.feature_at(pos.x, pos.y) == "unknown" then
+                    return false
+                end
+            end
+            return true
+        end)
+end
+
 function Monster:is(flag)
     if not self.props.flags then
         self.props.flags = {}

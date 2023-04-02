@@ -650,15 +650,15 @@ function update_monsters()
     update_invis_monsters()
 end
 
-function monster_in_list(mons, mlist)
-    local entry = mlist[mons:name()]
+function monster_in_list(mons, mons_list)
+    local entry = mons_list[mons:name()]
     if type(entry) == "number" and you.xl() < entry then
         return true
     elseif type(entry) == "function" and entry(mons) then
         return true
     end
 
-    for _, entry in ipairs(mlist["*"]) do
+    for _, entry in ipairs(mons_list["*"]) do
         if entry(mons) then
             return true
         end
@@ -667,7 +667,7 @@ function monster_in_list(mons, mlist)
     return false
 end
 
-function check_monster_list(radius, mons_list, filter)
+function check_enemies_in_list(radius, mons_list, filter)
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() <= radius
                 and (not filter or filter(enemy))
@@ -679,7 +679,7 @@ function check_monster_list(radius, mons_list, filter)
     return false
 end
 
-function count_enemies_near(pos, radius, filter)
+function count_enemies(radius, filter)
     local i = 0
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() <= radius and (not filter or filter(enemy)) then
@@ -687,23 +687,6 @@ function count_enemies_near(pos, radius, filter)
         end
     end
     return i
-end
-
-function count_enemies_near_by_name(pos, radius, name)
-    return count_enemies_near(pos, radius,
-        function(enemy) return enemy:name() == name end)
-end
-
-function count_enemies(radius, filter)
-    return count_enemies_near(origin, radius, filter)
-end
-
-function count_enemies_in_monster_list(radius, mons_list, filter)
-    return count_enemies(radius,
-        function(enemy)
-            return (not filter or filter(enemy))
-                and monster_in_list(enemy, mons_list)
-        end)
 end
 
 function count_enemies_by_name(radius, name)

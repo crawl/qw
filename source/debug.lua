@@ -150,7 +150,7 @@ function override_gameplan(gameplan)
 end
 
 function pos_string(pos)
-    return "(" .. tostring(pos.x) .. "," .. tostring(pos.y) .. ")"
+    return "(" .. tostring(pos.x) .. ", " .. tostring(pos.y) .. ")"
 end
 
 function cell_string(pos, global)

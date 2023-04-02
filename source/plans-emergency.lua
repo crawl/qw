@@ -508,13 +508,13 @@ function want_to_brothers_in_arms()
     end
 
     -- Always BiA this list of monsters.
-    if (check_monster_list(los_radius, brothers_in_arms_necessary_monsters)
+    if (check_enemies_in_list(los_radius, brothers_in_arms_necessary_monsters)
                 -- If piety as high, we can also use BiA as a fallback for when
                 -- we'd like to berserk, but can't, or if when we see nasty
                 -- monsters.
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
-                        or check_monster_list(los_radius, nasty_monsters)))
+                        or check_enemies_in_list(los_radius, nasty_monsters)))
             and count_brothers_in_arms(4) == 0 then
         return true
     end
@@ -534,7 +534,7 @@ function want_to_finesse()
     end
 
     if not you.teleporting()
-            and check_monster_list(los_radius, nasty_monsters) then
+            and check_enemies_in_list(los_radius, nasty_monsters) then
         return true
     end
 
@@ -559,7 +559,7 @@ end
 
 function want_to_greater_servant()
     if you.skill("Invocations") >= 12
-            and (check_monster_list(los_radius, nasty_monsters)
+            and (check_enemies_in_list(los_radius, nasty_monsters)
                 or hp_is_low(50) and immediate_danger) then
         if count_greater_servants(4) == 0 and not you.teleporting() then
             return true
@@ -576,8 +576,8 @@ function want_to_cleansing_flame()
     local holy_check = function(mons)
             return mons:is_holy_vulnerable()
         end
-    if not check_monster_list(1, scary_monsters, holy_check)
-                and check_monster_list(2, scary_monsters, holy_check)
+    if not check_enemies_in_list(1, scary_monsters, holy_check)
+                and check_enemies_in_list(2, scary_monsters, holy_check)
             or count_enemies(2, holy_check) > 8 then
         return true
     end
@@ -599,7 +599,7 @@ function want_to_divine_warrior()
         and not dangerous_to_attack()
         and not you.teleporting()
         and you.skill("Invocations") >= 8
-        and (check_monster_list(los_radius, nasty_monsters)
+        and (check_enemies_in_list(los_radius, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warriors(4) == 0
 end
@@ -608,8 +608,8 @@ function want_to_fiery_armour()
     return danger
         and not dangerous_to_attack()
         and (hp_is_low(50)
-            or count_monster_list(los_radius, scary_monsters) >= 2
-            or check_monster_list(los_radius, nasty_monsters)
+            or count_enemies_in_list(los_radius, scary_monsters) >= 2
+            or check_enemies_in_list(los_radius, nasty_monsters)
             or count_enemies(los_radius) >= 6)
 end
 
@@ -619,10 +619,10 @@ function want_to_apocalypse()
     end
 
     local dlevel = drain_level()
-    return dlevel == 0 and check_monster_list(los_radius, scary_monsters)
+    return dlevel == 0 and check_enemies_in_list(los_radius, scary_monsters)
         or dlevel <= 2
             and (danger and hp_is_low(50)
-                or check_monster_list(los_radius, nasty_monsters))
+                or check_enemies_in_list(los_radius, nasty_monsters))
 end
 
 function bad_corrosion()
@@ -688,7 +688,7 @@ function count_nasty_hell_monsters(radius)
     local filter = function(mons)
         return not (have_holy_wrath and mons:is_holy_vulnerable())
     end
-    return count_monster_list(radius, nasty_monsters, filter)
+    return count_enemies_in_list(radius, nasty_monsters, filter)
 end
 
 function want_to_serious_buff()
@@ -717,7 +717,7 @@ function want_to_serious_buff()
         return false
     end
 
-    if check_monster_list(los_radius, ridiculous_uniques) then
+    if check_enemies_in_list(los_radius, ridiculous_uniques) then
         return true
     end
 
@@ -733,16 +733,16 @@ function want_resistance()
         and not dangerous_to_attack()
         and not you.teleporting()
         and not you.extra_resistant()
-        and (check_monster_list(los_radius, fire_resistance_monsters)
+        and (check_enemies_in_list(los_radius, fire_resistance_monsters)
                 and you.res_fire() < 3
-            or check_monster_list(los_radius, cold_resistance_monsters)
+            or check_enemies_in_list(los_radius, cold_resistance_monsters)
                 and you.res_cold() < 3
-            or check_monster_list(los_radius, elec_resistance_monsters)
+            or check_enemies_in_list(los_radius, elec_resistance_monsters)
                 and you.res_shock() < 1
-            or check_monster_list(los_radius, pois_resistance_monsters)
+            or check_enemies_in_list(los_radius, pois_resistance_monsters)
                 and you.res_poison() < 1
             or in_branch("Zig")
-                and check_monster_list(los_radius, acid_resistance_monsters)
+                and check_enemies_in_list(los_radius, acid_resistance_monsters)
                 and not you.res_corr())
 end
 
@@ -764,14 +764,14 @@ end
 function want_to_trogs_hand()
     return danger
         and not dangerous_to_attack()
-        and check_monster_list(los_radius, hand_monsters)
+        and check_enemies_in_list(los_radius, hand_monsters)
 end
 
 function want_to_berserk()
     return danger
         and not dangerous_to_melee()
         and (hp_is_low(50) and sense_danger(2, true)
-            or check_monster_list(2, scary_monsters)
+            or check_enemies_in_list(2, scary_monsters)
             or invis_caster and not options.autopick_on)
 end
 
@@ -779,8 +779,8 @@ function want_to_heroism()
     return danger
         and dangerous_to_attack()
         and (hp_is_low(70)
-            or check_monster_list(los_radius, scary_monsters)
-            or count_(0, 0, los_radius) >= 4)
+            or check_enemies_in_list(los_radius, scary_monsters)
+            or count_enemies(0, 0, los_radius) >= 4)
 end
 
 function want_to_recall()
@@ -930,7 +930,7 @@ function plan_dig_grate()
                 if supdist(pos) <= los_radius
                         and view.feature_at(pos.x, pos.y) == "iron_grate" then
                     grate_count = grate_count + 1
-                    if abs(pos.x) + abs(pos.y) < closest_grate
+                    if abs(pos.x) + abs(pos.y) < grate_offset
                             and you.see_cell_solid_see(pos.x, pos.y) then
                         grate_pos = pos
                         grate_offset = abs(pos.x) + abs(pos.y)

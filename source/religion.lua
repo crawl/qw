@@ -91,6 +91,10 @@ function god_uses_mp(god)
     return god_data[god].uses_mp
 end
 
+function altar_god(feat)
+    return god_full_name(feat:gsub("^altar_", ""):gsub("_", " "))
+end
+
 function god_altar(god)
     if not god then
         god = you.god()
@@ -357,8 +361,7 @@ function count_beogh_allies(radius)
     return i
 end
 
-function update_altar(level, feat, los)
-    local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
+function update_altar(level, god, los)
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}
     end

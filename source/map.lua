@@ -409,20 +409,33 @@ function update_map_position(pos, map_queue)
     exclusion_map[gpos.x][gpos.y] = not (view.in_known_map_bounds(pos.x, pos.y)
         and travel.is_excluded(pos.x, pos.y))
 
-    if feat:find("^stone_stairs") then
-        update_stairs(where_branch, where_depth, feat,
+    local updated = false
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        update_stone_stairs(where_branch, where_depth, dir, num,
             { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
-        update_feature_map_position(feat, gpos)
-    elseif feat:find("^enter_") or feat:find("^exit_")then
-        update_branch_stairs(where_branch, where_depth, feat,
-            { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
-        update_feature_map_position(feat, gpos)
-    elseif feat:find("^altar_") and feat ~= "altar_ecumenical" then
-        update_altar(where, feat, los_state(pos))
-        update_feature_map_position(feat, gpos)
+        updated = true
     end
 
-    if record_pos then
+    if not updated then
+        local branch, dir = branch_stairs_type(feat)
+        if branch then
+            update_branch_stairs(where_branch, where_depth, branch, dir,
+                { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
+            updated = true
+        end
+    end
+
+    if not updated then
+        local god = altar_god(feat)
+        if god then
+            update_altar(where, god, los_state(pos))
+            updated = true
+        end
+    end
+
+    if updated then
+        update_feature_map_position(feat, gpos)
     end
 
     if move_destination
@@ -625,9 +638,47 @@ function remove_exclusions(record_only)
     c_persist.exclusions[where] = {}
 end
 
+function exclude_position(pos)
+    if debug_channel("map") then
+        local desc
+        local mons = monster_map[pos.x][pos.y]
+        if mons then
+            desc = mons:name()
+        else
+            desc = view.feature_at(pos.x, pos.y)
+        end
+        dsay("Excluding " .. desc .. " at " .. pos_string(pos))
+    end
+
+    travel.set_exclude(pos.x, pos.y)
+    local hash = hash_position(position_sum(global_pos, pos))
+    c_persist.exclusions[where][hash] = true
+end
+
 function update_exclusions(new_waypoint)
     if new_waypoint then
         remove_exclusions()
+    end
+
+    local auto_exclude = {}
+    local have_ranged = best_missile()
+    local have_temp_flight = find_item("potion", "flight")
+    -- Monsters that get excluded unconditionally...
+    for _, enemy in ipairs(enemy_list) do
+        if not enemy:is_summoned()
+                -- They can't move to our melee and we can't move to melee
+                -- them.
+                and not enemy:can_move_to_player_melee()
+                and not enemy:get_player_move_towards(have_temp_flight)
+                -- We need to at least see all cells adjacent to them.
+                and enemy:adjacent_cells_known()
+                -- We already know we can't target them with a ranged attack.
+                and not (have_ranged and enemy:have_line_of_fire()) then
+            table.insert(auto_exclude, enemy:pos())
+        end
+    end
+    for _, pos in ipairs(auto_exclude) do
+        exclude_position(pos)
     end
 
     -- We only exclude monsters when we have no incoming melee. Incoming melee
@@ -654,13 +705,7 @@ function update_exclusions(new_waypoint)
 
     for _, enemy in ipairs(enemy_list) do
         if not enemy:is_summoned() then
-            local pos = enemy:pos()
-            if debug_channel("map") then
-                dsay("Excluding " .. enemy:name() .. " at " .. pos_string(pos))
-            end
-            travel.set_exclude(pos.x, pos.y)
-            local hash = hash_position(position_sum(global_pos, pos))
-            c_persist.exclusions[where][hash] = true
+            exclude_position(enemy:pos())
         end
     end
 end

@@ -49,14 +49,17 @@ function feature_is_runed_door(feat)
 end
 
 function feature_uses_map_key(key, feat)
+    local dir = stone_stairs_type(feat)
+    if not dir then
+        dir = select(2, branch_stairs_type(feat))
+    end
+
     if key == ">" then
-        return feat:find("stone_stairs_down")
-            or feat:find("enter_")
+        return dir and dir == DIR.DOWN
             or feat == "transporter"
             or feat == "escape_hatch_down"
     elseif key == "<" then
-        return feat:find("stone_stairs_up")
-            or feat:find("exit_")
+        return dir and dir == DIR.UP
             or feat == "escape_hatch_up"
     else
         return false
@@ -83,8 +86,9 @@ function stone_stairs_type(feat)
         return
     end
 
-    return dir, feat:gsub("stone_stairs_"
-        .. (dir == DIR.DOWN and "down_" or "up_"), "")
+    local num = feat:gsub("stone_stairs_"
+        .. (dir == DIR.DOWN and "down_" or "up_"), "", 1)
+    return dir, num
 end
 
 function branch_stairs_type(feat)

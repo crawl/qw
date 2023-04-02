@@ -54,13 +54,10 @@ function stairs_state_string(state)
         .. (state.safe and "safe" or "unsafe")
 end
 
-function update_stairs(branch, depth, feat, state, force)
+function update_stone_stairs(branch, depth, dir, num, state, force)
     if not state.safe and not state.los then
         error("Undefined stairs state.")
     end
-
-    local dir, num
-    dir, num = stone_stairs_type(feat)
 
     local data
     if dir == DIR.DOWN then
@@ -98,7 +95,8 @@ function update_stairs(branch, depth, feat, state, force)
             or force and current.los ~= state.los
     if state.safe ~= current.safe or los_changed then
         if debug_channel("explore") then
-            dsay("Updating stone stairs " .. feat .. " on " .. level
+            dsay("Updating stone " .. (dir == DIR.UP and "up" or "down")
+                .. "stairs " .. num .. " on " .. level
                 .. " from " .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end
@@ -121,10 +119,8 @@ function update_all_stairs(branch, depth, dir, state, min_los)
     end
 
     for i = 1, num_required_stairs(branch, depth, dir) do
-        if get_stairs_state(branch, depth, dir, num).los >= min_los then
-            local feat = "stone_stairs_"
-                .. (dir == DIR.DOWN and "down_" or "up_") .. ("i"):rep(i)
-            update_stairs(branch, depth, feat, state, true)
+        if get_stairs_state(branch, depth, dir, i).los >= min_los then
+            update_stone_stairs(branch, depth, dir, i, state, true)
         end
     end
 end
@@ -229,10 +225,9 @@ function have_all_stairs(branch, depth, dir, los)
     return true
 end
 
-function update_branch_stairs(branch, depth, feat, state)
-    local dest_branch, dir = branch_stairs_type(feat)
-    if not branch then
-        return
+function update_branch_stairs(branch, depth, dest_branch, dir, state)
+    if not state.safe and not state.los then
+        error("Undefined branch stairs state.")
     end
 
     local data = dir == DIR.DOWN and c_persist.branch_entries
@@ -267,8 +262,9 @@ function update_branch_stairs(branch, depth, feat, state)
     end
 
     if debug_channel("explore") then
-        dsay("Updating branch stairs " .. feat .. " on " .. level
-            .. " from " .. stairs_state_string(current) .. " to "
+        dsay("Updating " .. dest_branch .. " branch "
+            .. (dir == DIR.UP and "exit" or "entrance") .. " stairs " .. " on "
+            .. level .. " from " .. stairs_state_string(current) .. " to "
             .. stairs_state_string(state))
     end
 
@@ -352,20 +348,21 @@ function find_good_stairs()
     local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
     local good_feats = {}
     for _, feat in ipairs(feats) do
+        local state
         if feat:find("^stone_stairs") then
             local dir, num = stone_stairs_type(feat)
-            local state = get_stairs_state(where_branch, where_depth, dir, num)
+            state = get_stairs_state(where_branch, where_depth, dir, num)
         elseif feat:find("^exit") then
             local branch, dir = branch_stairs_type(feat)
-            local state = get_branch_stairs_state(where_branch, where_depth,
-                dir, num)
+            state = get_branch_stairs_state(where_branch, where_depth, branch,
+                dir)
         end
         if state.safe then
             table.insert(good_feats, feat)
         end
     end
 
-    local stairs_positions = get_feature_positions(good_feats)
+    local stairs_positions = get_feature_map_positions(good_feats)
     local pspeed = player_speed()
     for _, pos in ipairs(stairs_positions) do
         local dist_map = get_distance_map(pos)

@@ -534,7 +534,12 @@ function plan_continue_move_towards_enemy()
         return false
     end
 
-    local move = get_move_towards(origin, enemy_memory, tabbable_square)
+    local move = get_move_towards(origin, enemy_memory, tabbable_square,
+        reach_range())
+    if not move then
+        return false
+    end
+
     magic(delta_to_vi(move))
     return true
 end
