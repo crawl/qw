@@ -132,8 +132,4 @@ function turn_update()
     go_travel_attempts = 0
     stash_travel_attempts = 0
     map_mode_search_attempts = 0
-
-    if collectgarbage("count") > 7000 then
-        collectgarbage()
-    end
 end

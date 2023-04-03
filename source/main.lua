@@ -98,6 +98,10 @@ function run_qw()
         do_dummy_action = true
     end
 
+    if collectgarbage("count") > 8000 then
+        collectgarbage("collect")
+    end
+
     if do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))
     end

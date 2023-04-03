@@ -388,6 +388,11 @@ function distance_map_update_pos(pos, dist_map)
     end
 end
 
+function has_exclusion_center_at(pos)
+    local hash = hash_position(position_sum(global_pos, pos))
+    return c_persist.exclusions[where][hash]
+end
+
 --[[
 Are the given player coordinates unexcluded according to the exclusion map
 cache?
@@ -665,7 +670,8 @@ function update_exclusions(new_waypoint)
     local have_temp_flight = find_item("potion", "flight")
     -- Monsters that get excluded unconditionally...
     for _, enemy in ipairs(enemy_list) do
-        if not enemy:is_summoned()
+        if not has_exclusion_center_at(enemy:pos())
+                and not enemy:is_summoned()
                 -- They can't move to our melee and we can't move to melee
                 -- them.
                 and not enemy:can_move_to_player_melee()
