@@ -310,6 +310,14 @@ function plan_exclusion_move()
         return true
     end
 
+    local move, dest = best_move_towards_unexplored(true)
+    if move then
+        move_destination = dest
+        move_reason = "travel"
+        move_to(move)
+        return true
+    end
+
     local feats = level_stairs_features(gameplan_branch, gameplan_depth,
         DIR.UP)
     if not feats then

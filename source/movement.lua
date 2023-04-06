@@ -526,6 +526,45 @@ function monster_can_move_to_player_melee(mons)
             or get_move_closer({ mons:pos() }))
 end
 
+function best_move_towards(positions, no_exclusions, radius)
+    local best_dist = INF_DIST
+    local best_dest
+    local best_move = {}
+    for _, pos in ipairs(positions) do
+        local dist_map = get_distance_map(pos, radius)
+        local map = no_exclusions and dist_map.map or dist_map.excluded_map
+        for dpos in adjacent_iter(global_pos) do
+            local dist = map[dpos.x][dpos.y]
+            if dist and dist < best_dist then
+                best_dist = dist
+                best_move = position_difference(dpos, global_pos)
+                best_dest = pos
+            end
+        end
+    end
+
+    if best_dist < INF_DIST then
+        return best_move, best_dest
+    end
+end
+
+function best_move_towards_features(feats, no_exclusions, radius)
+    local positions = get_feature_map_positions(feats, radius)
+    if #positions == 0 then
+        add_feature_search(feats)
+        find_features(radius)
+        positions = get_feature_map_positions(feats, radius)
+    end
+
+    if #positions > 0 then
+        return best_move_towards(positions, no_exclusions, radius)
+    end
+end
+
+function best_move_towards_feature(feat, no_exclusions, radius)
+    return best_move_towards_features({ feat }, no_exclusions, radius)
+end
+
 function destination_features()
     if gameplan_travel.first_dir then
         return level_stairs_features(where_branch, where_depth,
@@ -547,4 +586,30 @@ function best_move_towards_destination(no_exclusions, radius)
     end
 
     return best_move_towards_features(feats, no_exclusions, radius)
+end
+
+function map_position_has_adjacent_unseen(pos)
+    for apos in adjacent_iter(pos) do
+        if view.feature_at(pos.x, pos.y) == "unsenn" then
+            return true
+        end
+    end
+
+    return false
+end
+function best_move_towards_unexplored(radius)
+    local unexplored_pos
+    for pos in radius_iter(global_pos, radius) do
+        if map_is_traversable_at(pos) and map_has_adjacent_unseen(pos) then
+            for _, stair_pos in ipairs(good_stairs) do
+                local dist_map = get_distance_map(stair_pos)
+                if dist_map.excluded_map[pos.x][pos.y] < INF_DIST then
+                    unexplored_pos = pos
+                    break
+                end
+            end
+        end
+    end
+
+    return best_move_towards({ unexplored_pos }, no_exclusions, radius)
 end

@@ -64,10 +64,10 @@ function record_map_mode_search(key, start_hash, count, end_hash)
     map_mode_searches[key][start_hash][count] = end_hash
 end
 
-function clear_level_map_data(parity, full_clear)
+function clear_map_cache(parity, full_clear)
     if debug_channel("map") then
         dsay((full_clear and "Full clearing" or "Clearing")
-            .. " map data for slot " .. tostring(parity))
+            .. " map cache for slot " .. tostring(parity))
     end
 
     if full_clear then
@@ -390,20 +390,19 @@ end
 
 function has_exclusion_center_at(pos)
     local hash = hash_position(position_sum(global_pos, pos))
-    return c_persist.exclusions[where][hash]
+    return c_persist.exclusions[where] and c_persist.exclusions[where][hash]
 end
 
 --[[
-Are the given player coordinates unexcluded according to the exclusion map
-cache?
-@table gpos The global position
+Are the given map coordinates unexcluded according to the exclusion map cache?
+@table pos The map position.
 @treturn boolean True if coordinates are unexcluded, false otherwise.
 --]]
-function map_is_unexcluded_at(gpos)
-    return exclusion_map[gpos.x][gpos.y]
+function map_is_unexcluded_at(pos)
+    return exclusion_map[pos.x][pos.y]
 end
 
-function update_map_position(pos, map_queue)
+function update_map_at_los_position(pos, map_queue)
     local gpos = position_sum(global_pos, pos)
     if supdist(gpos) > GXM then
         return
@@ -483,7 +482,7 @@ function update_map(new_level, clear_map)
     local new_waypoint = update_waypoint()
 
     if new_waypoint or clear_map then
-        clear_level_map_data(cache_parity, clear_map)
+        clear_map_cache(cache_parity, clear_map)
     end
 
     if new_level or new_waypoint or full_clear then
@@ -534,7 +533,7 @@ function update_map(new_level, clear_map)
     local radius = global_map_update and GXM or los_radius
     local pos_queue = {}
     for pos in square_iter(origin, radius, true) do
-        update_map_position(pos, pos_queue)
+        update_map_at_los_position(pos, pos_queue)
     end
     global_map_update = false
 
@@ -565,28 +564,6 @@ function get_distance_map(pos, radius)
     return distance_maps[hash]
 end
 
-function best_move_towards(positions, no_exclusions, radius)
-    local best_dist = INF_DIST
-    local best_dest
-    local best_move = {}
-    for _, pos in ipairs(positions) do
-        local dist_map = get_distance_map(pos, radius)
-        local map = no_exclusions and dist_map.map or dist_map.excluded_map
-        for dpos in adjacent_iter(global_pos) do
-            local dist = map[dpos.x][dpos.y]
-            if dist and dist < best_dist then
-                best_dist = dist
-                best_move = position_difference(dpos, global_pos)
-                best_dest = pos
-            end
-        end
-    end
-
-    if best_dist < INF_DIST then
-        return best_move, best_dest
-    end
-end
-
 function get_feature_map_positions(feats, radius)
     local positions = {}
     for _, feat in ipairs(feats) do
@@ -599,23 +576,6 @@ function get_feature_map_positions(feats, radius)
         end
     end
     return positions
-end
-
-function best_move_towards_features(feats, no_exclusions, radius)
-    local positions = get_feature_map_positions(feats, radius)
-    if #positions == 0 then
-        add_feature_search(feats)
-        find_features(radius)
-        positions = get_feature_map_positions(feats, radius)
-    end
-
-    if #positions > 0 then
-        return best_move_towards(positions, no_exclusions, radius)
-    end
-end
-
-function best_move_towards_feature(feat, no_exclusions, radius)
-    return best_move_towards_features({ feat }, no_exclusions, radius)
 end
 
 function update_feature_map_position(feat, pos)
@@ -655,9 +615,13 @@ function exclude_position(pos)
         dsay("Excluding " .. desc .. " at " .. pos_string(pos))
     end
 
-    travel.set_exclude(pos.x, pos.y)
+    if not c_persist.exclusions[where] then
+        c_persist.exclusions[where] = {}
+    end
+
     local hash = hash_position(position_sum(global_pos, pos))
     c_persist.exclusions[where][hash] = true
+    travel.set_exclude(pos.x, pos.y)
 end
 
 function update_exclusions(new_waypoint)
@@ -665,20 +629,22 @@ function update_exclusions(new_waypoint)
         remove_exclusions()
     end
 
+    -- Unreachable monsters that we can't ranged attack get excluded
+    -- unconditionally.
     local auto_exclude = {}
     local have_ranged = best_missile()
     local have_temp_flight = find_item("potion", "flight")
-    -- Monsters that get excluded unconditionally...
     for _, enemy in ipairs(enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
                 and not enemy:is_summoned()
+                -- We need to at least see all cells adjacent to them to be
+                -- so our movement evaluation is reasonably correct.
+                and enemy:adjacent_cells_known()
                 -- They can't move to our melee and we can't move to melee
-                -- them.
+                -- them...
                 and not enemy:can_move_to_player_melee()
                 and not enemy:get_player_move_towards(have_temp_flight)
-                -- We need to at least see all cells adjacent to them.
-                and enemy:adjacent_cells_known()
-                -- We already know we can't target them with a ranged attack.
+                -- ... and already know we can't target them with a ranged attack.
                 and not (have_ranged and enemy:have_line_of_fire()) then
             table.insert(auto_exclude, enemy:pos())
         end

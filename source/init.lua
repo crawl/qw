@@ -62,8 +62,8 @@ function initialize()
         item_searches_cache = {}
         map_mode_searches_cache = {}
 
-        clear_level_map_data(1, true)
-        clear_level_map_data(2, true)
+        clear_map_cache(1, true)
+        clear_map_cache(2, true)
 
         cache_parity = 1
         previous_where = "nowhere"
