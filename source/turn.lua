@@ -119,6 +119,25 @@ function turn_update()
     melee_unsafe = nil
     melee_target = nil
 
+    if move_destination then
+        local reset = false
+        if move_reason == "monster" then
+            local pos = position_difference(move_destination, global_pos)
+            if supdist(pos) <= los_radius
+                    and you.see_cell_no_trans(pos.x, pos.y) then
+                reset = true
+            end
+        elseif global_pos.x == move_destination.x
+                and global_pos.y == move_destination.y then
+            reset = true
+        end
+
+        if reset then
+            move_destination = nil
+            move_reason = nil
+        end
+    end
+
     if danger then
         move_destination = nil
         move_reason = nil

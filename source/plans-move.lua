@@ -304,22 +304,31 @@ function plan_exclusion_move()
 
     local move, dest = best_move_towards_destination(true)
     if move then
-        move_destination = dest
-        move_reason = "travel"
         move_to(move)
         return true
     end
 
-    local move, dest = best_move_towards_unexplored(true)
-    if move then
-        move_destination = dest
-        move_reason = "travel"
-        move_to(move)
-        return true
+    if move_destination and move_reason == "unexplored" then
+        move = best_move_towards_map_position(move_destination, true)
+        if move then
+            move_to(move)
+            return true
+        end
     end
 
-    local feats = level_stairs_features(gameplan_branch, gameplan_depth,
-        DIR.UP)
+    if autoexplored_level(where_branch, where_depth) then
+        move, dest = best_move_towards_unexplored()
+        if move then
+            if debug_channel("explore") then
+                dsay("Moving to explore near " .. pos_string(dest) .. " (" ..
+                    cell_string(dest, true) .. ")")
+            end
+            move_destination = dest
+            move_reason = "unexplored"
+        end
+    end
+
+    local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
     if not feats then
         return false
     end
@@ -394,7 +403,7 @@ function plan_stuck_move_towards_monster()
         return false
     end
 
-    local move, dest = best_move_towards(mons_targets)
+    local move, dest = best_move_towards_map_positions(mons_targets)
     if move then
         move_destination = dest
         move_reason = "monster"
@@ -439,7 +448,7 @@ function set_plan_move()
         {plan_stuck_move_towards_destination,
             "stuck_move_towards_destination"},
         {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},
-        {plan_stuck_clear_exclusions, "try_stuck_leave_exclusion"},
+        {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_forget_map, "try_stuck_forget_map"},

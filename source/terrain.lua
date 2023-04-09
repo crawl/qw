@@ -7,8 +7,7 @@ function get_feature_name(where_name)
 end
 
 function feature_is_traversable(feat)
-    return feat ~= "unseen"
-        and (open_runed_doors or not feature_is_runed_door(feat))
+    return (open_runed_doors or not feature_is_runed_door(feat))
         and travel.feature_traversable(feat)
 end
 
@@ -69,8 +68,8 @@ end
 function feature_is_critical(feat)
     return feature_uses_map_key(">", feat)
         or feature_uses_map_key("<", feat)
-        or feat:find("shop")
-        or feat:find("altar")
+        or feat:find("_shop")
+        or feat:find("altar_")
         or feat:find("transporter")
         or feat:find("transit")
         or feat:find("abyss")
@@ -78,9 +77,9 @@ end
 
 function stone_stairs_type(feat)
     local dir
-    if feat:find("stone_stairs_down") then
+    if feat:find("^stone_stairs_down") then
         dir = DIR.DOWN
-    elseif feat:find("stone_stairs_up") then
+    elseif feat:find("^stone_stairs_up") then
         dir = DIR.UP
     else
         return

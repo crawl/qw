@@ -526,13 +526,13 @@ function monster_can_move_to_player_melee(mons)
             or get_move_closer({ mons:pos() }))
 end
 
-function best_move_towards(positions, no_exclusions, radius)
+function best_move_towards_map_positions(positions, ignore_exclusions, radius)
     local best_dist = INF_DIST
     local best_dest
     local best_move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
-        local map = no_exclusions and dist_map.map or dist_map.excluded_map
+        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
         for dpos in adjacent_iter(global_pos) do
             local dist = map[dpos.x][dpos.y]
             if dist and dist < best_dist then
@@ -548,7 +548,11 @@ function best_move_towards(positions, no_exclusions, radius)
     end
 end
 
-function best_move_towards_features(feats, no_exclusions, radius)
+function best_move_towards_map_position(pos, ignore_exclusions, radius)
+    return best_move_towards_map_positions({ pos }, ignore_exclusions, radius)
+end
+
+function best_move_towards_features(feats, ignore_exclusions, radius)
     local positions = get_feature_map_positions(feats, radius)
     if #positions == 0 then
         add_feature_search(feats)
@@ -557,12 +561,9 @@ function best_move_towards_features(feats, no_exclusions, radius)
     end
 
     if #positions > 0 then
-        return best_move_towards(positions, no_exclusions, radius)
+        return best_move_towards_map_positions(positions, ignore_exclusions,
+            radius)
     end
-end
-
-function best_move_towards_feature(feat, no_exclusions, radius)
-    return best_move_towards_features({ feat }, no_exclusions, radius)
 end
 
 function destination_features()
@@ -579,31 +580,34 @@ function destination_features()
     end
 end
 
-function best_move_towards_destination(no_exclusions, radius)
+function best_move_towards_destination(ignore_exclusions, radius)
     local feats = destination_features()
     if not feats then
         return
     end
 
-    return best_move_towards_features(feats, no_exclusions, radius)
+    return best_move_towards_features(feats, ignore_exclusions, radius)
 end
 
 function map_position_has_adjacent_unseen(pos)
     for apos in adjacent_iter(pos) do
-        if view.feature_at(pos.x, pos.y) == "unsenn" then
+        if traversal_map[apos.x][apos.y] == nil then
             return true
         end
     end
 
     return false
 end
-function best_move_towards_unexplored(radius)
+
+function best_move_towards_unexplored()
     local unexplored_pos
-    for pos in radius_iter(global_pos, radius) do
-        if map_is_traversable_at(pos) and map_has_adjacent_unseen(pos) then
+    for pos in radius_iter(global_pos, 2 * los_radius) do
+        if map_is_traversable_at(pos)
+                and map_position_has_adjacent_unseen(pos) then
             for _, stair_pos in ipairs(good_stairs) do
                 local dist_map = get_distance_map(stair_pos)
-                if dist_map.excluded_map[pos.x][pos.y] < INF_DIST then
+                if dist_map.map[pos.x][pos.y]
+                        and dist_map.map[pos.x][pos.y] < INF_DIST then
                     unexplored_pos = pos
                     break
                 end
@@ -611,5 +615,5 @@ function best_move_towards_unexplored(radius)
         end
     end
 
-    return best_move_towards({ unexplored_pos }, no_exclusions, radius)
+    return best_move_towards_map_position(unexplored_pos, true, GXM)
 end

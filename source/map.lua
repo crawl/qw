@@ -409,50 +409,60 @@ function update_map_at_los_position(pos, map_queue)
     end
 
     local feat = view.feature_at(pos.x, pos.y)
-    traversal_map[gpos.x][gpos.y] = feature_is_traversable(feat)
-    exclusion_map[gpos.x][gpos.y] = not (view.in_known_map_bounds(pos.x, pos.y)
-        and travel.is_excluded(pos.x, pos.y))
+    if feat == "unseen" then
+        return
+    end
 
-    local updated = false
+    local map_updated = false
+    local traversable = feature_is_traversable(feat)
+    if traversal_map[gpos.x][gpos.y] ~= traversable then
+        traversal_map[gpos.x][gpos.y] = traversable
+        map_updated = true
+    end
+
+    local unexcluded = not (view.in_known_map_bounds(pos.x, pos.y)
+        and travel.is_excluded(pos.x, pos.y))
+    if exclusion_map[gpos.x][gpos.y] ~= unexcluded then
+        exclusion_map[gpos.x][gpos.y] = unexcluded
+        map_updated = true
+    end
+
+    if map_updated then
+        table.insert(map_queue, gpos)
+    end
+
+    local feat_updated = false
     local dir, num = stone_stairs_type(feat)
     if dir then
         update_stone_stairs(where_branch, where_depth, dir, num,
             { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
-        updated = true
+        feat_updated = true
     end
 
-    if not updated then
+    if not feat_updated then
         local branch, dir = branch_stairs_type(feat)
         if branch then
             update_branch_stairs(where_branch, where_depth, branch, dir,
                 { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
-            updated = true
+            feat_updated = true
         end
     end
 
-    if not updated then
+    if not feat_updated then
         local god = altar_god(feat)
         if god then
             update_altar(where, god, los_state(pos))
-            updated = true
+            feat_updated = true
         end
     end
 
-    if updated then
+    if feat_updated then
         update_feature_map_position(feat, gpos)
-    end
 
-    if move_destination
-            and gpos.x == move_destination.x
-            and gpos.y == move_destination.y
-            and (move_reason == "monster"
-                    and you.see_cell_no_trans(pos.x, pos.y)
-                or pos.x == 0 and pos.y == 0) then
-        move_destination = nil
-        move_reason = nil
+        if not map_updated then
+            table.insert(map_queue, gpos)
+        end
     end
-
-    table.insert(map_queue, gpos)
 end
 
 function update_distance_maps(pos_queue)
@@ -531,13 +541,13 @@ function update_map(new_level, clear_map)
     end
 
     local radius = global_map_update and GXM or los_radius
-    local pos_queue = {}
+    local map_queue = {}
     for pos in square_iter(origin, radius, true) do
-        update_map_at_los_position(pos, pos_queue)
+        update_map_at_los_position(pos, map_queue)
     end
     global_map_update = false
 
-    update_distance_maps(pos_queue)
+    update_distance_maps(map_queue)
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)

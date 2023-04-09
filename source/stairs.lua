@@ -107,41 +107,37 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
             current.los = state.los
             want_gameplan_update = true
         end
-
     end
 end
 
-function update_all_stairs(branch, depth, dir, state, min_los)
-    local level = make_level(branch, depth)
-
-    if not min_los then
-        min_los = state.los
-    end
-
+function update_all_stone_stairs(branch, depth, dir, state, max_los)
     for i = 1, num_required_stairs(branch, depth, dir) do
-        if get_stairs_state(branch, depth, dir, i).los >= min_los then
+        if not max_los
+                or get_stone_stairs_state(branch, depth, dir, i).los
+                    >= state.los then
             update_stone_stairs(branch, depth, dir, i, state, true)
         end
     end
 end
 
-function reset_all_stairs(branch, depth, dir)
-    update_all_stairs(branch, depth, dir, { los = FEAT_LOS.REACHABLE })
+function reset_stone_stairs(branch, depth, dir)
+    update_all_stone_stairs(branch, depth, dir, { los = FEAT_LOS.REACHABLE },
+        true)
 
-    local lev = make_level(branch, depth)
-    if lev == where then
+    local level = make_level(branch, depth)
+    if level == where then
         map_mode_searches[dir_key(dir)] = nil
-    elseif lev == previous_where then
+    elseif level == previous_where then
         map_mode_searches_cache[3 - cache_parity][dir_key(dir)] = nil
     end
 
-    if where ~= lev then
+    if where ~= level then
         dsay("Resetting autoexplore of " .. lev, "explore")
         c_persist.autoexplore[lev] = AUTOEXP.NEEDED
     end
 end
 
-function get_stairs_state(branch, depth, dir, num)
+function get_stone_stairs_state(branch, depth, dir, num)
     local level = make_level(branch, depth)
     if dir == DIR.UP then
         if not c_persist.upstairs[level]
@@ -158,10 +154,6 @@ function get_stairs_state(branch, depth, dir, num)
 
         return c_persist.downstairs[level][num]
     end
-end
-
-function destination_stairs_state(branch, depth, dir, num)
-    return get_stairs_state(branch, depth + dir, -dir, num)
 end
 
 function num_required_stairs(branch, depth, dir)
@@ -202,7 +194,7 @@ function count_stairs(branch, depth, dir, los)
     for i = 1, num_required do
         num = "i"
         num = num:rep(i)
-        if get_stairs_state(branch, depth, dir, num).los >= los then
+        if get_stone_stairs_state(branch, depth, dir, num).los >= los then
             count = count + 1
         end
     end
@@ -216,7 +208,7 @@ function have_all_stairs(branch, depth, dir, los)
         for i = 1, num_required do
             num = "i"
             num = num:rep(i)
-            if get_stairs_state(branch, depth, dir, num).los < los then
+            if get_stone_stairs_state(branch, depth, dir, num).los < los then
                 return false
             end
         end
@@ -337,6 +329,19 @@ function get_branch_stairs_state(branch, depth, stairs_branch, dir)
     end
 end
 
+function get_stairs_state(branch, depth, feat)
+    local state
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        return get_stone_stairs_state(branch, depth, dir, num)
+    end
+
+    local branch, dir = branch_stairs_type(feat)
+    if branch then
+        return get_branch_stairs_state(where_branch, where_depth, branch, dir)
+    end
+end
+
 function find_good_stairs()
     good_stairs = {}
 
@@ -348,16 +353,7 @@ function find_good_stairs()
     local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
     local good_feats = {}
     for _, feat in ipairs(feats) do
-        local state
-        if feat:find("^stone_stairs") then
-            local dir, num = stone_stairs_type(feat)
-            state = get_stairs_state(where_branch, where_depth, dir, num)
-        elseif feat:find("^exit") then
-            local branch, dir = branch_stairs_type(feat)
-            state = get_branch_stairs_state(where_branch, where_depth, branch,
-                dir)
-        end
-        if state.safe then
+        if get_stairs_state(where_branch, where_depth, feat).safe then
             table.insert(good_feats, feat)
         end
     end

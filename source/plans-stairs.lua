@@ -127,8 +127,8 @@ function plan_unexplored_stairs_backtrack()
     end
 
     local next_depth = where_depth + gameplan_travel.stairs_dir
-    stairs_reset(where_branch, where_depth, gameplan_travel.stairs_dir)
-    stairs_reset(where_branch, next_depth, -gameplan_travel.stairs_dir)
+    reset_stone_stairs(where_branch, where_depth, gameplan_travel.stairs_dir)
+    reset_stone_stairs(where_branch, next_depth, -gameplan_travel.stairs_dir)
     want_gameplan_update = true
     send_travel(where_branch, next_depth)
     return true
@@ -146,7 +146,8 @@ function want_to_stairdance_up()
             or in_hell_branch()
             or in_branch("Abyss")
             or in_branch("Pan")
-            or not feature_is_upstairs(feat) then
+            or not feature_is_upstairs(feat)
+            or not get_stairs_state(where_branch, where_depth, feat).safe then
         return false
     end
 

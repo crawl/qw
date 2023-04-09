@@ -543,8 +543,7 @@ end
 function sense_danger(radius, moveable)
     for _, enemy in ipairs(enemy_list) do
         local pos = enemy:pos()
-        if (moveable and you.see_cell_solid_see(pos.x, pos.y)
-                    or not moveable)
+        if (not moveable or you.see_cell_solid_see(pos.x, pos.y))
                 and supdist(pos) <= radius then
             return true
         end

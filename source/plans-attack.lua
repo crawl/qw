@@ -433,13 +433,20 @@ function plan_wait_for_enemy()
 
     local need_wait = false
     for _, enemy in ipairs(enemy_list) do
-        if enemy:is_ranged() then
+        -- If we have a melee target (that we were unable to melee) but one of
+        -- the enemies has a ranged attack, we don't wait, since this gives the
+        -- enemy more ranged attacks.
+        if target and enemy:is_ranged() then
             wait_count = 0
             return false
         end
 
         if not need_wait and enemy:can_move_to_player_melee() then
             need_wait = true
+
+            if not target then
+                break
+            end
         end
     end
     if need_wait then
@@ -504,7 +511,7 @@ function plan_flight_move_towards_enemy()
             and not is_traversable_at(move) then
         return drink_by_name("flight")
     else
-        magic(delta_to_vi(move))
+        move_to(move)
         return true
     end
 end
