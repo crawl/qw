@@ -402,15 +402,15 @@ function map_is_unexcluded_at(pos)
     return exclusion_map[pos.x][pos.y]
 end
 
-function update_map_at_los_position(pos, map_queue)
+function update_map_at_position(pos, map_queue)
     local gpos = position_sum(global_pos, pos)
     if supdist(gpos) > GXM then
-        return
+        return false
     end
 
     local feat = view.feature_at(pos.x, pos.y)
     if feat == "unseen" then
-        return
+        return false
     end
 
     local map_updated = false
@@ -427,8 +427,16 @@ function update_map_at_los_position(pos, map_queue)
         map_updated = true
     end
 
-    if map_updated then
-        table.insert(map_queue, gpos)
+    seen[hash_position(gpos)] = true
+
+    if not map_updated then
+        return false
+    end
+
+    for apos in adjacent_iter(gpos) do
+        if not seen[hash_position(apos)] then
+            table.insert(map_queue, gpos)
+        end
     end
 
     local feat_updated = false
@@ -458,15 +466,31 @@ function update_map_at_los_position(pos, map_queue)
 
     if feat_updated then
         update_feature_map_position(feat, gpos)
+    end
 
-        if not map_updated then
-            table.insert(map_queue, gpos)
+    return true
+end
+
+function map_queue_update(map_queue)
+    local seen = {}
+    local ind = 1
+    local last = #map_queue
+    local count = 1
+    while ind <= last do
+        if COROUTINE_THROTTLE and count % 1000 == 0 then
+            coroutine.yield()
         end
+
+        update_map_at_position(pos, map_queue, seen)
+
+        count = ind
+        ind = ind + 1
+        last = #map_queue
     end
 end
 
-function update_distance_maps(pos_queue)
-    for i, pos in ipairs(pos_queue) do
+function update_distance_maps(map_queue)
+    for i, pos in ipairs(map_queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
@@ -540,12 +564,11 @@ function update_map(new_level, clear_map)
         item_searches["the orb of Zot"] = true
     end
 
-    local radius = global_map_update and GXM or los_radius
     local map_queue = {}
-    for pos in square_iter(origin, radius, true) do
-        update_map_at_los_position(pos, map_queue)
+    for pos in square_iter(origin, los_radius, true) do
+        table.insert(map_queue, pos)
     end
-    global_map_update = false
+    map_queue_update(map_queue)
 
     update_distance_maps(map_queue)
 

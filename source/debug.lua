@@ -115,25 +115,39 @@ function print_traversal_map()
     end
 end
 
-function print_distance_maps()
-    for hash, dist_map in pairs(distance_maps) do
-        local pos = unhash_position(hash)
-        say("---------------------------------------")
-        say("feature: "
-            .. view.feature_at(pos.x - global_pos.x, pos.y - global_pos.y))
-        -- This needs to iterate by row then column for display purposes.
-        for y = -20, 20 do
-            local str = ""
-            for x = -20, 20 do
-                if dist_map[global_pos.x + x][global_pos.y + y] == nil then
-                    str = str .. " "
-                else
-                    str = str .. string.char(string.byte('A')
-                        + dist_map[global_pos.x + x][global_pos.y + y])
-                end
+function print_distance_map(dist_map, center, excluded)
+    if not center then
+        center = global_pos
+    end
+
+    local map = excluded and dist_map.excluded_map or dist_map.map
+    say("distance map at " .. pos_string(dist_map.pos) .. " ("
+        .. cell_string(dist_map.pos, true) .. ") from position "
+        .. pos_string(center) .. ":")
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            if map[center.x + x][center.y + y] == nil then
+                str = str .. " "
+            elseif map[center.x + x][center.y + y] >= INF_DIST then
+                str = str .. "∞"
+            else
+                str = str .. string.char(string.byte('A')
+                    + map[center.x + x][center.y + y])
             end
-            say(str)
         end
+        say(str)
+    end
+end
+
+function print_distance_maps(center, excluded)
+    if not center then
+        center = global_pos
+    end
+
+    for _, dist_map in pairs(distance_maps) do
+        print_distance_map(dist_map, center, excluded)
     end
 end
 
@@ -147,6 +161,10 @@ end
 function override_gameplan(gameplan)
     debug_gameplan = gameplan
     update_gameplan()
+end
+
+function get_global_pos()
+    return global_pos
 end
 
 function pos_string(pos)
