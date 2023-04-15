@@ -1,6 +1,8 @@
 ----------------------
 -- Movement evaluation
 
+INF_STAIR_DIST = 10000
+
 function can_move_to(pos)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
@@ -181,8 +183,8 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to 10000 if the move is not closer to any stair in good_stairs,
-    -- otherwise equal to the (min) dist to such a stair
+    -- Equal to INF_STAIR_DIST if the move is not closer to any stair in
+    -- good_stairs, otherwise equal to the (min) dist to such a stair
     a.stairs_closer = stairs_improvement(pos)
 
     return a
@@ -204,7 +206,7 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.stairs_closer < 10000
+            and a2.stairs_closer < INF_STAIR_DIST
             and a1.stairs_closer > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
@@ -527,15 +529,14 @@ function monster_can_move_to_player_melee(mons)
 end
 
 function best_move_towards_map_positions(positions, ignore_exclusions, radius)
-    local best_dist = INF_DIST
-    local best_dest
+    local best_dist, best_dest
     local best_move = {}
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos, radius)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
         for dpos in adjacent_iter(global_pos) do
             local dist = map[dpos.x][dpos.y]
-            if dist and dist < best_dist then
+            if dist and (not best_dist or dist < best_dist) then
                 best_dist = dist
                 best_move = position_difference(dpos, global_pos)
                 best_dest = pos
@@ -543,7 +544,7 @@ function best_move_towards_map_positions(positions, ignore_exclusions, radius)
         end
     end
 
-    if best_dist < INF_DIST then
+    if best_dist then
         return best_move, best_dest
     end
 end
@@ -606,8 +607,7 @@ function best_move_towards_unexplored()
                 and map_position_has_adjacent_unseen(pos) then
             for _, stair_pos in ipairs(good_stairs) do
                 local dist_map = get_distance_map(stair_pos)
-                if dist_map.map[pos.x][pos.y]
-                        and dist_map.map[pos.x][pos.y] < INF_DIST then
+                if dist_map.map[pos.x][pos.y] then
                     unexplored_pos = pos
                     break
                 end

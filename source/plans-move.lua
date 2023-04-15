@@ -42,14 +42,20 @@ function plan_coward_step()
 end
 
 function plan_flee_step()
-    if tactical_reason == "fleeing" then
-        say("FLEEEEING.")
-        set_stairs_target(tactical_step)
-        last_flee_turn = you.turns()
-        magic(tactical_step .. "Y")
-        return true
+    if tactical_reason ~= "fleeing" then
+        return false
     end
-    return false
+
+    local best_stairs = best_stairs_for_position(vi_to_delta(tactical_step))
+    if not best_stairs then
+        return false
+    end
+
+    target_stairs = best_stairs
+    last_flee_turn = you.turns()
+    say("FLEEEEING.")
+    magic(tactical_step .. "Y")
+    return true
 end
 
 function plan_other_step()

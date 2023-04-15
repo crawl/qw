@@ -284,27 +284,26 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state)
 end
 
 function minimum_enemy_stairs_distance(dist_map, pspeed)
-    local min_dist = 1000
+    local min_dist
     for _, enemy in ipairs(enemy_list) do
         local gpos = position_sum(global_pos, enemy:pos())
         local dist = dist_map.map[gpos.x][gpos.y]
-        if dist == nil then
-            dist = 10000
-        end
 
-        local speed_diff = enemy:speed() - pspeed
-        if speed_diff > 1 then
-            dist = dist / 2
-        elseif speed_diff > 0 then
-            dist = dist / 1.5
-        end
+        if dist then
+            local speed_diff = enemy:speed() - pspeed
+            if speed_diff > 1 then
+                dist = dist / 2
+            elseif speed_diff > 0 then
+                dist = dist / 1.5
+            end
 
-        if enemy:is_ranged() then
-            dist = dist - 4
-        end
+            if enemy:is_ranged() then
+                dist = dist - 4
+            end
 
-        if dist < min_dist then
-            min_dist = dist
+            if not min_dist or dist < min_dist then
+                min_dist = dist
+            end
         end
     end
     return min_dist
@@ -363,53 +362,41 @@ function find_good_stairs()
     for _, pos in ipairs(stairs_positions) do
         local dist_map = get_distance_map(pos)
         local pdist = dist_map.map[global_pos.x][global_pos.y]
-        if pdist == nil then
-            pdist = 10000
-        end
-
-        if pdist < minimum_enemy_stairs_distance(dist_map, pspeed) then
+        local enemy_dist = minimum_enemy_stairs_distance(dist_map, pspeed)
+        if pdist and (not enemy_dist or pdist < enemy_dist) then
             table.insert(good_stairs, pos)
         end
     end
 end
 
+function best_stairs_for_position(pos)
+    local best_dist, best_stairs
+    for _, stairs_pos in ipairs(good_stairs) do
+        local dist_map = get_distance_map(stairs_pos)
+        local dist = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
+        local current_dist = dist_map.map[global_pos.x][global_pos.y]
+        if dist and current_dist
+                and dist < current_dist
+                and (not best_dist or dist < best_dist) then
+            best_dist = dist
+            best_stairs = stairs_pos
+        end
+    end
+    return best_stairs, best_dist
+end
+
 function stairs_improvement(pos)
     if not can_retreat_upstairs then
-        return 10000
+        return INF_STAIR_DIST
     end
 
     if supdist(pos) == 0 then
         if feature_is_upstairs(view.feature_at(0, 0)) then
             return 0
         else
-            return 10000
+            return INF_STAIR_DIST
         end
     end
 
-    local min_val = 10000
-    for _, stairs_pos in ipairs(good_stairs) do
-        local dist_map = get_distance_map(stairs_pos)
-        local val = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
-        if val and val < dist_map.map[global_pos.x][global_pos.y]
-                and val < min_val then
-            min_val = val
-        end
-    end
-    return min_val
-end
-
-function set_stairs_target(c)
-    local pos = vi_to_delta(c)
-    local min_val = 10000
-    local best_stair
-    for _, stairs_pos in ipairs(good_stairs) do
-        local dist_map = get_distance_map(stairs_pos)
-        local val = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
-        if val and val < dist_map.map[global_pos.x][global_pos.y]
-                and val < min_val then
-            min_val = val
-            best_stair = hash
-        end
-    end
-    target_stair = best_stair
+    return select(2, best_stairs_for_position(pos))
 end

@@ -6,10 +6,6 @@
 GXM = 80
 GYM = 70
 
--- A distance greater than any possible map distance between two squares that
--- represents an unreachable target.
-INF_DIST = 10000
-
 -- Autoexplore state enum.
 AUTOEXP = {
     "NEEDED",
@@ -111,29 +107,30 @@ function find_features(radius)
         end
 
         local feat = view.feature_at(pos.x, pos.y)
-        local gpos = position_sum(global_pos, pos)
         if feature_searches[feat] then
             if not feature_map_positions[feat] then
                 feature_map_positions[feat] = {}
             end
+
+            local gpos = position_sum(global_pos, pos)
             local hash = hash_position(gpos)
             if not feature_map_positions[feat][hash] then
                 feature_map_positions[feat][hash] = gpos
             end
         end
+
         i = i + 1
     end
 end
 
-function distance_map_initialize(pos, hash, radius)
+function distance_map_initialize(pos, radius)
     if debug_channel("map") then
-        dsay("Creating distance map at " .. pos_string(pos)
-            .. " (" .. cell_string(pos, true) .. ")")
+        dsay("Creating distance map at "
+            .. cell_string_from_map_position(pos))
     end
 
     local dist_map = {}
     dist_map.pos = pos
-    dist_map.hash = hash
     dist_map.radius = radius
 
     dist_map.map = {}
@@ -148,29 +145,33 @@ function distance_map_initialize(pos, hash, radius)
     end
     dist_map.excluded_map[pos.x][pos.y] = 0
 
-    dist_map.queue = { { x = pos.x, y = pos.y, propagate_traversable = true,
-        propagate_unexcluded = true } }
+    local dest_pos = { x = pos.x, y = pos.y }
+    dest_pos.propagate_traversable = true
+    dest_pos.propagate_untraversable = false
+    dest_pos.propagate_excluded = false
+    dest_pos.propagate_unexcluded = true
+    dist_map.queue = { dest_pos }
     return dist_map
 end
 
-function handle_feature_search(feat, pos)
-    if feature_searches[feat] then
-        if not feature_map_positions[feat] then
-            feature_map_positions[feat] = {}
+function handle_feature_search(cell)
+    if feature_searches[cell.feat] then
+        if not feature_map_positions[cell.feat] then
+            feature_map_positions[cell.feat] = {}
         end
 
-        local hash = hash_position(pos)
-        if not feature_map_positions[feat][hash] then
+        if not feature_map_positions[cell.feat][cell.hash] then
             if debug_channel("map") then
-                dsay("New position for " .. feat .. " feature.")
+                dsay("New feature position at " .. cell_string(cell))
             end
-            feature_map_positions[feat][hash] = pos
+            feature_map_positions[cell.feat][cell.hash] = cell.pos
         end
 
-        if not distance_maps[hash] then
-            distance_maps[hash] = distance_map_initialize(pos, hash)
+        if not distance_maps[cell.hash] then
+            distance_maps[cell.hash] = distance_map_initialize(cell.pos)
+        else
+            table.insert(distance_maps[cell.hash].queue, cell)
         end
-        table.insert(distance_maps[hash].queue, pos)
     end
 end
 
@@ -184,38 +185,26 @@ function map_is_traversable_at(pos)
 end
 
 
-function distance_map_best_adjacent(pos, dist_map, use_map, use_excluded_map)
-    local best_dist = INF_DIST
-    local best_excluded_dist = INF_DIST
-    for apos in adjacent_iter(pos) do
-        if map_is_traversable_at(apos) then
-            local dist
-            if use_map then
-                dist = dist_map.map[apos.x][apos.y]
-                if dist and (not best_dist or best_dist > dist) then
-                    best_dist = dist
-                end
+function distance_map_best_adjacent_dist(pos, dist_map)
+    local best_dist, best_excluded_dist
+    for pos in adjacent_iter(pos) do
+        if map_is_traversable_at(pos) then
+            local dist = dist_map.map[pos.x][pos.y]
+            if dist and (not best_dist or best_dist > dist) then
+                best_dist = dist
             end
 
-            if use_excluded_map and map_is_unexcluded_at(apos) then
-                dist = dist_map.excluded_map[apos.x][apos.y]
-                if dist and (not best_excluded_dist
-                        or best_excluded_dist > dist) then
-                    best_excluded_dist = dist
-                end
+            dist = dist_map.excluded_map[pos.x][pos.y]
+            if dist and (not best_excluded_dist
+                    or best_excluded_dist > dist) then
+                best_excluded_dist = dist
             end
         end
     end
-    if use_map and not use_excluded_map then
-        return best_dist
-    elseif not use_map and use_excluded_map then
-        return best_excluded_dist
-    else
-        return best_dist, best_excluded_dist
-    end
+    return best_dist, best_excluded_dist
 end
 
-function distance_map_update_adjacent_pos(center, pos, dist_map)
+function distance_map_update_adjacent_pos(pos, center, dist_map)
     if (dist_map.radius
                 and supdist(position_difference(pos, dist_map.pos))
                     > dist_map.radius)
@@ -224,44 +213,63 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
         return
     end
 
+    function new_update_pos()
+        local new_pos = { x = pos.x, y = pos.y }
+
+        new_pos.propagate_traversable = false
+        new_pos.propagate_untraversable = false
+        new_pos.propagate_excluded = false
+        new_pos.propagate_unexcluded = false
+        return new_pos
+    end
+
     local unexcluded = map_is_unexcluded_at(pos)
-    local center_dist, dist, best_dist, best_excluded_dist, update_pos
-    if center.propagate_traversable then
-        center_dist = dist_map.map[center.x][center.y]
-        dist = dist_map.map[pos.x][pos.y]
-        if not dist or dist > center_dist + 1 then
+    local best_dist, best_exc_dist, update_pos
+    if cell.propagate_traversable then
+        local center_dist = dist_map.map[center.x][center.y]
+        local dist = dist_map.map[pos.x][pos.y]
+        if center_dist and (not dist or dist > center_dist + 1) then
             dist_map.map[pos.x][pos.y] = center_dist + 1
-            update_pos = pos
+
+            update_pos = new_update_pos()
             update_pos.propagate_traversable = true
         end
     elseif center.propagate_untraversable then
-        best_dist, best_excluded_dist = distance_map_best_adjacent(pos,
-            dist_map, true, center.propagate_unexcluded)
-        if dist and dist ~= best_dist + 1 then
-            dist_map.map[pos.x][pos.y] = best_dist + 1
-            pos.propagate_untraversable = true
+        best_dist, best_exc_dist = distance_map_best_adjacent_dist(center,
+            dist_map)
+        target_dist = best_dist and best_dist + 1 or nil
+        local dist = dist_map.map[pos.x][pos.y]
+        if dist ~= target_dist then
+            dist_map.map[pos.x][pos.y] = target_dist
+
+            update_pos = new_update_pos()
+            update_pos.propagate_untraversable = true
         end
     end
 
     if center.propagate_unexcluded and unexcluded then
-        center_dist = dist_map.excluded_map[center.x][center.y]
-        dist = dist_map.excluded_map[pos.x][pos.y]
-        if not dist or dist > center_dist + 1 then
+        local center_dist = dist_map.excluded_map[center.x][center.y]
+        local dist = dist_map.excluded_map[pos.x][pos.y]
+        if center_dist and (not dist or dist > center_dist + 1) then
             dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
+
             if not update_pos then
-                update_pos = pos
+                update_pos = new_update_pos()
             end
             update_pos.propagate_unexcluded = true
         end
     elseif center.propagate_excluded and unexcluded then
-        if not best_excluded_dist then
-            best_excluded_dist = distance_map_best_adjacent(pos, dist_map,
-                false, true)
+        if not best_exc_dist then
+            best_exc_dist = select(2,
+                distance_map_best_adjacent_dist(center, dist_map))
         end
-        if excluded_dist ~= best_excluded_dist + 1 then
-            dist_map.excluded_map[pos.x][pos.y] = best_excluded_dist + 1
+
+        local dist = dist_map.excluded_map[pos.x][pos.y]
+        if dist and dist ~= best_exc_dist + 1 then
+            dist_map.excluded_map[pos.x][pos.y] = best_exc_dist + 1
+
             if not update_pos then
-                update_pos = pos
+                update_pos = new_update_pos()
             end
             update_pos.propagate_excluded = true
         end
@@ -272,7 +280,7 @@ function distance_map_update_adjacent_pos(center, pos, dist_map)
     end
 end
 
-function distance_map_queue_update(dist_map)
+function distance_map_propagate(dist_map)
     local ind = 1
     local count = ind
     while ind <= #dist_map.queue do
@@ -280,9 +288,9 @@ function distance_map_queue_update(dist_map)
             coroutine.yield()
         end
 
-        local pos = dist_map.queue[ind]
-        for apos in adjacent_iter(pos) do
-            distance_map_update_adjacent_pos(pos, apos, dist_map)
+        local center = dist_map.queue[ind]
+        for pos in adjacent_iter(center) do
+            distance_map_update_adjacent_pos(pos, center, dist_map)
         end
         ind = ind + 1
         count = ind
@@ -290,26 +298,23 @@ function distance_map_queue_update(dist_map)
     dist_map.queue = {}
 end
 
-function record_map_item(name, pos)
+function record_cell_item(name, cell)
     if not item_map_positions[name] then
         item_map_positions[name] = {}
     end
 
-    local pos = position_sum(global_pos, pos)
-    local pos_hash = hash_position(pos)
     for hash, _ in pairs(item_map_positions[name]) do
-        if hash ~= pos_hash then
+        if hash ~= cell.hash then
             item_map_positions[name][hash] = nil
             distance_maps[hash] = nil
         end
     end
 
-    item_map_positions[name][pos_hash] = pos
-    distance_maps[pos_hash] = distance_map_initialize(pos, pos_hash)
-    table.insert(distance_maps[pos_hash].queue, pos)
+    item_map_positions[name][cell.hash] = cell.pos
+    distance_maps[cell.hash] = distance_map_initialize(cell.pos)
 end
 
-function handle_item_searches(pos)
+function handle_item_searches(cell)
     -- Don't do an expensive iteration over all items if we don't have an
     -- active search. TODO: Maybe move the search trigger to the autopickup
     -- function so that this optimization is more accurate. Since that happens
@@ -319,8 +324,7 @@ function handle_item_searches(pos)
         return
     end
 
-    local floor_items = items.get_items_at(pos.x - global_pos.x,
-        pos.y - global_pos.y)
+    local floor_items = items.get_items_at(cell.los_pos.x, cell.los_pos.y)
     if not floor_items then
         return
     end
@@ -328,7 +332,7 @@ function handle_item_searches(pos)
     for _, it in ipairs(floor_items) do
         local name = it:name()
         if item_searches[name] then
-            record_map_item(name, pos)
+            record_map_item(name, cell.pos)
             return
         end
     end
@@ -402,113 +406,104 @@ function map_is_unexcluded_at(pos)
     return exclusion_map[pos.x][pos.y]
 end
 
-function update_map_at_position(pos, map_queue)
-    local gpos = position_sum(global_pos, pos)
-    if supdist(gpos) > GXM then
-        return false
-    end
-
-    local feat = view.feature_at(pos.x, pos.y)
-    if feat == "unseen" then
-        return false
+function update_map_at_cell(cell, queue, seen)
+    if seen[cell.hash] then
+        return
     end
 
     local map_updated = false
-    local traversable = feature_is_traversable(feat)
-    if traversal_map[gpos.x][gpos.y] ~= traversable then
-        traversal_map[gpos.x][gpos.y] = traversable
+    local traversable = feature_is_traversable(cell.feat)
+    if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
+        traversal_map[cell.pos.x][cell.pos.y] = traversable
         map_updated = true
     end
 
-    local unexcluded = not (view.in_known_map_bounds(pos.x, pos.y)
-        and travel.is_excluded(pos.x, pos.y))
-    if exclusion_map[gpos.x][gpos.y] ~= unexcluded then
-        exclusion_map[gpos.x][gpos.y] = unexcluded
+    local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
+            cell.los_pos.y)
+        and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
+    if exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
+        exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
         map_updated = true
     end
 
-    seen[hash_position(gpos)] = true
+    seen[cell.hash] = true
 
     if not map_updated then
-        return false
-    end
-
-    for apos in adjacent_iter(gpos) do
-        if not seen[hash_position(apos)] then
-            table.insert(map_queue, gpos)
-        end
+        return
     end
 
     local feat_updated = false
-    local dir, num = stone_stairs_type(feat)
+    local dir, num = stone_stairs_type(cell.feat)
     if dir then
         update_stone_stairs(where_branch, where_depth, dir, num,
-            { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
+            { safe = unexcluded, los = los_state(cell.los_pos) })
         feat_updated = true
     end
 
     if not feat_updated then
-        local branch, dir = branch_stairs_type(feat)
+        local branch, dir = branch_stairs_type(cell.feat)
         if branch then
             update_branch_stairs(where_branch, where_depth, branch, dir,
-                { safe = exclusion_map[gpos.x][gpos.y], los = los_state(pos) })
+                { safe = unexcluded, los = los_state(cell.los_pos) })
             feat_updated = true
         end
     end
 
     if not feat_updated then
-        local god = altar_god(feat)
+        local god = altar_god(cell.feat)
         if god then
-            update_altar(where, god, los_state(pos))
+            update_altar(where, god, los_state(cell.los_pos))
             feat_updated = true
         end
     end
 
     if feat_updated then
-        update_feature_map_position(feat, gpos)
+        update_cell_feature_positions(cell)
     end
 
-    return true
+    for pos in adjacent_iter(cell.los_pos) do
+        local acell = cell_from_position(pos)
+        if acell and not seen[acell.hash] then
+            table.insert(queue, acell)
+        end
+    end
 end
 
-function map_queue_update(map_queue)
+function update_map_at_cells(queue)
     local seen = {}
     local ind = 1
-    local last = #map_queue
+    local last = #queue
     local count = 1
     while ind <= last do
         if COROUTINE_THROTTLE and count % 1000 == 0 then
             coroutine.yield()
         end
 
-        update_map_at_position(pos, map_queue, seen)
+        local cell = queue[ind]
+        update_map_at_cell(cell, queue, seen)
 
         count = ind
         ind = ind + 1
-        last = #map_queue
+        last = #queue
     end
 end
 
-function update_distance_maps(map_queue)
-    for i, pos in ipairs(map_queue) do
+function update_distance_maps_at_cells(queue)
+    for i, cell in ipairs(queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
             coroutine.yield()
         end
 
-        local feat = view.feature_at(pos.x - global_pos.x,
-            pos.y - global_pos.y)
-        if feat ~= "unseen" then
-            handle_feature_search(feat, pos)
-            handle_item_searches(pos)
+        handle_feature_search(cell)
+        handle_item_searches(cell)
 
-            for _, dist_map in pairs(distance_maps) do
-                distance_map_update_pos(pos, dist_map)
-            end
+        for _, dist_map in pairs(distance_maps) do
+            distance_map_update_pos(cell.pos, dist_map)
         end
     end
 
     for _, dist_map in pairs(distance_maps) do
-        distance_map_queue_update(dist_map)
+        distance_map_propagate(dist_map)
     end
 end
 
@@ -564,13 +559,15 @@ function update_map(new_level, clear_map)
         item_searches["the orb of Zot"] = true
     end
 
-    local map_queue = {}
+    local cell_queue = {}
     for pos in square_iter(origin, los_radius, true) do
-        table.insert(map_queue, pos)
+        local cell = cell_from_position(pos)
+        if cell then
+            table.insert(cell_queue, cell)
+        end
     end
-    map_queue_update(map_queue)
-
-    update_distance_maps(map_queue)
+    update_map_at_cells(cell_queue)
+    update_distance_maps_at_cells(cell_queue)
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)
@@ -588,13 +585,26 @@ function update_map(new_level, clear_map)
     update_transporters()
 end
 
-function get_distance_map(pos, radius)
-    local hash = hash_position(pos)
-    if not distance_maps[hash] then
-        distance_maps[hash] = distance_map_initialize(pos, hash, radius)
-        distance_map_queue_update(distance_maps[hash])
+function cell_from_position(pos, feat)
+    local feat = view.feature_at(pos.x, pos.y)
+    if feat == "unseen" then
+        return
     end
-    return distance_maps[hash]
+
+    local cell = {}
+    cell.los_pos = pos
+    cell.feat = feat
+    cell.pos = position_sum(global_pos, pos)
+    cell.hash = hash_position(cell.pos)
+    return cell
+end
+
+function get_distance_map(pos, radius)
+    if not distance_maps[cell.hash] then
+        distance_maps[cell.hash] = distance_map_initialize(pos, radius)
+        distance_map_queue_update(distance_maps[cell.hash])
+    end
+    return distance_maps[cell.hash]
 end
 
 function get_feature_map_positions(feats, radius)
@@ -611,14 +621,13 @@ function get_feature_map_positions(feats, radius)
     return positions
 end
 
-function update_feature_map_position(feat, pos)
-    if not feature_map_positions[feat] then
-        feature_map_positions[feat] = {}
+function update_cell_feature_positions(cell)
+    if not feature_map_positions[cell.feat] then
+        feature_map_positions[cell.feat] = {}
     end
 
-    local hash = hash_position(pos)
-    if not feature_map_positions[feat][hash] then
-        feature_map_positions[feat][hash] = pos
+    if not feature_map_positions[cell.feat][cell.hash] then
+        feature_map_positions[cell.feat][cell.hash] = cell.pos
     end
 end
 

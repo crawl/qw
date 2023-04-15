@@ -168,21 +168,24 @@ function get_global_pos()
 end
 
 function pos_string(pos)
-    return "(" .. tostring(pos.x) .. ", " .. tostring(pos.y) .. ")"
+    return tostring(pos.x) .. ", " .. tostring(pos.y)
 end
 
-function cell_string(pos, global)
-    if global then
-        pos = position_difference(pos, global_pos)
-    end
-
-    local str = ""
-    if supdist(pos) <= los_radius then
-        local mons = monster.get_monster_at(pos.x, pos.y)
+function cell_string(cell)
+    local str = pos_string(cell.los_pos) .. " ("
+    if supdist(cell.los_pos) <= los_radius then
+        local mons = monster.get_monster_at(cell.los_pos.x, cell.los_pos.y)
         if mons then
             str = mons:name() .. "; "
         end
     end
 
-    return str .. view.feature_at(pos.x, pos.y)
+    return str .. cell.feat .. ")"
+end
+
+function cell_string_from_map_position(pos)
+    local cell = cell_from_position(position_difference(pos, global_pos))
+    if cell then
+        return cell_string(cell)
+    end
 end
