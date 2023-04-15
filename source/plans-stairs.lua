@@ -92,11 +92,10 @@ function plan_take_unexplored_stairs()
         return false
     end
 
-    local dir, num
-    dir, num = stone_stairs_type(view.feature_at(0, 0))
+    local dir, num = stone_stairs_type(view.feature_at(0, 0))
+    local state = get_stone_stairs_state(where_branch, where_depth, dir, num)
     if not dir or dir ~= gameplan_travel.stairs_dir
-            or stairs_state(where_branch, where_depth, dir, num)
-                >= FEAT_LOS.EXPLORED then
+            or state.los >= FEAT_LOS.EXPLORED then
         return false
     end
 
@@ -141,13 +140,12 @@ end
 
 function want_to_stairdance_up()
     local feat = view.feature_at(0, 0)
-    if where == "D:1"
-            or in_portal()
-            or in_hell_branch()
-            or in_branch("Abyss")
-            or in_branch("Pan")
-            or not feature_is_upstairs(feat)
-            or not get_stairs_state(where_branch, where_depth, feat).safe then
+    if not can_retreat_upstairs or not feature_is_upstairs(feat) then
+        return false
+    end
+
+    local state = get_destination_stairs_state(where_branch, where_depth, feat)
+    if state and not state.safe then
         return false
     end
 

@@ -303,6 +303,22 @@ function Monster:status(status)
     return self.props.status[status]
 end
 
+function Monster:player_has_path_to(assume_flight)
+    if not self.props.player_has_path then
+        self.props.player_has_path = {}
+    end
+
+    local ind = assume_flight and 2 or 1
+    if self.props.player_has_path[ind] == nil then
+        local move_func = assume_flight and flight_traversable_square
+            or traversable_square
+        self.props.player_has_path[ind] = get_move_towards(origin, self:pos(),
+            move_func, reach_range())
+    end
+
+    return self.props.player_has_path[ind]
+end
+
 function Monster:get_player_move_towards(assume_flight)
     if not self.props.player_move then
         self.props.player_move = {}

@@ -81,6 +81,11 @@ function clear_map_cache(parity, full_clear)
         traversal_maps_cache[parity][x] = {}
     end
 
+    flight_traversal_maps_cache[parity] = {}
+    for x = -GXM, GXM do
+        flight_traversal_maps_cache[parity][x] = {}
+    end
+
     exclusion_maps_cache[parity] = {}
     for x = -GXM, GXM do
         exclusion_maps_cache[parity][x] = {}
@@ -155,23 +160,25 @@ function distance_map_initialize(pos, radius)
 end
 
 function handle_feature_search(cell)
-    if feature_searches[cell.feat] then
-        if not feature_map_positions[cell.feat] then
-            feature_map_positions[cell.feat] = {}
-        end
+    if not feature_searches[cell.feat] then
+        return
+    end
 
-        if not feature_map_positions[cell.feat][cell.hash] then
-            if debug_channel("map") then
-                dsay("New feature position at " .. cell_string(cell))
-            end
-            feature_map_positions[cell.feat][cell.hash] = cell.pos
-        end
+    if not feature_map_positions[cell.feat] then
+        feature_map_positions[cell.feat] = {}
+    end
 
-        if not distance_maps[cell.hash] then
-            distance_maps[cell.hash] = distance_map_initialize(cell.pos)
-        else
-            table.insert(distance_maps[cell.hash].queue, cell)
+    if not feature_map_positions[cell.feat][cell.hash] then
+        if debug_channel("map") then
+            dsay("New feature position at " .. cell_string(cell))
         end
+        feature_map_positions[cell.feat][cell.hash] = cell.pos
+    end
+
+    if not distance_maps[cell.hash] then
+        distance_maps[cell.hash] = distance_map_initialize(cell.pos)
+    else
+        table.insert(distance_maps[cell.hash].queue, cell.pos)
     end
 end
 
@@ -180,12 +187,20 @@ function is_traversable_at(pos)
     return traversal_map[gpos.x][gpos.y]
 end
 
+function is_flight_traversable_at(pos)
+    local gpos = position_sum(global_pos, pos)
+    return flight_traversal_map[gpos.x][gpos.y]
+end
+
 function map_is_traversable_at(pos)
     return traversal_map[pos.x][pos.y]
 end
 
+function map_is_flight_traversable_at(pos)
+    return flight_traversal_map[pos.x][pos.y]
+end
 
-function distance_map_best_adjacent_dist(pos, dist_map)
+function distance_map_adjacent_dist(pos, dist_map)
     local best_dist, best_excluded_dist
     for pos in adjacent_iter(pos) do
         if map_is_traversable_at(pos) then
@@ -225,7 +240,7 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
 
     local unexcluded = map_is_unexcluded_at(pos)
     local best_dist, best_exc_dist, update_pos
-    if cell.propagate_traversable then
+    if center.propagate_traversable then
         local center_dist = dist_map.map[center.x][center.y]
         local dist = dist_map.map[pos.x][pos.y]
         if center_dist and (not dist or dist > center_dist + 1) then
@@ -235,7 +250,7 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
             update_pos.propagate_traversable = true
         end
     elseif center.propagate_untraversable then
-        best_dist, best_exc_dist = distance_map_best_adjacent_dist(center,
+        best_dist, best_exc_dist = distance_map_adjacent_dist(center,
             dist_map)
         target_dist = best_dist and best_dist + 1 or nil
         local dist = dist_map.map[pos.x][pos.y]
@@ -261,7 +276,7 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
     elseif center.propagate_excluded and unexcluded then
         if not best_exc_dist then
             best_exc_dist = select(2,
-                distance_map_best_adjacent_dist(center, dist_map))
+                distance_map_adjacent_dist(center, dist_map))
         end
 
         local dist = dist_map.excluded_map[pos.x][pos.y]
@@ -332,7 +347,7 @@ function handle_item_searches(cell)
     for _, it in ipairs(floor_items) do
         local name = it:name()
         if item_searches[name] then
-            record_map_item(name, cell.pos)
+            record_cell_item(name, cell)
             return
         end
     end
@@ -347,15 +362,18 @@ function distance_map_update_pos(pos, dist_map)
 
     local traversable = map_is_traversable_at(pos)
     local unexcluded = map_is_unexcluded_at(pos)
-    local dist, excluded_dist
-    local update_pos
+    local dist, excluded_dist, update_pos
+    local have_adjacent = false
     -- If we're traversable and don't have a map distance, we just became
     -- traversable, so update the map distance from adjacent squares.
     if traversable and not dist_map.map[pos.x][pos.y] then
-        local dist, excluded_dist = distance_map_best_adjacent(pos, dist_map)
-        dist_map.map[pos.x][pos.y] = dist + 1
-        update_pos = pos
-        update_pos.propagate_traversable = true
+        dist, excluded_dist = distance_map_adjacent_dist(pos, dist_map)
+        have_adjacent = true
+        if dist then
+            dist_map.map[pos.x][pos.y] = dist + 1
+            update_pos = pos
+            update_pos.propagate_traversable = true
+        end
     -- If we're not traversable yet have a map distance, we just became
     -- untraversable, so nil both map distances.
     elseif not traversable and dist_map.map[pos.x][pos.y] then
@@ -369,14 +387,18 @@ function distance_map_update_pos(pos, dist_map)
     if traversable
             and unexcluded
             and not dist_map.excluded_map[pos.x][pos.y] then
-        if not excluded_dist then
-            excluded_dist = select(2, distance_map_best_adjacent(pos, dist_map))
+        if not have_adjacent then
+            excluded_dist = select(2,
+                distance_map_adjacent_dist(pos, dist_map))
         end
-        dist_map.excluded_map[pos.x][pos.y] = excluded_dist + 1
-        if not update_pos then
-            update_pos = pos
+
+        if excluded_dist then
+            dist_map.excluded_map[pos.x][pos.y] = excluded_dist + 1
+            if not update_pos then
+                update_pos = pos
+            end
+            update_pos.propagate_unexcluded = true
         end
-        update_pos.propagate_unexcluded = true
     -- We're excluded yet have an excluded distance, so we just became
     -- excluded.
     elseif excluded and dist_map.excluded_map[pos.x][pos.y] then
@@ -416,6 +438,12 @@ function update_map_at_cell(cell, queue, seen)
     if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
         traversal_map[cell.pos.x][cell.pos.y] = traversable
         map_updated = true
+    end
+
+    if cell.feat == "lava" or cell.feat == "deep_water" then
+        flight_traversal_map[cell.pos.x][cell.pos.y] = true
+    else
+        flight_traversal_map[cell.pos.x][cell.pos.y] = traversable
     end
 
     local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
@@ -516,6 +544,7 @@ function update_map(new_level, clear_map)
 
     if new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
+        flight_traversal_map = flight_traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
         feature_searches = feature_searches_cache[cache_parity]
@@ -600,11 +629,12 @@ function cell_from_position(pos, feat)
 end
 
 function get_distance_map(pos, radius)
-    if not distance_maps[cell.hash] then
-        distance_maps[cell.hash] = distance_map_initialize(pos, radius)
-        distance_map_queue_update(distance_maps[cell.hash])
+    local hash = hash_position(pos)
+    if not distance_maps[hash] then
+        distance_maps[hash] = distance_map_initialize(pos, radius)
+        distance_map_propagate(distance_maps[hash])
     end
-    return distance_maps[cell.hash]
+    return distance_maps[hash]
 end
 
 function get_feature_map_positions(feats, radius)
@@ -635,10 +665,16 @@ function remove_exclusions(record_only)
     if not record_only and c_persist.exclusions[where] then
         for hash, _ in pairs(c_persist.exclusions[where]) do
             local pos = position_difference(unhash_position(hash), global_pos)
-            if debug_channel("combat") then
-                dsay("Unexcluding position " .. pos_string(pos))
+            if view.in_known_map_bounds(pos.x, pos.y) then
+                if debug_channel("combat") then
+                    dsay("Unexcluding position " .. pos_string(pos))
+                end
+
+                travel.del_exclude(pos.x, pos.y)
+            elseif debug_channel("combat") then
+                dsay("Ignoring out of bounds exclusion coordinates "
+                    .. pos_string(pos))
             end
-            travel.del_exclude(pos.x, pos.y)
         end
     end
 
@@ -682,11 +718,12 @@ function update_exclusions(new_waypoint)
                 -- We need to at least see all cells adjacent to them to be
                 -- so our movement evaluation is reasonably correct.
                 and enemy:adjacent_cells_known()
-                -- They can't move to our melee and we can't move to melee
-                -- them...
+                -- They won't move into our melee range...
                 and not enemy:can_move_to_player_melee()
-                and not enemy:get_player_move_towards(have_temp_flight)
-                -- ... and already know we can't target them with a ranged attack.
+                -- ...we can't move into melee range...
+                and not enemy:player_has_path_to(have_temp_flight)
+                -- ... and we already see that we can't target them with a
+                -- ranged attack.
                 and not (have_ranged and enemy:have_line_of_fire()) then
             table.insert(auto_exclude, enemy:pos())
         end

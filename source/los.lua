@@ -77,7 +77,7 @@ function radius_iter(pos, radius, include_center)
         if r == 0 then
             r = 1
             if include_center then
-                return origin
+                return pos
             end
         end
 

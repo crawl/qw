@@ -97,13 +97,21 @@ function ttt()
     end
 end
 
-function print_traversal_map()
+function print_traversal_map(center)
+    if not center then
+        center = origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(global_pos, center)
+    say("Traversal map at " .. cell_string_from_map_position(map_center))
     local str
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         str = ""
         for x = -20, 20 do
-            local pos = position_sum(global_pos, { x = x, y = y })
+            local pos = position_sum(map_center, { x = x, y = y })
             local traversable = map_is_traversable_at(pos)
             if traversable == nil then
                 str = str .. " "
@@ -113,32 +121,36 @@ function print_traversal_map()
         end
         say(str)
     end
+
+    crawl.setopt("msg_condense_repeats = true")
 end
 
 function print_distance_map(dist_map, center, excluded)
     if not center then
-        center = global_pos
+        center = origin
     end
 
+    crawl.setopt("msg_condense_repeats = true")
+
     local map = excluded and dist_map.excluded_map or dist_map.map
-    say("distance map at " .. pos_string(dist_map.pos) .. " ("
-        .. cell_string(dist_map.pos, true) .. ") from position "
-        .. pos_string(center) .. ":")
+    local map_center = position_sum(global_pos, center)
+    say("Distance map at " .. cell_string_from_map_position(dist_map.pos)
+        .. " from position " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         local str = ""
         for x = -20, 20 do
-            if map[center.x + x][center.y + y] == nil then
+            if map[map_center.x + x][map_center.y + y] == nil then
                 str = str .. " "
-            elseif map[center.x + x][center.y + y] >= INF_DIST then
-                str = str .. "∞"
             else
                 str = str .. string.char(string.byte('A')
-                    + map[center.x + x][center.y + y])
+                    + map[map_center.x + x][map_center.y + y])
             end
         end
         say(str)
     end
+
+    crawl.setopt("msg_condense_repeats = false")
 end
 
 function print_distance_maps(center, excluded)
@@ -168,7 +180,7 @@ function get_global_pos()
 end
 
 function pos_string(pos)
-    return tostring(pos.x) .. ", " .. tostring(pos.y)
+    return tostring(pos.x) .. "," .. tostring(pos.y)
 end
 
 function cell_string(cell)

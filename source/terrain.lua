@@ -6,9 +6,10 @@ function get_feature_name(where_name)
     end
 end
 
-function feature_is_traversable(feat)
+function feature_is_traversable(feat, assume_flight)
     return (open_runed_doors or not feature_is_runed_door(feat))
-        and travel.feature_traversable(feat)
+        -- XXX: Can we pass a default nil value instead?
+        and travel.feature_traversable(feat, assume_flight and true or false)
 end
 
 function is_cornerish_at(pos)
@@ -30,9 +31,13 @@ function is_solid_at(pos)
     return feat == "unseen" or travel.feature_solid(feat)
 end
 
-function destroys_items_at(pos)
+function feature_destroys_items(feat)
     return feat == "deep_water" and not intrinsic_amphibious()
         or feat == "lava"
+end
+
+function destroys_items_at(pos)
+    return feature_destroys_items(view.feature_at(pos.x, pos.y))
 end
 
 function feature_is_upstairs(feat)

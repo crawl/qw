@@ -14,6 +14,7 @@ local enum_att_neutral = 1
 
 -- Constants
 local INF_TURNS
+local INF_STAIRS_DIST
 local GXM
 local origin
 
@@ -110,6 +111,8 @@ local item_searches_cache
 local item_searches
 local traversal_maps_cache
 local traversal_map
+local flight_traversal_maps_cache
+local flight_traversal_map
 local exclusion_maps_cache
 local exclusion_map
 local distance_maps_cache

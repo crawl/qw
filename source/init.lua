@@ -54,6 +54,7 @@ function initialize()
 
     if not cache_parity then
         traversal_maps_cache = {}
+        flight_traversal_maps_cache = {}
         exclusion_maps_cache = {}
 
         distance_maps_cache = {}

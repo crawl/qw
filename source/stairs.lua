@@ -4,6 +4,8 @@
 -- Stair direction enum
 DIR = { UP = -1, DOWN = 1 }
 
+INF_STAIRS_DIST = 10000
+
 upstairs_features = {
     "stone_stairs_up_i",
     "stone_stairs_up_ii",
@@ -328,6 +330,26 @@ function get_branch_stairs_state(branch, depth, stairs_branch, dir)
     end
 end
 
+function get_destination_stairs_state(branch, depth, feat)
+    local state
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        return get_stone_stairs_state(branch, depth + dir, -dir, num)
+    end
+
+    local branch, dir = branch_stairs_type(feat)
+    if branch then
+        if dir == DIR.UP then
+            local parent, min_depth, max_depth = parent_branch(branch)
+            if min_depth == max_depth then
+                return get_branch_stairs_state(parent, min_depth, branch, -dir)
+            end
+        else
+            return get_branch_stairs_state(branch, 1, -dir)
+        end
+    end
+end
+
 function get_stairs_state(branch, depth, feat)
     local state
     local dir, num = stone_stairs_type(feat)
@@ -343,10 +365,6 @@ end
 
 function find_good_stairs()
     good_stairs = {}
-
-    if not can_retreat_upstairs then
-        return
-    end
 
     -- Only retreat to stairs marked as safe.
     local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
@@ -387,16 +405,21 @@ end
 
 function stairs_improvement(pos)
     if not can_retreat_upstairs then
-        return INF_STAIR_DIST
+        return INF_STAIRS_DIST
     end
 
     if supdist(pos) == 0 then
         if feature_is_upstairs(view.feature_at(0, 0)) then
             return 0
         else
-            return INF_STAIR_DIST
+            return INF_STAIRS_DIST
         end
     end
 
-    return select(2, best_stairs_for_position(pos))
+    local dist = select(2, best_stairs_for_position(pos))
+    if dist then
+        return dist
+    end
+
+    return INF_STAIRS_DIST
 end

@@ -326,8 +326,8 @@ function plan_exclusion_move()
         move, dest = best_move_towards_unexplored()
         if move then
             if debug_channel("explore") then
-                dsay("Moving to explore near " .. pos_string(dest) .. " (" ..
-                    cell_string(dest, true) .. ")")
+                dsay("Moving to explore near "
+                    .. cell_string_from_map_position(dest))
             end
             move_destination = dest
             move_reason = "unexplored"

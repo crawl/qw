@@ -1,12 +1,23 @@
 ----------------------
 -- Movement evaluation
 
-INF_STAIR_DIST = 10000
-
 function can_move_to(pos)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
         and not monster_in_way(pos)
+end
+
+-- XXX: This needs to run before update_map() and hence before traversal_map is
+-- updated, so we have to do an uncached check. Ideally we'd use the traversal
+-- map, but this requires separating the traversal map update to its own path
+-- and somehow retaining information about the per-cell changes so update_map()
+-- can propagate updates to adjacent cells.
+function traversable_square(pos)
+    return feature_is_traversable(view.feature_at(pos.x, pos.y))
+end
+
+function flight_traversable_square(pos)
+    return feature_is_traversable(view.feature_at(pos.x, pos.y), true)
 end
 
 function tabbable_square(pos)
@@ -183,7 +194,7 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to INF_STAIR_DIST if the move is not closer to any stair in
+    -- Equal to INF_STAIRS_DIST if the move is not closer to any stair in
     -- good_stairs, otherwise equal to the (min) dist to such a stair
     a.stairs_closer = stairs_improvement(pos)
 
@@ -206,7 +217,7 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.stairs_closer < INF_STAIR_DIST
+            and a2.stairs_closer < INF_STAIRS_DIST
             and a1.stairs_closer > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
@@ -601,19 +612,40 @@ function map_position_has_adjacent_unseen(pos)
 end
 
 function best_move_towards_unexplored()
-    local unexplored_pos
     for pos in radius_iter(global_pos, 2 * los_radius) do
         if map_is_traversable_at(pos)
                 and map_position_has_adjacent_unseen(pos) then
             for _, stair_pos in ipairs(good_stairs) do
                 local dist_map = get_distance_map(stair_pos)
                 if dist_map.map[pos.x][pos.y] then
-                    unexplored_pos = pos
-                    break
+                    return best_move_towards_map_position(pos, true)
                 end
             end
         end
     end
+end
 
-    return best_move_towards_map_position(unexplored_pos, true, GXM)
+function update_move_destination()
+    if not move_destination then
+        return
+    end
+
+    local monster = move_reason == "monster"
+    if monster and danger then
+        reset = true
+    elseif monster then
+        local pos = position_difference(move_destination, global_pos)
+        if supdist(pos) <= los_radius
+                and you.see_cell_no_trans(pos.x, pos.y) then
+            reset = true
+        end
+    elseif global_pos.x == move_destination.x
+            and global_pos.y == move_destination.y then
+        reset = true
+    end
+
+    if reset then
+        move_destination = nil
+        move_reason = nil
+    end
 end
