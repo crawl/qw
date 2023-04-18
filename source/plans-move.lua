@@ -417,10 +417,30 @@ function plan_stuck_move_towards_monster()
         return true
     end
 
-    move = get_move_closer(mons_targets)
+    return false
+end
+
+function plan_stuck_move_towards_unexplored()
+    if dangerous_to_move() then
+        return false
+    end
+
+    if move_destination and move_reason == "unexplored" then
+        move = best_move_towards_map_position(move_destination, true)
+        if move then
+            move_to(move)
+            return true
+        end
+    end
+
+    move, dest = best_move_towards_unexplored()
     if move then
-        move_to(move)
-        return true
+        if debug_channel("explore") then
+            dsay("Moving to explore near "
+                .. cell_string_from_map_position(dest))
+        end
+        move_destination = dest
+        move_reason = "unexplored"
     end
 
     return false
@@ -454,6 +474,7 @@ function set_plan_move()
         {plan_stuck_move_towards_destination,
             "stuck_move_towards_destination"},
         {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},
+        {plan_stuck_move_towards_unexplored, "stuck_move_towards_unexplored"},
         {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_stuck_cloudy, "stuck_cloudy"},

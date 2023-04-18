@@ -74,7 +74,7 @@ end
 
 function plan_orbrun_hand()
     local hp, mhp = you.hp()
-    if mhp - hp >= 30 and can_hand() then
+    if mhp - hp >= 30 and can_trogs_hand() then
         trogs_hand()
         return true
     end
@@ -147,6 +147,25 @@ function set_plan_orbrun_rest()
     }
 end
 
+function plan_orbrun_exclusion_move()
+    if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
+        return false
+    end
+
+    local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
+    if not feats then
+        return false
+    end
+
+    move = best_move_towards_features(feats, true)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
 function set_plan_orbrun_emergency()
     plan_orbrun_emergency = cascade {
         {plan_special_purification, "special_purification"},
@@ -167,6 +186,7 @@ end
 function set_plan_orbrun_move()
     plan_orbrun_move = cascade {
         {plan_orbrun_emergency, "orbrun_emergency"},
+        {plan_orbrun_exclusion_move, "orbrun_exclusion_move"},
         {plan_recall, "recall"},
         {plan_recall_ancestor, "try_recall_ancestor"},
         {plan_attack, "attack"},
