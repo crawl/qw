@@ -285,6 +285,62 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state)
     want_gameplan_update = true
 end
 
+function update_escape_hatch(branch, depth, dir, hash, state, force)
+    if not state.safe and not state.los then
+        error("Undefined stairs state.")
+    end
+
+    local data
+    if dir == DIR.DOWN then
+        data = c_persist.down_hatches
+    else
+        data = c_persist.up_hatches
+    end
+
+    local level = make_level(branch, depth)
+    if not data[level] then
+        data[level] = {}
+    end
+
+    if not data[level][hash] then
+        data[level][hash] = {}
+    end
+
+    local current = data[level][hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(global_pos, unhash_position(hash))
+            dsay("Updating escape hatch " .. (dir == DIR.UP and "up" or "down")
+                .. " at " .. pos_string(pos) .. " on " .. level
+                .. " from " .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed and not force then
+            current.los = state.los
+        end
+    end
+end
+
 function minimum_enemy_stairs_distance(dist_map, pspeed)
     local min_dist
     for _, enemy in ipairs(enemy_list) do
@@ -373,6 +429,14 @@ function find_good_stairs()
         if get_stairs_state(where_branch, where_depth, feat).safe then
             table.insert(good_feats, feat)
         end
+    end
+
+    -- When holding the ORB, we'll retreat to and use escape hatches as long as
+    -- the level above us is fully explored.
+    if have_orb
+            and where_depth > 1
+            and explored_level(where_branch, where_depth - 1) then
+        table.insert(good_feats, "escape_hatch_up")
     end
 
     local stairs_positions = get_feature_map_positions(good_feats)

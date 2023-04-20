@@ -103,16 +103,12 @@ local dislike_pan_level = false
 
 local global_map_update = false
 local cache_parity
-local feature_searches_cache
-local feature_searches
 local feature_map_positions_cache
 local feature_map_positions
 local item_searches_cache
 local item_searches
 local traversal_maps_cache
 local traversal_map
-local flight_traversal_maps_cache
-local flight_traversal_map
 local exclusion_maps_cache
 local exclusion_map
 local distance_maps_cache
@@ -143,6 +139,7 @@ local time_passed
 local memos
 
 local los_radius
+local have_orb
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0

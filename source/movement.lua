@@ -566,12 +566,6 @@ end
 
 function best_move_towards_features(feats, ignore_exclusions, radius)
     local positions = get_feature_map_positions(feats, radius)
-    if #positions == 0 then
-        add_feature_search(feats)
-        find_features(radius)
-        positions = get_feature_map_positions(feats, radius)
-    end
-
     if #positions > 0 then
         return best_move_towards_map_positions(positions, ignore_exclusions,
             radius)

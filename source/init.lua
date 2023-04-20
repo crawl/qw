@@ -9,7 +9,7 @@ function initialize_c_persist()
     local tables = {
         "waypoints", "exclusions", "portals", "branch_entries",
         "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
-        "seen_items", "plan_fail_count"
+        "up_hatches", "down_hatches", "seen_items", "plan_fail_count"
     }
     for _, table in ipairs(tables) do
         if not c_persist[table] then
@@ -54,11 +54,9 @@ function initialize()
 
     if not cache_parity then
         traversal_maps_cache = {}
-        flight_traversal_maps_cache = {}
         exclusion_maps_cache = {}
 
         distance_maps_cache = {}
-        feature_searches_cache = {}
         feature_map_positions_cache = {}
         item_searches_cache = {}
         map_mode_searches_cache = {}

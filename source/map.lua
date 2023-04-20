@@ -67,9 +67,7 @@ function clear_map_cache(parity, full_clear)
     end
 
     if full_clear then
-        feature_searches_cache[parity] = {}
         item_searches_cache[parity] = {}
-
         map_mode_searches_cache[parity] = {}
     end
 
@@ -81,28 +79,20 @@ function clear_map_cache(parity, full_clear)
         traversal_maps_cache[parity][x] = {}
     end
 
-    flight_traversal_maps_cache[parity] = {}
-    for x = -GXM, GXM do
-        flight_traversal_maps_cache[parity][x] = {}
-    end
-
     exclusion_maps_cache[parity] = {}
     for x = -GXM, GXM do
         exclusion_maps_cache[parity][x] = {}
     end
 end
 
-function add_feature_search(feats)
-    for _, feat in ipairs(feats) do
-        if not feature_searches[feat] then
-            feature_searches[feat] = true
-        end
-    end
-end
-
-function find_features(radius)
+function find_features(feats, radius)
     if not radius then
         radius = GXM
+    end
+
+    local searches = {}
+    for _, feat in feats do
+        searches[feat] = true
     end
 
     local i = 1
@@ -112,7 +102,7 @@ function find_features(radius)
         end
 
         local feat = view.feature_at(pos.x, pos.y)
-        if feature_searches[feat] then
+        if searches[feat] then
             if not feature_map_positions[feat] then
                 feature_map_positions[feat] = {}
             end
@@ -159,45 +149,13 @@ function distance_map_initialize(pos, radius)
     return dist_map
 end
 
-function handle_feature_search(cell)
-    if not feature_searches[cell.feat] then
-        return
-    end
-
-    if not feature_map_positions[cell.feat] then
-        feature_map_positions[cell.feat] = {}
-    end
-
-    if not feature_map_positions[cell.feat][cell.hash] then
-        if debug_channel("map") then
-            dsay("New feature position at " .. cell_string(cell))
-        end
-        feature_map_positions[cell.feat][cell.hash] = cell.pos
-    end
-
-    if not distance_maps[cell.hash] then
-        distance_maps[cell.hash] = distance_map_initialize(cell.pos)
-    else
-        table.insert(distance_maps[cell.hash].queue, cell.pos)
-    end
-end
-
 function is_traversable_at(pos)
     local gpos = position_sum(global_pos, pos)
     return traversal_map[gpos.x][gpos.y]
 end
 
-function is_flight_traversable_at(pos)
-    local gpos = position_sum(global_pos, pos)
-    return flight_traversal_map[gpos.x][gpos.y]
-end
-
 function map_is_traversable_at(pos)
     return traversal_map[pos.x][pos.y]
-end
-
-function map_is_flight_traversable_at(pos)
-    return flight_traversal_map[pos.x][pos.y]
 end
 
 function distance_map_adjacent_dist(pos, dist_map)
@@ -440,12 +398,6 @@ function update_map_at_cell(cell, queue, seen)
         map_updated = true
     end
 
-    if cell.feat == "lava" or cell.feat == "deep_water" then
-        flight_traversal_map[cell.pos.x][cell.pos.y] = true
-    else
-        flight_traversal_map[cell.pos.x][cell.pos.y] = traversable
-    end
-
     local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
             cell.los_pos.y)
         and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
@@ -460,40 +412,47 @@ function update_map_at_cell(cell, queue, seen)
         return
     end
 
-    local feat_updated = false
-    local dir, num = stone_stairs_type(cell.feat)
-    if dir then
-        update_stone_stairs(where_branch, where_depth, dir, num,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        feat_updated = true
-    end
-
-    if not feat_updated then
-        local branch, dir = branch_stairs_type(cell.feat)
-        if branch then
-            update_branch_stairs(where_branch, where_depth, branch, dir,
-                { safe = unexcluded, los = los_state(cell.los_pos) })
-            feat_updated = true
-        end
-    end
-
-    if not feat_updated then
-        local god = altar_god(cell.feat)
-        if god then
-            update_altar(where, god, los_state(cell.los_pos))
-            feat_updated = true
-        end
-    end
-
-    if feat_updated then
-        update_cell_feature_positions(cell)
-    end
-
     for pos in adjacent_iter(cell.los_pos) do
         local acell = cell_from_position(pos)
         if acell and not seen[acell.hash] then
             table.insert(queue, acell)
         end
+    end
+
+    local dir, num = stone_stairs_type(cell.feat)
+    if dir then
+        update_stone_stairs(where_branch, where_depth, dir, num,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+
+        if not distance_maps[cell.hash] then
+            distance_maps[cell.hash] = distance_map_initialize(cell.pos)
+        end
+
+        return
+    end
+
+    local dir = escape_hatch_type(cell.feat)
+    if dir then
+        update_escape_hatch(where_branch, where_depth, dir, cell.hash,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
+    end
+
+    local branch, dir = branch_stairs_type(cell.feat)
+    if branch then
+        update_branch_stairs(where_branch, where_depth, branch, dir,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
+    end
+
+    local god = altar_god(cell.feat)
+    if god then
+        update_altar(where, god, los_state(cell.los_pos))
+        update_cell_feature_positions(cell)
+        return
     end
 end
 
@@ -522,7 +481,6 @@ function update_distance_maps_at_cells(queue)
             coroutine.yield()
         end
 
-        handle_feature_search(cell)
         handle_item_searches(cell)
 
         for _, dist_map in pairs(distance_maps) do
@@ -544,27 +502,14 @@ function update_map(new_level, clear_map)
 
     if new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
-        flight_traversal_map = flight_traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
-        feature_searches = feature_searches_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_searches = item_searches_cache[cache_parity]
         map_mode_searches = map_mode_searches_cache[cache_parity]
     end
 
     update_exclusions(new_waypoint)
-
-    if num_required_stairs(where_branch, where_dir, DIR.UP) > 0 then
-        for _, feat in ipairs(upstairs_features) do
-            feature_searches[feat] = true
-        end
-    end
-
-    local exit = branch_exit(where_branch)
-    if feature_is_upstairs(exit) then
-        feature_searches[exit] = true
-    end
 
     if not have_branch_runes(where_branch)
             and where_depth >= branch_rune_depth(where_branch) then
@@ -642,12 +587,15 @@ function get_feature_map_positions(feats, radius)
     for _, feat in ipairs(feats) do
         if feature_map_positions[feat] then
             for _, pos in pairs(feature_map_positions[feat]) do
-                if not radius or supdist(pos) <= radius then
-                    table.insert(positions, pos)
-                end
+                table.insert(positions, pos)
             end
         end
     end
+
+    if #positions == 0 then
+        find_features(feats, radius)
+    end
+
     return positions
 end
 

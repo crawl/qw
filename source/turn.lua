@@ -24,6 +24,7 @@ function turn_update()
         return
     end
 
+    have_orb = you.have_orb()
     time_passed = true
     turn_count = turns
     memos = {}

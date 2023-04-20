@@ -142,6 +142,7 @@ end
 
 function set_plan_orbrun_rest()
     plan_orbrun_rest = cascade {
+        {plan_cure_poison, "cure_poison"},
         {plan_orbrun_rest, "orbrun_rest"},
         {plan_orbrun_hand, "orbrun_hand"},
     }
@@ -170,16 +171,26 @@ function set_plan_orbrun_emergency()
     plan_orbrun_emergency = cascade {
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
+        {plan_cancellation, "cancellation"},
+        {plan_flee_step, "flee_step"},
         {plan_orbrun_teleport, "orbrun_teleport"},
         {plan_orbrun_heal_wounds, "orbrun_heal_wounds"},
         {plan_orbrun_finesse, "orbrun_finesse"},
         {plan_orbrun_haste, "orbrun_haste"},
         {plan_orbrun_heroism, "orbrun_heroism"},
+        {plan_cleansing_flame, "try_cleansing_flame"},
+        {plan_brothers_in_arms, "brothers_in_arms"},
+        {plan_greater_servant, "greater_servant"},
         {plan_orbrun_divine_warrior, "orbrun_divine_warrior"},
         {plan_trogs_hand, "trogs_hand"},
         {plan_resistance, "resistance"},
+        {plan_magic_points, "magic_points"},
         {plan_wield_weapon, "wield_weapon"},
         {plan_orbrun_might, "orbrun_might"},
+        {plan_continue_flee, "continue_flee"},
+        {plan_recall, "recall"},
+        {plan_recall_ancestor, "try_recall_ancestor"},
+        {plan_recite, "try_recite"},
     }
 end
 
@@ -187,10 +198,7 @@ function set_plan_orbrun_move()
     plan_orbrun_move = cascade {
         {plan_orbrun_emergency, "orbrun_emergency"},
         {plan_orbrun_exclusion_move, "orbrun_exclusion_move"},
-        {plan_recall, "recall"},
-        {plan_recall_ancestor, "try_recall_ancestor"},
         {plan_attack, "attack"},
-        {plan_cure_poison, "cure_poison"},
         {plan_orbrun_rest, "orbrun_rest"},
         {plan_go_up, "go_up"},
         {plan_use_good_consumables, "use_good_consumables"},

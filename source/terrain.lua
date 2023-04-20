@@ -117,6 +117,14 @@ function branch_stairs_type(feat)
     end
 end
 
+function escape_hatch_type(feat)
+    if feat == "escape_hatch_up" then
+        return DIR.UP
+    elseif feat == "escape_hatch_down" then
+        return DIR.DOWN
+    end
+end
+
 function cloud_is_dangerous(cloud)
     if cloud == "flame" or cloud == "fire" then
         return (you.res_fire() < 1)
