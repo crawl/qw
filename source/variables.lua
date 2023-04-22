@@ -14,7 +14,7 @@ local enum_att_neutral = 1
 
 -- Constants
 local INF_TURNS
-local INF_STAIRS_DIST
+local INF_DIST
 local GXM
 local origin
 
@@ -101,12 +101,12 @@ local open_runed_doors
 local permanent_bazaar
 local dislike_pan_level = false
 
-local global_map_update = false
 local cache_parity
 local feature_map_positions_cache
 local feature_map_positions
-local item_searches_cache
 local item_searches
+local item_map_positions_cache
+local item_map_positions
 local traversal_maps_cache
 local traversal_map
 local exclusion_maps_cache
@@ -130,8 +130,8 @@ local transp_orient
 local transp_search
 
 local global_pos = {}
-local good_stairs
-local target_stair
+local flee_positions
+local target_flee_position
 local last_flee_turn = -100
 
 local turn_count = you.turns() - 1
@@ -140,6 +140,7 @@ local memos
 
 local los_radius
 local have_orb
+local sensed_abyssal_rune
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0

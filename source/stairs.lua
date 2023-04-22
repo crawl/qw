@@ -4,7 +4,7 @@
 -- Stair direction enum
 DIR = { UP = -1, DOWN = 1 }
 
-INF_STAIRS_DIST = 10000
+INF_DIST = 10000
 
 upstairs_features = {
     "stone_stairs_up_i",
@@ -29,7 +29,6 @@ function level_stairs_features(branch, depth, dir)
     if dir == DIR.UP then
         if is_portal_branch(branch)
                 or branch == "Abyss"
-                or branch == "Pan"
                 or util.contains(hell_branches, branch)
                 or depth == 1 then
             feats = { branch_exit(branch) }
@@ -341,7 +340,127 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
     end
 end
 
-function minimum_enemy_stairs_distance(dist_map, pspeed)
+function get_escape_hatch_state(branch, depth, map_pos)
+    local level = make_level(branch, depth)
+    local hash = hash_position(map_pos)
+
+    if c_persist.up_hatches[level] and c_persist.up_hatches[level][hash] then
+        return c_persist.up_hatches[level][hash]
+    elseif c_persist.down_hatches[level]
+            and c_persist.down_hatches[level][hash] then
+        return c_persist.down_hatches[level][hash]
+    else
+        return { safe = true, los = FEAT_LOS.NONE }
+    end
+end
+
+function update_pan_transit(hash, state, force)
+    if not state.safe and not state.los then
+        error("Undefined stairs state.")
+    end
+
+    if not c_persist.pan_transits[hash] then
+        c_persist.pan_transits[hash] = {}
+    end
+
+    local current = c_persist.pan_transits[hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(global_pos, unhash_position(hash))
+            dsay("Updating Pan transit at " .. pos_string(pos) .. " from "
+                .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed and not force then
+            current.los = state.los
+        end
+    end
+end
+
+function get_pan_transit_state(map_pos)
+    local hash = hash_position(map_pos)
+
+    if c_persist.pan_transits[hash] then
+        return c_persist.pan_transits[hash]
+    else
+        return { safe = true, los = FEAT_LOS.NONE }
+    end
+end
+
+function update_abyssal_stairs(hash, state, force)
+    if not state.safe and not state.los then
+        error("Undefined stairs state.")
+    end
+
+    if not c_persist.abyssal_stairs[hash] then
+        c_persist.abyssal_stairs[hash] = {}
+    end
+
+    local current = c_persist.abyssal_stairs[hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(global_pos, unhash_position(hash))
+            dsay("Updating Abyssal stairs at " .. pos_string(pos) .. " from "
+                .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed and not force then
+            current.los = state.los
+        end
+    end
+end
+
+function get_abyssal_stairs_state(map_pos)
+    local hash = hash_position(map_pos)
+
+    if c_persist.abyssal_stairs[hash] then
+        return c_persist.abyssal_stairs[hash]
+    else
+        return { safe = true, los = FEAT_LOS.NONE }
+    end
+end
+
+function distance_map_minimum_enemy_distance(dist_map, pspeed)
     local min_dist
     for _, enemy in ipairs(enemy_list) do
         local gpos = position_sum(global_pos, enemy:pos())
@@ -419,71 +538,91 @@ function get_stairs_state(branch, depth, feat)
     end
 end
 
-function find_good_stairs()
-    good_stairs = {}
+function find_flee_positions()
+    flee_positions = {}
 
     -- Only retreat to stairs marked as safe.
-    local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
-    local good_feats = {}
-    for _, feat in ipairs(feats) do
+    local stairs_feats = level_stairs_features(where_branch, where_depth,
+        DIR.UP)
+    local search_feats = {}
+    for _, feat in ipairs(stairs_feats) do
         if get_stairs_state(where_branch, where_depth, feat).safe then
-            table.insert(good_feats, feat)
+            table.insert(search_feats, feat)
         end
     end
 
-    -- When holding the ORB, we'll retreat to and use escape hatches as long as
-    -- the level above us is fully explored.
     if have_orb
             and where_depth > 1
-            and explored_level(where_branch, where_depth - 1) then
-        table.insert(good_feats, "escape_hatch_up")
+            -- It's dangerous to hatch through unexplored areas in Zot as
+            -- opposed to simply taking an explored route through stone stairs.
+            -- So we only take a hatch up in Zot if the destination level is
+            -- fully explored.
+            and (not in_branch("Zot")
+                or explored_level(where_branch, where_depth - 1)) then
+        table.insert(search_feats, "escape_hatch_up")
+    elseif in_branch("Pan") then
+        table.insert(search_feats, "transit_pandemonium")
     end
 
-    local stairs_positions = get_feature_map_positions(good_feats)
+    local positions, feats = get_feature_map_positions(search_feats)
+    local safe_positions = {}
+    for i, feat in ipairs(feats) do
+        local state
+        if feat == "escape_hatch_up" then
+            state = get_escape_hatch_state(where_branch, where_depth,
+                positions[i])
+        elseif feat == "transit_pandemonium" then
+            state = get_pan_transit_state(positions[i])
+        end
+        if not state or state.safe then
+            table.insert(safe_positions, positions[i])
+        end
+    end
+
     local pspeed = player_speed()
-    for _, pos in ipairs(stairs_positions) do
+    for _, pos in ipairs(safe_positions) do
         local dist_map = get_distance_map(pos)
         local pdist = dist_map.map[global_pos.x][global_pos.y]
-        local enemy_dist = minimum_enemy_stairs_distance(dist_map, pspeed)
-        if pdist and (not enemy_dist or pdist < enemy_dist) then
-            table.insert(good_stairs, pos)
+        local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
+        if pdist and (not edist or pdist < edist) then
+            table.insert(flee_positions, pos)
         end
     end
 end
 
-function best_stairs_for_position(pos)
-    local best_dist, best_stairs
-    for _, stairs_pos in ipairs(good_stairs) do
-        local dist_map = get_distance_map(stairs_pos)
+function best_flee_destination_at(pos)
+    local best_dist, best_pos
+    for _, flee_pos in ipairs(flee_positions) do
+        local dist_map = get_distance_map(flee_pos)
         local dist = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
         local current_dist = dist_map.map[global_pos.x][global_pos.y]
         if dist and current_dist
                 and dist < current_dist
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
-            best_stairs = stairs_pos
+            best_pos = flee_pos
         end
     end
-    return best_stairs, best_dist
+    return best_pos, best_dist
 end
 
 function stairs_improvement(pos)
     if not can_retreat_upstairs then
-        return INF_STAIRS_DIST
+        return INF_DIST
     end
 
     if supdist(pos) == 0 then
         if feature_is_upstairs(view.feature_at(0, 0)) then
             return 0
         else
-            return INF_STAIRS_DIST
+            return INF_DIST
         end
     end
 
-    local dist = select(2, best_stairs_for_position(pos))
+    local dist = select(2, best_flee_destination_at(pos))
     if dist then
         return dist
     end
 
-    return INF_STAIRS_DIST
+    return INF_DIST
 end

@@ -9,7 +9,8 @@ function initialize_c_persist()
     local tables = {
         "waypoints", "exclusions", "portals", "branch_entries",
         "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
-        "up_hatches", "down_hatches", "seen_items", "plan_fail_count"
+        "up_hatches", "down_hatches", "pan_transits", "abyssal_stairs",
+        "seen_items", "plan_fail_count"
     }
     for _, table in ipairs(tables) do
         if not c_persist[table] then
@@ -32,8 +33,6 @@ function initialize()
         initialize_branch_data()
         initialize_god_data()
         first_turn_initialize()
-    else
-        global_map_update = true
     end
 
     initialize_c_persist()
@@ -58,7 +57,7 @@ function initialize()
 
         distance_maps_cache = {}
         feature_map_positions_cache = {}
-        item_searches_cache = {}
+        item_map_positions_cache = {}
         map_mode_searches_cache = {}
 
         clear_map_cache(1, true)

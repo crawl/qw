@@ -99,6 +99,10 @@ function plan_orbrun_finesse()
 end
 
 function plan_orbrun_rest()
+    if dangerous_to_rest() then
+        return false
+    end
+
     if you.confused()
             or transformed()
             or you.slowed()
@@ -121,18 +125,15 @@ function plan_orbrun_teleport()
     return false
 end
 
-function plan_gd1()
-    send_travel("D", 1)
+function plan_gd0()
+    send_travel("D", 0)
     return true
 end
 
 function plan_go_up()
     local feat = view.feature_at(0, 0)
-    if feature_is_upstairs(feat) or feat == "escape_hatch_up" then
-        if you.mesmerised() then
-            return false
-        end
-
+    if (feature_is_upstairs(feat) or feat == "escape_hatch_up")
+            and can_use_stairs() then
         go_upstairs()
         return true
     end
@@ -154,12 +155,34 @@ function plan_orbrun_exclusion_move()
     end
 
     local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
-    if not feats then
-        return false
+    if feats then
+        table.insert("escape_hatch_up")
+    else
+        feats = { "escape_hatch_up" }
     end
 
     move = best_move_towards_features(feats, true)
     if move then
+        move_to(move)
+        return true
+    end
+
+    if move_destination and move_reason == "exclusion" then
+        move = best_move_towards_map_position(move_destination, true)
+        if move then
+            move_to(move)
+            return true
+        end
+    end
+
+    move, dest = best_move_towards_unexcluded()
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to unexcluded position at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_destination = dest
+        move_reason = "unexplored"
         move_to(move)
         return true
     end
@@ -175,6 +198,7 @@ function set_plan_orbrun_emergency()
         {plan_flee_step, "flee_step"},
         {plan_orbrun_teleport, "orbrun_teleport"},
         {plan_orbrun_heal_wounds, "orbrun_heal_wounds"},
+        {plan_cloud_step, "cloud_step"},
         {plan_orbrun_finesse, "orbrun_finesse"},
         {plan_orbrun_haste, "orbrun_haste"},
         {plan_orbrun_heroism, "orbrun_heroism"},
@@ -200,15 +224,15 @@ function set_plan_orbrun_move()
         {plan_orbrun_exclusion_move, "orbrun_exclusion_move"},
         {plan_attack, "attack"},
         {plan_orbrun_rest, "orbrun_rest"},
-        {plan_go_up, "go_up"},
         {plan_use_good_consumables, "use_good_consumables"},
-        {plan_find_upstairs, "try_find_upstairs"},
+        {plan_go_up, "go_up"},
+        {plan_gd0, "try_gd0"},
+        {plan_go_to_upstairs, "try_go_to_upstairs"},
         {plan_disturbance_random_step, "disturbance_random_step"},
         {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
         {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_teleport, "stuck_teleport"},
         {plan_autoexplore, "try_autoexplore"},
-        {plan_gd1, "try_gd1"},
         {plan_stuck, "stuck"},
     }
 end

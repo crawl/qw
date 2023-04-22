@@ -42,14 +42,14 @@ function turn_update()
         full_hp_turn = turn_count
     end
 
-    local new_level
-    local clear_map = false
+    local new_level = false
+    local full_map_clear = false
     if you.where() ~= where then
         new_level = true
         cache_parity = 3 - cache_parity
 
         if you.where() ~= previous_where then
-            clear_map = true
+            full_map_clear = true
         end
 
         previous_where = where
@@ -75,7 +75,7 @@ function turn_update()
                 and where_depth >= min_depth
                 and where_depth <= max_depth
 
-        target_stair = nil
+        target_flee_position = nil
         transp_zone = 0
 
         stuck_turns = 0
@@ -96,7 +96,7 @@ function turn_update()
     end
 
     update_monsters()
-    update_map(new_level, clear_map)
+    update_map(new_level, full_map_clear)
 
     if want_gameplan_update then
         update_gameplan()
@@ -120,7 +120,7 @@ function turn_update()
     melee_unsafe = nil
     melee_target = nil
 
-    find_good_stairs()
+    find_flee_positions()
     update_move_destination()
     choose_tactical_step()
 

@@ -26,25 +26,25 @@ local branch_data_values = {
     { "Orc", "O", 2, "enter_orcish_mines", "D", 9, 12 },
     { "Elf", "E", 3, "enter_elven_halls", "Orc", 2, 2 },
     { "Lair", "L", 5, "enter_lair", "D", 8, 11 },
-    { "Swamp", "S", 4, "enter_swamp", "Lair", 2, 4, "decaying" },
-    { "Shoals", "A", 4, "enter_shoals", "Lair", 2, 4, "barnacled" },
-    { "Snake", "P", 4, "enter_snake_pit", "Lair", 2, 4, "serpentine" },
-    { "Spider", "N", 4, "enter_spider_nest", "Lair", 2, 4, "gossamer" },
-    { "Slime", "M", 5, "enter_slime_pits", "Lair", 5, 6, "slimy" },
-    { "Vaults", "V", 5, "enter_vaults", "D", 13, 14, "silver" },
+    { "Swamp", "S", 4, "enter_swamp", "Lair", 2, 4, { "decaying" } },
+    { "Shoals", "A", 4, "enter_shoals", "Lair", 2, 4, { "barnacled" } },
+    { "Snake", "P", 4, "enter_snake_pit", "Lair", 2, 4, { "serpentine" } },
+    { "Spider", "N", 4, "enter_spider_nest", "Lair", 2, 4, { "gossamer" } },
+    { "Slime", "M", 5, "enter_slime_pits", "Lair", 5, 6, { "slimy" } },
+    { "Vaults", "V", 5, "enter_vaults", "D", 13, 14, { "silver" } },
     { "Crypt", "C", 3, "enter_crypt", "Vaults", 3, 4 },
-    { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, "golden" },
+    { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, { "golden" } },
     { "Depths", "U", 4, "enter_depths", "D", 15, 15 },
     { "Zig", nil, 27, "enter_ziggurat", "Depths", 1, 4 },
     { "Zot", "Z", 5, "enter_zot", "Depths", 4, 4 },
     { "Pan", nil, 1, "enter_pandemonium", "Depths", 2, 2,
         { "dark", "demonic", "fiery", "glowing", "magical" } },
-    { "Abyss", nil, 7, "enter_abyss", "Depths", 4, 4, "abyssal" },
+    { "Abyss", nil, 7, "enter_abyss", "Depths", 4, 4, { "abyssal" } },
     { "Hell", "H", 1, "enter_hell", "Depths", 1, 4 },
-    { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, "iron" },
-    { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, "obsidian" },
-    { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, "icy" },
-    { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
+    { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, { "iron" } },
+    { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, { "obsidian" } },
+    { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, { "icy" } },
+    { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, { "bone" } },
 }
 
 hell_branches = { "Coc", "Dis", "Geh", "Tar" }
@@ -188,7 +188,7 @@ function parent_branch(branch)
 
 end
 
-function branch_rune(branch)
+function branch_runes(branch)
     if not branch_data[branch] then
         error("Unknown branch: " .. tostring(branch))
     end
@@ -260,7 +260,7 @@ function in_hell_branch()
 end
 
 function branch_rune_depth(branch)
-    if not branch_rune(branch) then
+    if not branch_runes(branch) then
         return
     end
 
@@ -272,20 +272,17 @@ function branch_rune_depth(branch)
 end
 
 function have_branch_runes(branch)
-    local rune = branch_rune(branch)
-    if not rune then
-        return true
-    elseif type(rune) == "table" then
-        for _, r in ipairs(rune) do
-            if not you.have_rune(r) then
-                return false
-            end
-        end
-
+    local runes = branch_runes(branch)
+    if not runes then
         return true
     end
 
-    return you.have_rune(rune)
+
+    for _, rune in ipairs(runes) do
+        if not you.have_rune(rune) then
+            return false
+        end
+    end
 end
 
 function is_portal_branch(branch)

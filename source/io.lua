@@ -54,6 +54,46 @@ function c_answer_prompt(prompt)
     end
 end
 
+function control(c)
+    return string.char(string.byte(c) - string.byte('a') + 1)
+end
+
+local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
+function arrowkey(c)
+    return a2c[c]
+end
+
+local d2v = {
+    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
+    [0]  = { [-1] = 'k', [1] = 'j' },
+    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
+}
+local v2d = {}
+for x, _ in pairs(d2v) do
+    for y, c in pairs(d2v[x]) do
+        v2d[c] = { x = x, y = y }
+    end
+end
+
+function delta_to_vi(pos)
+    return d2v[pos.x][pos.y]
+end
+
+function vi_to_delta(c)
+    return v2d[c]
+end
+
+function vector_move(pos)
+    local str = ''
+    for i = 1, abs(pos.x) do
+        str = str .. delta_to_vi({ x = sign(pos.x), y = 0 })
+    end
+    for i = 1, abs(pos.y) do
+        str = str .. delta_to_vi({ x = 0, y = sign(pos.y) })
+    end
+    return str
+end
+
 function ch_stash_search_annotate_item(it)
     return ""
 end
@@ -108,9 +148,9 @@ function c_message(text, channel)
             end
         end
         stairs_travel = nil
-    elseif text:find("Orb of Zot") then
-        c_persist.found_orb = true
-        want_gameplan_update = true
+    elseif text:find("abyssal rune vanishes from your memory and reappears")
+            or text:find("detect the abyssal rune") then
+        sensed_abyssal_rune = true
     -- Timed portals are recorded by the "Hurry and find it" message handling,
     -- but a permanent bazaar doesn't have this. Check messages for "a gateway
     -- to a bazaar", which happens via autoexplore. Timed bazaars are described

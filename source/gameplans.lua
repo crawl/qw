@@ -704,7 +704,7 @@ function make_initial_gameplans()
             local branch = capitalize(gameplan_rune_branch(pl))
             if not branch_data[branch] then
                 error("Unknown rune branch: " .. branch)
-            elseif not branch_rune(branch) then
+            elseif not branch_runes(branch) then
                 error("Branch has no rune: " .. branch)
             end
 

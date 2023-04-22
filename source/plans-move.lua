@@ -46,12 +46,12 @@ function plan_flee_step()
         return false
     end
 
-    local best_stairs = best_stairs_for_position(vi_to_delta(tactical_step))
-    if not best_stairs then
+    local best_pos = best_flee_destination_at(vi_to_delta(tactical_step))
+    if not best_pos then
         return false
     end
 
-    target_stairs = best_stairs
+    target_flee_position = best_pos
     last_flee_turn = you.turns()
     say("FLEEEEING.")
     magic(tactical_step .. "Y")
@@ -225,7 +225,7 @@ function plan_swamp_go_to_rune()
     end
 
     last_swamp_fail_count = c_persist.plan_fail_count.try_swamp_go_to_rune
-    magicfind("@" .. branch_rune("Swamp") .. " rune")
+    magicfind("@" .. branch_runes("Swamp")[1] .. " rune")
     return true
 end
 
@@ -331,16 +331,36 @@ function plan_exclusion_move()
             end
             move_destination = dest
             move_reason = "unexplored"
+            move_to(move)
+            return true
         end
     end
 
     local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
-    if not feats then
-        return false
+    if feats then
+        move = best_move_towards_features(feats, true)
+        if move then
+            move_to(move)
+            return true
+        end
     end
 
-    move = best_move_towards_features(feats, true)
+    if move_destination and move_reason == "exclusion" then
+        move = best_move_towards_map_position(move_destination, true)
+        if move then
+            move_to(move)
+            return true
+        end
+    end
+
+    move, dest = best_move_towards_unexcluded()
     if move then
+        if debug_channel("explore") then
+            dsay("Moving to unexcluded position at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_destination = dest
+        move_reason = "unexplored"
         move_to(move)
         return true
     end

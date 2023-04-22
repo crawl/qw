@@ -10,7 +10,7 @@ function plan_flail_at_invis()
     invis_caster_turns = invis_caster_turns + 1
     for pos in adjacent_iter(origin) do
         if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
-            magic(control(delta_to_vi(pos)))
+            attack_melee(pos, true)
             return true
         end
     end
@@ -18,14 +18,14 @@ function plan_flail_at_invis()
     if invis_caster and supdist(invis_caster_pos) > 0 then
         if is_adjacent(invis_caster_pos)
                 and not is_solid_at(invis_caster_pos) then
-            magic(control(delta_to_vi(invis_caster_pos)))
+            attack_melee(invis_caster_pos, true)
             return true
         end
 
         if invis_caster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_caster_pos.y) }
             if not is_solid_at(apos) then
-                magic(delta_to_vi(apos))
+                attack_melee(apos, true)
                 return true
             end
         end
@@ -33,7 +33,7 @@ function plan_flail_at_invis()
         if invis_caster_pos.y == 0 then
             local apos = { x = sign(invis_caster_pos.x), y = 0 }
             if not is_solid_at(apos) then
-                magic(delta_to_vi(apos))
+                attack_melee(apos, true)
                 return true
             end
         end
@@ -44,7 +44,7 @@ function plan_flail_at_invis()
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
         if supdist(pos) > 0 and not is_solid_at(pos) then
-            magic(control(delta_to_vi(pos)))
+            attack_melee(pos, true)
             return true
         end
     end
@@ -132,8 +132,8 @@ function get_melee_target(assume_flight)
     return melee_target
 end
 
-function attack_melee(pos)
-    if you.confused() and you.transform() == "tree" then
+function attack_melee(pos, control)
+    if control or you.confused() and you.transform() == "tree" then
         magic(control(delta_to_vi(pos)) .. "Y")
         return
     end
@@ -392,37 +392,31 @@ function wait_combat()
 end
 
 function plan_wait_for_enemy()
-    if not danger or dangerous_to_attack() then
+    if not danger
+            or dangerous_to_attack()
+            or cloudy
+            or not options.autopick_on
+            or view.feature_at(0, 0) == "shallow_water"
+                and intrinsic_fumble()
+                and not you.flying()
+            or in_branch("Abyss")
+            or wait_count >= 10 then
+        wait_count = 0
         return false
     end
 
     local target = get_melee_target()
-    if target and dangerous_to_melee() then
+    if not target then
+        target = get_melee_target(true)
+    end
+
+    if target and dangerous_to_move() then
         wait_combat()
         return true
     end
 
-    if not options.autopick_on
-            or you.berserk()
-            or you.have_orb()
-            or count_brothers_in_arms(los_radius) > 0
-            or count_greater_servants(los_radius) > 0
-            or count_divine_warriors(los_radius) > 0
-            or not view.is_safe_square(0, 0)
-            or view.feature_at(0, 0) == "shallow_water"
-                and intrinsic_fumble()
-                and not you.flying()
-            or in_branch("Abyss") then
-        wait_count = 0
-        return false
-    end
-
     if you.turns() >= last_wait + 10 then
         wait_count = 0
-    end
-
-    if not danger or wait_count >= 10 then
-        return false
     end
 
     -- Hack to wait when we enter the Vaults end, so we don't move off stairs.
@@ -431,25 +425,28 @@ function plan_wait_for_enemy()
         return true
     end
 
-    local need_wait = false
+    local want_wait = false
     for _, enemy in ipairs(enemy_list) do
-        -- If we have a melee target (that we were unable to melee) but one of
-        -- the enemies has a ranged attack, we don't wait, since this gives the
-        -- enemy more ranged attacks.
+        -- We prefer to wait for a target monster to reach us over moving
+        -- towards it. However if there exists monsters with ranged attacks, we
+        -- prefer to move closer to our target over waiting. This way we are
+        -- hit with fewer ranged attacks over time.
         if target and enemy:is_ranged() then
             wait_count = 0
             return false
         end
 
-        if not need_wait and enemy:can_move_to_player_melee() then
-            need_wait = true
+        if not want_wait and enemy:can_move_to_player_melee() then
+            want_wait = true
 
+            -- If we don't have a target, we'll never abort from waiting due to
+            -- a ranged monsters, since we couldn't move towards it anyhow.
             if not target then
                 break
             end
         end
     end
-    if need_wait then
+    if want_wait then
         wait_combat()
         return true
     end
@@ -528,16 +525,22 @@ function plan_move_towards_enemy()
 
     local mons = monster_map[target.x][target.y]
     local move = mons:get_player_move_towards()
+    if not move then
+        return false
+    end
+
     enemy_memory = position_difference(mons:pos(), move)
     turns_left_moving_towards_enemy = 2
-    magic(delta_to_vi(move))
+    move_to(move)
     return true
 end
 
 function plan_continue_move_towards_enemy()
     if turns_left_moving_towards_enemy == 0
             or supdist(enemy_memory) == 0
-            or not options.autopick_on then
+            or not options.autopick_on
+            or dangerous_to_attack()
+            or dangerous_to_move() then
         return false
     end
 
@@ -547,21 +550,21 @@ function plan_continue_move_towards_enemy()
         return false
     end
 
-    magic(delta_to_vi(move))
+    move_to(move)
     return true
 end
 
 function set_plan_attack()
     plan_attack = cascade {
-        {plan_flail_at_invis, "try_flail_at_invis"},
-        {plan_starting_spell, "try_starting_spell"},
-        {plan_poison_spit, "try_poison_spit"},
-        {plan_melee, "try_melee"},
-        {plan_throw, "try_throw"},
-        {plan_wait_for_enemy, "try_wait_for_enemy"},
-        {plan_move_towards_enemy, "try_move_towards_enemy"},
-        {plan_continue_move_towards_enemy, "try_continue_move_towards_enemy"},
-        {plan_flight_move_towards_enemy, "try_flight_move_towards_enemy"},
+        {plan_flail_at_invis, "flail_at_invis"},
+        {plan_starting_spell, "starting_spell"},
+        {plan_poison_spit, "poison_spit"},
+        {plan_melee, "melee"},
+        {plan_throw, "throw"},
+        {plan_wait_for_enemy, "wait_for_enemy"},
+        {plan_continue_move_towards_enemy, "continue_move_towards_enemy"},
+        {plan_move_towards_enemy, "move_towards_enemy"},
+        {plan_flight_move_towards_enemy, "flight_move_towards_enemy"},
         {plan_disturbance_random_step, "disturbance_random_step"},
     }
 end

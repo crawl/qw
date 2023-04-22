@@ -363,7 +363,8 @@ function dangerous_to_melee()
                 or you.confused()
                     and (count_brothers_in_arms(1) > 0
                         or count_greater_servants(1) > 0
-                        or count_divine_warriors(1) > 0)
+                        or count_divine_warriors(1) > 0
+                        or count_beogh_allies(1) > 0)
         end)
 end
 

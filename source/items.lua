@@ -1,6 +1,9 @@
 -------------------------------------
 -- Equipment valuation and autopickup
 
+RUNE_SUFFIX = " rune of Zot"
+ORB_NAME = "the orb of Zot"
+
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
 -- for equipment selection. A negative value means we prefer an empty slot.
@@ -1033,16 +1036,30 @@ function want_miscellaneous(it)
     return false
 end
 
+function record_seen_item(level, name)
+    if not c_persist.seen_items[level] then
+        c_persist.seen_items[level] = {}
+    end
+
+    c_persist.seen_items[level][name] = true
+end
+
+function have_seen_item(name)
+    return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
+        or name == ORB_NAME and you.have_orb()
+end
+
 function autopickup(it, name)
     if not initialized then
         return
     end
 
-    if (name:find("rune of Zot") or name:find("Orb of Zot")) then
-        if not c_persist.seen_items[name] then
-            c_persist.seen_items[name] = true
-        end
-
+    if name:find(rune_suffix) then
+        record_seen_item(you.where(), name)
+        return true
+    elseif name == ORB_NAME then
+        record_seen_item(you.where(), name)
+        c_persist.found_orb = true
         return true
     end
 

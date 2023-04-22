@@ -77,7 +77,7 @@ function plan_go_down_pan()
         end
 
         pan_stairs_turn = you.turns()
-        magic(">Y")
+        go_downstairs(true)
         -- In case we are trying to leave a rune level.
         return nil
     end
@@ -99,7 +99,7 @@ function plan_dive_pan()
 
         pan_stairs_turn = you.turns()
         dislike_pan_level = false
-        magic(">Y")
+        go_downstairs(true)
         -- In case we are trying to leave a rune level.
         return
     end
@@ -110,8 +110,8 @@ end
 function plan_exit_pan()
     if view.feature_at(0, 0) == branch_exit("Pan")
             and not want_to_be_in_pan()
-            and not you.mesmerised()
-            and can_move() then
+            and can_use_stairs() then
+        go_upstairs()
         return true
     end
 

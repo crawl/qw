@@ -194,9 +194,9 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to INF_STAIRS_DIST if the move is not closer to any stair in
-    -- good_stairs, otherwise equal to the (min) dist to such a stair
-    a.stairs_closer = stairs_improvement(pos)
+    -- Equal to INF_DIST if the move is not closer to any position in
+    -- flee_positions, otherwise equal to the (min) dist to such a stair
+    a.flee_distance = stairs_improvement(pos)
 
     return a
 end
@@ -217,8 +217,8 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.stairs_closer < INF_STAIRS_DIST
-            and a1.stairs_closer > 0
+            and a2.flee_distance < INF_DIST
+            and a1.flee_distance > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
             -- attacked.
@@ -271,15 +271,15 @@ end
 -- determines whether moving a0->a2 is an improvement over a0->a1
 -- assumes that these two moves have already been determined to be better
 -- than not moving, with given reasons
-function step_improvement(bestreason, reason, a1, a2)
-    if reason == "fleeing" and bestreason ~= "fleeing" then
+function step_improvement(best_reason, reason, a1, a2)
+    if reason == "fleeing" and best_reason ~= "fleeing" then
         return true
-    elseif bestreason == "fleeing" and reason ~= "fleeing" then
+    elseif best_reason == "fleeing" and reason ~= "fleeing" then
         return false
-    elseif reason == "water" and bestreason == "water"
+    elseif reason == "water" and best_reason == "water"
          and a2.enemy_distance < a1.enemy_distance then
         return true
-    elseif reason == "water" and bestreason == "water"
+    elseif reason == "water" and best_reason == "water"
          and a2.enemy_distance > a1.enemy_distance then
         return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
@@ -294,17 +294,17 @@ function step_improvement(bestreason, reason, a1, a2)
         return true
     elseif a2.adjacent + a2.ranged == 0 and a2.unalert > a1.unalert then
         return false
-    elseif reason == "fleeing" and a2.stairs_closer < a1.stairs_closer then
+    elseif reason == "fleeing" and a2.flee_distance < a1.flee_distance then
         return true
-    elseif reason == "fleeing" and a2.stairs_closer > a1.stairs_closer then
+    elseif reason == "fleeing" and a2.flee_distance > a1.flee_distance then
         return false
     elseif a2.enemy_distance < a1.enemy_distance then
         return true
     elseif a2.enemy_distance > a1.enemy_distance then
         return false
-    elseif a2.stairs_closer < a1.stairs_closer then
+    elseif a2.flee_distance < a1.flee_distance then
         return true
-    elseif a2.stairs_closer > a2.stairs_closer then
+    elseif a2.flee_distance > a2.flee_distance then
         return false
     elseif a1.cornerish and not a2.cornerish then
         return true
@@ -338,7 +338,7 @@ function choose_tactical_step()
         local reason = step_reason(a0, a)
         if reason then
             if besta == nil
-                    or step_improvement(bestreason, reason, besta, a) then
+                    or step_improvement(best_reason, reason, besta, a) then
                 best_pos = pos
                 besta = a
                 best_reason = reason
@@ -572,6 +572,14 @@ function best_move_towards_features(feats, ignore_exclusions, radius)
     end
 end
 
+function best_move_towards_items(item_names, ignore_exclusions, radius)
+    local positions = get_item_map_positions(item_names, radius)
+    if #positions > 0 then
+        return best_move_towards_map_positions(positions, ignore_exclusions,
+            radius)
+    end
+end
+
 function destination_features()
     if gameplan_travel.first_dir then
         return level_stairs_features(where_branch, where_depth,
@@ -606,11 +614,38 @@ function map_position_has_adjacent_unseen(pos)
 end
 
 function best_move_towards_unexplored()
-    for pos in radius_iter(global_pos, 2 * los_radius) do
+    local reachable_positions
+    if #flee_positions > 0 then
+        reachable_positions = flee_positions
+    else
+        reachable_positions = { global_pos }
+    end
+
+    for pos in radius_iter(global_pos, GXM) do
         if map_is_traversable_at(pos)
                 and map_position_has_adjacent_unseen(pos) then
-            for _, stair_pos in ipairs(good_stairs) do
-                local dist_map = get_distance_map(stair_pos)
+            for _, reachable_pos in ipairs(reachable_positions) do
+                local dist_map = get_distance_map(reachable_pos)
+                if dist_map.map[pos.x][pos.y] then
+                    return best_move_towards_map_position(pos, true)
+                end
+            end
+        end
+    end
+end
+
+function best_move_towards_unexcluded()
+    local reachable_positions
+    if #flee_positions > 0 then
+        reachable_positions = flee_positions
+    else
+        reachable_positions = { global_pos }
+    end
+
+    for pos in radius_iter(global_pos, GXM) do
+        if map_is_traversable_at(pos) and map_is_unexcluded_at(pos) then
+            for _, reachable_pos in ipairs(reachable_positions) do
+                local dist_map = get_distance_map(reachable_pos)
                 if dist_map.map[pos.x][pos.y] then
                     return best_move_towards_map_position(pos, true)
                 end

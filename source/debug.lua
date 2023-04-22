@@ -197,7 +197,5 @@ end
 
 function cell_string_from_map_position(pos)
     local cell = cell_from_position(position_difference(pos, global_pos))
-    if cell then
-        return cell_string(cell)
-    end
+    return cell_string(cell)
 end

@@ -11,6 +11,14 @@ FEAT_LOS = {
     "EXPLORED",
 }
 
+function supdist(pos)
+    return max(abs(pos.x), abs(pos.y))
+end
+
+function is_adjacent(pos)
+    return abs(pos.x) <= 1 and abs(pos.y) <= 1
+end
+
 function los_state(pos)
     if you.see_cell_solid_see(pos.x, pos.y) then
         return FEAT_LOS.REACHABLE

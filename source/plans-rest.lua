@@ -87,8 +87,7 @@ function should_ally_rest()
 
     for pos in square_iter(origin, 3) do
         local mons = monster_map[pos.x][pos.y]
-        if mons and mons:attitude() == enum_att_friendly
-                and mons:damage_level() > 0 then
+        if mons and mons:is_friendly() and mons:damage_level() > 0 then
             return true
         end
     end

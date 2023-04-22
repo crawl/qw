@@ -116,10 +116,37 @@ function plan_abyss_wait_one_turn()
     return true
 end
 
+function plan_move_to_abyssal_rune()
+    local rune = branch_runes("Abyss")[1]
+    local rune_name = rune .. RUNE_SUFFIX
+    if have_branch_runes(where_branch)
+            or not c_persist.sensed_abyssal_rune
+                and not c_persist.seen_items[where][rune_name] then
+        return false
+    end
+
+    move = best_move_towards_items({ rune_name })
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_move_to_runelight()
+    local rune = branch_runes("Abyss")[1]
+    local rune_name = rune .. RUNE_SUFFIX
+    if have_branch_runes(where_branch) then
+        return false
+    end
+end
+
 function set_plan_abyss_rest()
     plan_abyss_rest = cascade {
         {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
         {plan_abyss_hand, "abyss_hand"},
+        {plan_cure_poison, "cure_poison"},
         {plan_abyss_long_rest, "rest"},
         {plan_go_down_abyss, "go_down_abyss"},
         {plan_go_to_abyss_downstairs, "try_go_to_abyss_downstairs"},
@@ -131,12 +158,11 @@ function set_plan_abyss_move()
         {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
         {plan_exit_abyss, "exit_abyss"},
         {plan_emergency, "emergency"},
-        {plan_recall_ancestor, "try_recall_ancestor"},
-        {plan_recite, "try_recite"},
         {plan_attack, "attack"},
-        {plan_cure_poison, "cure_poison"},
         {plan_abyss_rest, "abyss_long_rest"},
         {plan_pre_explore, "pre_explore"},
+        {plan_move_to_rune, "move_to_rune"}
+        {plan_move_to_runelight, "move_to_runelight"}
         {plan_autoexplore, "try_autoexplore"},
         {plan_pre_explore2, "pre_explore2"},
         {plan_stuck_cloudy, "stuck_cloudy"},

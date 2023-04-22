@@ -36,7 +36,7 @@ function plan_go_to_unexplored_stairs()
 end
 
 function plan_go_to_transporter()
-    if not can_use_transporters() or transp_search then
+    if not want_use_transporters() or transp_search then
         return false
     end
 
@@ -70,7 +70,7 @@ function plan_go_to_transporter()
 end
 
 function plan_transporter_orient_exit()
-    if not can_use_transporters() or not transp_orient then
+    if not can_move() or not transp_orient then
         return false
     end
 
@@ -78,8 +78,14 @@ function plan_transporter_orient_exit()
     return true
 end
 
+function can_use_transporters()
+    return can_move() and not you.mesmerised()
+end
+
 function plan_enter_transporter()
-    if not transp_search or view.feature_at(0, 0) ~= "transporter" then
+    if not transp_search
+            or view.feature_at(0, 0) ~= "transporter"
+            or not can_use_transporters() then
         return false
     end
 
@@ -88,7 +94,7 @@ function plan_enter_transporter()
 end
 
 function plan_take_unexplored_stairs()
-    if not gameplan_travel.stairs_dir then
+    if not gameplan_travel.stairs_dir or not can_use_stairs() then
         return false
     end
 
@@ -133,9 +139,13 @@ function plan_unexplored_stairs_backtrack()
     return true
 end
 
-function plan_find_upstairs()
+function plan_go_to_upstairs()
     magic("X<\r")
     return true
+end
+
+function can_use_stairs()
+    return can_move() and not you.mesmerised()
 end
 
 function want_to_stairdance_up()
@@ -155,9 +165,7 @@ function want_to_stairdance_up()
     end
 
     if you.caught()
-            or you.mesmerised()
             or you.constricted()
-            or not can_move()
             or count_brothers_in_arms(3) > 0
             or count_greater_servants(3) > 0
             or count_divine_warriors(3) > 0 then
@@ -198,7 +206,7 @@ function want_to_stairdance_up()
 end
 
 function plan_stairdance_up()
-    if want_to_stairdance_up() then
+    if can_use_stairs() and want_to_stairdance_up() then
         say("STAIRDANCE")
         go_upstairs(you.status("spiked"))
         return true

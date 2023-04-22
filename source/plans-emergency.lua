@@ -797,7 +797,7 @@ function want_to_recall_ancestor()
 end
 
 function plan_continue_flee()
-    if you.turns() >= last_flee_turn + 10 or not target_stair then
+    if you.turns() >= last_flee_turn + 10 or not target_flee_position then
         return false
     end
 
@@ -818,7 +818,7 @@ function plan_continue_flee()
         if can_move_to(pos)
                 and not is_solid_at(pos)
                 and view.is_safe_square(pos.x, pos.y) then
-            local dist_map = get_distance_map(target_stair)
+            local dist_map = get_distance_map(target_flee_position)
             local val = dist_map[global_pos.x + pos.x][global_pos.y + pos.y]
             if val and val < dist_map[global_pos.x][global_pos.y] then
                 if debug_channel("main") then

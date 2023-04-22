@@ -106,7 +106,7 @@ function branch_stairs_type(feat)
     end
 
     if feat == "exit_dungeon" then
-        return dir, "D"
+        return "D", dir
     end
 
     local entry_feat = feat:gsub("exit", "enter", 1)

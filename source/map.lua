@@ -67,11 +67,11 @@ function clear_map_cache(parity, full_clear)
     end
 
     if full_clear then
-        item_searches_cache[parity] = {}
         map_mode_searches_cache[parity] = {}
     end
 
     feature_map_positions_cache[parity] = {}
+    item_map_positions_cache[parity] = {}
     distance_maps_cache[parity] = {}
 
     traversal_maps_cache[parity] = {}
@@ -91,10 +91,12 @@ function find_features(feats, radius)
     end
 
     local searches = {}
-    for _, feat in feats do
+    for _, feat in ipairs(feats) do
         searches[feat] = true
     end
 
+    local positions = {}
+    local found_feats = {}
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
@@ -112,10 +114,54 @@ function find_features(feats, radius)
             if not feature_map_positions[feat][hash] then
                 feature_map_positions[feat][hash] = gpos
             end
+            table.insert(positions, gpos)
+            table.insert(found_feats, feat)
         end
 
         i = i + 1
     end
+
+    return positions, found_feats
+end
+
+function find_items(item_names, radius)
+    if not radius then
+        radius = GXM
+    end
+
+    local searches = {}
+    for _, name in ipairs(item_names) do
+        searches[name] = true
+    end
+
+    local positions = {}
+    local found_items = {}
+    local i = 1
+    for pos in square_iter(origin, radius, true) do
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
+            coroutine.yield()
+        end
+
+        local floor_items = items.get_items_at(pos.x, pos.y)
+        for _, it in ipairs(floor_items) do
+            local name = it:name()
+            if searches[name] then
+                local map_pos = position_sum(global_pos, pos)
+                item_map_positions[name] = map_pos
+                table.insert(positions, map_pos)
+                table.insert(found_items, name)
+
+                searches[name] = nil
+                if table_is_empty(searches) then
+                    return positions, found_items
+                end
+            end
+        end
+
+        i = i + 1
+    end
+
+    return positions, found_items
 end
 
 function distance_map_initialize(pos, radius)
@@ -276,24 +322,13 @@ function record_cell_item(name, cell)
         item_map_positions[name] = {}
     end
 
-    for hash, _ in pairs(item_map_positions[name]) do
-        if hash ~= cell.hash then
-            item_map_positions[name][hash] = nil
-            distance_maps[hash] = nil
-        end
-    end
-
     item_map_positions[name][cell.hash] = cell.pos
-    distance_maps[cell.hash] = distance_map_initialize(cell.pos)
 end
 
 function handle_item_searches(cell)
     -- Don't do an expensive iteration over all items if we don't have an
-    -- active search. TODO: Maybe move the search trigger to the autopickup
-    -- function so that this optimization is more accurate. Since that happens
-    -- before our turn update and hance might require careful coordination, we
-    -- do it this way for now.
-    if #item_searches == 0 then
+    -- active search.
+    if table_is_empty(item_searches) then
         return
     end
 
@@ -305,8 +340,12 @@ function handle_item_searches(cell)
     for _, it in ipairs(floor_items) do
         local name = it:name()
         if item_searches[name] then
-            record_cell_item(name, cell)
-            return
+            item_map_positions[name] = cell.pos
+            item_searches[name] = nil
+
+            if table_is_empty(item_searches) then
+                return
+            end
         end
     end
 end
@@ -413,7 +452,7 @@ function update_map_at_cell(cell, queue, seen)
     end
 
     for pos in adjacent_iter(cell.los_pos) do
-        local acell = cell_from_position(pos)
+        local acell = cell_from_position(pos, true)
         if acell and not seen[acell.hash] then
             table.insert(queue, acell)
         end
@@ -444,6 +483,25 @@ function update_map_at_cell(cell, queue, seen)
     if branch then
         update_branch_stairs(where_branch, where_depth, branch, dir,
             { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
+    end
+
+    if cell.feat == "abyssal_stair" then
+        update_abyssal_stairs(cell.hash,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
+    end
+
+    if cell.feat == "transit_pandemonium" then
+        update_pan_transit(cell.hash,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
+    end
+
+    if cell.feat == "runelight" then
         update_cell_feature_positions(cell)
         return
     end
@@ -493,11 +551,28 @@ function update_distance_maps_at_cells(queue)
     end
 end
 
-function update_map(new_level, clear_map)
+function update_map(new_level, full_clear)
     local new_waypoint = update_waypoint()
 
-    if new_waypoint or clear_map then
-        clear_map_cache(cache_parity, clear_map)
+    -- A new waypoint means a new instance of a portal, a new level in Pan, or
+    -- that that our Abyssal area has shifted, so we expire data for the
+    -- relevant features.
+    if new_waypoint and level_is_temporary() then
+        c_persist.autexplore[where_branch] = AUTOEXP.NEEDED
+        c_persist.branch_exits[where_branch] = {}
+        c_persist.seen_items[where_branch] = {}
+    end
+
+    if new_waypoint and in_branch("Pan") then
+        c_persist.pan_transits = {}
+    end
+
+    if new_waypoint and in_branch("Abyss") then
+        c_persist.abyssal_stairs = {}
+    end
+
+    if new_waypoint or full_clear then
+        clear_map_cache(cache_parity, full_clear)
     end
 
     if new_level or new_waypoint or full_clear then
@@ -505,43 +580,37 @@ function update_map(new_level, clear_map)
         exclusion_map = exclusion_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
-        item_searches = item_searches_cache[cache_parity]
+        item_map_positions = item_map_positions_cache[cache_parity]
         map_mode_searches = map_mode_searches_cache[cache_parity]
     end
 
     update_exclusions(new_waypoint)
 
-    if not have_branch_runes(where_branch)
-            and where_depth >= branch_rune_depth(where_branch) then
-        local rune = branch_rune(where_branch)
-        if type(rune) == "string" then
-            if c_persist.seen_items[rune] then
-                item_searches[rune] = true
-            end
-        else
-            for _, r in ipairs(rune) do
-                local rune = rune .. " rune of Zot"
-                if c_persist.seen_items[rune] then
-                    item_searches[rune] = true
-                end
-                item_searches[rune] = true
+    item_searches = {}
+    if c_persist.seen_items[where] then
+        for name, _ in pairs(c_persist.seen_items[where]) do
+            if not item_map_positions[name] and not have_seen_item(name) then
+                item_searches[name] = true
             end
         end
     end
 
-    if at_branch_end("Zot") and not you.have_orb() then
-        item_searches["the orb of Zot"] = true
-    end
-
     local cell_queue = {}
     for pos in square_iter(origin, los_radius, true) do
-        local cell = cell_from_position(pos)
+        local cell = cell_from_position(pos, true)
         if cell then
             table.insert(cell_queue, cell)
         end
     end
     update_map_at_cells(cell_queue)
     update_distance_maps_at_cells(cell_queue)
+
+    if c_persist.sensed_abyssal_rune then
+        local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
+        find_items({ rune })
+
+        sensed_abyssal_rune = false
+    end
 
     if map_mode_search_key then
         local feat = view.feature_at(0, 0)
@@ -559,9 +628,9 @@ function update_map(new_level, clear_map)
     update_transporters()
 end
 
-function cell_from_position(pos, feat)
+function cell_from_position(pos, no_unseen)
     local feat = view.feature_at(pos.x, pos.y)
-    if feat == "unseen" then
+    if no_unseen and feat == "unseen" then
         return
     end
 
@@ -584,19 +653,36 @@ end
 
 function get_feature_map_positions(feats, radius)
     local positions = {}
+    local features = {}
     for _, feat in ipairs(feats) do
         if feature_map_positions[feat] then
             for _, pos in pairs(feature_map_positions[feat]) do
                 table.insert(positions, pos)
+                table.insert(features, feat)
             end
         end
     end
-
-    if #positions == 0 then
-        find_features(feats, radius)
+    if #positions > 0 then
+        return positions, features
     end
 
-    return positions
+    return find_features(feats, radius)
+end
+
+function get_item_map_positions(item_names, radius)
+    local positions = {}
+    local found_items = {}
+    for _, name in ipairs(item_names) do
+        if item_map_positions[name] then
+            table.insert(positions, item_map_positions[name])
+            table.insert(found_items, name)
+        end
+    end
+    if #positions > 0 then
+        return positions, found_items
+    end
+
+    return find_items(item_names, radius)
 end
 
 function update_cell_feature_positions(cell)
@@ -615,7 +701,8 @@ function remove_exclusions(record_only)
             local pos = position_difference(unhash_position(hash), global_pos)
             if view.in_known_map_bounds(pos.x, pos.y) then
                 if debug_channel("combat") then
-                    dsay("Unexcluding position " .. pos_string(pos))
+                    dsay("Unexcluding position "
+                        .. cell_string_from_map_position(pos))
                 end
 
                 travel.del_exclude(pos.x, pos.y)
@@ -709,14 +796,14 @@ function update_exclusions(new_waypoint)
     end
 end
 
-function can_use_transporters()
+function want_use_transporters()
     return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
         and (in_branch("Temple") or in_portal())
 end
 
 function update_transporters()
     transp_search = nil
-    if can_use_transporters() then
+    if want_use_transporters() then
         local feat = view.feature_at(0, 0)
         if feature_uses_map_key(">", feat) and transp_search_zone then
             if not transp_map[transp_search_zone] then

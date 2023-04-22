@@ -20,7 +20,7 @@ end
 
 function contains_string_in(name, t)
     for _, value in ipairs(t) do
-        if string.find(name, value) then
+        if name:find(value) then
             return true
         end
     end
@@ -52,52 +52,12 @@ function trim(str)
     return result
 end
 
-function control(c)
-    return string.char(string.byte(c) - string.byte('a') + 1)
-end
-
-local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
-function arrowkey(c)
-    return a2c[c]
-end
-
-local d2v = {
-    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
-    [0]  = { [-1] = 'k', [1] = 'j' },
-    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
-}
-local v2d = {}
-for x, _ in pairs(d2v) do
-    for y, c in pairs(d2v[x]) do
-        v2d[c] = { x = x, y = y }
-    end
-end
-
-function delta_to_vi(pos)
-    return d2v[pos.x][pos.y]
-end
-
-function vi_to_delta(c)
-    return v2d[c]
-end
-
 function sign(a)
     return a > 0 and 1 or a < 0 and -1 or 0
 end
 
 function abs(a)
     return a * sign(a)
-end
-
-function vector_move(pos)
-    local str = ''
-    for i = 1, abs(pos.x) do
-        str = str .. delta_to_vi({ x = sign(pos.x), y = 0 })
-    end
-    for i = 1, abs(pos.y) do
-        str = str .. delta_to_vi({ x = 0, y = sign(pos.y) })
-    end
-    return str
 end
 
 function max(x, y)
@@ -116,10 +76,11 @@ function min(x, y)
     end
 end
 
-function supdist(pos)
-    return max(abs(pos.x), abs(pos.y))
-end
-
-function is_adjacent(pos)
-    return abs(pos.x) <= 1 and abs(pos.y) <= 1
+function table_is_empty(t)
+    local empty = true
+    for _, v in pairs(t) do
+        empty = false
+        break
+    end
+    return empty
 end
