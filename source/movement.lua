@@ -564,6 +564,32 @@ function best_move_towards_map_position(pos, ignore_exclusions, radius)
     return best_move_towards_map_positions({ pos }, ignore_exclusions, radius)
 end
 
+function adjacent_reachable_map_positions(pos, ignore_exclusions, radius)
+end
+
+function best_move_towards_unreachable_map_position(pos, ignore_exclusions,
+        radius)
+    local reachable_positions
+    if #flee_positions > 0 then
+        reachable_positions = flee_positions
+    else
+        reachable_positions = { global_pos }
+    end
+
+    for near_pos in radius_iter(pos, radius) do
+        if map_is_unseen_at(near_pos) then
+            for apos in adjacent_iter(near_pos) do
+                if map_is_traversable_at(apos)
+                        and map_is_reachable_at(apos)
+                        and (not radius or supdist(apos) <= radius) then
+                    return best_move_towards_map_position(apos,
+                        ignore_exclusions, radius)
+                end
+            end
+        end
+    end
+end
+
 function best_move_towards_features(feats, ignore_exclusions, radius)
     local positions = get_feature_map_positions(feats, radius)
     if #positions > 0 then

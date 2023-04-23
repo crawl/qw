@@ -204,6 +204,14 @@ function map_is_traversable_at(pos)
     return traversal_map[pos.x][pos.y]
 end
 
+function map_is_unseen_at(pos)
+    return traversal_map[pos.x][pos.y] == nil
+end
+
+function map_is_reachable_at(pos)
+end
+
+
 function distance_map_adjacent_dist(pos, dist_map)
     local best_dist, best_excluded_dist
     for pos in adjacent_iter(pos) do
