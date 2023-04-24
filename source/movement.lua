@@ -564,11 +564,18 @@ function best_move_towards_map_position(pos, ignore_exclusions, radius)
     return best_move_towards_map_positions({ pos }, ignore_exclusions, radius)
 end
 
-function adjacent_reachable_map_positions(pos, ignore_exclusions, radius)
+function map_position_is_reachable(pos, reachable_positions, ignore_exclusions)
+    for _, rpos in ipairs(reachable_positions) do
+        local dist_map = get_distance_map(rpos)
+        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
+        if map[pos.x][pos.y] then
+            return true
+        end
+    end
+    return false
 end
 
-function best_move_towards_unreachable_map_position(pos, ignore_exclusions,
-        radius)
+function get_move_towards_unreachable_map_position(pos, ignore_exclusions)
     local reachable_positions
     if #flee_positions > 0 then
         reachable_positions = flee_positions
@@ -576,33 +583,31 @@ function best_move_towards_unreachable_map_position(pos, ignore_exclusions,
         reachable_positions = { global_pos }
     end
 
-    for near_pos in radius_iter(pos, radius) do
+    for near_pos in radius_iter(pos, GXM, true) do
         if map_is_unseen_at(near_pos) then
             for apos in adjacent_iter(near_pos) do
                 if map_is_traversable_at(apos)
-                        and map_is_reachable_at(apos)
-                        and (not radius or supdist(apos) <= radius) then
+                        and map_position_is_reachable(apos,
+                            reachable_positions, ignore_exclusions) then
                     return best_move_towards_map_position(apos,
-                        ignore_exclusions, radius)
+                        ignore_exclusions)
                 end
             end
         end
     end
 end
 
-function best_move_towards_features(feats, ignore_exclusions, radius)
-    local positions = get_feature_map_positions(feats, radius)
+function best_move_towards_features(feats, ignore_exclusions)
+    local positions = get_feature_map_positions(feats)
     if #positions > 0 then
-        return best_move_towards_map_positions(positions, ignore_exclusions,
-            radius)
+        return best_move_towards_map_positions(positions, ignore_exclusions)
     end
 end
 
-function best_move_towards_items(item_names, ignore_exclusions, radius)
-    local positions = get_item_map_positions(item_names, radius)
+function best_move_towards_items(item_names, ignore_exclusions)
+    local positions = get_item_map_positions(item_names)
     if #positions > 0 then
-        return best_move_towards_map_positions(positions, ignore_exclusions,
-            radius)
+        return best_move_towards_map_positions(positions, ignore_exclusions)
     end
 end
 
@@ -620,13 +625,13 @@ function destination_features()
     end
 end
 
-function best_move_towards_destination(ignore_exclusions, radius)
+function best_move_towards_destination(ignore_exclusions)
     local feats = destination_features()
     if not feats then
         return
     end
 
-    return best_move_towards_features(feats, ignore_exclusions, radius)
+    return best_move_towards_features(feats, ignore_exclusions)
 end
 
 function map_position_has_adjacent_unseen(pos)
@@ -639,7 +644,7 @@ function map_position_has_adjacent_unseen(pos)
     return false
 end
 
-function best_move_towards_unexplored()
+function best_move_towards_unexplored(ignore_exclusions)
     local reachable_positions
     if #flee_positions > 0 then
         reachable_positions = flee_positions
@@ -649,12 +654,11 @@ function best_move_towards_unexplored()
 
     for pos in radius_iter(global_pos, GXM) do
         if map_is_traversable_at(pos)
-                and map_position_has_adjacent_unseen(pos) then
-            for _, reachable_pos in ipairs(reachable_positions) do
-                local dist_map = get_distance_map(reachable_pos)
-                if dist_map.map[pos.x][pos.y] then
-                    return best_move_towards_map_position(pos, true)
-                end
+                and map_position_has_adjacent_unseen(pos)
+                and map_position_is_reachable(pos, reachable_positions,
+                    ignore_exclusions) then
+            if map[pos.x][pos.y] then
+                return best_move_towards_map_position(pos, ignore_exclusions)
             end
         end
     end
