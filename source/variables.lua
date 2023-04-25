@@ -140,7 +140,6 @@ local memos
 
 local los_radius
 local have_orb
-local sensed_abyssal_rune
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0

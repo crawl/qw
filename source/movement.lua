@@ -539,11 +539,11 @@ function monster_can_move_to_player_melee(mons)
             or get_move_closer({ mons:pos() }))
 end
 
-function best_move_towards_map_positions(positions, ignore_exclusions, radius)
+function best_move_towards_map_positions(positions, ignore_exclusions)
     local best_dist, best_dest
     local best_move = {}
     for _, pos in ipairs(positions) do
-        local dist_map = get_distance_map(pos, radius)
+        local dist_map = get_distance_map(pos)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
         for dpos in adjacent_iter(global_pos) do
             local dist = map[dpos.x][dpos.y]
@@ -560,8 +560,8 @@ function best_move_towards_map_positions(positions, ignore_exclusions, radius)
     end
 end
 
-function best_move_towards_map_position(pos, ignore_exclusions, radius)
-    return best_move_towards_map_positions({ pos }, ignore_exclusions, radius)
+function best_move_towards_map_position(pos, ignore_exclusions)
+    return best_move_towards_map_positions({ pos }, ignore_exclusions)
 end
 
 function map_position_is_reachable(pos, reachable_positions, ignore_exclusions)
@@ -682,6 +682,9 @@ function best_move_towards_unexcluded()
             end
         end
     end
+end
+
+function best_move_towards_unexplored_runelight()
 end
 
 function update_move_destination()

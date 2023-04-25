@@ -150,12 +150,14 @@ function c_message(text, channel)
         stairs_travel = nil
     elseif text:find("abyssal rune vanishes from your memory and reappears")
             or text:find("detect the abyssal rune") then
-        sensed_abyssal_rune = true
+        c_persist.sensed_abyssal_rune = true
     -- Timed portals are recorded by the "Hurry and find it" message handling,
     -- but a permanent bazaar doesn't have this. Check messages for "a gateway
     -- to a bazaar", which happens via autoexplore. Timed bazaars are described
     -- as "a flickering gateway to a bazaar", so by looking for the right
     -- message, we prevent counting timed bazaars twice.
+    elseif text:find("abyssal rune vanishes from your memory") then
+        c_persist.sensed_abyssal_rune = false
     elseif text:find("Found a gateway to a bazaar") then
         record_portal(you.where(), "Bazaar", true)
     elseif text:find("Hurry and find it")

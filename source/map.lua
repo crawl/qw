@@ -511,6 +511,10 @@ function update_map_at_cell(cell, queue, seen)
 
     if cell.feat == "runelight" then
         update_cell_feature_positions(cell)
+
+        if cell.pos.x == global_pos.x and cell.pos.y == global_pos.y then
+            local hash = hash_position(cell.pos)
+            c_persist.explored_runelights[hash] = true
         return
     end
 
@@ -568,15 +572,27 @@ function update_map(new_level, full_clear)
     if new_waypoint and level_is_temporary() then
         c_persist.autexplore[where_branch] = AUTOEXP.NEEDED
         c_persist.branch_exits[where_branch] = {}
-        c_persist.seen_items[where_branch] = {}
     end
 
     if new_waypoint and in_branch("Pan") then
         c_persist.pan_transits = {}
     end
 
-    if new_waypoint and in_branch("Abyss") then
-        c_persist.abyssal_stairs = {}
+    if in_branch("Abyss") then
+        if new_waypoint then
+            c_persist.abyssal_stairs = {}
+            c_persist.runelights = {}
+        end
+
+        if new_level then
+            c_persist.sensed_abyssal_rune = false
+        end
+
+        local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
+        if not c_persist.seen_items[where_branch][rune]
+                and not c_persist.sensed_abyssal_rune then
+            item_map_positions[rune] = nil
+        end
     end
 
     if new_waypoint or full_clear then
@@ -597,7 +613,7 @@ function update_map(new_level, full_clear)
     item_searches = {}
     if c_persist.seen_items[where] then
         for name, _ in pairs(c_persist.seen_items[where]) do
-            if not item_map_positions[name] and not have_seen_item(name) then
+            if not item_map_positions[name] then
                 item_searches[name] = true
             end
         end
@@ -613,11 +629,15 @@ function update_map(new_level, full_clear)
     update_map_at_cells(cell_queue)
     update_distance_maps_at_cells(cell_queue)
 
-    if c_persist.sensed_abyssal_rune then
-        local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
-        find_items({ rune })
-
-        sensed_abyssal_rune = false
+    -- Any seen item for which we don't have an item position is unregistered.
+    if c_persist.seen_items[where] then
+        local seen_items = {}
+        for name, _ in pairs(c_persist.seen_items[where]) do
+            if item_map_positions[name] then
+                seen_items[name] = true
+            end
+        end
+        c_persist.seen_items[where] = seen_items
     end
 
     if map_mode_search_key then
@@ -690,7 +710,18 @@ function get_item_map_positions(item_names, radius)
         return positions, found_items
     end
 
-    return find_items(item_names, radius)
+    positions, found_items = find_items(item_names, radius)
+
+    -- If we've searched the map for the abyssal rune and not found it, unset
+    -- our sensing of the rune.
+    local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
+    if in_branch("Abyss")
+            and table.contains(item_names, rune)
+            and not table.contains(found_items, rune) then
+        c_persist.sensed_abyssal_rune = false
+    end
+
+    return positions, found_items
 end
 
 function update_cell_feature_positions(cell)

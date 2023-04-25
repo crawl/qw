@@ -117,8 +117,7 @@ function plan_abyss_wait_one_turn()
 end
 
 function plan_move_to_abyssal_rune()
-    local rune = branch_runes("Abyss")[1]
-    local rune_name = rune .. RUNE_SUFFIX
+    local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
     if have_branch_runes(where_branch)
             or not c_persist.sensed_abyssal_rune
                 and not c_persist.seen_items[where][rune_name] then
@@ -131,10 +130,20 @@ function plan_move_to_abyssal_rune()
         return true
     end
 
+    if not item_map_positions[rune] then
+        return false
+    end
+
+    move = get_move_towards_unreachable_map_position(item_map_positions[rune])
+    if move then
+        move_to(move)
+        return true
+    end
+
     return false
 end
 
-function plan_move_to_runelight()
+function plan_move_to_unexplored_runelight()
     local rune = branch_runes("Abyss")[1]
     local rune_name = rune .. RUNE_SUFFIX
     if have_branch_runes(where_branch) then
