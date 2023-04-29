@@ -17,6 +17,9 @@ local INF_TURNS
 local INF_DIST
 local GXM
 local origin
+local RUNE_SUFFIX
+local ORB_NAME
+local MAX_TEMP_DISTANCE_MAPS
 
 -- Enum tables
 local AUTOEXP
@@ -24,10 +27,8 @@ local FEAT_LOS
 local DIR
 
 -- Plan functions. These must later be initialized as cascades.
-local plan_abyss_rest
-local plan_abyss_move
-
 local plan_emergency
+local plan_exclusion
 local plan_attack
 local plan_rest
 local plan_handle_acquirement_result
@@ -35,11 +36,8 @@ local plan_pre_explore
 local plan_pre_explore2
 local plan_explore
 local plan_explore2
+local plan_stuck
 local plan_move
-
-local plan_orbrun_rest
-local plan_orbrun_emergency
-local plan_orbrun_move
 
 -- All variables past this point are qw state.
 local initialized = false
@@ -78,6 +76,7 @@ local early_vaults
 local vaults_end
 local early_zot
 local zot_end
+local abyssal_rune
 
 local planning_god_uses_mp
 local planning_good_god
@@ -113,6 +112,8 @@ local exclusion_maps_cache
 local exclusion_map
 local distance_maps_cache
 local distance_maps
+local num_temp_distance_maps = 0
+local last_temp_distance_map_hash
 
 local level_map_mode_searches
 local map_mode_searches

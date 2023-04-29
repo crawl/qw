@@ -1,9 +1,9 @@
 ------------------
 -- Plans for god worship and abilities.
 
-function plan_find_altar()
+function plan_go_to_altar()
     local god = gameplan_god(gameplan_status)
-    if not god then
+    if unable_to_travel() or not god then
         return false
     end
 
@@ -42,10 +42,8 @@ end
 
 function plan_use_altar()
     local god = gameplan_god(gameplan_status)
-    local feat = view.feature_at(0, 0)
-    if not (FADED_ALTAR and feat == "altar_ecumenical")
-            or not god
-            or feat ~= god_altar(god)
+    if not god
+            or view.feature_at(0, 0) ~= god_altar(god)
             or not can_use_altars() then
         return false
     end
@@ -54,14 +52,6 @@ function plan_use_altar()
     want_gameplan_update = true
 
     return true
-end
-
-function plan_exclusion_use_altar()
-    if map_is_unexcluded_at(global_pos) then
-        return false
-    end
-
-    return plan_use_altar()
 end
 
 function plan_sacrifice()

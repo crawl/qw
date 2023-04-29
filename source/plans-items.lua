@@ -58,10 +58,7 @@ function selfzap_by_name(name)
 end
 
 function teleport()
-    if read_by_name("teleportation") then
-        return true
-    end
-    return false
+    return read_by_name("teleportation")
 end
 
 function plan_wield_weapon()
@@ -176,7 +173,7 @@ end
 
 function plan_maybe_pickup_acquirement()
     if acquirement_pickup then
-        magic(";")
+        magic(",")
         acquirement_pickup = false
         return true
     end
@@ -365,6 +362,7 @@ function plan_upgrade_armour()
     if cloudy or you.mesmerised() then
         return false
     end
+
     for it in inventory() do
         if it and it.class(true) == "armour" and not it.equipped then
             local st, _ = it.subtype()

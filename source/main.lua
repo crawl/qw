@@ -71,10 +71,6 @@ function qw_main()
         crawl.more_autoclear(true)
         if have_message then
             plan_message()
-        elseif in_branch("Abyss") then
-            plan_abyss_move()
-        elseif have_orb then
-            plan_orbrun_move()
         else
             plan_move()
         end

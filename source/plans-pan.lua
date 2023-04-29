@@ -6,10 +6,10 @@ function want_to_be_in_pan()
 end
 
 function plan_go_to_pan_portal()
-    if in_branch("Pan")
+    if unable_to_travel()
+            or in_branch("Pan")
             or not want_to_be_in_pan()
-            or not branch_found("Pan")
-            or cloudy then
+            or not branch_found("Pan") then
         return false
     end
 
@@ -25,7 +25,7 @@ function plan_go_to_pan_portal()
 end
 
 function plan_go_to_pan_downstairs()
-    if in_branch("Pan") then
+    if not unable_to_travel() and in_branch("Pan") then
         magic("X>\r")
         return true
     end
@@ -50,10 +50,13 @@ function plan_dive_go_to_pan_downstairs()
 end
 
 function plan_go_to_pan_exit()
-    if in_branch("Pan") and not want_to_be_in_pan() then
+    if not unable_to_travel()
+            and in_branch("Pan")
+            and not want_to_be_in_pan() then
         magic("X<\r")
         return true
     end
+
     return false
 end
 

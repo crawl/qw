@@ -29,7 +29,7 @@ function should_rest()
         return true
     end
 
-    if dangerous_to_rest() then
+    if danger then
         return false
     end
 
@@ -48,6 +48,10 @@ end
 -- include some things in should_rest() because they are not clearly good to
 -- wait out with monsters around.
 function reason_to_rest(percentage)
+    if have_orb then
+        return want_to_orbrun_rest()
+    end
+
     if not no_spells and starting_spell() then
         local mp, mmp = you.mp()
         if mp < mmp then
@@ -64,10 +68,6 @@ function reason_to_rest(percentage)
 
     return you.confused()
         or transformed()
-        or hp_is_low(percentage)
-            and (you.god() ~= "the Shining One"
-                or hp_is_low(75)
-                or count_divine_warriors(2) == 0)
         or you.slowed()
         or you.exhausted()
         or you.teleporting()
@@ -77,6 +77,10 @@ function reason_to_rest(percentage)
         or you.status("weakened")
         or you.silencing()
         or you.corrosion() > base_corrosion
+        or hp_is_low(percentage)
+            and (in_branch("Abyss") and you.regenerating()
+                or you.god() == "the Shining One"
+                    and (count_divine_warriors(2) == 0 or hp_is_low(75)))
 end
 
 function should_ally_rest()

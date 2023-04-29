@@ -114,7 +114,7 @@ function turn_update()
         enemy_memory = nil
     end
 
-    danger = sense_danger(los_radius)
+    danger = sense_danger(los_radius) or not map_is_unexcluded_at(global_pos)
     immediate_danger = sense_immediate_danger()
     moving_unsafe = nil
     melee_unsafe = nil

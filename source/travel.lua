@@ -347,18 +347,26 @@ function update_gameplan_travel()
             and not in_portal()
             and branch_found(gameplan_branch)
         or gameplan_branch == "Abyss"
-            and where_branch ~= "Abyss"
+            and not in_branch("Abyss")
             and branch_found("Abyss")
         or gameplan_branch == "Pan"
-            and where_branch ~= "Pan"
+            and not in_branch("Pan")
             and branch_found("Pan")
 
     gameplan_travel = travel_destination(gameplan_branch, gameplan_depth,
         want_stash)
+
+    if gameplan_status == "Escape" and where == "D:1" then
+        gameplan_travel.first_dir = DIR.UP
+    end
+
     gameplan_travel.want_stash = want_stash
-    gameplan_travel.want_go = gameplan_travel.branch
-        and (where_branch ~= gameplan_travel.branch
-            or where_depth ~= gameplan_travel.depth)
+    gameplan_travel.want_go = not in_branch("Abyss")
+        -- We always try to GD0 when escaping.
+        and (gameplan_status == "Escape"
+            or gameplan_travel.branch
+                and (where_branch ~= gameplan_travel.branch
+                    or where_depth ~= gameplan_travel.depth))
 
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.

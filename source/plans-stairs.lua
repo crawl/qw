@@ -1,8 +1,26 @@
 ----------------------
 -- Stair-related plans
 
+function go_upstairs(confirm, keep_exclusions)
+    if not keep_exclusions then
+        remove_exclusions(level_is_temporary())
+    end
+
+    magic("<" .. (confirm and "Y" or ""))
+end
+
+function go_downstairs(confirm, keep_exclusions)
+    if not keep_exclusions then
+        remove_exclusions(level_is_temporary())
+    end
+
+    magic(">" .. (confirm and "Y" or ""))
+end
+
 function plan_go_to_unexplored_stairs()
-    if gameplan_travel.want_go or not gameplan_travel.stairs_dir or cloudy then
+    if unable_to_travel()
+            or gameplan_travel.want_go
+            or not gameplan_travel.stairs_dir then
         return false
     end
 
@@ -36,7 +54,9 @@ function plan_go_to_unexplored_stairs()
 end
 
 function plan_go_to_transporter()
-    if not want_use_transporters() or transp_search then
+    if unable_to_travel()
+            or not want_to_use_transporters()
+            or transp_search then
         return false
     end
 
@@ -127,7 +147,9 @@ end
 -- return to the previous level, we'll take a different set of stairs from that
 -- level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
-    if gameplan_travel.want_go or not gameplan_travel.stairs_dir or cloudy then
+    if unable_to_travel()
+            or gameplan_travel.want_go
+            or not gameplan_travel.stairs_dir then
         return false
     end
 
@@ -211,5 +233,40 @@ function plan_stairdance_up()
         go_upstairs(you.status("spiked"))
         return true
     end
+
     return false
+end
+
+-- It's dangerous to hatch through unexplored areas in Zot as opposed
+-- to simply taking an explored route through stone stairs. So we only
+-- take a hatch up in Zot if the destination level is fully explored.
+function want_to_use_escape_hatches(dir)
+    return dir == DIR.UP
+        and have_orb
+        and where_depth > 1
+            and (where_branch ~= "Zot"
+                or explored_level(where_branch, where_depth - 1))
+end
+
+function plan_take_escape_hatch()
+    local dir = escape_hatch_type(view.feature_at(0, 0))
+    if not dir or not want_to_use_escape_hatches(dir) then
+        return false
+    end
+
+    if dir == DIR.UP then
+        go_upstairs()
+    else
+        go_downstairs()
+    end
+
+    return true
+end
+
+function plan_go_to_escape_hatch()
+    if unable_to_travel() or not want_to_use_escape_hatches(DIR.UP) then
+        return false
+    end
+
+    magic("X<\r")
 end

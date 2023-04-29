@@ -2,7 +2,9 @@
 -- The exploration plan cascades.
 
 function plan_autoexplore()
-    if disable_autoexplore or free_inventory_slots() == 0 then
+    if unable_to_travel()
+            or disable_autoexplore
+            or free_inventory_slots() == 0 then
         return false
     end
 
@@ -23,11 +25,15 @@ function send_travel(branch, depth)
     magic("G" .. branch_travel(branch) .. depth_str .. "\rY")
 end
 
+function unable_to_travel()
+    return danger or cloudy
+end
+
 function plan_go_to_portal_entrance()
-    if in_portal()
+    if unable_to_travel()
+            or in_portal()
             or not is_portal_branch(gameplan_branch)
-            or not branch_found(gameplan_branch)
-            or cloudy then
+            or not branch_found(gameplan_branch) then
         return false
     end
 
@@ -51,13 +57,17 @@ end
 
 -- Use the 'G' command to travel to our next destination.
 function plan_go_command()
-    if not gameplan_travel.want_go or cloudy then
+    if unable_to_travel() or not gameplan_travel.want_go then
         return false
     end
 
     if go_travel_attempts == 0 then
         go_travel_attempts = 1
-        send_travel(gameplan_travel.branch, gameplan_travel.depth)
+        if gameplan_status == "Escape" then
+            send_travel("D", 0)
+        else
+            send_travel(gameplan_travel.branch, gameplan_travel.depth)
+        end
         return
     end
 
@@ -68,12 +78,12 @@ end
 
 function plan_go_to_portal_exit()
     -- Zig has its own stair handling in plan_zig_go_to_stairs().
-    if in_portal() and where_branch ~= "Zig" then
-        magic("X<\r")
-        return true
+    if unable_to_travel() or not in_portal() or where_branch == "Zig" then
+        return false
     end
 
-    return false
+    magic("X<\r")
+    return true
 end
 
 -- Open runed doors in Pan to get to the pan lord vault and open them on levels
@@ -118,8 +128,8 @@ function plan_exit_portal()
     return true
 end
 
-function plan_continue_move_towards_destination()
-    if not move_destination or danger or dangerous_to_move() then
+function plan_continue_to_destination()
+    if not move_destination or dangerous_to_move() then
         return false
     end
 
@@ -140,6 +150,7 @@ function set_plan_pre_explore()
         {plan_bless_weapon, "bless_weapon"},
         {plan_upgrade_weapon, "upgrade_weapon"},
         {plan_use_good_consumables, "use_good_consumables"},
+        {plan_unwield_weapon, "unwield_weapon"},
     }
 end
 
@@ -158,10 +169,13 @@ end
 
 function set_plan_explore()
     plan_explore = cascade {
+        {plan_continue_to_destination, "try_continue_to_destination"},
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
-        {plan_continue_move_towards_destination,
-            "try_continue_move_towards_destination"},
+        {plan_take_escape_hatch, "take_escape_hatch"},
+        {plan_go_to_escape_hatch, "try_go_to_escape_hatch"},
+        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
+        {plan_move_towards_runelight, "move_towards_runelight"},
         {plan_autoexplore, "try_autoexplore"},
     }
 end
@@ -170,7 +184,10 @@ function set_plan_explore2()
     plan_explore2 = cascade {
         {plan_abandon_god, "abandon_god"},
         {plan_use_altar, "use_altar"},
-        {plan_find_altar, "try_find_altar"},
+        {plan_go_to_altar, "try_go_to_altar"},
+        {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
+        {plan_go_down_abyss, "go_down_abyss"},
+        {plan_go_to_abyssal_stairs, "try_go_to_abyssal_stairs"},
         {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
         {plan_use_zigfig, "use_zigfig"},
         {plan_zig_dig, "zig_dig"},

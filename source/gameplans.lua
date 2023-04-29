@@ -126,7 +126,7 @@ function gameplan_normal_next(final)
         gameplan = early_zot
     -- Time to win.
     elseif final then
-        gameplan = "Orb"
+        gameplan = "Win"
     end
 
     return gameplan
@@ -149,6 +149,7 @@ function gameplan_complete(plan, final)
             and have_branch_runes("Abyss")
         or plan == "Pan" and have_branch_runes("Pan")
         or plan == "Zig" and c_persist.zig_completed
+        or plan == "Orb" and have_orb
 end
 
 function choose_gameplan()
@@ -197,10 +198,10 @@ function choose_gameplan()
         end
     end
 
-    -- We're out of gameplans, so we make our final task be getting the ORB.
+    -- We're out of gameplans, so we make our final task be winning.
     if not chosen_gameplan then
         which_gameplan = nil
-        chosen_gameplan = "Orb"
+        chosen_gameplan = "Win"
     end
 
     return chosen_gameplan, normal_gameplan
@@ -273,7 +274,7 @@ function determine_gameplan()
     -- Until then, we're diving to and exploring the branch end.
     if status:find("^Rune:") then
         local branch = gameplan_rune_branch(status)
-        gameplan = branch_end(branch)
+        gameplan = make_level(branch, branch_rune_depth(branch))
         desc = branch .. " rune"
     end
 
@@ -321,9 +322,15 @@ function determine_gameplan()
         gameplan = portal
     end
 
+    if status == "Win" then
+        status = have_orb and "Escape" or "Orb"
+    end
+
+    if status == "Escape" then
+        gameplan = "D:1"
     -- Dive to and explore the end of Zot. We'll start trying to pick up the
     -- ORB via stash search travel as soon as it's found.
-    if status == "Orb" then
+    elseif status == "Orb" then
         gameplan = zot_end
     end
 
@@ -738,6 +745,8 @@ function make_initial_gameplans()
                 or plan == "Normal"
                 or plan == "Shopping"
                 or plan == "Orb"
+                or plan == "Escape"
+                or plan == "Win"
                 or plan == "Zig") then
             error("Invalid gameplan '" .. tostring(plan) .. "'.")
         end
@@ -819,8 +828,8 @@ function set_gameplan(status, gameplan)
     if debug_channel("explore") then
         dsay("Gameplan status: " .. gameplan_status)
         if gameplan_branch then
-            dsay("Gameplan branch: " .. tostring(gameplan_branch), ", depth: "
-                .. tostring(gameplan_depth))
+            dsay("Gameplan branch: " .. tostring(gameplan_branch)
+                .. ", depth: " .. tostring(gameplan_depth))
         end
     end
 end

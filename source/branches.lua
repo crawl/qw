@@ -112,6 +112,8 @@ function initialize_branch_data()
 
     early_zot = make_level_range("Zot", 1, -1)
     zot_end = branch_end("Zot")
+
+    abyssal_rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
 end
 
 function branch_travel(branch)

@@ -10,7 +10,7 @@ function initialize_c_persist()
         "waypoints", "exclusions", "portals", "branch_entries",
         "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
         "up_hatches", "down_hatches", "pan_transits", "abyssal_stairs",
-        "seen_items", "plan_fail_count"
+        "explored_runelights", "seen_items", "plan_fail_count"
     }
     for _, table in ipairs(tables) do
         if not c_persist[table] then

@@ -16,13 +16,11 @@ function plan_zig_fog()
 end
 
 function plan_move_to_zigfig_location()
-    if gameplan_branch ~= "Zig"
-            or in_portal()
-            or in_branch("Abyss")
-            or in_branch("Pan")
+    if unable_to_travel()
+            or gameplan_branch ~= "Zig"
+            or level_is_temporary()
             or not find_item("misc", "figurine of a ziggurat")
-            or not feature_is_critical(view.feature_at(0, 0))
-            or cloudy then
+            or not feature_is_critical(view.feature_at(0, 0)) then
         return false
     end
 
@@ -42,13 +40,12 @@ end
 
 function plan_use_zigfig()
     if gameplan_branch ~= "Zig"
-            or in_portal()
-            or in_branch("Abyss")
-            or in_branch("Pan")
+            or level_is_temporary()
             or you.berserk()
             or you.confused()
             or feature_is_critical(view.feature_at(0, 0))
-            or cloudy then
+            or cloudy
+            or danger then
         return false
     end
 
@@ -63,12 +60,12 @@ function plan_use_zigfig()
 end
 
 function plan_go_to_zig_dig()
-    if gameplan_branch ~= "Zig"
+    if unable_to_travel()
+            or gameplan_branch ~= "Zig"
             or not branch_found("Zig")
             or view.feature_at(0, 0) == branch_entrance("Zig")
             or view.feature_at(3, 1) == branch_entrance("Zig")
-            or count_charges("digging") == 0
-            or cloudy then
+            or count_charges("digging") == 0 then
         return false
     end
 
@@ -101,7 +98,7 @@ function plan_zig_dig()
 end
 
 function plan_zig_go_to_stairs()
-    if not in_branch("Zig") then
+    if unable_to_travel() or not in_branch("Zig") then
         return false
     end
 

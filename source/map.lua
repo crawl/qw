@@ -6,6 +6,8 @@
 GXM = 80
 GYM = 70
 
+MAX_TEMP_DISTANCE_MAPS = 6
+
 -- Autoexplore state enum.
 AUTOEXP = {
     "NEEDED",
@@ -164,15 +166,37 @@ function find_items(item_names, radius)
     return positions, found_items
 end
 
-function distance_map_initialize(pos, radius)
+function distance_map_initialize(pos, permanent, radius)
+    if permanent == nil then
+        permanent = false
+    end
+
     if debug_channel("map") then
-        dsay("Creating distance map at "
+        dsay("Creating" .. (permanent and " permanent" or " temporary")
+            .. " distance map at "
             .. cell_string_from_map_position(pos))
     end
 
     local dist_map = {}
+
     dist_map.pos = pos
+    dist_map.hash = hash_position(pos)
+    dist_map.permanent = permanent
     dist_map.radius = radius
+
+    if not permanent then
+        if num_temp_distance_maps >= MAX_TEMP_DISTANCE_MAPS then
+            if debug_channel("map") then
+                dsay("Removing temporary distance map at "
+                    .. cell_string_from_map_position(pos))
+            end
+
+            distance_maps[last_temp_distance_map_hash] = nil
+        end
+
+        num_temp_distance_maps = num_temp_distance_maps + 1
+        last_temp_distance_map_hash = dist_map.hash
+    end
 
     dist_map.map = {}
     for x = -GXM, GXM do
@@ -510,11 +534,11 @@ function update_map_at_cell(cell, queue, seen)
     end
 
     if cell.feat == "runelight" then
-        update_cell_feature_positions(cell)
+        if positions_equal(cell.pos, global_pos) then
+            c_persist.explored_runelights[cell.hash] = true
+        end
 
-        if cell.pos.x == global_pos.x and cell.pos.y == global_pos.y then
-            local hash = hash_position(cell.pos)
-            c_persist.explored_runelights[hash] = true
+        update_cell_feature_positions(cell)
         return
     end
 
@@ -570,7 +594,7 @@ function update_map(new_level, full_clear)
     -- that that our Abyssal area has shifted, so we expire data for the
     -- relevant features.
     if new_waypoint and level_is_temporary() then
-        c_persist.autexplore[where_branch] = AUTOEXP.NEEDED
+        c_persist.autoexplore[where_branch] = AUTOEXP.NEEDED
         c_persist.branch_exits[where_branch] = {}
     end
 
@@ -581,18 +605,13 @@ function update_map(new_level, full_clear)
     if in_branch("Abyss") then
         if new_waypoint then
             c_persist.abyssal_stairs = {}
-            c_persist.runelights = {}
+            c_persist.explored_runelights = {}
         end
 
         if new_level then
             c_persist.sensed_abyssal_rune = false
         end
 
-        local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
-        if not c_persist.seen_items[where_branch][rune]
-                and not c_persist.sensed_abyssal_rune then
-            item_map_positions[rune] = nil
-        end
     end
 
     if new_waypoint or full_clear then
@@ -606,6 +625,13 @@ function update_map(new_level, full_clear)
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_map_positions = item_map_positions_cache[cache_parity]
         map_mode_searches = map_mode_searches_cache[cache_parity]
+    end
+
+    if in_branch("Abyss")
+            and (not c_persist.seen_items[where_branch]
+                    or not c_persist.seen_items[where_branch][abyssal_rune])
+            and not c_persist.sensed_abyssal_rune then
+        item_map_positions[abyssal_rune] = nil
     end
 
     update_exclusions(new_waypoint)
@@ -835,14 +861,14 @@ function update_exclusions(new_waypoint)
     end
 end
 
-function want_use_transporters()
+function want_to_use_transporters()
     return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
         and (in_branch("Temple") or in_portal())
 end
 
 function update_transporters()
     transp_search = nil
-    if want_use_transporters() then
+    if want_to_use_transporters() then
         local feat = view.feature_at(0, 0)
         if feature_uses_map_key(">", feat) and transp_search_zone then
             if not transp_map[transp_search_zone] then

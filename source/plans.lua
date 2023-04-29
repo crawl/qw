@@ -117,12 +117,6 @@ function initialize_plans()
     set_plan_pre_explore2()
     set_plan_explore()
     set_plan_explore2()
+    set_plan_stuck()
     set_plan_move()
-
-    set_plan_abyss_rest()
-    set_plan_abyss_move()
-
-    set_plan_orbrun_rest()
-    set_plan_orbrun_emergency()
-    set_plan_orbrun_move()
 end

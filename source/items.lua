@@ -1054,7 +1054,7 @@ function autopickup(it, name)
         return
     end
 
-    if name:find(rune_suffix) then
+    if name:find(RUNE_SUFFIX) then
         record_seen_item(you.where(), name)
         return true
     elseif name == ORB_NAME then

@@ -146,3 +146,7 @@ end
 function position_sum(a, b)
     return { x = a.x + b.x, y = a.y + b.y }
 end
+
+function positions_equal(a, b)
+    return a.x == b.x and a.y == b.y
+end

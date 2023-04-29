@@ -196,7 +196,7 @@ function assess_square(pos)
 
     -- Equal to INF_DIST if the move is not closer to any position in
     -- flee_positions, otherwise equal to the (min) dist to such a stair
-    a.flee_distance = stairs_improvement(pos)
+    a.flee_distance = flee_improvement(pos)
 
     return a
 end
@@ -351,6 +351,105 @@ function choose_tactical_step()
     end
 end
 
+function distance_map_minimum_enemy_distance(dist_map, pspeed)
+    local min_dist
+    for _, enemy in ipairs(enemy_list) do
+        local gpos = position_sum(global_pos, enemy:pos())
+        local dist = dist_map.map[gpos.x][gpos.y]
+
+        if dist then
+            local speed_diff = enemy:speed() - pspeed
+            if speed_diff > 1 then
+                dist = dist / 2
+            elseif speed_diff > 0 then
+                dist = dist / 1.5
+            end
+
+            if enemy:is_ranged() then
+                dist = dist - 4
+            end
+
+            if not min_dist or dist < min_dist then
+                min_dist = dist
+            end
+        end
+    end
+    return min_dist
+end
+
+function find_flee_positions()
+    flee_positions = {}
+
+    local stairs_feats = level_stairs_features(where_branch, where_depth,
+        DIR.UP)
+    local search_feats = {}
+    -- Only retreat to stairs marked as safe.
+    for _, feat in ipairs(stairs_feats) do
+        local state = get_stairs_state(where_branch, where_depth, feat)
+        if not state or state.safe then
+            table.insert(search_feats, feat)
+        end
+    end
+
+    local positions, feats = get_feature_map_positions(search_feats)
+    local safe_positions = {}
+    for i, feat in ipairs(feats) do
+        local state
+        if feat == "escape_hatch_up" then
+            state = get_escape_hatch_state(where_branch, where_depth,
+                positions[i])
+        elseif feat == "transit_pandemonium" then
+            state = get_pan_transit_state(positions[i])
+        end
+        if not state or state.safe then
+            table.insert(safe_positions, positions[i])
+        end
+    end
+
+    local pspeed = player_speed()
+    for _, pos in ipairs(safe_positions) do
+        local dist_map = get_distance_map(pos, true)
+        local pdist = dist_map.map[global_pos.x][global_pos.y]
+        local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
+        if pdist and (not edist or pdist < edist) then
+            table.insert(flee_positions, pos)
+        end
+    end
+end
+
+function best_flee_destination_at(pos)
+    local best_dist, best_pos
+    for _, flee_pos in ipairs(flee_positions) do
+        local dist_map = get_distance_map(flee_pos)
+        local dist = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
+        local current_dist = dist_map.map[global_pos.x][global_pos.y]
+        if dist and current_dist
+                and dist < current_dist
+                and (not best_dist or dist < best_dist) then
+            best_dist = dist
+            best_pos = flee_pos
+        end
+    end
+    return best_pos, best_dist
+end
+
+function flee_improvement(pos)
+    local flee_pos, flee_dist = best_flee_destination_at(pos)
+    if supdist(pos) == 0 then
+        if flee_pos and positions_equall(pos, flee_pos) then
+            return 0
+        else
+            return INF_DIST
+        end
+    end
+
+    if dist then
+        return dist
+    end
+
+    return INF_DIST
+end
+
 function get_move_closer(positions)
     local best_dist, best_move, best_dest
     for apos in adjacent_iter(origin) do
@@ -382,7 +481,7 @@ function move_search(search, current)
             return false
         end
 
-        if current.x == search.center.x and current.y == search.center.y  then
+        if positions_equal(current, search.center) then
             search.first_pos = nil
         end
 
@@ -611,7 +710,7 @@ function best_move_towards_items(item_names, ignore_exclusions)
     end
 end
 
-function destination_features()
+function gameplan_features()
     if gameplan_travel.first_dir then
         return level_stairs_features(where_branch, where_depth,
             gameplan_travel.first_dir)
@@ -625,8 +724,8 @@ function destination_features()
     end
 end
 
-function best_move_towards_destination(ignore_exclusions)
-    local feats = destination_features()
+function best_move_towards_gameplan(ignore_exclusions)
+    local feats = gameplan_features()
     if not feats then
         return
     end
@@ -657,9 +756,7 @@ function best_move_towards_unexplored(ignore_exclusions)
                 and map_position_has_adjacent_unseen(pos)
                 and map_position_is_reachable(pos, reachable_positions,
                     ignore_exclusions) then
-            if map[pos.x][pos.y] then
-                return best_move_towards_map_position(pos, ignore_exclusions)
-            end
+            return best_move_towards_map_position(pos, ignore_exclusions)
         end
     end
 end
@@ -673,18 +770,13 @@ function best_move_towards_unexcluded()
     end
 
     for pos in radius_iter(global_pos, GXM) do
-        if map_is_traversable_at(pos) and map_is_unexcluded_at(pos) then
-            for _, reachable_pos in ipairs(reachable_positions) do
-                local dist_map = get_distance_map(reachable_pos)
-                if dist_map.map[pos.x][pos.y] then
-                    return best_move_towards_map_position(pos, true)
-                end
-            end
+        if map_is_traversable_at(pos)
+                and map_is_unexcluded_at(pos)
+                and map_position_is_reachable(pos, reachable_positions,
+                    true) then
+            return best_move_towards_map_position(pos, true)
         end
     end
-end
-
-function best_move_towards_unexplored_runelight()
 end
 
 function update_move_destination()
@@ -698,11 +790,10 @@ function update_move_destination()
     elseif monster then
         local pos = position_difference(move_destination, global_pos)
         if supdist(pos) <= los_radius
-                and you.see_cell_no_trans(pos.x, pos.y) then
+                and you.see_cell_solid_see(pos.x, pos.y) then
             reset = true
         end
-    elseif global_pos.x == move_destination.x
-            and global_pos.y == move_destination.y then
+    elseif positions_equal(global_pos, move_destination) then
         reset = true
     end
 

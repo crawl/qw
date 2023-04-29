@@ -3,7 +3,6 @@
 
 function plan_teleport()
     if can_teleport() and want_to_teleport() then
-        -- return false
         return teleport()
     end
     return false
@@ -142,6 +141,62 @@ function plan_recite()
     return false
 end
 
+function plan_cloud_step()
+    if tactical_reason == "cloud" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        magic(tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
+function plan_water_step()
+    if tactical_reason == "water" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        magic(tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
+function plan_coward_step()
+    if tactical_reason == "hiding" or tactical_reason == "stealth" then
+        if tactical_reason == "hiding" then
+            hiding_turn_count = you.turns()
+        end
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        magic(tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
+function plan_flee_step()
+    if tactical_reason ~= "fleeing" then
+        return false
+    end
+
+    local best_pos = best_flee_destination_at(vi_to_delta(tactical_step))
+    if not best_pos then
+        return false
+    end
+
+    target_flee_position = best_pos
+    last_flee_turn = you.turns()
+    say("FLEEEEING.")
+    magic(tactical_step .. "Y")
+    return true
+end
+
+function plan_other_step()
+    if tactical_reason ~= "none" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        magic(tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
 -- XXX: This plan is broken due to changes to combat assessment.
 function plan_grand_finale()
     if not danger
@@ -219,6 +274,7 @@ function plan_resistance()
     if want_resistance() then
         return drink_by_name("resistance")
     end
+
     return false
 end
 
@@ -226,6 +282,7 @@ function plan_magic_points()
     if not you.teleporting() and want_magic_points() then
         return drink_by_name("magic")
     end
+
     return false
 end
 
@@ -234,6 +291,7 @@ function plan_trogs_hand()
         trogs_hand()
         return true
     end
+
     return false
 end
 
@@ -641,6 +699,10 @@ function want_to_teleport()
         return false
     end
 
+    if want_to_orbrun_teleport() then
+        return true
+    end
+
     if count_hostile_greater_servants(los_radius) > 0 and you.xl() < 21 then
         greater_servant_timer = you.turns()
         return true
@@ -665,6 +727,10 @@ function want_to_teleport()
 end
 
 function want_to_heal_wounds()
+    if have_orb then
+        return want_to_orbrun_heal_wounds()
+    end
+
     if danger and can_ely_healing()
             and hp_is_low(50)
             and you.piety_rank() >= 5 then
@@ -694,6 +760,10 @@ end
 function want_to_serious_buff()
     if not danger or dangerous_to_attack() then
         return false
+    end
+
+    if have_orb then
+        return want_to_orbrun_buff()
     end
 
     if in_branch("Zig")
@@ -762,9 +832,10 @@ function want_magic_points()
 end
 
 function want_to_trogs_hand()
-    return danger
-        and not dangerous_to_attack()
-        and check_enemies_in_list(los_radius, hand_monsters)
+    local hp, mhp = you.hp()
+    return in_branch("Abyss") and mhp - hp >= 30
+        or not dangerous_to_attack()
+            and check_enemies_in_list(los_radius, hand_monsters)
 end
 
 function want_to_berserk()
@@ -777,8 +848,9 @@ end
 
 function want_to_heroism()
     return danger
-        and dangerous_to_attack()
-        and (hp_is_low(70)
+        and not dangerous_to_attack()
+        and (have_orb and want_to_orbrun_buff()
+            or hp_is_low(70)
             or check_enemies_in_list(los_radius, scary_monsters)
             or count_enemies(0, 0, los_radius) >= 4)
 end

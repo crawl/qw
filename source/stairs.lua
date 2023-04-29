@@ -19,32 +19,37 @@ downstairs_features = {
 }
 
 --[[
-Return a list of stair features on the given level and in the given direction.
-This does include any exits from the given branch but not any entrances to
-different branches. For downstairs, it does include features on temporary
-levels like Abyss and Pan that lead to the "next" level in the branch.
+Return a list of stair features we're allowed to take on the given level and in
+the given direction that takes us to the next depth for that direction. For
+going up, this includes branch exits that take us out of the branch. Up escape
+hatches are included on the Orb run under the right conditions. For going down,
+this does not include any branch entrances, but does include features in Abyss
+and Pan that lead to the next level in the branch.
 --]]
 function level_stairs_features(branch, depth, dir)
     local feats
     if dir == DIR.UP then
         if is_portal_branch(branch)
                 or branch == "Abyss"
-                or util.contains(hell_branches, branch)
+                or is_hell_branch(branch)
                 or depth == 1 then
             feats = { branch_exit(branch) }
         else
-            feats = upstairs_features
+            feats = util.copy_table(upstairs_features)
+        end
+
+        if want_to_use_escape_hatches(DIR.UP) then
+            table.insert(feats, "escape_hatch_up")
         end
     elseif dir == DIR.DOWN then
         if branch == "Abyss" then
             feats = { "abyssal_stair" }
         elseif branch == "Pan" then
             feats = { "transit_pandemonium" }
-        elseif util.contains(hell_branches, branch)
-                and depth < branch_depth(branch)then
+        elseif is_hell_branch(branch) and depth < branch_depth(branch) then
             feats = { downstairs_features[1] }
         elseif depth < branch_depth(branch) then
-            feats = downstairs_features
+            feats = util.copy_table(downstairs_features)
         end
     end
     return feats
@@ -164,7 +169,7 @@ function num_required_stairs(branch, depth, dir)
                 or branch == "Tomb"
                 or branch == "Abyss"
                 or branch == "Pan"
-                or util.contains(hell_branches, branch) then
+                or is_hell_branch(branch) then
             return 0
         else
             return 3
@@ -176,7 +181,7 @@ function num_required_stairs(branch, depth, dir)
                     or branch == "Abyss"
                     or branch == "Pan" then
             return 0
-        elseif util.contains(hell_branches, branch) then
+        elseif is_hell_branch(branch) then
             return 1
         else
             return 3
@@ -460,32 +465,6 @@ function get_abyssal_stairs_state(map_pos)
     end
 end
 
-function distance_map_minimum_enemy_distance(dist_map, pspeed)
-    local min_dist
-    for _, enemy in ipairs(enemy_list) do
-        local gpos = position_sum(global_pos, enemy:pos())
-        local dist = dist_map.map[gpos.x][gpos.y]
-
-        if dist then
-            local speed_diff = enemy:speed() - pspeed
-            if speed_diff > 1 then
-                dist = dist / 2
-            elseif speed_diff > 0 then
-                dist = dist / 1.5
-            end
-
-            if enemy:is_ranged() then
-                dist = dist - 4
-            end
-
-            if not min_dist or dist < min_dist then
-                min_dist = dist
-            end
-        end
-    end
-    return min_dist
-end
-
 function get_branch_stairs_state(branch, depth, stairs_branch, dir)
     local level = make_level(branch, depth)
     if dir == DIR.UP then
@@ -526,7 +505,6 @@ function get_destination_stairs_state(branch, depth, feat)
 end
 
 function get_stairs_state(branch, depth, feat)
-    local state
     local dir, num = stone_stairs_type(feat)
     if dir then
         return get_stone_stairs_state(branch, depth, dir, num)
@@ -536,93 +514,4 @@ function get_stairs_state(branch, depth, feat)
     if branch then
         return get_branch_stairs_state(where_branch, where_depth, branch, dir)
     end
-end
-
-function find_flee_positions()
-    flee_positions = {}
-
-    -- Only retreat to stairs marked as safe.
-    local stairs_feats = level_stairs_features(where_branch, where_depth,
-        DIR.UP)
-    local search_feats = {}
-    for _, feat in ipairs(stairs_feats) do
-        if get_stairs_state(where_branch, where_depth, feat).safe then
-            table.insert(search_feats, feat)
-        end
-    end
-
-    if have_orb
-            and where_depth > 1
-            -- It's dangerous to hatch through unexplored areas in Zot as
-            -- opposed to simply taking an explored route through stone stairs.
-            -- So we only take a hatch up in Zot if the destination level is
-            -- fully explored.
-            and (not in_branch("Zot")
-                or explored_level(where_branch, where_depth - 1)) then
-        table.insert(search_feats, "escape_hatch_up")
-    elseif in_branch("Pan") then
-        table.insert(search_feats, "transit_pandemonium")
-    end
-
-    local positions, feats = get_feature_map_positions(search_feats)
-    local safe_positions = {}
-    for i, feat in ipairs(feats) do
-        local state
-        if feat == "escape_hatch_up" then
-            state = get_escape_hatch_state(where_branch, where_depth,
-                positions[i])
-        elseif feat == "transit_pandemonium" then
-            state = get_pan_transit_state(positions[i])
-        end
-        if not state or state.safe then
-            table.insert(safe_positions, positions[i])
-        end
-    end
-
-    local pspeed = player_speed()
-    for _, pos in ipairs(safe_positions) do
-        local dist_map = get_distance_map(pos)
-        local pdist = dist_map.map[global_pos.x][global_pos.y]
-        local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
-        if pdist and (not edist or pdist < edist) then
-            table.insert(flee_positions, pos)
-        end
-    end
-end
-
-function best_flee_destination_at(pos)
-    local best_dist, best_pos
-    for _, flee_pos in ipairs(flee_positions) do
-        local dist_map = get_distance_map(flee_pos)
-        local dist = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
-        local current_dist = dist_map.map[global_pos.x][global_pos.y]
-        if dist and current_dist
-                and dist < current_dist
-                and (not best_dist or dist < best_dist) then
-            best_dist = dist
-            best_pos = flee_pos
-        end
-    end
-    return best_pos, best_dist
-end
-
-function stairs_improvement(pos)
-    if not can_retreat_upstairs then
-        return INF_DIST
-    end
-
-    if supdist(pos) == 0 then
-        if feature_is_upstairs(view.feature_at(0, 0)) then
-            return 0
-        else
-            return INF_DIST
-        end
-    end
-
-    local dist = select(2, best_flee_destination_at(pos))
-    if dist then
-        return dist
-    end
-
-    return INF_DIST
 end

@@ -1,5 +1,5 @@
 ------------------
--- The abyss plan cascade: choosing a move for a turn in the Abyss.
+-- Plans specifically for the Abyss.
 
 function plan_go_to_abyss_portal()
     if in_branch("Abyss")
@@ -30,10 +30,21 @@ function plan_enter_abyss()
     return false
 end
 
-function plan_go_to_abyss_downstairs()
+function have_abyssal_stairs()
+    for _, state in ipairs(c_persist.abyssal_stairs) do
+        if state.los >= LOS.REACHABLE then
+            return true
+        end
+    end
+
+    return false
+end
+
+function plan_go_to_abyssal_stairs()
     if in_branch("Abyss")
             and want_to_stay_in_abyss()
-            and where_depth < gameplan_depth then
+            and where_depth < gameplan_depth
+            and have_abyssal_stairs() then
         magic("X>\r")
         return true
     end
@@ -44,7 +55,7 @@ end
 function plan_go_down_abyss()
     if view.feature_at(0, 0) == "abyssal_stair"
             and want_to_stay_in_abyss()
-            and where_depth < 3 then
+            and where_depth < gameplan_depth then
         go_downstairs()
         return true
     end
@@ -71,32 +82,6 @@ function plan_exit_abyss()
     return false
 end
 
-function plan_abyss_long_rest()
-    local hp, mhp = you.hp()
-    if you.confused()
-            or transformed()
-            or you.slowed()
-            or you.berserk()
-            or you.teleporting()
-            or you.silencing()
-            or you.status("spiked")
-            or hp < mhp and you.regenerating() then
-        long_rest()
-        return true
-    end
-
-    return false
-end
-
-function plan_abyss_hand()
-    local hp, mhp = you.hp()
-    if mhp - hp >= 30 and can_trogs_hand() then
-        trogs_hand()
-        return true
-    end
-    return false
-end
-
 function plan_lugonu_exit_abyss()
     if you.god() ~= "Lugonu"
             or you.berserk()
@@ -111,70 +96,72 @@ function plan_lugonu_exit_abyss()
     return true
 end
 
-function plan_abyss_wait_one_turn()
-    wait_one_turn()
-    return true
-end
-
-function plan_move_to_abyssal_rune()
-    local rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
-    if have_branch_runes(where_branch)
-            or not c_persist.sensed_abyssal_rune
-                and not c_persist.seen_items[where][rune_name] then
-        return false
-    end
-
-    move = best_move_towards_items({ rune_name })
-    if move then
-        move_to(move)
-        return true
-    end
-
-    if not item_map_positions[rune] then
-        return false
-    end
-
-    move = get_move_towards_unreachable_map_position(item_map_positions[rune])
-    if move then
-        move_to(move)
+function plan_stuck_abyss_wait_one_turn()
+    if in_branch("Abyss") then
+        wait_one_turn()
         return true
     end
 
     return false
 end
 
-function plan_move_to_unexplored_runelight()
-    local rune = branch_runes("Abyss")[1]
-    local rune_name = rune .. RUNE_SUFFIX
-    if have_branch_runes(where_branch) then
+function plan_pickup_abyssal_rune()
+    if not in_branch("Abyss")
+            or not item_map_positions[abyssal_rune]
+            or not positions_equal(global_pos,
+                item_map_positions[abyssal_rune]) then
         return false
     end
+
+    magic(",")
+    return true
 end
 
-function set_plan_abyss_rest()
-    plan_abyss_rest = cascade {
-        {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
-        {plan_abyss_hand, "abyss_hand"},
-        {plan_cure_poison, "cure_poison"},
-        {plan_abyss_long_rest, "rest"},
-        {plan_go_down_abyss, "go_down_abyss"},
-        {plan_go_to_abyss_downstairs, "try_go_to_abyss_downstairs"},
-    }
+function plan_move_towards_abyssal_rune()
+    if not have_branch_runes("Abyss")
+            or not item_map_positions[abyssal_rune]
+                and not c_persist.sensed_abyssal_rune then
+        return false
+    end
+
+    local move, dest = best_move_towards_items({ abyssal_rune })
+    if move then
+        move_to_destination(move, dest)
+        return true
+    end
+
+    local rune_pos = item_map_positions[rune]
+    if not rune_pos then
+        return false
+    end
+
+    move, dest = get_move_towards_unreachable_map_position(rune_pos)
+    if move then
+        move_to_destination(move, dest)
+        return true
+    end
+
+    return false
 end
 
-function set_plan_abyss_move()
-    plan_abyss_move = cascade {
-        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
-        {plan_exit_abyss, "exit_abyss"},
-        {plan_emergency, "emergency"},
-        {plan_attack, "attack"},
-        {plan_abyss_rest, "abyss_long_rest"},
-        {plan_pre_explore, "pre_explore"},
-        {plan_move_to_rune, "move_to_rune"}
-        {plan_move_to_runelight, "move_to_runelight"}
-        {plan_autoexplore, "try_autoexplore"},
-        {plan_pre_explore2, "pre_explore2"},
-        {plan_stuck_cloudy, "stuck_cloudy"},
-        {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
-    }
+function plan_move_towards_runelight()
+    if have_branch_runes(where_branch)
+            or not item_map_positions["runelight"] then
+        return false
+    end
+
+    local unexplored_runelights = {}
+    for _, pos in ipairs(get_feature_map_positions("runelight")) do
+        if not c_persist.explored_runelights[hash_position(pos)] then
+            table.insert(unexplored_runelights, pos)
+        end
+    end
+
+    local move, dest = best_move_towards_map_positions(unexplored_runelights)
+    if move then
+        move_to_destination(move, dest)
+        return true
+    end
+
+    return false
 end

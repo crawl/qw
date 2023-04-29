@@ -174,7 +174,7 @@ function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
         -- Never hit ourselves.
-        if pos.x == 0 and pos.y == 0 then
+        if positions_equall(pos, origin) then
             return
         end
 
@@ -205,7 +205,7 @@ function assess_ranged_target(attack, target)
     end
     for i, coords in ipairs(positions) do
         pos = { x = coords[1], y = coords[2] }
-        local hit_target = pos.x == target.x and pos.y == target.y
+        local hit_target = positions_equal(pos, target)
         local enemy = monster_map[pos.x][pos.y]
         -- Non-penetrating attacks must reach the target before reaching any
         -- other enemy, otherwise they're considered blocked and unusable.

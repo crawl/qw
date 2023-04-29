@@ -11,80 +11,14 @@ function plan_quit()
     return false
 end
 
-function plan_cloud_step()
-    if tactical_reason == "cloud" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
-function plan_water_step()
-    if tactical_reason == "water" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
-function plan_coward_step()
-    if tactical_reason == "hiding" or tactical_reason == "stealth" then
-        if tactical_reason == "hiding" then
-            hiding_turn_count = you.turns()
-        end
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
-function plan_flee_step()
-    if tactical_reason ~= "fleeing" then
-        return false
-    end
-
-    local best_pos = best_flee_destination_at(vi_to_delta(tactical_step))
-    if not best_pos then
-        return false
-    end
-
-    target_flee_position = best_pos
-    last_flee_turn = you.turns()
-    say("FLEEEEING.")
-    magic(tactical_step .. "Y")
-    return true
-end
-
-function plan_other_step()
-    if tactical_reason ~= "none" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
 function move_to(pos)
     magic(delta_to_vi(pos) .. "YY")
 end
 
-function go_upstairs(confirm, keep_exclusions)
-    if not keep_exclusions then
-        remove_exclusions(level_is_temporary())
-    end
-
-    magic("<" .. (confirm and "Y" or ""))
-end
-
-function go_downstairs(confirm, keep_exclusions)
-    if not keep_exclusions then
-        remove_exclusions(level_is_temporary())
-    end
-
-    magic(">" .. (confirm and "Y" or ""))
+function move_to_destination(pos, dest, reason)
+    move_destination = dest
+    move_reason = reason
+    magic(delta_to_vi(pos) .. "YY")
 end
 
 function random_step(reason)
@@ -120,89 +54,6 @@ function plan_disturbance_random_step()
         return random_step("disturbance")
     end
     return false
-end
-
-function plan_stuck()
-    stuck_turns = stuck_turns + 1
-    return random_step("stuck")
-end
-
-function plan_stuck_initial()
-    if stuck_turns <= 50 then
-        return plan_stuck()
-    end
-
-    return false
-end
-
-function plan_stuck_clear_exclusions()
-    local n = clear_exclusion_count[where] or 0
-    if n > 20 then
-        return false
-    end
-
-    clear_exclusion_count[where] = n + 1
-    remove_exclusions(true)
-    magic("X" .. control('e'))
-    return true
-end
-
-function plan_stuck_dig_grate()
-    local grate_offset = 20
-    local grate_pos
-    for pos in square_iter(origin) do
-        if view.feature_at(pos.x, pos.y) == "iron_grate" then
-            if abs(pos.x) + abs(pos.y) < grate_offset
-                    and you.see_cell_solid_see(pos.x, pos.y) then
-                grate_pos = pos
-                grate_offset = abs(pos.x) + abs(pos.y)
-            end
-        end
-    end
-
-    if grate_offset < 20 then
-        local c = find_item("wand", "digging")
-        if c and can_zap() then
-            say("ZAPPING " .. item(c).name() .. ".")
-            magic("V" .. letter(c) .. "r" .. vector_move(grate_pos) .. "\r")
-            return true
-        end
-    end
-
-    return false
-end
-
-function plan_stuck_forget_map()
-    if not cloudy
-            and not danger
-            and (at_branch_end("Slime") and not have_branch_runes("Slime")
-                or at_branch_end("Geh") and not have_branch_runes("Geh")) then
-        magic("X" .. control('f'))
-        return true
-    end
-    return false
-end
-
-function plan_stuck_cloudy()
-    if cloudy and not hp_is_low(50) and not you.mesmerised() then
-        return random_step("cloudy")
-    end
-    return false
-end
-
-function plan_stuck_teleport()
-    if can_teleport() then
-        return teleport()
-    end
-    return false
-end
-
-function try_move(pos)
-    if can_move_to(pos) then
-        return delta_to_vi(pos)
-    else
-        return
-    end
 end
 
 function plan_swamp_clear_exclusions()
@@ -281,99 +132,12 @@ function plan_swamp_clouds_hack()
     return plan_stuck_teleport()
 end
 
-function plan_exclusion_use_stairs()
-    if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
-        return false
-    end
-
-    local feats = destination_features()
-    local feat = view.feature_at(0, 0)
-    if not feats or not util.contains(feats, feat) then
-        return false
-    end
-
-    if feature_uses_map_key(">", feat) then
-        go_downstairs()
-        return true
-    elseif feature_uses_map_key("<", feat) then
-        go_upstairs()
-        return true
-    end
-
-    return false
-end
-
-function plan_exclusion_move()
-    if dangerous_to_move() or map_is_unexcluded_at(global_pos) then
-        return false
-    end
-
-    local move, dest = best_move_towards_destination(true)
-    if move then
-        move_to(move)
-        return true
-    end
-
-    if move_destination and move_reason == "unexplored" then
-        move = best_move_towards_map_position(move_destination, true)
-        if move then
-            move_to(move)
-            return true
-        end
-    end
-
-    if autoexplored_level(where_branch, where_depth) then
-        move, dest = best_move_towards_unexplored()
-        if move then
-            if debug_channel("explore") then
-                dsay("Moving to explore near "
-                    .. cell_string_from_map_position(dest))
-            end
-            move_destination = dest
-            move_reason = "unexplored"
-            move_to(move)
-            return true
-        end
-    end
-
-    local feats = level_stairs_features(where_branch, where_depth, DIR.UP)
-    if feats then
-        move = best_move_towards_features(feats, true)
-        if move then
-            move_to(move)
-            return true
-        end
-    end
-
-    if move_destination and move_reason == "exclusion" then
-        move = best_move_towards_map_position(move_destination, true)
-        if move then
-            move_to(move)
-            return true
-        end
-    end
-
-    move, dest = best_move_towards_unexcluded()
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to unexcluded position at "
-                .. cell_string_from_map_position(dest))
-        end
-        move_destination = dest
-        move_reason = "unexplored"
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
 function plan_stuck_use_stairs()
     if dangerous_to_move() then
         return false
     end
 
-    local feats = destination_features()
+    local feats = gameplan_features()
     local feat = view.feature_at(0, 0)
     if not feats or not util.contains(feats, feat) then
         return false
@@ -385,82 +149,6 @@ function plan_stuck_use_stairs()
     elseif feature_uses_map_key("<", feat) then
         go_upstairs()
         return true
-    end
-
-    return false
-end
-
-function plan_stuck_move_towards_destination()
-    if dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_destination()
-    if move then
-        move_destination = dest
-        move_reason = "travel"
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
-function plan_stuck_move_towards_monster()
-    if dangerous_to_move() then
-        return false
-    end
-
-    local mons_targets = {}
-    for _, enemy in ipairs(enemy_list) do
-        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
-    end
-
-    if #mons_targets == 0 then
-        for pos in square_iter(origin) do
-            local mons = monster.get_monster_at(pos.x, pos.y)
-            if mons and Monster:new(mons):is_enemy() then
-                table.insert(mons_targets, position_sum(global_pos, pos))
-            end
-        end
-    end
-
-    if #mons_targets == 0 then
-        return false
-    end
-
-    local move, dest = best_move_towards_map_positions(mons_targets)
-    if move then
-        move_destination = dest
-        move_reason = "monster"
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
-function plan_stuck_move_towards_unexplored()
-    if dangerous_to_move() then
-        return false
-    end
-
-    if move_destination and move_reason == "unexplored" then
-        move = best_move_towards_map_position(move_destination, true)
-        if move then
-            move_to(move)
-            return true
-        end
-    end
-
-    move, dest = best_move_towards_unexplored()
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to explore near "
-                .. cell_string_from_map_position(dest))
-        end
-        move_destination = dest
-        move_reason = "unexplored"
     end
 
     return false
@@ -472,15 +160,14 @@ function set_plan_move()
         {plan_ancestor_identity, "try_ancestor_identity"},
         {plan_join_beogh, "join_beogh"},
         {plan_shop, "shop"},
+        {plan_pickup_abyssal_rune, "pickup_abyssal_rune"},
+        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
+        {plan_exit_abyss, "exit_abyss"},
         {plan_stairdance_up, "stairdance_up"},
         {plan_emergency, "emergency"},
-        {plan_exclusion_use_altar, "exclusion_use_altar"},
-        {plan_exclusion_use_stairs, "exclusion_use_stairs"},
-        {plan_exclusion_move, "exclusion_move"},
         {plan_attack, "attack"},
         {plan_rest, "rest"},
         {plan_pre_explore, "pre_explore"},
-        {plan_unwield_weapon, "unwield_weapon"},
         {plan_explore, "explore"},
         {plan_pre_explore2, "pre_explore2"},
         {plan_explore2, "explore2"},
@@ -490,17 +177,6 @@ function set_plan_move()
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
         {plan_swamp_clouds_hack, "swamp_clouds_hack"},
-        {plan_stuck_use_stairs, "stuck_use_stairs"},
-        {plan_stuck_move_towards_destination,
-            "stuck_move_towards_destination"},
-        {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},
-        {plan_stuck_move_towards_unexplored, "stuck_move_towards_unexplored"},
-        {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
-        {plan_stuck_dig_grate, "try_stuck_dig_grate"},
-        {plan_stuck_cloudy, "stuck_cloudy"},
-        {plan_stuck_forget_map, "try_stuck_forget_map"},
-        {plan_stuck_initial, "stuck_initial"},
-        {plan_stuck_teleport, "stuck_teleport"},
         {plan_stuck, "stuck"},
     }
 end
