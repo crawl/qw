@@ -20,6 +20,7 @@ function initialize_debug()
         return
     end
 
+    debug_mode = true
     debug_channels = {}
     for _, channel in ipairs(DEBUG_CHANNELS) do
         debug_channels[channel] = true
@@ -27,7 +28,7 @@ function initialize_debug()
 end
 
 function toggle_debug()
-    DEBUG_MODE = not DEBUG_MODE
+    debug_mode = not debug_mode
 end
 
 function toggle_debug_channel(channel)
@@ -35,7 +36,7 @@ function toggle_debug_channel(channel)
 end
 
 function debug_channel(channel)
-    return DEBUG_MODE and debug_channels[channel]
+    return debug_mode and debug_channels[channel]
 end
 
 function dsay(x, channel)
@@ -53,8 +54,11 @@ function dsay(x, channel)
     -- say() and note() so we can catch errors.
     crawl.mpr(you.turns() .. " ||| " .. str)
 end
-function toggle_coroutine()
-    USE_COROUTINE = not USE_COROUTINE
+
+function toggle_throttle()
+    coroutine_throttle = not coroutine_throttle
+    dsay("Coroutine throttle "
+        .. (coroutine_throttle and "enabled" or "disabled"))
 end
 
 function test_radius_iter()
@@ -130,7 +134,7 @@ function print_distance_map(dist_map, center, excluded)
         center = origin
     end
 
-    crawl.setopt("msg_condense_repeats = true")
+    crawl.setopt("msg_condense_repeats = false")
 
     local map = excluded and dist_map.excluded_map or dist_map.map
     local map_center = position_sum(global_pos, center)
@@ -150,7 +154,7 @@ function print_distance_map(dist_map, center, excluded)
         say(str)
     end
 
-    crawl.setopt("msg_condense_repeats = false")
+    crawl.setopt("msg_condense_repeats = true")
 end
 
 function print_distance_maps(center, excluded)
@@ -188,7 +192,7 @@ function cell_string(cell)
     if supdist(cell.los_pos) <= los_radius then
         local mons = monster.get_monster_at(cell.los_pos.x, cell.los_pos.y)
         if mons then
-            str = mons:name() .. "; "
+            str = str .. mons:name() .. "; "
         end
     end
 
@@ -198,4 +202,8 @@ end
 function cell_string_from_map_position(pos)
     local cell = cell_from_position(position_difference(pos, global_pos))
     return cell_string(cell)
+end
+
+function toggle_throttle()
+    COROUTINE_THROTTLE = not COROUTINE_THROTTLE
 end

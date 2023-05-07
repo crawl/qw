@@ -102,6 +102,10 @@ function find_features(feats, radius)
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Searched features in block " .. tostring(i / 1000)
+                    .. " of map positions")
+            end
             coroutine.yield()
         end
 
@@ -141,6 +145,10 @@ function find_items(item_names, radius)
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Searched items in block " .. tostring(i / 1000)
+                    .. " of map positions")
+            end
             coroutine.yield()
         end
 
@@ -166,13 +174,25 @@ function find_items(item_names, radius)
     return positions, found_items
 end
 
+function distance_map_remove(dist_map)
+    if debug_channel("map") then
+        dsay("Removing " .. (permanent and "permanent" or "temporary")
+            .. " distance map at "
+            .. cell_string_from_map_position(pos))
+    end
+
+    dist_map.map = nil
+    dist_map.excluded_map = nil
+    distance_maps[dist_map.hash] = nil
+end
+
 function distance_map_initialize(pos, permanent, radius)
     if permanent == nil then
         permanent = false
     end
 
     if debug_channel("map") then
-        dsay("Creating" .. (permanent and " permanent" or " temporary")
+        dsay("Creating " .. (permanent and "permanent" or "temporary")
             .. " distance map at "
             .. cell_string_from_map_position(pos))
     end
@@ -210,10 +230,8 @@ function distance_map_initialize(pos, permanent, radius)
     end
     dist_map.excluded_map[pos.x][pos.y] = 0
 
-    local dest_pos = { x = pos.x, y = pos.y }
+    local dest_pos = new_update_position(pos)
     dest_pos.propagate_traversable = true
-    dest_pos.propagate_untraversable = false
-    dest_pos.propagate_excluded = false
     dest_pos.propagate_unexcluded = true
     dist_map.queue = { dest_pos }
     return dist_map
@@ -232,10 +250,6 @@ function map_is_unseen_at(pos)
     return traversal_map[pos.x][pos.y] == nil
 end
 
-function map_is_reachable_at(pos)
-end
-
-
 function distance_map_adjacent_dist(pos, dist_map)
     local best_dist, best_excluded_dist
     for pos in adjacent_iter(pos) do
@@ -246,8 +260,10 @@ function distance_map_adjacent_dist(pos, dist_map)
             end
 
             dist = dist_map.excluded_map[pos.x][pos.y]
-            if dist and (not best_excluded_dist
-                    or best_excluded_dist > dist) then
+            if map_is_unexcluded_at(pos)
+                    and dist
+                    and (not best_excluded_dist
+                        or best_excluded_dist > dist) then
                 best_excluded_dist = dist
             end
         end
@@ -256,44 +272,65 @@ function distance_map_adjacent_dist(pos, dist_map)
 end
 
 function distance_map_update_adjacent_pos(pos, center, dist_map)
-    if (dist_map.radius
+    if positions_equal(pos, dist_map.pos)
+            or (dist_map.radius
                 and supdist(position_difference(pos, dist_map.pos))
                     > dist_map.radius)
-            -- Untraversable cells don't need updates.
+            -- Untraversable cells don't need distance map updates.
             or not map_is_traversable_at(pos) then
         return
     end
 
-    function new_update_pos()
-        local new_pos = { x = pos.x, y = pos.y }
-
-        new_pos.propagate_traversable = false
-        new_pos.propagate_untraversable = false
-        new_pos.propagate_excluded = false
-        new_pos.propagate_unexcluded = false
-        return new_pos
-    end
-
     local unexcluded = map_is_unexcluded_at(pos)
-    local best_dist, best_exc_dist, update_pos
+    local adjacent_dist, adjacent_excluded_dist, update_pos
+    local have_adjacent_excluded = false
     if center.propagate_traversable then
         local center_dist = dist_map.map[center.x][center.y]
         local dist = dist_map.map[pos.x][pos.y]
         if center_dist and (not dist or dist > center_dist + 1) then
             dist_map.map[pos.x][pos.y] = center_dist + 1
 
-            update_pos = new_update_pos()
+            update_pos = new_update_position(pos)
+            update_pos.propagate_traversable = true
+        end
+
+        center_dist = dist_map.excluded_map[center.x][center.y]
+        dist = dist_map.excluded_map[pos.x][pos.y]
+        if unexcluded
+                and not center.propagate_unexcluded
+                and not center.propagate_excluded
+                and center_dist
+                and (not dist or dist > center_dist + 1) then
+            dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
+
+            if not update_pos then
+                update_pos = new_update_position(pos)
+            end
             update_pos.propagate_traversable = true
         end
     elseif center.propagate_untraversable then
-        best_dist, best_exc_dist = distance_map_adjacent_dist(center,
+        adjacent_dist, adjacent_excluded_dist = distance_map_adjacent_dist(pos,
             dist_map)
-        target_dist = best_dist and best_dist + 1 or nil
-        local dist = dist_map.map[pos.x][pos.y]
-        if dist ~= target_dist then
+        have_adjacent_excluded = true
+        target_dist = adjacent_dist and adjacent_dist + 1 or nil
+        if dist_map.map[pos.x][pos.y] ~= target_dist then
             dist_map.map[pos.x][pos.y] = target_dist
 
-            update_pos = new_update_pos()
+            update_pos = new_update_position(pos)
+            update_pos.propagate_untraversable = true
+        end
+
+        target_dist = adjacent_excluded_dist and adjacent_excluded_dist + 1
+            or nil
+        if unexcluded
+                and not center.propagate_unexcluded
+                and not center.propagate_excluded
+                and dist_map.excluded_map[pos.x][pos.y] ~= target_dist then
+            dist_map.excluded_map[pos.x][pos.y] = target_dist
+
+            if not update_pos then
+                update_pos = new_update_position(pos)
+            end
             update_pos.propagate_untraversable = true
         end
     end
@@ -305,28 +342,36 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
             dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
 
             if not update_pos then
-                update_pos = new_update_pos()
+                update_pos = new_update_position(pos)
             end
             update_pos.propagate_unexcluded = true
         end
     elseif center.propagate_excluded and unexcluded then
-        if not best_exc_dist then
-            best_exc_dist = select(2,
-                distance_map_adjacent_dist(center, dist_map))
+        if not have_adjacent_excluded then
+            adjacent_excluded_dist = select(2,
+                distance_map_adjacent_dist(pos, dist_map))
         end
 
-        local dist = dist_map.excluded_map[pos.x][pos.y]
-        if dist and dist ~= best_exc_dist + 1 then
-            dist_map.excluded_map[pos.x][pos.y] = best_exc_dist + 1
+        local target_dist = adjacent_excluded_dist
+            and adjacent_excluded_dist + 1 or nil
+        if dist_map.excluded_map[pos.x][pos.y] ~= target_dist then
+            dist_map.excluded_map[pos.x][pos.y] = target_dist
 
             if not update_pos then
-                update_pos = new_update_pos()
+                update_pos = new_update_position(pos)
             end
             update_pos.propagate_excluded = true
         end
     end
 
     if update_pos then
+        if debug_channel("update-all") then
+            dsay("Adding position "
+                .. pos_string(position_difference(update_pos, global_pos))
+                .. " to distance map queue of length "
+                .. tostring(#dist_map.queue))
+        end
+
         table.insert(dist_map.queue, update_pos)
     end
 end
@@ -334,8 +379,17 @@ end
 function distance_map_propagate(dist_map)
     local ind = 1
     local count = ind
+    if debug_channel("update") then
+        dsay("Propagating distance map at "
+            .. cell_string_from_map_position(dist_map.pos))
+    end
     while ind <= #dist_map.queue do
         if COROUTINE_THROTTLE and count % 300 == 0 then
+            if debug_channel("update") then
+                dsay("Propagated block " .. tostring(count / 300)
+                    .. " with " .. tostring(#dist_map.queue - ind)
+                    .. " positions remaining")
+            end
             coroutine.yield()
         end
 
@@ -382,6 +436,17 @@ function handle_item_searches(cell)
     end
 end
 
+function new_update_position(pos)
+    return {
+        x = pos.x,
+        y = pos.y,
+        propagate_traversable = false,
+        propagate_untraversable = false,
+        propagate_excluded = false,
+        propagate_unexcluded = false
+    }
+end
+
 function distance_map_update_pos(pos, dist_map)
     if dist_map.radius
             and supdist(position_difference(dist_map.pos, pos))
@@ -400,7 +465,7 @@ function distance_map_update_pos(pos, dist_map)
         have_adjacent = true
         if dist then
             dist_map.map[pos.x][pos.y] = dist + 1
-            update_pos = pos
+            update_pos = new_update_position(pos)
             update_pos.propagate_traversable = true
         end
     -- If we're not traversable yet have a map distance, we just became
@@ -408,7 +473,7 @@ function distance_map_update_pos(pos, dist_map)
     elseif not traversable and dist_map.map[pos.x][pos.y] then
         dist_map.map[pos.x][pos.y] = nil
         dist_map.excluded_map[pos.x][pos.y] = nil
-        update_pos = pos
+        update_pos = new_update_position(pos)
         update_pos.propagate_untraversable = true
     end
 
@@ -424,7 +489,7 @@ function distance_map_update_pos(pos, dist_map)
         if excluded_dist then
             dist_map.excluded_map[pos.x][pos.y] = excluded_dist + 1
             if not update_pos then
-                update_pos = pos
+                update_pos = new_update_position(pos)
             end
             update_pos.propagate_unexcluded = true
         end
@@ -433,7 +498,7 @@ function distance_map_update_pos(pos, dist_map)
     elseif excluded and dist_map.excluded_map[pos.x][pos.y] then
         dist_map.excluded_map[pos.x][pos.y] = nil
         if not update_pos then
-            update_pos = pos
+            update_pos = new_update_position(pos)
         end
         update_pos.propagate_excluded = true
     end
@@ -457,37 +522,25 @@ function map_is_unexcluded_at(pos)
     return exclusion_map[pos.x][pos.y]
 end
 
-function update_map_at_cell(cell, queue, seen)
-    if seen[cell.hash] then
+function update_map_cell_feature(cell, map_updated)
+    -- These two features can appear spontaneously in an already seen LOS in
+    -- the Abyss, so we handle them separately.
+    if cell.feat == "abyssal_stair" then
+        update_abyssal_stairs(cell.hash,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
         return
     end
 
-    local map_updated = false
-    local traversable = feature_is_traversable(cell.feat)
-    if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
-        traversal_map[cell.pos.x][cell.pos.y] = traversable
-        map_updated = true
+    if cell.feat == "exit_abyss" then
+        update_branch_stairs(where_branch, where_depth, "Abyss", DIR.UP,
+            { safe = unexcluded, los = los_state(cell.los_pos) })
+        update_cell_feature_positions(cell)
+        return
     end
-
-    local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
-            cell.los_pos.y)
-        and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
-    if exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
-        exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
-        map_updated = true
-    end
-
-    seen[cell.hash] = true
 
     if not map_updated then
         return
-    end
-
-    for pos in adjacent_iter(cell.los_pos) do
-        local acell = cell_from_position(pos, true)
-        if acell and not seen[acell.hash] then
-            table.insert(queue, acell)
-        end
     end
 
     local dir, num = stone_stairs_type(cell.feat)
@@ -519,13 +572,6 @@ function update_map_at_cell(cell, queue, seen)
         return
     end
 
-    if cell.feat == "abyssal_stair" then
-        update_abyssal_stairs(cell.hash,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
-        return
-    end
-
     if cell.feat == "transit_pandemonium" then
         update_pan_transit(cell.hash,
             { safe = unexcluded, los = los_state(cell.los_pos) })
@@ -550,6 +596,42 @@ function update_map_at_cell(cell, queue, seen)
     end
 end
 
+function update_map_at_cell(cell, queue, seen)
+    if seen[cell.hash] then
+        return
+    end
+
+    local map_updated = false
+    local traversable = feature_is_traversable(cell.feat)
+    if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
+        traversal_map[cell.pos.x][cell.pos.y] = traversable
+        map_updated = true
+    end
+
+    local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
+            cell.los_pos.y)
+        and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
+    if exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
+        exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
+        map_updated = true
+    end
+
+    seen[cell.hash] = true
+
+    update_map_cell_feature(cell, map_updated)
+
+    if not map_updated then
+        return
+    end
+
+    for pos in adjacent_iter(cell.los_pos) do
+        local acell = cell_from_position(pos, true)
+        if acell and not seen[acell.hash] then
+            table.insert(queue, acell)
+        end
+    end
+end
+
 function update_map_at_cells(queue)
     local seen = {}
     local ind = 1
@@ -557,6 +639,10 @@ function update_map_at_cells(queue)
     local count = 1
     while ind <= last do
         if COROUTINE_THROTTLE and count % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Updated map in block " .. tostring(count / 1000)
+                    .. " with " .. tostring(last - ind) .. " cells remaining")
+            end
             coroutine.yield()
         end
 
@@ -572,6 +658,10 @@ end
 function update_distance_maps_at_cells(queue)
     for i, cell in ipairs(queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Updated distance maps in block " .. tostring(i / 1000)
+                    .. " of " .. tostring(#queue) .. " map cells")
+            end
             coroutine.yield()
         end
 
@@ -628,8 +718,8 @@ function update_map(new_level, full_clear)
     end
 
     if in_branch("Abyss")
-            and (not c_persist.seen_items[where_branch]
-                    or not c_persist.seen_items[where_branch][abyssal_rune])
+            and not (c_persist.seen_items[where_branch]
+                and c_persist.seen_items[where_branch][abyssal_rune])
             and not c_persist.sensed_abyssal_rune then
         item_map_positions[abyssal_rune] = nil
     end
@@ -719,8 +809,6 @@ function get_feature_map_positions(feats, radius)
     if #positions > 0 then
         return positions, features
     end
-
-    return find_features(feats, radius)
 end
 
 function get_item_map_positions(item_names, radius)

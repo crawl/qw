@@ -26,7 +26,7 @@ function send_travel(branch, depth)
 end
 
 function unable_to_travel()
-    return danger or cloudy
+    return danger or position_is_cloudy
 end
 
 function plan_go_to_portal_entrance()

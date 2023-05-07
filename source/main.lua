@@ -78,6 +78,10 @@ function qw_main()
 end
 
 function run_qw()
+    if abort_qw then
+        return
+    end
+
     if update_coroutine == nil then
         update_coroutine = coroutine.create(qw_main)
     end
@@ -94,8 +98,15 @@ function run_qw()
         do_dummy_action = true
     end
 
-    if collectgarbage("count") > 8000 then
+    if collectgarbage("count") > memory_limit then
         collectgarbage("collect")
+
+        if collectgarbage("count") > memory_limit then
+            abort_qw = true
+            dsay("Memory usage above " .. tostring(memory_limit))
+            dsay("Aborting...")
+            return
+        end
     end
 
     if do_dummy_action then
@@ -109,4 +120,12 @@ end
 
 function hit_closest()
     startstop()
+end
+
+function resume_qw()
+    abort_qw = false
+end
+
+function set_memory_limit(limit)
+    memory_limit = limit
 end

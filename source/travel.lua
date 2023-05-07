@@ -370,7 +370,10 @@ function update_gameplan_travel()
 
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.
-    disable_autoexplore = (gameplan_travel.stairs_dir
+    disable_autoexplore = (in_branch("Abyss")
+                and gameplan_travel.first_dir
+                and have_abyssal_stairs()
+            or gameplan_travel.stairs_dir
             or gameplan_travel.want_go
             or gameplan_travel.want_stash)
         -- We do allow autoexplore even when we want to travel if the current

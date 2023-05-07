@@ -15,7 +15,7 @@ function move_to(pos)
     magic(delta_to_vi(pos) .. "YY")
 end
 
-function move_to_destination(pos, dest, reason)
+function move_towards_destination(pos, dest, reason)
     move_destination = dest
     move_reason = reason
     magic(delta_to_vi(pos) .. "YY")

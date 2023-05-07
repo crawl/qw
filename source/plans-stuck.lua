@@ -64,10 +64,10 @@ function plan_stuck_move_towards_monster()
     local move, dest = best_move_towards_map_positions(mons_targets)
     if move then
         if debug_channel("explore") then
-            dsay("Moving to explore near "
+            dsay("Moving to enemy at "
                 .. cell_string_from_map_position(dest))
         end
-        move_to_destination(move, dest, "monster")
+        move_towards_destination(move, dest, "monster")
         return true
     end
 
@@ -79,32 +79,31 @@ function plan_stuck_move_towards_unexplored()
         return false
     end
 
-    move, dest = best_move_towards_unexplored()
+    local move, dest = best_move_towards_unexplored()
     if move then
         if debug_channel("explore") then
             dsay("Moving to explore near "
                 .. cell_string_from_map_position(dest))
         end
-        move_to_destination(move, dest, "unexplored")
+        move_towards_destination(move, dest, "unexplored")
         return true
     end
 
     return false
 end
 
-function plan_exclusion_move_towards_unexcluded()
-    if map_is_unexcluded_at(global_pos)
-            or dangerous_to_move() then
+function plan_stuck_move_towards_safety()
+    if position_is_safe or dangerous_to_move() then
         return false
     end
 
-    move, dest = best_move_towards_unexcluded()
+    local move, dest = best_move_towards_safety()
     if move then
         if debug_channel("explore") then
-            dsay("Moving to unexcluded position at "
+            dsay("Moving to safe position at "
                 .. cell_string_from_map_position(dest))
         end
-        move_to_destination(dest, "unexcluded")
+        move_towards_destination(move, dest, "safety")
         return true
     end
 
@@ -112,13 +111,17 @@ function plan_exclusion_move_towards_unexcluded()
 end
 
 function plan_stuck_random_step()
+    if dangerous_to_move() then
+        return false
+    end
+
     stuck_turns = stuck_turns + 1
     return random_step("stuck")
 end
 
 function plan_stuck_initial()
     if stuck_turns <= 50 then
-        return plan_stuck()
+        return plan_stuck_random_step()
     end
 
     return false
@@ -137,6 +140,11 @@ function plan_stuck_clear_exclusions()
 end
 
 function plan_stuck_dig_grate()
+    local wand = find_item("wand", "digging")
+    if not wand or not can_zap() then
+        return false
+    end
+
     local grate_offset = 20
     local grate_pos
     for pos in square_iter(origin) do
@@ -150,32 +158,23 @@ function plan_stuck_dig_grate()
     end
 
     if grate_offset < 20 then
-        local c = find_item("wand", "digging")
-        if c and can_zap() then
-            say("ZAPPING " .. item(c).name() .. ".")
-            magic("V" .. letter(c) .. "r" .. vector_move(grate_pos) .. "\r")
-            return true
-        end
+        say("ZAPPING " .. item(c).name() .. ".")
+        magic("V" .. letter(c) .. "r" .. vector_move(grate_pos) .. "\r")
+        return true
     end
 
     return false
 end
 
 function plan_stuck_forget_map()
-    if not cloudy
+    if not position_is_cloudy
             and not danger
             and (at_branch_end("Slime") and not have_branch_runes("Slime")
                 or at_branch_end("Geh") and not have_branch_runes("Geh")) then
         magic("X" .. control('f'))
         return true
     end
-    return false
-end
 
-function plan_stuck_cloudy()
-    if cloudy and not hp_is_low(50) and not you.mesmerised() then
-        return random_step("cloudy")
-    end
     return false
 end
 
@@ -190,12 +189,11 @@ function set_plan_stuck()
     plan_stuck = cascade {
         {plan_stuck_use_stairs, "stuck_use_stairs"},
         {plan_stuck_move_towards_gameplan, "stuck_move_towards_gameplan"},
+        {plan_stuck_move_towards_safety, "stuck_move_towards_safety"},
         {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},
         {plan_stuck_move_towards_unexplored, "stuck_move_towards_unexplored"},
-        {plan_stuck_move_towards_unexcluded, "stuck_move_towards_unexcluded"},
         {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
-        {plan_stuck_cloudy, "stuck_cloudy"},
         {plan_stuck_abyss_wait_one_turn, "stuck_abyss_wait_one_turn"},
         {plan_stuck_forget_map, "try_stuck_forget_map"},
         {plan_stuck_initial, "stuck_initial"},

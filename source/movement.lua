@@ -392,6 +392,10 @@ function find_flee_positions()
     end
 
     local positions, feats = get_feature_map_positions(search_feats)
+    if not positions then
+        return
+    end
+
     local safe_positions = {}
     for i, feat in ipairs(feats) do
         local state
@@ -698,7 +702,7 @@ end
 
 function best_move_towards_features(feats, ignore_exclusions)
     local positions = get_feature_map_positions(feats)
-    if #positions > 0 then
+    if positions then
         return best_move_towards_map_positions(positions, ignore_exclusions)
     end
 end
@@ -761,7 +765,7 @@ function best_move_towards_unexplored(ignore_exclusions)
     end
 end
 
-function best_move_towards_unexcluded()
+function best_move_towards_safety()
     local reachable_positions
     if #flee_positions > 0 then
         reachable_positions = flee_positions
@@ -770,8 +774,9 @@ function best_move_towards_unexcluded()
     end
 
     for pos in radius_iter(global_pos, GXM) do
+        local los_pos = position_difference(pos, global_pos)
         if map_is_traversable_at(pos)
-                and map_is_unexcluded_at(pos)
+                and view.is_safe_square(los_pos.x, los_pos.y)
                 and map_position_is_reachable(pos, reachable_positions,
                     true) then
             return best_move_towards_map_position(pos, true)
@@ -798,6 +803,11 @@ function update_move_destination()
     end
 
     if reset then
+        local hash = hash_position(move_destination)
+        if distance_maps[hash] and not distance_maps[hash].permanent then
+            distance_map_remove(hash)
+        end
+
         move_destination = nil
         move_reason = nil
     end

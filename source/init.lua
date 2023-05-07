@@ -27,6 +27,7 @@ end
 function initialize()
     initialize_enums()
     initialize_debug()
+    coroutine_throttle = COROUTINE_THROTTLE
 
     if you.turns() == 0 then
         initialize_c_persist()

@@ -204,13 +204,10 @@ function can_drink()
 end
 
 function can_zap()
-    if you.berserk() or you.confused() or transformed() then
-        return false
-    end
-    if you.mutation("inability to use devices") > 0 then
-        return false
-    end
-    return true
+    return not (you.berserk()
+        or you.confused()
+        or transformed()
+        or you.mutation("inability to use devices") > 0)
 end
 
 function can_teleport()

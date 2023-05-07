@@ -5,7 +5,7 @@ function plan_go_to_abyss_portal()
     if in_branch("Abyss")
             or not want_to_stay_in_abyss()
             or not branch_found("Abyss")
-            or cloudy then
+            or position_is_cloudy then
         return false
     end
 
@@ -31,8 +31,8 @@ function plan_enter_abyss()
 end
 
 function have_abyssal_stairs()
-    for _, state in ipairs(c_persist.abyssal_stairs) do
-        if state.los >= LOS.REACHABLE then
+    for _, state in pairs(c_persist.abyssal_stairs) do
+        if state.los >= FEAT_LOS.REACHABLE then
             return true
         end
     end
@@ -118,7 +118,8 @@ function plan_pickup_abyssal_rune()
 end
 
 function plan_move_towards_abyssal_rune()
-    if not have_branch_runes("Abyss")
+    if not in_branch("Abyss")
+            or not want_to_stay_in_abyss()
             or not item_map_positions[abyssal_rune]
                 and not c_persist.sensed_abyssal_rune then
         return false
@@ -126,7 +127,7 @@ function plan_move_towards_abyssal_rune()
 
     local move, dest = best_move_towards_items({ abyssal_rune })
     if move then
-        move_to_destination(move, dest)
+        move_towards_destination(move, dest, "rune")
         return true
     end
 
@@ -137,7 +138,7 @@ function plan_move_towards_abyssal_rune()
 
     move, dest = get_move_towards_unreachable_map_position(rune_pos)
     if move then
-        move_to_destination(move, dest)
+        move_towards_destination(move, dest, "rune")
         return true
     end
 
@@ -159,7 +160,7 @@ function plan_move_towards_runelight()
 
     local move, dest = best_move_towards_map_positions(unexplored_runelights)
     if move then
-        move_to_destination(move, dest)
+        move_towards_destination(move, dest, "runelight")
         return true
     end
 

@@ -394,7 +394,7 @@ end
 function plan_wait_for_enemy()
     if not danger
             or dangerous_to_attack()
-            or cloudy
+            or position_is_cloudy
             or not options.autopick_on
             or view.feature_at(0, 0) == "shallow_water"
                 and intrinsic_fumble()

@@ -41,6 +41,7 @@ local plan_move
 
 -- All variables past this point are qw state.
 local initialized = false
+local debug_mode = false
 local branch_data = {}
 local hell_branches
 local portal_data = {}
@@ -51,6 +52,9 @@ local downstairs_features
 
 local debug_channels = {}
 
+local coroutine_throttle = true
+local memory_limit = 16000
+local abort_qw = false
 local automatic = false
 local update_coroutine
 local do_dummy_action
@@ -156,7 +160,8 @@ local immediate_danger
 
 local ignore_traps
 local stairs_travel
-local cloudy
+local position_is_safe
+local position_is_cloudy
 local moving_unsafe
 local melee_unsafe
 local melee_target

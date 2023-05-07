@@ -124,7 +124,8 @@ function turn_update()
     update_move_destination()
     choose_tactical_step()
 
-    cloudy = not view.is_safe_square(0, 0) and view.cloud_at(0, 0) ~= nil
+    position_is_safe = view.is_safe_square(0, 0)
+    position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
     go_travel_attempts = 0
     stash_travel_attempts = 0
     map_mode_search_attempts = 0

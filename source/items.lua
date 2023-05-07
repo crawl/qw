@@ -1182,7 +1182,10 @@ function count_item(cls, name)
 end
 
 function find_item(cls, name)
-    if cls == "wand" then return find_wand(name) end
+    if cls == "wand" then
+        return find_wand(name)
+    end
+
     for it in inventory() do
         if it.class(true) == cls and it.name():find(name) then
             return items.index_to_letter(it.slot)

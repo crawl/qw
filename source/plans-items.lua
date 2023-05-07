@@ -359,7 +359,7 @@ function plan_maybe_upgrade_armour()
 end
 
 function plan_upgrade_armour()
-    if cloudy or you.mesmerised() then
+    if position_is_cloudy or you.mesmerised() then
         return false
     end
 

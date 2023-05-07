@@ -41,11 +41,11 @@ end
 function plan_use_zigfig()
     if gameplan_branch ~= "Zig"
             or level_is_temporary()
+            or position_is_cloudy
+            or danger
             or you.berserk()
             or you.confused()
-            or feature_is_critical(view.feature_at(0, 0))
-            or cloudy
-            or danger then
+            or feature_is_critical(view.feature_at(0, 0)) then
         return false
     end
 
