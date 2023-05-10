@@ -65,6 +65,7 @@ end
 function want_to_move_to_abyss_exit()
     return in_branch("Abyss")
         and not want_to_stay_in_abyss()
+        and view.feature_at(0, 0) ~= "exit_abyss"
         and get_branch_stairs_state(where_branch, where_depth, where_branch,
             DIR.UP).los >= FEAT_LOS.REACHABLE
 end
@@ -72,7 +73,8 @@ end
 function want_to_move_to_abyssal_stairs()
     if not in_branch("Abyss")
             or not want_to_stay_in_abyss()
-            or where_depth >= gameplan_depth then
+            or where_depth >= gameplan_depth
+            or view.feature_at(0, 0) == "abyssal_stair" then
         return false
     end
 
@@ -113,7 +115,7 @@ function plan_go_down_abyss()
 end
 
 function plan_go_to_abyss_exit()
-    if want_to_stay_in_abyss() then
+    if not want_to_move_to_abyssal_stairs() then
         return false
     end
 
@@ -124,8 +126,7 @@ end
 function plan_exit_abyss()
     if view.feature_at(0, 0) == branch_exit("Abyss")
             and not want_to_stay_in_abyss()
-            and not you.mesmerised()
-            and can_move() then
+            and can_use_stairs() then
         go_upstairs()
         return true
     end
@@ -168,11 +169,7 @@ function plan_pickup_abyssal_rune()
 end
 
 function plan_move_towards_abyssal_rune()
-    if not in_branch("Abyss")
-            or not want_to_stay_in_abyss()
-            or not item_map_positions[abyssal_rune]
--- XXX: Re-enable this when abyssal rune sensing works.
---              and not c_persist.sensed_abyssal_rune then
+    if not want_to_move_to_abyssal_rune() then
         return false
     end
 
