@@ -370,9 +370,7 @@ function update_gameplan_travel()
 
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.
-    disable_autoexplore = (in_branch("Abyss")
-                and gameplan_travel.first_dir
-                and have_abyssal_stairs()
+    disable_autoexplore = (want_to_move_to_abyss_objective()
             or gameplan_travel.stairs_dir
             or gameplan_travel.want_go
             or gameplan_travel.want_stash)
@@ -381,12 +379,14 @@ function update_gameplan_travel()
         -- items like thrown projectiles or loot from e.g. stairdancing.
         and (not explored_level(where_branch, where_depth)
         -- However we don't allow autoexplore in this case if our current level
-        -- is our travel destination. This exception is to allow within-level
-        -- plans like taking unexplored stairs and stash searches to on-level
-        -- destinations like altars to not be interrupted when runed doors
-        -- exist. In that case autoexplore would move us next to a runed door
-        -- and off of our intermediate stair/altar/etc. where we need to be.
-            or (gameplan_travel.branch and not gameplan_travel.want_go))
+        -- is the Abyss or is our travel destination. This latter exception is
+        -- to allow within-level plans like taking unexplored stairs and stash
+        -- searches to on-level destinations like altars to not be interrupted
+        -- when runed doors exist. In that case autoexplore would move us next
+        -- to a runed door and off of our intermediate stair/altar/etc. where
+        -- we need to be.
+            or (in_branch("Abyss")
+                or gameplan_travel.branch and not gameplan_travel.want_go))
 
     if debug_channel("explore") then
         dsay("Travel branch: " .. tostring(gameplan_travel.branch)

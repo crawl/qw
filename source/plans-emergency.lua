@@ -160,7 +160,8 @@ function plan_water_step()
 end
 
 function plan_coward_step()
-    if tactical_reason == "hiding" or tactical_reason == "stealth" then
+    if (tactical_reason == "hiding" or tactical_reason == "stealth")
+            and not want_to_move_to_abyss_objective() then
         if tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end

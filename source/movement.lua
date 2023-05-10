@@ -687,7 +687,7 @@ function get_move_towards_unreachable_map_position(pos, ignore_exclusions)
     end
 
     for near_pos in radius_iter(pos, GXM, true) do
-        if map_is_unseen_at(near_pos) then
+        if supdist(pos) <= GXM and map_is_unseen_at(near_pos) then
             for apos in adjacent_iter(near_pos) do
                 if map_is_traversable_at(apos)
                         and map_position_is_reachable(apos,
@@ -756,7 +756,8 @@ function best_move_towards_unexplored(ignore_exclusions)
     end
 
     for pos in radius_iter(global_pos, GXM) do
-        if map_is_traversable_at(pos)
+        if supdist(pos) <= GXM
+                and map_is_traversable_at(pos)
                 and map_position_has_adjacent_unseen(pos)
                 and map_position_is_reachable(pos, reachable_positions,
                     ignore_exclusions) then
@@ -775,7 +776,8 @@ function best_move_towards_safety()
 
     for pos in radius_iter(global_pos, GXM) do
         local los_pos = position_difference(pos, global_pos)
-        if map_is_traversable_at(pos)
+        if supdist(pos) <= GXM
+                and map_is_traversable_at(pos)
                 and view.is_safe_square(los_pos.x, los_pos.y)
                 and map_position_is_reachable(pos, reachable_positions,
                     true) then
@@ -803,9 +805,9 @@ function update_move_destination()
     end
 
     if reset then
-        local hash = hash_position(move_destination)
-        if distance_maps[hash] and not distance_maps[hash].permanent then
-            distance_map_remove(hash)
+        local dist_map = distance_maps[hash_position(move_destination)]
+        if dist_map and not dist_map.permanent then
+            distance_map_remove(dist_map)
         end
 
         move_destination = nil

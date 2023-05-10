@@ -116,8 +116,6 @@ local exclusion_maps_cache
 local exclusion_map
 local distance_maps_cache
 local distance_maps
-local num_temp_distance_maps = 0
-local last_temp_distance_map_hash
 
 local level_map_mode_searches
 local map_mode_searches

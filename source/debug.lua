@@ -117,7 +117,16 @@ function print_traversal_map(center)
         for x = -20, 20 do
             local pos = position_sum(map_center, { x = x, y = y })
             local traversable = map_is_traversable_at(pos)
-            if traversable == nil then
+            local char
+            if positions_equal(pos, map_center) then
+                if positions_equal(center, origin) then
+                    str = str .. "@"
+                elseif traversable == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (traversable and "&" or "G")
+                end
+            elseif traversable == nil then
                 str = str .. " "
             else
                 str = str .. (traversable and "." or "#")
@@ -147,8 +156,12 @@ function print_distance_map(dist_map, center, excluded)
             if map[map_center.x + x][map_center.y + y] == nil then
                 str = str .. " "
             else
-                str = str .. string.char(string.byte('A')
-                    + map[map_center.x + x][map_center.y + y])
+                local dist = map[map_center.x + x][map_center.y + y]
+                if dist > 180 then
+                    str = str .. "∞"
+                else
+                    str = str .. string.char(string.byte('A') + dist)
+                end
             end
         end
         say(str)
@@ -159,7 +172,7 @@ end
 
 function print_distance_maps(center, excluded)
     if not center then
-        center = global_pos
+        center = origin
     end
 
     for _, dist_map in pairs(distance_maps) do
@@ -206,4 +219,9 @@ end
 
 function toggle_throttle()
     COROUTINE_THROTTLE = not COROUTINE_THROTTLE
+end
+
+function reset_coroutine()
+    update_coroutine = nil
+    collectgarbage("collect")
 end

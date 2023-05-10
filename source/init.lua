@@ -10,7 +10,7 @@ function initialize_c_persist()
         "waypoints", "exclusions", "portals", "branch_entries",
         "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
         "up_hatches", "down_hatches", "pan_transits", "abyssal_stairs",
-        "explored_runelights", "seen_items", "plan_fail_count"
+        "runelights", "seen_items", "plan_fail_count"
     }
     for _, table in ipairs(tables) do
         if not c_persist[table] then
@@ -42,15 +42,11 @@ function initialize()
 
     calc_los_radius()
     initialize_monster_map()
-    map_update_radius = GXM
 
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)
 
     make_initial_gameplans()
-    where = "nowhere"
-    where_branch = "nowhere"
-    where_depth = nil
 
     if not cache_parity then
         traversal_maps_cache = {}
