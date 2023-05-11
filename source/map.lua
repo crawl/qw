@@ -765,8 +765,8 @@ function update_map(new_level, full_clear)
     end
 
     if in_branch("Abyss")
-            and not (c_persist.seen_items[where_branch]
-                and c_persist.seen_items[where_branch][abyssal_rune]) then
+            and not (c_persist.seen_items[where]
+                and c_persist.seen_items[where][abyssal_rune]) then
 -- XXX: Re-enable this when abyssal rune sensing works.
 --              and not c_persist.sensed_abyssal_rune then
         item_map_positions[abyssal_rune] = nil
@@ -781,6 +781,16 @@ function update_map(new_level, full_clear)
                 item_searches[name] = true
             end
         end
+    end
+
+    local purged = {}
+    for name, _ in pairs(item_map_positions) do
+        if have_item(name) then
+            table.insert(purged, name)
+        end
+    end
+    for name, _ in ipairs(purged) do
+        item_map_positions[name] = nil
     end
 
     local cell_queue = {}

@@ -1044,7 +1044,7 @@ function record_seen_item(level, name)
     c_persist.seen_items[level][name] = true
 end
 
-function have_seen_item(name)
+function have_item(name)
     return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
         or name == ORB_NAME and you.have_orb()
 end
@@ -1055,10 +1055,10 @@ function autopickup(it, name)
     end
 
     if name:find(RUNE_SUFFIX) then
-        record_seen_item(you.where(), name)
+        record_seen_item(you.where(), it:name())
         return true
     elseif name == ORB_NAME then
-        record_seen_item(you.where(), name)
+        record_seen_item(you.where(), it:name())
         c_persist.found_orb = true
         return true
     end
