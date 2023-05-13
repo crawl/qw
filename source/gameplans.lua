@@ -322,6 +322,30 @@ function determine_gameplan()
         gameplan = portal
     end
 
+    -- Make sure we respect Vaults locking when we don't have the rune.
+    if in_branch("Vaults") and not have_branch_runes("Vaults") then
+        local branch = parse_level_range(gameplan)
+        local override = false
+        if branch then
+            local parent = parent_branch(branch)
+            if branch ~= "Vaults"
+                    and parent ~= "Vaults"
+                    and parent ~= "Crypt"
+                    and parent ~= "Tomb" then
+                override = true
+            end
+        else
+            override = true
+        end
+
+        if override then
+            branch = "Vaults"
+            status = "Rune:Vaults"
+            gameplan = vaults_end
+            desc = "Vaults rune"
+        end
+    end
+
     if status == "Win" then
         status = have_orb and "Escape" or "Orb"
     end
@@ -341,9 +365,7 @@ function determine_gameplan()
     end
 
     local branch = parse_level_range(gameplan)
-    if branch == "Vaults" and you.num_runes() < 1 then
-        error("Couldn't get a rune to enter Vaults!")
-    elseif branch == "Zot" and you.num_runes() < 3 then
+    if branch == "Zot" and you.num_runes() < 3 then
         error("Couldn't get three runes to enter Zot!")
     end
 

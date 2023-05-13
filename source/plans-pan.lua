@@ -62,7 +62,8 @@ end
 
 function plan_enter_pan()
     if view.feature_at(0, 0) == branch_entrance("Pan")
-            and want_to_be_in_pan() then
+            and want_to_be_in_pan()
+            and not unable_to_use_stairs() then
         magic(">Y")
         return true
     end
@@ -72,24 +73,25 @@ end
 
 local pan_stairs_turn = -100
 function plan_go_down_pan()
-    if view.feature_at(0, 0) == "transit_pandemonium"
-            or view.feature_at(0, 0) == branch_exit("Pan") then
-        if pan_stairs_turn == you.turns() then
-            magic("X" .. control('f'))
-            return true
-        end
-
-        pan_stairs_turn = you.turns()
-        go_downstairs(true)
-        -- In case we are trying to leave a rune level.
-        return nil
+    if view.feature_at(0, 0) ~= "transit_pandemonium"
+                and view.feature_at(0, 0) ~= branch_exit("Pan")
+            or unable_to_use_stairs() then
+        return false
     end
 
-    return false
+    if pan_stairs_turn == you.turns() then
+        magic("X" .. control('f'))
+        return true
+    end
+
+    pan_stairs_turn = you.turns()
+    go_downstairs(true)
+    -- In case we are trying to leave a rune level.
+    return nil
 end
 
 function plan_dive_pan()
-    if not want_to_dive_pan() then
+    if not want_to_dive_pan() or unable_to_use_stairs() then
         return false
     end
 
@@ -113,7 +115,7 @@ end
 function plan_exit_pan()
     if view.feature_at(0, 0) == branch_exit("Pan")
             and not want_to_be_in_pan()
-            and can_use_stairs() then
+            and not unable_to_use_stairs() then
         go_upstairs()
         return true
     end

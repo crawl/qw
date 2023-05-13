@@ -1,6 +1,9 @@
 ---------------------------------------------
 -- ready function and main coroutine
 
+-- Max memory available to clua in kilobytes
+MAX_MEMORY = 16000
+
 function stop()
     automatic = false
     unset_options()
@@ -89,6 +92,7 @@ function run_qw()
     local okay, err = coroutine.resume(update_coroutine)
     if not okay then
         error("Error in coroutine: " .. err)
+        abort_qw = true
     end
 
     if coroutine.status(update_coroutine) == "dead" then

@@ -13,6 +13,7 @@ local enum_att_friendly = 4
 local enum_att_neutral = 1
 
 -- Constants
+local MAX_MEMORY
 local INF_TURNS
 local INF_DIST
 local GXM
@@ -53,7 +54,7 @@ local downstairs_features
 local debug_channels = {}
 
 local coroutine_throttle = true
-local memory_limit = 16000
+local memory_limit
 local abort_qw = false
 local automatic = false
 local update_coroutine

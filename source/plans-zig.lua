@@ -111,7 +111,7 @@ function plan_zig_go_to_stairs()
 end
 
 function plan_zig_leave_level()
-    if not in_branch("Zig") then
+    if not in_branch("Zig") or unable_to_use_stairs() then
         return false
     end
 

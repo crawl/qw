@@ -2,7 +2,8 @@
 -- Plans specifically for the Abyss.
 
 function plan_go_to_abyss_portal()
-    if in_branch("Abyss")
+    if unable_to_travel()
+            or in_branch("Abyss")
             or not want_to_stay_in_abyss()
             or not branch_found("Abyss")
             or position_is_cloudy then
@@ -22,7 +23,8 @@ end
 
 function plan_enter_abyss()
     if view.feature_at(0, 0) == "enter_abyss"
-            and want_to_stay_in_abyss() then
+            and want_to_stay_in_abyss()
+            and not unable_to_use_stairs() then
         go_downstairs(true, true)
         return true
     end
@@ -102,7 +104,8 @@ end
 function plan_go_down_abyss()
     if view.feature_at(0, 0) == "abyssal_stair"
             and want_to_stay_in_abyss()
-            and where_depth < gameplan_depth then
+            and where_depth < gameplan_depth
+            and not unable_to_use_stairs() then
         go_downstairs()
         return true
     end
@@ -112,7 +115,7 @@ end
 function plan_exit_abyss()
     if view.feature_at(0, 0) == branch_exit("Abyss")
             and not want_to_stay_in_abyss()
-            and can_use_stairs() then
+            and not unable_to_use_stairs() then
         go_upstairs()
         return true
     end
@@ -134,7 +137,7 @@ function plan_lugonu_exit_abyss()
     return true
 end
 
-function plan_stuck_abyss_wait_one_turn()
+function plan_abyss_wait_one_turn()
     if in_branch("Abyss") then
         wait_one_turn()
         return true
@@ -155,7 +158,9 @@ function plan_pick_up_abyssal_rune()
 end
 
 function plan_move_towards_abyssal_rune()
-    if not want_to_move_to_abyssal_rune() then
+    if not want_to_move_to_abyssal_rune()
+            or unable_to_move()
+            or dangerous_to_move() then
         return false
     end
 
@@ -170,7 +175,7 @@ function plan_move_towards_abyssal_rune()
         return false
     end
 
-    move, dest = get_move_towards_unreachable_map_position(rune_pos)
+    move, dest = best_move_towards_unreachable_map_position(rune_pos)
     if move then
         move_towards_destination(move, dest, "rune")
         return true
@@ -180,7 +185,9 @@ function plan_move_towards_abyssal_rune()
 end
 
 function plan_move_towards_runelight()
-    if not want_to_move_to_runelight() then
+    if not want_to_move_to_runelight()
+            or unable_to_move()
+            or dangerous_to_move() then
         return false
     end
 

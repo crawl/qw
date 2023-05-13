@@ -137,8 +137,8 @@ function reset_stone_stairs(branch, depth, dir)
     end
 
     if where ~= level then
-        dsay("Resetting autoexplore of " .. lev, "explore")
-        c_persist.autoexplore[lev] = AUTOEXP.NEEDED
+        dsay("Resetting autoexplore of " .. level, "explore")
+        c_persist.autoexplore[level] = AUTOEXP.NEEDED
     end
 end
 

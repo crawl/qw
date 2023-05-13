@@ -90,7 +90,7 @@ function plan_go_to_transporter()
 end
 
 function plan_transporter_orient_exit()
-    if not can_move() or not transp_orient then
+    if unable_to_move() or not transp_orient then
         return false
     end
 
@@ -98,14 +98,14 @@ function plan_transporter_orient_exit()
     return true
 end
 
-function can_use_transporters()
-    return can_move() and not you.mesmerised()
+function unable_to_use_transporters()
+    return unable_to_move() or you.mesmerised()
 end
 
 function plan_enter_transporter()
     if not transp_search
             or view.feature_at(0, 0) ~= "transporter"
-            or not can_use_transporters() then
+            or unable_to_use_transporters() then
         return false
     end
 
@@ -114,7 +114,7 @@ function plan_enter_transporter()
 end
 
 function plan_take_unexplored_stairs()
-    if not gameplan_travel.stairs_dir or not can_use_stairs() then
+    if not gameplan_travel.stairs_dir or unable_to_use_stairs() then
         return false
     end
 
@@ -171,8 +171,8 @@ function plan_go_to_upstairs()
     return true
 end
 
-function can_use_stairs()
-    return can_move() and not you.mesmerised()
+function unable_to_use_stairs()
+    return unable_to_move() or you.mesmerised()
 end
 
 function want_to_stairdance_up()
@@ -233,7 +233,7 @@ function want_to_stairdance_up()
 end
 
 function plan_stairdance_up()
-    if can_use_stairs() and want_to_stairdance_up() then
+    if not unable_to_use_stairs() and want_to_stairdance_up() then
         say("STAIRDANCE")
         go_upstairs(you.status("spiked"))
         return true
@@ -255,7 +255,9 @@ end
 
 function plan_take_escape_hatch()
     local dir = escape_hatch_type(view.feature_at(0, 0))
-    if not dir or not want_to_use_escape_hatches(dir) then
+    if not dir
+            or not want_to_use_escape_hatches(dir)
+            or unable_to_use_stairs() then
         return false
     end
 

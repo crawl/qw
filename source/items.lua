@@ -761,9 +761,7 @@ function weapon_value(it, cur, it2, sit)
             -- This is good too
             value = value + 300
         elseif ego == "spectralizing" then
-            value = value + 200
-        elseif ego == "electrocution" then
-            value = value + 150
+            value = value + 400
         elseif ego == "draining" then
             if planning_good_god then
                 return -1, -1
@@ -772,7 +770,11 @@ function weapon_value(it, cur, it2, sit)
             if not extended then
                 value = value + 75
             end
-        elseif ego == "flaming" or ego == "freezing" or ego == "vorpal" then
+        elseif ego == "heavy" then
+            value = value + 100
+        elseif ego == "flaming"
+                or ego == "freezing"
+                or ego == "electrocution" then
             value = value + 75
         elseif ego == "protection" then
             value = value + 50

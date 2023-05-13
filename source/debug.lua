@@ -16,11 +16,7 @@ function restore_gameplans()
 end
 
 function initialize_debug()
-    if not DEBUG_MODE then
-        return
-    end
-
-    debug_mode = true
+    debug_mode = DEBUG_MODE
     debug_channels = {}
     for _, channel in ipairs(DEBUG_CHANNELS) do
         debug_channels[channel] = true

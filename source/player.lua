@@ -308,9 +308,8 @@ function calc_los_radius()
     end
 end
 
-function can_move()
-    return not (you.transform() == "tree"
-        or you.transform() == "fungus" and danger)
+function unable_to_move()
+    return you.transform() == "tree" or you.transform() == "fungus" and danger
 end
 
 function dangerous_to_move()
@@ -322,6 +321,18 @@ function dangerous_to_move()
                     or count_divine_warriors(1) > 0
                     or count_beogh_allies(1) > 0)
         end)
+end
+
+function unable_to_throw()
+    if you.confused() or you.caught() then
+        return true
+    end
+
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "lich")
 end
 
 function player_can_melee_mons(mons)

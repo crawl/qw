@@ -2,8 +2,8 @@
 -- The normal plan cascade: choosing a move for a normal turn (not in the Abyss
 -- or on the Orb run).
 
-function plan_stuck_use_stairs()
-    if dangerous_to_move() then
+function plan_use_gameplan_feature()
+    if unable_to_use_stairs() or dangerous_to_move() then
         return false
     end
 
@@ -24,8 +24,36 @@ function plan_stuck_use_stairs()
     return false
 end
 
-function plan_stuck_move_towards_gameplan()
-    if dangerous_to_move() then
+function plan_continue_to_unsafe_destination()
+    if not move_destination or dangerous_to_move() then
+        return false
+    end
+
+    local move = best_move_towards_map_position(move_destination, true)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_safe_move_towards_gameplan()
+    if not position_is_safe or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_gameplan()
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_move_towards_gameplan()
+    if unable_to_move() or dangerous_to_move() then
         return false
     end
 
@@ -38,8 +66,8 @@ function plan_stuck_move_towards_gameplan()
     return false
 end
 
-function plan_stuck_move_towards_monster()
-    if dangerous_to_move() then
+function plan_move_towards_monster()
+    if not position_is_safe or unable_to_move() or dangerous_to_move() then
         return false
     end
 
@@ -74,12 +102,12 @@ function plan_stuck_move_towards_monster()
     return false
 end
 
-function plan_stuck_move_towards_unexplored()
-    if dangerous_to_move() then
+function plan_move_towards_unexplored()
+    if unable_to_move() or dangerous_to_move() then
         return false
     end
 
-    local move, dest = best_move_towards_unexplored()
+    local move, dest = best_move_towards_unexplored(true)
     if move then
         if debug_channel("explore") then
             dsay("Moving to explore near "
@@ -92,8 +120,11 @@ function plan_stuck_move_towards_unexplored()
     return false
 end
 
-function plan_stuck_move_towards_safety()
-    if position_is_safe or dangerous_to_move() then
+function plan_move_towards_safety()
+    if autoexplored_level(where_branch, where_depth)
+            or position_is_safe
+            or unable_to_move()
+            or dangerous_to_move() then
         return false
     end
 
@@ -110,8 +141,8 @@ function plan_stuck_move_towards_safety()
     return false
 end
 
-function plan_stuck_random_step()
-    if dangerous_to_move() then
+function plan_random_step()
+    if unable_to_move() or dangerous_to_move() then
         return false
     end
 
@@ -127,7 +158,7 @@ function plan_stuck_initial()
     return false
 end
 
-function plan_stuck_clear_exclusions()
+function plan_clear_exclusions()
     local n = clear_exclusion_count[where] or 0
     if n > 20 then
         return false
@@ -139,7 +170,7 @@ function plan_stuck_clear_exclusions()
     return true
 end
 
-function plan_stuck_dig_grate()
+function plan_dig_grate()
     local wand = find_item("wand", "digging")
     if not wand or not can_zap() then
         return false
@@ -166,7 +197,7 @@ function plan_stuck_dig_grate()
     return false
 end
 
-function plan_stuck_forget_map()
+function plan_forget_map()
     if not position_is_cloudy
             and not danger
             and (at_branch_end("Slime") and not have_branch_runes("Slime")
@@ -187,17 +218,18 @@ end
 
 function set_plan_stuck()
     plan_stuck = cascade {
-        {plan_stuck_use_stairs, "stuck_use_stairs"},
-        {plan_stuck_move_towards_gameplan, "stuck_move_towards_gameplan"},
-        {plan_stuck_move_towards_safety, "stuck_move_towards_safety"},
-        {plan_stuck_move_towards_monster, "stuck_move_towards_monster"},
-        {plan_stuck_move_towards_unexplored, "stuck_move_towards_unexplored"},
-        {plan_stuck_clear_exclusions, "try_stuck_clear_exclusions"},
-        {plan_stuck_dig_grate, "try_stuck_dig_grate"},
-        {plan_stuck_abyss_wait_one_turn, "stuck_abyss_wait_one_turn"},
-        {plan_stuck_forget_map, "try_stuck_forget_map"},
-        {plan_stuck_initial, "stuck_initial"},
-        {plan_stuck_teleport, "stuck_teleport"},
-        {plan_stuck_random_step, "stuck_random_step"},
+        {plan_use_gameplan_feature, "use_gameplan_feature"},
+        {plan_continue_to_unsafe_destination, "continue_to_unsafe_destination"},
+        {plan_move_towards_gameplan, "move_towards_gameplan"},
+        {plan_move_towards_monster, "move_towards_monster"},
+        {plan_move_towards_safety, "move_towards_safety"},
+        {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
+        {plan_move_towards_unexplored, "move_towards_unexplored"},
+        {plan_clear_exclusions, "try_clear_exclusions"},
+        {plan_dig_grate, "try_dig_grate"},
+        {plan_forget_map, "try_forget_map"},
+        {plan_initial, "initial"},
+        {plan_teleport, "teleport"},
+        {plan_random_step, "random_step"},
     }
 end

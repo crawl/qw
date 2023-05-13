@@ -575,7 +575,6 @@ function update_invis_monsters()
     if see_caster or options.autopick_on then
         invis_caster = false
         invis_caster_turns = 0
-        invis_caster_pos = nil
     end
 end
 
@@ -639,11 +638,6 @@ function update_monsters()
         else
             monster_map[pos.x][pos.y] = nil
         end
-    end
-
-    if #enemy_list > 0 and move_reason == "monster" then
-        move_target = nil
-        move_reason = nil
     end
 
     update_invis_monsters()

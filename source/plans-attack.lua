@@ -7,10 +7,13 @@ function plan_flail_at_invis()
         return false
     end
 
+    local can_ctrl = not you.confused()
     invis_caster_turns = invis_caster_turns + 1
     for pos in adjacent_iter(origin) do
         if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
-            attack_melee(pos, true)
+            invis_caster = true
+            invis_caster_pos = pos
+            attack_melee(pos, can_ctrl)
             return true
         end
     end
@@ -18,14 +21,14 @@ function plan_flail_at_invis()
     if invis_caster and supdist(invis_caster_pos) > 0 then
         if is_adjacent(invis_caster_pos)
                 and not is_solid_at(invis_caster_pos) then
-            attack_melee(invis_caster_pos, true)
+            attack_melee(invis_caster_pos, can_ctrl)
             return true
         end
 
         if invis_caster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_caster_pos.y) }
             if not is_solid_at(apos) then
-                attack_melee(apos, true)
+                attack_melee(apos, can_ctrl)
                 return true
             end
         end
@@ -33,7 +36,7 @@ function plan_flail_at_invis()
         if invis_caster_pos.y == 0 then
             local apos = { x = sign(invis_caster_pos.x), y = 0 }
             if not is_solid_at(apos) then
-                attack_melee(apos, true)
+                attack_melee(apos, can_ctrl)
                 return true
             end
         end
@@ -44,7 +47,7 @@ function plan_flail_at_invis()
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
         if supdist(pos) > 0 and not is_solid_at(pos) then
-            attack_melee(pos, true)
+            attack_melee(pos, can_ctrl)
             return true
         end
     end
@@ -132,8 +135,8 @@ function get_melee_target(assume_flight)
     return melee_target
 end
 
-function attack_melee(pos, control)
-    if control or you.confused() and you.transform() == "tree" then
+function attack_melee(pos, use_control)
+    if use_control or you.confused() and you.transform() == "tree" then
         magic(control(delta_to_vi(pos)) .. "Y")
         return
     end
@@ -368,7 +371,7 @@ function throw_missile(missile, pos)
 end
 
 function plan_throw()
-    if not danger or dangerous_to_attack() then
+    if not danger or unable_to_throw() or dangerous_to_attack() then
         return false
     end
 
@@ -410,7 +413,7 @@ function plan_wait_for_enemy()
         target = get_melee_target(true)
     end
 
-    if target and dangerous_to_move() then
+    if target and (unable_to_move() or dangerous_to_move()) then
         wait_combat()
         return true
     end
@@ -487,7 +490,10 @@ function plan_poison_spit()
 end
 
 function plan_flight_move_towards_enemy()
-    if not danger or dangerous_to_attack() or dangerous_to_move() then
+    if not danger
+            or unable_to_move()
+            or dangerous_to_attack()
+            or dangerous_to_move() then
         return false
     end
 
@@ -514,7 +520,10 @@ function plan_flight_move_towards_enemy()
 end
 
 function plan_move_towards_enemy()
-    if not danger or dangerous_to_attack() or dangerous_to_move() then
+    if not danger
+            or unable_to_move()
+            or dangerous_to_attack()
+            or dangerous_to_move() then
         return false
     end
 
@@ -539,6 +548,7 @@ function plan_continue_move_towards_enemy()
     if turns_left_moving_towards_enemy == 0
             or supdist(enemy_memory) == 0
             or not options.autopick_on
+            or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
         return false

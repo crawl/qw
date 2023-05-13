@@ -878,7 +878,7 @@ function plan_continue_flee()
     if danger
             or not (reason_to_rest(90)
                 or you.xl() <= 8 and disable_autoexplore)
-            or not can_move()
+            or unable_to_move()
             or count_brothers_in_arms(3) > 0
             or count_greater_servants(3) > 0
             or count_divine_warriors(3) > 0

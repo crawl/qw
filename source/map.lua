@@ -592,11 +592,6 @@ function update_map_cell_feature(cell, map_updated)
         update_stone_stairs(where_branch, where_depth, dir, num,
             { safe = unexcluded, los = los_state(cell.los_pos) })
         update_cell_feature_positions(cell)
-
-        if not distance_maps[cell.hash] then
-            distance_maps[cell.hash] = distance_map_initialize(cell.pos)
-        end
-
         return
     end
 
@@ -857,10 +852,10 @@ function cell_from_position(pos, no_unseen)
     return cell
 end
 
-function get_distance_map(pos, radius)
+function get_distance_map(pos, permanent, radius)
     local hash = hash_position(pos)
     if not distance_maps[hash] then
-        distance_maps[hash] = distance_map_initialize(pos, radius)
+        distance_maps[hash] = distance_map_initialize(pos, permanent, radius)
         distance_map_propagate(distance_maps[hash])
     end
     return distance_maps[hash]

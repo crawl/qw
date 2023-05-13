@@ -319,7 +319,7 @@ function choose_tactical_step()
     if you.confused()
             or you.berserk()
             or you.constricted()
-            or not can_move()
+            or unable_to_move()
             or in_branch("Slime")
             or you.status("spiked") then
         return
@@ -410,7 +410,7 @@ function find_flee_positions()
 
     local pspeed = player_speed()
     for _, pos in ipairs(safe_positions) do
-        local dist_map = get_distance_map(pos)
+        local dist_map = get_distance_map(pos, true)
         local pdist = dist_map.map[global_pos.x][global_pos.y]
         local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
         if pdist and (not edist or pdist < edist) then
@@ -685,19 +685,30 @@ function update_reachable_position()
     end
 end
 
-function map_position_is_reachable(pos)
+function map_position_is_reachable(pos, ignore_exclusions)
     local dist_map = get_distance_map(reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
     return map[pos.x][pos.y]
 end
 
-function get_move_towards_unreachable_map_position(pos, ignore_exclusions)
+function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
+    local i = 1
     for near_pos in radius_iter(pos, GXM) do
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Searched for unexplored near unreachable in block "
+                    .. tostring(i / 1000) .. " of map positions")
+            end
+            coroutine.yield()
+        end
+
         if supdist(near_pos) <= GXM
-                and map_position_is_reachable(near_pos)
+                and map_position_is_reachable(near_pos, ignore_exclusions)
                 and map_has_adjacent_unseen(near_pos) then
             return best_move_towards_map_position(near_pos, ignore_exclusions)
         end
+
+        i = i + 1
     end
 end
 
@@ -749,25 +760,45 @@ function map_position_has_adjacent_unseen(pos)
 end
 
 function best_move_towards_unexplored(ignore_exclusions)
+    local i = 1
     for pos in radius_iter(global_pos, GXM) do
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Searched for unexplored in block " .. tostring(i / 1000)
+                    .. " of map positions")
+            end
+            coroutine.yield()
+        end
+
         if supdist(pos) <= GXM
-                and map_is_traversable_at(pos)
-                and map_position_has_adjacent_unseen(pos)
-                and map_position_is_reachable(pos) then
+                and map_position_is_reachable(pos, ignore_exclusions)
+                and map_position_has_adjacent_unseen(pos) then
             return best_move_towards_map_position(pos, ignore_exclusions)
         end
+
+        i = i + 1
     end
 end
 
 function best_move_towards_safety()
+    local i = 1
     for pos in radius_iter(global_pos, GXM) do
+        if COROUTINE_THROTTLE and i % 1000 == 0 then
+            if debug_channel("update") then
+                dsay("Searched for safety in block " .. tostring(i / 1000)
+                    .. " of map positions")
+            end
+            coroutine.yield()
+        end
+
         local los_pos = position_difference(pos, global_pos)
         if supdist(pos) <= GXM
-                and map_is_traversable_at(pos)
                 and view.is_safe_square(los_pos.x, los_pos.y)
-                and map_position_is_reachable(pos) then
+                and map_position_is_reachable(pos, true) then
             return best_move_towards_map_position(pos, true)
         end
+
+        i = i + 1
     end
 end
 
@@ -777,19 +808,25 @@ function update_move_destination()
     end
 
     local monster = move_reason == "monster"
+    local clear = false
     if monster and danger then
-        reset = true
+        clear = true
     elseif monster then
         local pos = position_difference(move_destination, global_pos)
         if supdist(pos) <= los_radius
                 and you.see_cell_solid_see(pos.x, pos.y) then
-            reset = true
+            clear = true
         end
     elseif positions_equal(global_pos, move_destination) then
-        reset = true
+        clear = true
     end
 
-    if reset then
+    if clear then
+        if debug_channel("explore") then
+            dsay("Clearing move destination "
+                .. cell_string_from_map_position(move_destination))
+        end
+
         local dist_map = distance_maps[hash_position(move_destination)]
         if dist_map and not dist_map.permanent then
             distance_map_remove(dist_map)

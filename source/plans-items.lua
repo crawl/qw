@@ -763,7 +763,7 @@ function plan_shop()
 end
 
 function plan_shopping_spree()
-    if gameplan_status ~= "Shopping" then
+    if unable_to_travel() or gameplan_status ~= "Shopping" then
         return false
     end
 

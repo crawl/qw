@@ -25,6 +25,12 @@ function initialize_enums()
 end
 
 function initialize()
+    -- We don't want to hit MAX_MEMORY since that will corrupt the c_persist
+    -- table. Generally qw only gets clua memory usage this high due to bugs.
+    -- Leave some memory left over so we can e.g. reset the coroutine and
+    -- attempt debugging.
+    memory_limit = MAX_MEMORY * 0.75
+
     initialize_enums()
     initialize_debug()
     coroutine_throttle = COROUTINE_THROTTLE

@@ -26,7 +26,7 @@ function send_travel(branch, depth)
 end
 
 function unable_to_travel()
-    return danger or position_is_cloudy
+    return danger or position_is_cloudy or unable_to_move()
 end
 
 function plan_go_to_portal_entrance()
@@ -104,7 +104,8 @@ end
 
 function plan_enter_portal()
     if not is_portal_branch(gameplan_branch)
-            or view.feature_at(0, 0) ~= branch_entrance(gameplan_branch) then
+            or view.feature_at(0, 0) ~= branch_entrance(gameplan_branch)
+            or unable_to_use_stairs() then
         return false
     end
 
@@ -116,8 +117,8 @@ function plan_exit_portal()
     if not in_portal()
             -- Zigs have their own exit rules.
             or where_branch == "Zig"
-            or you.mesmerised()
-            or not view.feature_at(0, 0) == branch_exit(where_branch) then
+            or view.feature_at(0, 0) ~= branch_exit(where_branch)
+            or unable_to_use_stairs() then
         return false
     end
 
@@ -129,11 +130,17 @@ function plan_exit_portal()
 end
 
 function plan_move_towards_gameplan()
-    if dangerous_to_move() then
+    if unable_to_move() or dangerous_to_move() then
         return false
     end
 
     local move, dest = best_move_towards_gameplan()
+    if move then
+        move_to(move)
+        return true
+    end
+
+    local move, dest = best_move_towards_gameplan(true)
     if move then
         move_to(move)
         return true

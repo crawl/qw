@@ -38,6 +38,11 @@ function should_rest()
             or you.status("spiked")
     end
 
+    if want_to_move_to_abyss_objective()
+            and not (you.confused() or hp_is_low(50)) then
+        return false
+    end
+
     return you.berserk()
         or you.turns() < hiding_turn_count + 10
         or you.god() == "Makhleb"
