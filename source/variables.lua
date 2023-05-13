@@ -134,6 +134,7 @@ local transp_search
 
 local global_pos = {}
 local flee_positions
+local reachable_position
 local target_flee_position
 local last_flee_turn = -100
 
@@ -173,7 +174,7 @@ local invis_caster = false
 local invis_caster_pos
 local invis_caster_turns = 0
 
-local greater_servant_timer = -200
+local hostile_summon_timer = -200
 
 local enemy_memory
 local turns_left_moving_towards_enemy = 0

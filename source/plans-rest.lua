@@ -25,27 +25,24 @@ function plan_cure_poison()
 end
 
 function should_rest()
-    if have_orb then
-        return want_to_orbrun_rest()
-    end
-
-    if you.confused() or you.berserk() or transformed() then
-        return true
-    end
-
-    if danger or want_to_move_to_abyss_objective() then
+    if danger then
         return false
     end
 
-    if you.turns() < hiding_turn_count + 10 then
-        dsay("Waiting for ranged monster.")
-        return true
+    if have_orb then
+        return you.confused()
+            or transformed()
+            or you.slowed()
+            or you.berserk()
+            or you.teleporting()
+            or you.status("spiked")
     end
 
-    return reason_to_rest(99.9)
+    return you.berserk()
+        or you.turns() < hiding_turn_count + 10
         or you.god() == "Makhleb"
-            and you.turns() <= greater_servant_timer + 100
-        or should_ally_rest()
+            and you.turns() <= hostile_servants_timer + 100
+        or reason_to_rest(99.9)
 end
 
 -- Check statuses to see whether there is something to rest off, does not
@@ -84,8 +81,7 @@ function reason_to_rest(percentage)
 end
 
 function should_ally_rest()
-    if (you.god() ~= "Yredelemnul" and you.god() ~= "Beogh")
-            or dangerous_to_rest() then
+    if danger or (you.god() ~= "Yredelemnul" and you.god() ~= "Beogh") then
         return false
     end
 

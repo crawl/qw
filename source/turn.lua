@@ -121,6 +121,7 @@ function turn_update()
     melee_target = nil
 
     find_flee_positions()
+    update_reachable_position()
     update_move_destination()
     choose_tactical_step()
 

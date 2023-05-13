@@ -160,7 +160,7 @@ function set_plan_move()
         {plan_ancestor_identity, "try_ancestor_identity"},
         {plan_join_beogh, "join_beogh"},
         {plan_shop, "shop"},
-        {plan_pickup_abyssal_rune, "pickup_abyssal_rune"},
+        {plan_pick_up_abyssal_rune, "pick_up_abyssal_rune"},
         {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
         {plan_exit_abyss, "exit_abyss"},
         {plan_stairdance_up, "stairdance_up"},

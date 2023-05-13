@@ -201,7 +201,7 @@ function distance_map_initialize(pos, permanent, radius)
 
     local dist_map = {}
 
-    dist_map.pos = pos
+    dist_map.pos = util.copy_table(pos)
     dist_map.hash = hash_position(pos)
     dist_map.permanent = permanent
     dist_map.radius = radius
@@ -625,9 +625,6 @@ function update_map_cell_feature(cell, map_updated)
 
     if cell.feat == "runelight" then
         local state = { safe = unexcluded, los = los_state(cell.los_pos) }
-        if positions_equal(cell.pos, global_pos) then
-            state.los = FEAT_LOS.EXPLORED
-        end
         update_runelight(cell.hash, state)
 
         update_cell_feature_positions(cell)
@@ -785,7 +782,7 @@ function update_map(new_level, full_clear)
 
     local purged = {}
     for name, _ in pairs(item_map_positions) do
-        if have_item(name) then
+        if have_progression_item(name) then
             table.insert(purged, name)
         end
     end
@@ -801,6 +798,11 @@ function update_map(new_level, full_clear)
         end
     end
     update_map_at_cells(cell_queue)
+
+    if get_map_runelight(global_pos) then
+        local state = { los = FEAT_LOS.EXPLORED }
+        update_runelight(hash_position(global_pos), state)
+    end
 
     -- Any seen item for which we don't have an item position is unregistered.
     if c_persist.seen_items[where] then

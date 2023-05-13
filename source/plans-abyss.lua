@@ -46,8 +46,9 @@ function get_reachable_runelights()
     end
 
     local runelights = {}
-    for _, pos in ipairs(feature_map_positions["runelight"]) do
-        if get_runelight(pos).los == FEAT_LOS.REACHABLE then
+    for _, pos in pairs(feature_map_positions["runelight"]) do
+        local state = get_map_runelight(pos)
+        if state and state.los == FEAT_LOS.REACHABLE then
             table.insert(runelights, pos)
         end
     end
@@ -63,11 +64,15 @@ function want_to_move_to_runelight()
 end
 
 function want_to_move_to_abyss_exit()
-    return in_branch("Abyss")
-        and not want_to_stay_in_abyss()
-        and view.feature_at(0, 0) ~= "exit_abyss"
-        and get_branch_stairs_state(where_branch, where_depth, where_branch,
-            DIR.UP).los >= FEAT_LOS.REACHABLE
+    if not in_branch("Abyss")
+            or want_to_stay_in_abyss()
+            or view.feature_at(0, 0) == "exit_abyss" then
+        return false
+    end
+
+    local state = get_branch_stairs(where_branch, where_depth, where_branch,
+            DIR.UP)
+    return state and state.los >= FEAT_LOS.REACHABLE
 end
 
 function want_to_move_to_abyssal_stairs()
@@ -92,16 +97,6 @@ function want_to_move_to_abyss_objective()
             or want_to_move_to_abyssal_stairs()
             or want_to_move_to_runelight()
             or want_to_move_to_abyssal_rune())
-        and not reason_to_rest(0.66)
-end
-
-function plan_go_to_abyssal_stairs()
-    if want_to_move_to_abyssal_stairs() then
-        magic("X>\r")
-        return true
-    end
-
-    return false
 end
 
 function plan_go_down_abyss()
@@ -112,15 +107,6 @@ function plan_go_down_abyss()
         return true
     end
     return false
-end
-
-function plan_go_to_abyss_exit()
-    if not want_to_move_to_abyssal_stairs() then
-        return false
-    end
-
-    magic("X<\r")
-    return true
 end
 
 function plan_exit_abyss()
@@ -157,7 +143,7 @@ function plan_stuck_abyss_wait_one_turn()
     return false
 end
 
-function plan_pickup_abyssal_rune()
+function plan_pick_up_abyssal_rune()
     if item_map_positions[abyssal_rune]
             and positions_equal(global_pos,
                 item_map_positions[abyssal_rune]) then

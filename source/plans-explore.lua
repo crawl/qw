@@ -128,6 +128,20 @@ function plan_exit_portal()
     return true
 end
 
+function plan_move_towards_gameplan()
+    if dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_gameplan()
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
 function plan_continue_to_destination()
     if not move_destination or dangerous_to_move() then
         return false
@@ -141,6 +155,21 @@ function plan_continue_to_destination()
 
     return false
 end
+
+function plan_move_towards_gameplan()
+    if dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_gameplan()
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
 
 function set_plan_pre_explore()
     plan_pre_explore = cascade {
@@ -185,9 +214,7 @@ function set_plan_explore2()
         {plan_abandon_god, "abandon_god"},
         {plan_use_altar, "use_altar"},
         {plan_go_to_altar, "try_go_to_altar"},
-        {plan_go_to_abyss_exit, "try_go_to_abyss_exit"},
         {plan_go_down_abyss, "go_down_abyss"},
-        {plan_go_to_abyssal_stairs, "try_go_to_abyssal_stairs"},
         {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
         {plan_use_zigfig, "use_zigfig"},
         {plan_zig_dig, "zig_dig"},
@@ -215,6 +242,7 @@ function set_plan_explore2()
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
+        {plan_move_towards_gameplan, "move_towards_gameplan"},
         {plan_autoexplore, "try_autoexplore2"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }

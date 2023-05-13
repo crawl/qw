@@ -39,7 +39,7 @@ local branch_data_values = {
     { "Zot", "Z", 5, "enter_zot", "Depths", 4, 4 },
     { "Pan", nil, 1, "enter_pandemonium", "Depths", 2, 2,
         { "dark", "demonic", "fiery", "glowing", "magical" } },
-    { "Abyss", nil, 7, "enter_abyss", "Depths", 4, 4, { "abyssal" } },
+    { "Abyss", nil, 7, "enter_abyss", "Depths", 3, 3, { "abyssal" } },
     { "Hell", "H", 1, "enter_hell", "Depths", 1, 4 },
     { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, { "iron" } },
     { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, { "obsidian" } },
@@ -267,7 +267,7 @@ function branch_rune_depth(branch)
     end
 
     if branch == "Abyss" then
-        return 3
+        return 4
     else
         return branch_depth(branch)
     end

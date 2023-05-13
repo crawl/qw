@@ -1044,7 +1044,7 @@ function record_seen_item(level, name)
     c_persist.seen_items[level][name] = true
 end
 
-function have_item(name)
+function have_progression_item(name)
     return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
         or name == ORB_NAME and you.have_orb()
 end

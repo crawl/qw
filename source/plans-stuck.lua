@@ -29,7 +29,7 @@ function plan_stuck_move_towards_gameplan()
         return false
     end
 
-    local move, dest = best_move_towards_gameplan()
+    local move, dest = best_move_towards_gameplan(true)
     if move then
         move_to(move)
         return true

@@ -325,6 +325,9 @@ function travel_destination(dest_branch, dest_depth, stash_travel)
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
         result.branch = parent
         result.depth = next_exploration_depth(parent, min_depth, max_depth)
+        if not result.depth then
+            result.depth = min_depth
+        end
         finalize_travel_depth(result)
     -- Get the final depth we should travel to given the state of stair
     -- exploration at our travel destination. For stash search travel, we don't

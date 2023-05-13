@@ -693,7 +693,7 @@ function count_enemies_by_name(radius, name)
         function(enemy) return enemy:name() == name end)
 end
 
-function count_hostile_greater_servants(radius)
+function count_hostile_summons(radius)
     if you.god() ~= "Makhleb" then
         return 0
     end

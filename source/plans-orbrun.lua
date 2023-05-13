@@ -18,15 +18,6 @@ function want_to_orbrun_buff()
         or check_enemies_in_list(los_radius, scary_monsters)
 end
 
-function want_to_orbrun_rest()
-    return you.confused()
-        or transformed()
-        or you.slowed()
-        or you.berserk()
-        or you.teleporting()
-        or you.status("spiked")
-end
-
 function plan_go_to_orb()
     if unable_to_travel()
             or gameplan_status ~= "Orb"

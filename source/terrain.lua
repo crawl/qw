@@ -145,7 +145,7 @@ function cloud_is_dangerous(cloud)
 end
 
 function update_runelight(hash, state, force)
-    if not state.safe and not state.los then
+    if state.safe == nil and not state.los then
         error("Undefined runelight state.")
     end
 
@@ -173,7 +173,7 @@ function update_runelight(hash, state, force)
             or force and current.los ~= state.los
     if state.safe ~= current.safe or los_changed then
         if debug_channel("explore") then
-            local pos = position_difference(global_pos, unhash_position(hash))
+            local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating Abyss runelight at " .. pos_string(pos) .. " from "
                 .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
@@ -187,12 +187,7 @@ function update_runelight(hash, state, force)
     end
 end
 
-function get_runelight(map_pos)
-    local hash = hash_position(map_pos)
-
-    if c_persist.runelights[hash] then
-        return c_persist.runelights[hash]
-    else
-        return { safe = true, los = FEAT_LOS.NONE }
-    end
+function get_map_runelight(pos)
+    local hash = hash_position(pos)
+    return c_persist.runelights[hash]
 end

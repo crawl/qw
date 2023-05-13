@@ -267,14 +267,6 @@ function player_speed()
     return num
 end
 
-function dangerous_to_rest()
-    if danger then
-        return true
-    end
-
-    return false
-end
-
 function base_mutation(str)
     return you.mutation(str) - you.temp_mutation(str)
 end

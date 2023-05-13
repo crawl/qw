@@ -385,7 +385,7 @@ function find_flee_positions()
     local search_feats = {}
     -- Only retreat to stairs marked as safe.
     for _, feat in ipairs(stairs_feats) do
-        local state = get_stairs_state(where_branch, where_depth, feat)
+        local state = get_stairs(where_branch, where_depth, feat)
         if not state or state.safe then
             table.insert(search_feats, feat)
         end
@@ -400,10 +400,8 @@ function find_flee_positions()
     for i, feat in ipairs(feats) do
         local state
         if feat == "escape_hatch_up" then
-            state = get_escape_hatch_state(where_branch, where_depth,
+            state = get_map_escape_hatch(where_branch, where_depth,
                 positions[i])
-        elseif feat == "transit_pandemonium" then
-            state = get_pan_transit_state(positions[i])
         end
         if not state or state.safe then
             table.insert(safe_positions, positions[i])
@@ -412,7 +410,7 @@ function find_flee_positions()
 
     local pspeed = player_speed()
     for _, pos in ipairs(safe_positions) do
-        local dist_map = get_distance_map(pos, true)
+        local dist_map = get_distance_map(pos)
         local pdist = dist_map.map[global_pos.x][global_pos.y]
         local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
         if pdist and (not edist or pdist < edist) then
@@ -667,35 +665,38 @@ function best_move_towards_map_position(pos, ignore_exclusions)
     return best_move_towards_map_positions({ pos }, ignore_exclusions)
 end
 
-function map_position_is_reachable(pos, reachable_positions, ignore_exclusions)
-    for _, rpos in ipairs(reachable_positions) do
-        local dist_map = get_distance_map(rpos)
-        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-        if map[pos.x][pos.y] then
-            return true
+function update_reachable_position()
+    if #flee_positions > 0 then
+        reachable_position = flee_positions[1]
+        return
+    end
+
+    if reachable_position then
+        local hash = hash_position(reachable_position)
+        local dist_map = distance_maps[hash]
+        if not (dist_map
+                and dist_map.excluded_map[global_pos.x][global_pos.y]) then
+            reachable_position = nil
         end
     end
-    return false
+
+    if not reachable_position then
+        reachable_position = global_pos
+    end
+end
+
+function map_position_is_reachable(pos)
+    local dist_map = get_distance_map(reachable_position)
+    local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
+    return map[pos.x][pos.y]
 end
 
 function get_move_towards_unreachable_map_position(pos, ignore_exclusions)
-    local reachable_positions
-    if #flee_positions > 0 then
-        reachable_positions = flee_positions
-    else
-        reachable_positions = { global_pos }
-    end
-
-    for near_pos in radius_iter(pos, GXM, true) do
-        if supdist(pos) <= GXM and map_is_unseen_at(near_pos) then
-            for apos in adjacent_iter(near_pos) do
-                if map_is_traversable_at(apos)
-                        and map_position_is_reachable(apos,
-                            reachable_positions, ignore_exclusions) then
-                    return best_move_towards_map_position(apos,
-                        ignore_exclusions)
-                end
-            end
+    for near_pos in radius_iter(pos, GXM) do
+        if supdist(near_pos) <= GXM
+                and map_position_is_reachable(near_pos)
+                and map_has_adjacent_unseen(near_pos) then
+            return best_move_towards_map_position(near_pos, ignore_exclusions)
         end
     end
 end
@@ -748,39 +749,23 @@ function map_position_has_adjacent_unseen(pos)
 end
 
 function best_move_towards_unexplored(ignore_exclusions)
-    local reachable_positions
-    if #flee_positions > 0 then
-        reachable_positions = flee_positions
-    else
-        reachable_positions = { global_pos }
-    end
-
     for pos in radius_iter(global_pos, GXM) do
         if supdist(pos) <= GXM
                 and map_is_traversable_at(pos)
                 and map_position_has_adjacent_unseen(pos)
-                and map_position_is_reachable(pos, reachable_positions,
-                    ignore_exclusions) then
+                and map_position_is_reachable(pos) then
             return best_move_towards_map_position(pos, ignore_exclusions)
         end
     end
 end
 
 function best_move_towards_safety()
-    local reachable_positions
-    if #flee_positions > 0 then
-        reachable_positions = flee_positions
-    else
-        reachable_positions = { global_pos }
-    end
-
     for pos in radius_iter(global_pos, GXM) do
         local los_pos = position_difference(pos, global_pos)
         if supdist(pos) <= GXM
                 and map_is_traversable_at(pos)
                 and view.is_safe_square(los_pos.x, los_pos.y)
-                and map_position_is_reachable(pos, reachable_positions,
-                    true) then
+                and map_position_is_reachable(pos) then
             return best_move_towards_map_position(pos, true)
         end
     end

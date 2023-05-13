@@ -161,7 +161,8 @@ end
 
 function plan_coward_step()
     if (tactical_reason == "hiding" or tactical_reason == "stealth")
-            and not want_to_move_to_abyss_objective() then
+            and (not want_to_move_to_abyss_objective()
+                or should_rest()) then
         if tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end
@@ -704,8 +705,8 @@ function want_to_teleport()
         return true
     end
 
-    if count_hostile_greater_servants(los_radius) > 0 and you.xl() < 21 then
-        greater_servant_timer = you.turns()
+    if count_hostile_summons(los_radius) > 0 and you.xl() < 21 then
+        hostile_summons_timer = you.turns()
         return true
     end
 
