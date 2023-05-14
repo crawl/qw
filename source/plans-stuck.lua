@@ -38,21 +38,7 @@ function plan_continue_to_unsafe_destination()
     return false
 end
 
-function plan_safe_move_towards_gameplan()
-    if not position_is_safe or unable_to_move() or dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_gameplan()
-    if move then
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
-function plan_move_towards_gameplan()
+function plan_unsafe_move_towards_gameplan()
     if unable_to_move() or dangerous_to_move() then
         return false
     end
@@ -220,7 +206,7 @@ function set_plan_stuck()
     plan_stuck = cascade {
         {plan_use_gameplan_feature, "use_gameplan_feature"},
         {plan_continue_to_unsafe_destination, "continue_to_unsafe_destination"},
-        {plan_move_towards_gameplan, "move_towards_gameplan"},
+        {plan_unsafe_move_towards_gameplan, "unsafe_move_towards_gameplan"},
         {plan_move_towards_monster, "move_towards_monster"},
         {plan_move_towards_safety, "move_towards_safety"},
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},

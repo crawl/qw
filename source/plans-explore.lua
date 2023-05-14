@@ -140,12 +140,6 @@ function plan_move_towards_gameplan()
         return true
     end
 
-    local move, dest = best_move_towards_gameplan(true)
-    if move then
-        move_to(move)
-        return true
-    end
-
     return false
 end
 
@@ -249,7 +243,6 @@ function set_plan_explore2()
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
-        {plan_move_towards_gameplan, "move_towards_gameplan"},
         {plan_autoexplore, "try_autoexplore2"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }
