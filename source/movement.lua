@@ -685,7 +685,7 @@ function update_reachable_position()
     end
 end
 
-function map_position_is_reachable(pos, ignore_exclusions)
+function map_is_reachable_at(pos, ignore_exclusions)
     local dist_map = get_distance_map(reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
     return map[pos.x][pos.y]
@@ -703,8 +703,8 @@ function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
         end
 
         if supdist(near_pos) <= GXM
-                and map_position_is_reachable(near_pos, ignore_exclusions)
-                and map_has_adjacent_unseen(near_pos) then
+                and map_is_reachable_at(near_pos, ignore_exclusions)
+                and map_has_adjacent_unseen_at(near_pos) then
             return best_move_towards_map_position(near_pos, ignore_exclusions)
         end
 
@@ -749,7 +749,7 @@ function best_move_towards_gameplan(ignore_exclusions)
     return best_move_towards_features(feats, ignore_exclusions)
 end
 
-function map_position_has_adjacent_unseen(pos)
+function map_has_adjacent_unseen_at(pos)
     for apos in adjacent_iter(pos) do
         if traversal_map[apos.x][apos.y] == nil then
             return true
@@ -759,7 +759,7 @@ function map_position_has_adjacent_unseen(pos)
     return false
 end
 
-function best_move_towards_unexplored(ignore_exclusions)
+function best_move_towards_unexplored(safe)
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
@@ -771,9 +771,10 @@ function best_move_towards_unexplored(ignore_exclusions)
         end
 
         if supdist(pos) <= GXM
-                and map_position_is_reachable(pos, ignore_exclusions)
-                and map_position_has_adjacent_unseen(pos) then
-            return best_move_towards_map_position(pos, ignore_exclusions)
+                and (not safe or map_is_unexcluded_at(pos))
+                and map_is_reachable_at(pos, true)
+                and map_has_adjacent_unseen_at(pos) then
+            return best_move_towards_map_position(pos, true)
         end
 
         i = i + 1
@@ -794,7 +795,7 @@ function best_move_towards_safety()
         local los_pos = position_difference(pos, global_pos)
         if supdist(pos) <= GXM
                 and view.is_safe_square(los_pos.x, los_pos.y)
-                and map_position_is_reachable(pos, true) then
+                and map_is_reachable_at(pos, true) then
             return best_move_towards_map_position(pos, true)
         end
 

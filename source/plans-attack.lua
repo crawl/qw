@@ -3,12 +3,11 @@
 --
 
 function plan_flail_at_invis()
-    if options.autopick_on or dangerous_to_melee() then
+    if dangerous_to_melee() then
         return false
     end
 
     local can_ctrl = not you.confused()
-    invis_caster_turns = invis_caster_turns + 1
     for pos in adjacent_iter(origin) do
         if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
             invis_caster = true
@@ -18,7 +17,11 @@ function plan_flail_at_invis()
         end
     end
 
-    if invis_caster and supdist(invis_caster_pos) > 0 then
+    if not invis_caster then
+        return false
+    end
+
+    if supdist(invis_caster_pos) > 0 then
         if is_adjacent(invis_caster_pos)
                 and not is_solid_at(invis_caster_pos) then
             attack_melee(invis_caster_pos, can_ctrl)
@@ -395,8 +398,16 @@ function wait_combat()
 end
 
 function plan_wait_for_enemy()
-    if not danger
-            or dangerous_to_attack()
+    if not danger then
+        return false
+    end
+
+    if unable_to_move() or dangerous_to_move() then
+        wait_combat()
+        return true
+    end
+
+    if dangerous_to_attack()
             or position_is_cloudy
             or not options.autopick_on
             or view.feature_at(0, 0) == "shallow_water"
@@ -406,16 +417,6 @@ function plan_wait_for_enemy()
             or wait_count >= 10 then
         wait_count = 0
         return false
-    end
-
-    local target = get_melee_target()
-    if not target then
-        target = get_melee_target(true)
-    end
-
-    if target and (unable_to_move() or dangerous_to_move()) then
-        wait_combat()
-        return true
     end
 
     if you.turns() >= last_wait + 10 then
@@ -566,7 +567,6 @@ end
 
 function set_plan_attack()
     plan_attack = cascade {
-        {plan_flail_at_invis, "flail_at_invis"},
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
         {plan_melee, "melee"},
@@ -575,6 +575,7 @@ function set_plan_attack()
         {plan_continue_move_towards_enemy, "continue_move_towards_enemy"},
         {plan_move_towards_enemy, "move_towards_enemy"},
         {plan_flight_move_towards_enemy, "flight_move_towards_enemy"},
+        {plan_flail_at_invis, "flail_at_invis"},
         {plan_disturbance_random_step, "disturbance_random_step"},
     }
 end

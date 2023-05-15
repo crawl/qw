@@ -143,7 +143,7 @@ function plan_move_towards_gameplan()
     return false
 end
 
-function plan_continue_to_destination()
+function plan_move_towards_destination()
     if not move_destination or dangerous_to_move() then
         return false
     end
@@ -171,6 +171,19 @@ function plan_move_towards_gameplan()
     return false
 end
 
+function plan_move_towards_destination()
+    if not move_destination or dangerous_to_move() then
+        return false
+    end
+
+    local move = best_move_towards_map_position(move_destination)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
 
 function set_plan_pre_explore()
     plan_pre_explore = cascade {
@@ -199,13 +212,14 @@ end
 
 function set_plan_explore()
     plan_explore = cascade {
-        {plan_continue_to_destination, "try_continue_to_destination"},
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_take_escape_hatch, "take_escape_hatch"},
         {plan_go_to_escape_hatch, "try_go_to_escape_hatch"},
+        {plan_move_towards_destination, "try_move_towards_destination"},
         {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
         {plan_move_towards_runelight, "move_towards_runelight"},
+        {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
     }
 end
@@ -243,7 +257,10 @@ function set_plan_explore2()
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
+        {plan_use_gameplan_feature, "use_gameplan_feature"},
+        {plan_move_towards_gameplan, "move_towards_gameplan"},
         {plan_autoexplore, "try_autoexplore2"},
+        {plan_move_towards_safe_unexplored, "move_towards_safe_unexplored"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }
 end

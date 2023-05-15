@@ -41,6 +41,8 @@ function turn_update()
     if hp_is_full() then
         full_hp_turn = turn_count
     end
+    position_is_safe = view.is_safe_square(0, 0)
+    position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
 
     local new_level = false
     local full_map_clear = false
@@ -125,8 +127,6 @@ function turn_update()
     update_move_destination()
     choose_tactical_step()
 
-    position_is_safe = view.is_safe_square(0, 0)
-    position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
     go_travel_attempts = 0
     stash_travel_attempts = 0
     map_mode_search_attempts = 0

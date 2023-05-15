@@ -915,24 +915,26 @@ function update_cell_feature_positions(cell)
 end
 
 function remove_exclusions(record_only)
-    if not record_only and c_persist.exclusions[where] then
-        for hash, _ in pairs(c_persist.exclusions[where]) do
-            local pos = position_difference(unhash_position(hash), global_pos)
-            if view.in_known_map_bounds(pos.x, pos.y) then
-                if debug_channel("combat") then
-                    dsay("Unexcluding position "
-                        .. cell_string_from_map_position(pos))
-                end
-
-                travel.del_exclude(pos.x, pos.y)
-            elseif debug_channel("combat") then
-                dsay("Ignoring out of bounds exclusion coordinates "
-                    .. pos_string(pos))
-            end
-        end
+    if record_only or not c_persist.exclusions[where] then
+        c_persist.exclusions[where] = nil
+        return
     end
 
-    c_persist.exclusions[where] = {}
+    for hash, _ in pairs(c_persist.exclusions[where]) do
+        local pos = position_difference(unhash_position(hash), global_pos)
+        if view.in_known_map_bounds(pos.x, pos.y) then
+            if debug_channel("combat") then
+                dsay("Unexcluding position "
+                    .. cell_string_from_map_position(pos))
+            end
+
+            travel.del_exclude(pos.x, pos.y)
+        elseif debug_channel("combat") then
+            dsay("Ignoring out of bounds exclusion coordinates "
+                .. pos_string(pos))
+        end
+    end
+    c_persist.exclusions[where] = nil
 end
 
 function exclude_position(pos)
@@ -947,13 +949,17 @@ function exclude_position(pos)
         dsay("Excluding " .. desc .. " at " .. pos_string(pos))
     end
 
+    local hash = hash_position(position_sum(global_pos, pos))
     if not c_persist.exclusions[where] then
         c_persist.exclusions[where] = {}
     end
-
-    local hash = hash_position(position_sum(global_pos, pos))
     c_persist.exclusions[where][hash] = true
+
     travel.set_exclude(pos.x, pos.y)
+end
+
+function level_has_exclusions(branch, depth)
+    return c_persist.exclusions[make_level(branch, depth)]
 end
 
 function update_exclusions(new_waypoint)

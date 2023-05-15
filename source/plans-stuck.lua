@@ -24,7 +24,7 @@ function plan_use_gameplan_feature()
     return false
 end
 
-function plan_continue_to_unsafe_destination()
+function plan_unsafe_move_towards_destination()
     if not move_destination or dangerous_to_move() then
         return false
     end
@@ -88,8 +88,26 @@ function plan_move_towards_monster()
     return false
 end
 
+function plan_move_towards_safe_unexplored()
+    if disable_autoexplore or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_unexplored(true)
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to explore near "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "unexplored")
+        return true
+    end
+
+    return false
+end
+
 function plan_move_towards_unexplored()
-    if unable_to_move() or dangerous_to_move() then
+    if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false
     end
 
@@ -108,6 +126,7 @@ end
 
 function plan_move_towards_safety()
     if autoexplored_level(where_branch, where_depth)
+            or disable_autoexplore
             or position_is_safe
             or unable_to_move()
             or dangerous_to_move() then
@@ -138,7 +157,7 @@ end
 
 function plan_stuck_initial()
     if stuck_turns <= 50 then
-        return plan_stuck_random_step()
+        return plan_random_step()
     end
 
     return false
@@ -195,7 +214,7 @@ function plan_forget_map()
     return false
 end
 
-function plan_stuck_teleport()
+function plan_teleport()
     if can_teleport() then
         return teleport()
     end
@@ -204,17 +223,15 @@ end
 
 function set_plan_stuck()
     plan_stuck = cascade {
-        {plan_use_gameplan_feature, "use_gameplan_feature"},
-        {plan_continue_to_unsafe_destination, "continue_to_unsafe_destination"},
+        {plan_unsafe_move_towards_destination, "unsafe_move_towards_destination"},
         {plan_unsafe_move_towards_gameplan, "unsafe_move_towards_gameplan"},
         {plan_move_towards_monster, "move_towards_monster"},
-        {plan_move_towards_safety, "move_towards_safety"},
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
         {plan_move_towards_unexplored, "move_towards_unexplored"},
         {plan_clear_exclusions, "try_clear_exclusions"},
         {plan_dig_grate, "try_dig_grate"},
         {plan_forget_map, "try_forget_map"},
-        {plan_initial, "initial"},
+        {plan_stuck_initial, "stuck_initial"},
         {plan_teleport, "teleport"},
         {plan_random_step, "random_step"},
     }

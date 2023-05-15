@@ -553,29 +553,44 @@ function sense_danger(radius, moveable)
 end
 
 function update_invis_monsters()
-    local see_caster = false
-    if you.xl() < 10 then
-        for _, enemy in ipairs(enemy_list) do
-            if enemy:name() == "Sigmund" then
-                invis_caster_pos = enemy:pos()
-                see_caster = true
-                break
-            end
-        end
-    end
-
-    if invis_caster and invis_caster_turns > 100 then
-        say("Invisibility caster not found???")
+    if not invis_caster or not position_is_safe or options.autopick_on then
         if not options.autopick_on then
             magic(control('a'))
             coroutine.yield()
         end
-    end
 
-    if see_caster or options.autopick_on then
         invis_caster = false
         invis_caster_turns = 0
+        invis_caster_pos = nil
+        return
     end
+
+    if you.xl() < 10 then
+        for _, enemy in ipairs(enemy_list) do
+            if enemy:name() == "Sigmund" then
+                invis_caster = false
+                invis_caster_turns = 0
+                invis_caster_pos = enemy:pos()
+                return
+            end
+        end
+    end
+
+    if invis_caster_turns > 100 then
+        say("Invisibility caster not found???")
+
+        if not options.autopick_on then
+            magic(control('a'))
+            coroutine.yield()
+        end
+
+        invis_caster = false
+        invis_caster_turns = 0
+        invis_caster_pos = nil
+        return
+    end
+
+    invis_caster_turns = invis_caster_turns + 1
 end
 
 function monster_speed_number(mons)
@@ -676,6 +691,18 @@ function count_enemies(radius, filter)
     local i = 0
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() <= radius and (not filter or filter(enemy)) then
+            i = i + 1
+        end
+    end
+    return i
+end
+
+function count_enemies_in_list(radius, mons_list, filter)
+    local i = 0
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:distance() <= radius
+                and (not filter or filter(enemy))
+                and monster_in_list(enemy, mons_list) then
             i = i + 1
         end
     end

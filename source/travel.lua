@@ -261,7 +261,8 @@ function finalize_depth_dir(result, dir)
 end
 
 function finalize_travel_depth(result)
-    if not autoexplored_level(result.branch, result.depth) then
+    if not autoexplored_level(result.branch, result.depth)
+            or level_has_exclusions(result.branch, result.depth) then
         return
     end
 
