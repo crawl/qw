@@ -22,16 +22,18 @@ end
 
 function tabbable_square(pos)
     return view.feature_at(pos.x, pos.y) ~= "unseen"
-        and view.is_safe_square(pos.x, pos.y)
         and (not monster_map[pos.x][pos.y]
             or monster_map[pos.x][pos.y]:is_firewood())
+        and view.is_safe_square(pos.x, pos.y)
+        and not view.withheld(pos.x, pos.y)
 end
 
 function flight_tabbable_square(pos)
     return view.feature_at(pos.x, pos.y) ~= "unseen"
-        and view.is_safe_square(pos.x, pos.y, true)
         and (not monster_map[pos.x][pos.y]
             or monster_map[pos.x][pos.y]:is_firewood())
+        and view.is_safe_square(pos.x, pos.y, true)
+        and not view.withheld(pos.x, pos.y)
 end
 
 -- Should only be called for adjacent squares.
@@ -54,7 +56,7 @@ end
 function assess_square_enemies(a, pos)
     local best_dist = 10
     a.enemy_distance = 0
-    a.followers_to_land = false
+    a.followers = false
     a.adjacent = 0
     a.slow_adjacent = 0
     a.ranged = 0
@@ -77,7 +79,7 @@ function assess_square_enemies(a, pos)
             if not liquid_bound
                     and not ranged
                     and enemy:reach_range() < 2 then
-                a.followers_to_land = true
+                a.followers = true
             end
 
             if have_reaching()
@@ -177,11 +179,13 @@ function assess_square(pos)
         and intrinsic_fumble()
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
+    -- Is the wall next to us dangerous?
+    a.bad_wall = adjacent_slimy_walls_at(pos)
+
     -- Will we be slow if we move into this square?
     a.slow = not you.flying()
         and view.feature_at(pos.x, pos.y) == "shallow_water"
         and not intrinsic_amphibious()
-        and not intrinsic_flight()
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Is the square safe to step in? (checks traps & clouds)
@@ -214,7 +218,7 @@ end
 function step_reason(a1, a2)
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
         return false
-    elseif (a2.fumble or a2.slow) and a1.cloud_safe then
+    elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
             and a2.flee_distance < INF_DIST
@@ -247,10 +251,19 @@ function step_reason(a1, a2)
         -- we'll try to move out of water. We also require that we are no worse
         -- in at least one of ranged threats or enemy distance at the new
         -- position.
-        if a1.followers_to_land
+        if a1.followers
                 and (a2.ranged <= a1.ranged
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "water"
+        else
+            return false
+        end
+    elseif a1.bad_wall then
+        -- Same conditions for dangerous walls as for water.
+        if a1.followers
+                and (a2.ranged <= a1.ranged
+                    or a2.enemy_distance <= a1.enemy_distance) then
+            return "wall"
         else
             return false
         end
@@ -759,7 +772,7 @@ function map_has_adjacent_unseen_at(pos)
     return false
 end
 
-function best_move_towards_unexplored(safe)
+function best_move_towards_unexplored(unsafe)
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
@@ -771,7 +784,7 @@ function best_move_towards_unexplored(safe)
         end
 
         if supdist(pos) <= GXM
-                and (not safe or map_is_unexcluded_at(pos))
+                and (unsafe or map_is_unexcluded_at(pos))
                 and map_is_reachable_at(pos, true)
                 and map_has_adjacent_unseen_at(pos) then
             return best_move_towards_map_position(pos, true)
@@ -818,7 +831,16 @@ function update_move_destination()
                 and you.see_cell_solid_see(pos.x, pos.y) then
             clear = true
         end
+    elseif move_reason == "gameplan" and want_gameplan_update then
+        clear = true
     elseif positions_equal(global_pos, move_destination) then
+        if move_reason == "unexplored"
+                and autoexplored_level(where_branch, where_depth)
+                and position_is_safe then
+            reset_autoexplore(where)
+            want_gameplan_update = true
+        end
+
         clear = true
     end
 

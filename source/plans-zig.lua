@@ -69,15 +69,8 @@ function plan_go_to_zig_dig()
         return false
     end
 
-    if stash_stash_travel_fail_count == 0 then
-        stash_travel_fail_count = 1
-        magic(control('f') .. portal_entrance_description("Zig") .. "\rayby\r")
-        return
-    end
-
-    stash_travel_fail_count = 0
-    disable_autoexplore = false
-    return false
+    magic(control('f') .. portal_entrance_description("Zig") .. "\rayby\r")
+    return true
 end
 
 function plan_zig_dig()

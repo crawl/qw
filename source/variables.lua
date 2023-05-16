@@ -63,6 +63,7 @@ local dump_count = you.turns() + 100 - (you.turns() % 100)
 local skill_count = you.turns() - (you.turns() % 5)
 local have_message = false
 local read_message = true
+local restart_cascade = false
 
 local gameplan_list
 local which_gameplan = 1
@@ -100,6 +101,9 @@ local where_branch
 local where_depth
 
 local base_corrosion
+local permanent_flight
+local gained_permanent_flight
+local temporary_flight
 local can_retreat_upstairs
 local open_runed_doors
 local permanent_bazaar
@@ -162,9 +166,6 @@ local ignore_traps
 local stairs_travel
 local position_is_safe
 local position_is_cloudy
-local moving_unsafe
-local melee_unsafe
-local melee_target
 local incoming_melee_turn = -1
 local full_hp_turn = 0
 
@@ -190,9 +191,6 @@ local acquirement_class
 
 local tactical_step
 local tactical_reason
-
-local go_travel_attempts = 0
-local stash_travel_attempts = 0
 
 local stairdance_count = {}
 local clear_exclusion_count = {}

@@ -306,9 +306,9 @@ function determine_gameplan()
     if status:find("^God:") then
         local god = gameplan_god(status)
         desc = god .. " worship"
-        local altar_lev = altar_found(god)
-        if altar_lev then
-            gameplan = altar_lev
+        local altar_level = altar_found(god)
+        if altar_level then
+            gameplan = altar_level
         elseif branch_found("Temple")
                 and not explored_level_range("Temple") then
             gameplan = "Temple"
@@ -778,8 +778,11 @@ function make_initial_gameplans()
 end
 
 function update_gameplan()
-    check_expired_portals()
+    update_expired_portals()
+    update_altars()
+
     determine_gameplan()
+
     check_future_branches()
     check_future_gods()
 
@@ -854,6 +857,18 @@ function set_gameplan(status, gameplan)
                 .. ", depth: " .. tostring(gameplan_depth))
         end
     end
+end
+
+function reset_autoexplore(level)
+    if c_persist.autoexplore[level] == AUTOEXP.NEEDED then
+        return
+    end
+
+    if debug_channel("explore") then
+        dsay("Resetting autoexplore of " .. level)
+    end
+
+    c_persist.autoexplore[level] = AUTOEXP.NEEDED
 end
 
 function want_to_stay_in_abyss()

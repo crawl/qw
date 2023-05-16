@@ -70,12 +70,6 @@ function initialize()
         previous_where = "nowhere"
     end
 
-    for _, god in ipairs(god_options()) do
-        if god == "the Shining One" or god == "Elyvilon" or god == "Zin" then
-            might_be_good = true
-        end
-    end
-
     set_options()
     initialize_plans()
     initialized = true

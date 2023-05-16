@@ -221,6 +221,8 @@ function Monster:is_ranged()
             return self.minfo:has_known_ranged_attack()
                 and not (self:name():find("kraken")
                     or self:name() == "lost soul")
+                -- We want to treat these as ranged.
+                or self:name() == "obsidian statue"
         end)
 end
 

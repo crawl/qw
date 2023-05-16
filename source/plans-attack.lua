@@ -111,8 +111,8 @@ function assess_melee_target(attack, enemy)
 end
 
 function get_melee_target(assume_flight)
-    if melee_target then
-        return melee_target
+    if memos["melee_target"] then
+        return memos["melee_target"]
     end
 
     local attack = {}
@@ -133,9 +133,9 @@ function get_melee_target(assume_flight)
     end
 
     if best_result then
-        melee_target = best_result.pos
+        memos["melee_target"] = best_result.pos
     end
-    return melee_target
+    return memos["melee_target"]
 end
 
 function attack_melee(pos, use_control)
@@ -342,10 +342,12 @@ function get_ranged_target(weapon, prefer_melee)
         local pos = enemy:pos()
         if enemy:distance() <= attack.range
                 and you.see_cell_solid_see(pos.x, pos.y)
-                -- Don't try this ranged attack if we prefer melee and could
-                -- use the turn to move into melee range.
+                -- If we prefer melee, don't try this ranged attack when we
+                -- have a reachable ranged monster or are just outside of their
+                -- melee range.
                 and not (prefer_melee
-                    and enemy:distance() == reach_range() + 1
+                    and (enemy:is_ranged()
+                        or enemy:distance() == reach_range() + 1)
                     and enemy:get_player_move_towards()) then
             local result
             if explosion then
@@ -429,6 +431,7 @@ function plan_wait_for_enemy()
         return true
     end
 
+    local target = get_melee_target()
     local want_wait = false
     for _, enemy in ipairs(enemy_list) do
         -- We prefer to wait for a target monster to reach us over moving
@@ -444,7 +447,7 @@ function plan_wait_for_enemy()
             want_wait = true
 
             -- If we don't have a target, we'll never abort from waiting due to
-            -- a ranged monsters, since we couldn't move towards it anyhow.
+            -- ranged monsters, since we can't move towards one anyhow.
             if not target then
                 break
             end

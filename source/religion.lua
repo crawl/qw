@@ -124,9 +124,9 @@ function altar_found(god, los_state)
         return
     end
 
-    for w, s in pairs(c_persist.altars[god]) do
-        if s >= los_state then
-            return w
+    for level, state in pairs(c_persist.altars[god]) do
+        if state >= los_state then
+            return level
         end
     end
 end
@@ -397,4 +397,18 @@ function estimate_slouch_damage()
         count = count + val
     end
     return count
+end
+
+function update_altars()
+    if not gained_permanent_flight then
+        return
+    end
+
+    for god, levels in pairs(c_persist.altars) do
+        for level, state in pairs(levels) do
+            if state >= FEAT_LOS.SEEN and state < FEAT_LOS.REACHABLE then
+                c_persist.altars[god][level] = FEAT_LOS.REACHABLE
+            end
+        end
+    end
 end

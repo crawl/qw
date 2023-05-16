@@ -24,34 +24,6 @@ function plan_use_gameplan_feature()
     return false
 end
 
-function plan_unsafe_move_towards_destination()
-    if not move_destination or dangerous_to_move() then
-        return false
-    end
-
-    local move = best_move_towards_map_position(move_destination, true)
-    if move then
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
-function plan_unsafe_move_towards_gameplan()
-    if unable_to_move() or dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_gameplan(true)
-    if move then
-        move_to(move)
-        return true
-    end
-
-    return false
-end
-
 function plan_move_towards_monster()
     if not position_is_safe or unable_to_move() or dangerous_to_move() then
         return false
@@ -88,7 +60,7 @@ function plan_move_towards_monster()
     return false
 end
 
-function plan_move_towards_safe_unexplored()
+function plan_move_towards_unsafe_unexplored()
     if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false
     end
@@ -96,50 +68,10 @@ function plan_move_towards_safe_unexplored()
     local move, dest = best_move_towards_unexplored(true)
     if move then
         if debug_channel("explore") then
-            dsay("Moving to explore near "
+            dsay("Moving to unsafely explore near "
                 .. cell_string_from_map_position(dest))
         end
         move_towards_destination(move, dest, "unexplored")
-        return true
-    end
-
-    return false
-end
-
-function plan_move_towards_unexplored()
-    if disable_autoexplore or unable_to_move() or dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_unexplored(true)
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to explore near "
-                .. cell_string_from_map_position(dest))
-        end
-        move_towards_destination(move, dest, "unexplored")
-        return true
-    end
-
-    return false
-end
-
-function plan_move_towards_safety()
-    if autoexplored_level(where_branch, where_depth)
-            or disable_autoexplore
-            or position_is_safe
-            or unable_to_move()
-            or dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_safety()
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to safe position at "
-                .. cell_string_from_map_position(dest))
-        end
-        move_towards_destination(move, dest, "safety")
         return true
     end
 
@@ -175,9 +107,9 @@ function plan_clear_exclusions()
     return true
 end
 
-function plan_dig_grate()
-    local wand = find_item("wand", "digging")
-    if not wand or not can_zap() then
+function plan_stuck_dig_grate()
+    local wand_letter = find_item("wand", "digging")
+    if not wand_letter or not can_zap() then
         return false
     end
 
@@ -194,8 +126,8 @@ function plan_dig_grate()
     end
 
     if grate_offset < 20 then
-        say("ZAPPING " .. item(c).name() .. ".")
-        magic("V" .. letter(c) .. "r" .. vector_move(grate_pos) .. "\r")
+        say("ZAPPING " .. item(wand_letter).name() .. ".")
+        magic("V" .. wand_letter .. "r" .. vector_move(grate_pos) .. "\r")
         return true
     end
 
@@ -214,7 +146,7 @@ function plan_forget_map()
     return false
 end
 
-function plan_teleport()
+function plan_stuck_teleport()
     if can_teleport() then
         return teleport()
     end
@@ -223,16 +155,14 @@ end
 
 function set_plan_stuck()
     plan_stuck = cascade {
-        {plan_unsafe_move_towards_destination, "unsafe_move_towards_destination"},
-        {plan_unsafe_move_towards_gameplan, "unsafe_move_towards_gameplan"},
         {plan_move_towards_monster, "move_towards_monster"},
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
-        {plan_move_towards_unexplored, "move_towards_unexplored"},
+        {plan_move_towards_unsafe_unexplored, "move_towards_unsafe_unexplored"},
         {plan_clear_exclusions, "try_clear_exclusions"},
-        {plan_dig_grate, "try_dig_grate"},
+        {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_forget_map, "try_forget_map"},
         {plan_stuck_initial, "stuck_initial"},
-        {plan_teleport, "teleport"},
+        {plan_stuck_teleport, "stuck_teleport"},
         {plan_random_step, "random_step"},
     }
 end

@@ -159,6 +159,15 @@ function plan_water_step()
     return false
 end
 
+function plan_wall_step()
+    if tactical_reason == "wall" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
+        magic(tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
 function plan_coward_step()
     if (tactical_reason == "hiding" or tactical_reason == "stealth")
             and (not want_to_move_to_abyss_objective()
@@ -970,7 +979,7 @@ function plan_special_purification()
 end
 
 function plan_dig_grate()
-    local wand = find_item("wand", "digging")
+    local wand_letter = find_item("wand", "digging")
     if not wand or not can_zap() then
         return false
     end
@@ -1055,6 +1064,7 @@ function set_plan_emergency()
         {plan_wield_weapon, "wield_weapon"},
         {plan_swap_weapon, "swap_weapon"},
         {plan_water_step, "water_step"},
+        {plan_wall_step, "wall_step"},
         {plan_zig_fog, "zig_fog"},
         {plan_finesse, "finesse"},
         {plan_fiery_armour, "fiery_armour"},

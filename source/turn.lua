@@ -97,8 +97,26 @@ function turn_update()
         ignore_traps = false
     end
 
+    base_corrosion = base_corrosion
+        + (adjacent_slimy_walls_at(origin) and 1 or 0)
+
+    if you.flying() then
+        gained_permanent_flight = permanent_flight == false
+            and not temporary_flight
+        if gained_permanent_flight then
+            want_gameplan_update = true
+        end
+
+        permanent_flight = not temporary_flight
+    else
+        permanent_flight = false
+        temporary_flight = false
+    end
+
     update_monsters()
     update_map(new_level, full_map_clear)
+
+    update_move_destination()
 
     if want_gameplan_update then
         update_gameplan()
@@ -118,16 +136,11 @@ function turn_update()
 
     danger = sense_danger(los_radius) or not map_is_unexcluded_at(global_pos)
     immediate_danger = sense_immediate_danger()
-    moving_unsafe = nil
-    melee_unsafe = nil
     melee_target = nil
 
     find_flee_positions()
     update_reachable_position()
-    update_move_destination()
     choose_tactical_step()
 
-    go_travel_attempts = 0
-    stash_travel_attempts = 0
     map_mode_search_attempts = 0
 end

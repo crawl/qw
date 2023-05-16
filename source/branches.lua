@@ -285,6 +285,7 @@ function have_branch_runes(branch)
             return false
         end
     end
+    return true
 end
 
 function is_portal_branch(branch)
@@ -363,7 +364,7 @@ end
 
 -- Expire any timed portals for levels we've fully explored or where they're
 -- older than their max timeout.
-function check_expired_portals()
+function update_expired_portals()
     for level, portals in pairs(c_persist.portals) do
         local explored = explored_level_range(level)
         for portal, turns_list in pairs(portals) do

@@ -324,7 +324,7 @@ function dangerous_to_move()
 end
 
 function unable_to_throw()
-    if you.confused() or you.caught() then
+    if you.berserk() or you.confused() or you.caught() then
         return true
     end
 

@@ -26,6 +26,15 @@ function is_cornerish_at(pos)
             or is_traversable_at({ x = pos.x, y = pos.y - 1 }))
 end
 
+function adjacent_slimy_walls_at(pos)
+    for apos in adjacent_iter(pos) do
+        if view.feature_at(apos.x, apos.y) == "slimy_wall" then
+            return true
+        end
+    end
+    return false
+end
+
 function is_solid_at(pos)
     local feat = view.feature_at(pos.x, pos.y)
     return feat == "unseen" or travel.feature_solid(feat)

@@ -198,5 +198,7 @@ function c_message(text, channel)
     elseif text:find("You enter a dispersal trap")
             or text:find("You enter a permanent teleport trap") then
         ignore_traps = false
+    elseif text:find("You feel very bouyant") then
+        temporary_flight = true
     end
 end

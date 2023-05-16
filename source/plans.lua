@@ -58,13 +58,17 @@ function cascade(plans)
     local plan_turns = {}
     local plan_result = {}
     return function ()
+        local restart = restart_cascade
+        restart_cascade = false
         for i, plandata in ipairs(plans) do
             local plan = plandata[1]
             if plan == nil then
                 error("No plan function for " .. plandata[2])
             end
 
-            if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
+            if restart
+                    or you.turns() ~= plan_turns[plan]
+                    or plan_result[plan] == nil then
                 local result = plan()
                 if not automatic then
                     return true
@@ -77,11 +81,16 @@ function cascade(plans)
                     dsay("Ran " .. plandata[2] .. ": " .. tostring(result))
                 end
 
+                if want_gameplan_update then
+                    update_gameplan()
+                end
+
                 if result == nil or result == true then
                     if DELAYED and result == true then
                         crawl.delay(next_delay)
                     end
                     next_delay = DELAY_TIME
+
                     return
                 end
             elseif plan_turns[plan] and plan_result[plan] == true then
@@ -96,8 +105,6 @@ function cascade(plans)
                 fail_count = fail_count + 1
                 c_persist.plan_fail_count[plandata[2]] = fail_count
 
-                -- We haven't consumed a turn but might still need a planning
-                -- update.
                 if want_gameplan_update then
                     update_gameplan()
                 end

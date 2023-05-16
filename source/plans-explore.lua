@@ -37,22 +37,14 @@ function plan_go_to_portal_entrance()
         return false
     end
 
-    if stash_travel_attempts == 0 then
-        local desc = portal_entrance_description(gameplan_branch)
-        -- For timed bazaars, make a search string that can' match permanent
-        -- ones.
-        if gameplan_branch == "Bazaar" and not permanent_bazaar then
-            desc = "a flickering " .. desc
-        end
-        magicfind(desc)
-
-        stash_travel_attempts = 1
-        return
+    local desc = portal_entrance_description(gameplan_branch)
+    -- For timed bazaars, make a search string that can' match permanent
+    -- ones.
+    if gameplan_branch == "Bazaar" and not permanent_bazaar then
+        desc = "a flickering " .. desc
     end
-
-    stash_travel_attempts = 0
-    disable_autoexplore = false
-    return false
+    magicfind(desc)
+    return true
 end
 
 -- Use the 'G' command to travel to our next destination.
@@ -61,19 +53,12 @@ function plan_go_command()
         return false
     end
 
-    if go_travel_attempts == 0 then
-        go_travel_attempts = 1
-        if gameplan_status == "Escape" then
-            send_travel("D", 0)
-        else
-            send_travel(gameplan_travel.branch, gameplan_travel.depth)
-        end
-        return
+    if gameplan_status == "Escape" then
+        send_travel("D", 0)
+    else
+        send_travel(gameplan_travel.branch, gameplan_travel.depth)
     end
-
-    go_travel_attempts = 0
-    disable_autoexplore = false
-    return false
+    return true
 end
 
 function plan_go_to_portal_exit()
@@ -136,8 +121,27 @@ function plan_move_towards_gameplan()
 
     local move, dest = best_move_towards_gameplan()
     if move then
-        move_to(move)
+        move_towards_destination(move, dest, "gameplan")
         return true
+    end
+
+    local move, dest = best_move_towards_gameplan(true)
+    if move then
+        move_towards_destination(move, dest, "gameplan")
+        return true
+    end
+
+    local god = gameplan_god(gameplan_status)
+    if not god then
+        return false
+    end
+
+    if c_persist.altars[god]
+            and c_persist.altars[god][where] >= FEAT_LOS.REACHABLE then
+        c_persist.altars[god][where] = FEAT_LOS.SEEN
+        want_gameplan_update = true
+        restart_cascade = true
+        return
     end
 
     return false
@@ -154,15 +158,7 @@ function plan_move_towards_destination()
         return true
     end
 
-    return false
-end
-
-function plan_move_towards_gameplan()
-    if dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_gameplan()
+    local move = best_move_towards_map_position(move_destination, true)
     if move then
         move_to(move)
         return true
@@ -171,14 +167,40 @@ function plan_move_towards_gameplan()
     return false
 end
 
-function plan_move_towards_destination()
-    if not move_destination or dangerous_to_move() then
+function plan_move_towards_unexplored()
+    if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false
     end
 
-    local move = best_move_towards_map_position(move_destination)
+    local move, dest = best_move_towards_unexplored()
     if move then
-        move_to(move)
+        if debug_channel("explore") then
+            dsay("Moving to explore near "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "unexplored")
+        return true
+    end
+
+    return false
+end
+
+function plan_move_towards_safety()
+    if autoexplored_level(where_branch, where_depth)
+            or disable_autoexplore
+            or position_is_safe
+            or unable_to_move()
+            or dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_safety()
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to safe position at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "safety")
         return true
     end
 
@@ -216,7 +238,7 @@ function set_plan_explore()
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_take_escape_hatch, "take_escape_hatch"},
         {plan_go_to_escape_hatch, "try_go_to_escape_hatch"},
-        {plan_move_towards_destination, "try_move_towards_destination"},
+        {plan_move_towards_destination, "move_towards_destination"},
         {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
         {plan_move_towards_runelight, "move_towards_runelight"},
         {plan_move_towards_safety, "move_towards_safety"},
@@ -260,7 +282,7 @@ function set_plan_explore2()
         {plan_use_gameplan_feature, "use_gameplan_feature"},
         {plan_move_towards_gameplan, "move_towards_gameplan"},
         {plan_autoexplore, "try_autoexplore2"},
-        {plan_move_towards_safe_unexplored, "move_towards_safe_unexplored"},
+        {plan_move_towards_unexplored, "move_towards_unexplored"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }
 end
