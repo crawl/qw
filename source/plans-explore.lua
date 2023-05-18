@@ -1,6 +1,28 @@
 ------------------
 -- The exploration plan cascades.
 
+function plan_move_towards_safety()
+    if autoexplored_level(where_branch, where_depth)
+            or disable_autoexplore
+            or position_is_safe
+            or unable_to_move()
+            or dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_safety()
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to safe position at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "safety")
+        return true
+    end
+
+    return false
+end
+
 function plan_autoexplore()
     if unable_to_travel()
             or disable_autoexplore
@@ -167,6 +189,42 @@ function plan_move_towards_destination()
     return false
 end
 
+function plan_move_towards_monster()
+    if not position_is_safe or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local mons_targets = {}
+    for _, enemy in ipairs(enemy_list) do
+        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
+    end
+
+    if #mons_targets == 0 then
+        for pos in square_iter(origin) do
+            local mons = monster.get_monster_at(pos.x, pos.y)
+            if mons and Monster:new(mons):is_enemy() then
+                table.insert(mons_targets, position_sum(global_pos, pos))
+            end
+        end
+    end
+
+    if #mons_targets == 0 then
+        return false
+    end
+
+    local move, dest = best_move_towards_map_positions(mons_targets)
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to enemy at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "monster")
+        return true
+    end
+
+    return false
+end
+
 function plan_move_towards_unexplored()
     if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false
@@ -179,28 +237,6 @@ function plan_move_towards_unexplored()
                 .. cell_string_from_map_position(dest))
         end
         move_towards_destination(move, dest, "unexplored")
-        return true
-    end
-
-    return false
-end
-
-function plan_move_towards_safety()
-    if autoexplored_level(where_branch, where_depth)
-            or disable_autoexplore
-            or position_is_safe
-            or unable_to_move()
-            or dangerous_to_move() then
-        return false
-    end
-
-    local move, dest = best_move_towards_safety()
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to safe position at "
-                .. cell_string_from_map_position(dest))
-        end
-        move_towards_destination(move, dest, "safety")
         return true
     end
 
@@ -282,6 +318,7 @@ function set_plan_explore2()
         {plan_use_gameplan_feature, "use_gameplan_feature"},
         {plan_move_towards_gameplan, "move_towards_gameplan"},
         {plan_autoexplore, "try_autoexplore2"},
+        {plan_move_towards_monster, "move_towards_monster"},
         {plan_move_towards_unexplored, "move_towards_unexplored"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }

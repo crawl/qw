@@ -491,11 +491,9 @@ function brand_is_great(brand)
     if brand == "speed" or brand == "spectralizing" then
         return true
     elseif brand == "vampirism" then
-        return not you.have_orb()
-    elseif brand == "electrocution" then
-        return at_branch_end("Zot")
+        return not have_orb
     elseif brand == "holy wrath" then
-        return gameplan == "Orb" or planning_undead_demon_branches
+        return have_orb or planning_undead_demon_branches
     else
         return false
     end

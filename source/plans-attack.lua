@@ -3,41 +3,33 @@
 --
 
 function plan_flail_at_invis()
-    if dangerous_to_melee() then
+    if not invis_monster or dangerous_to_melee() then
         return false
     end
 
     local can_ctrl = not you.confused()
-    for pos in adjacent_iter(origin) do
-        if supdist(pos) > 0 and view.invisible_monster(pos.x, pos.y) then
-            invis_caster = true
-            invis_caster_pos = pos
-            attack_melee(pos, can_ctrl)
-            return true
-        end
+    if invis_monster_pos and is_adjacent(invis_monster_pos) then
+        attack_melee(invis_monster_pos, can_ctrl)
+        return true
     end
 
-    if not invis_caster then
-        return false
-    end
-
-    if supdist(invis_caster_pos) > 0 then
-        if is_adjacent(invis_caster_pos)
-                and not is_solid_at(invis_caster_pos) then
-            attack_melee(invis_caster_pos, can_ctrl)
+    if invis_monster_pos then
+        if is_adjacent(invis_monster_pos)
+                and not is_solid_at(invis_monster_pos) then
+            attack_melee(invis_monster_pos, can_ctrl)
             return true
         end
 
-        if invis_caster_pos.x == 0 then
-            local apos = { x = 0, y = sign(invis_caster_pos.y) }
+        if invis_monster_pos.x == 0 then
+            local apos = { x = 0, y = sign(invis_monster_pos.y) }
             if not is_solid_at(apos) then
                 attack_melee(apos, can_ctrl)
                 return true
             end
         end
 
-        if invis_caster_pos.y == 0 then
-            local apos = { x = sign(invis_caster_pos.x), y = 0 }
+        if invis_monster_pos.y == 0 then
+            local apos = { x = sign(invis_monster_pos.x), y = 0 }
             if not is_solid_at(apos) then
                 attack_melee(apos, can_ctrl)
                 return true

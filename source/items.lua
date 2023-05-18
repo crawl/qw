@@ -1048,7 +1048,7 @@ end
 
 function have_progression_item(name)
     return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
-        or name == ORB_NAME and you.have_orb()
+        or name == ORB_NAME and have_orb
 end
 
 function autopickup(it, name)

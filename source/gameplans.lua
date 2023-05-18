@@ -323,7 +323,7 @@ function determine_gameplan()
     end
 
     -- Make sure we respect Vaults locking when we don't have the rune.
-    if in_branch("Vaults") and not have_branch_runes("Vaults") then
+    if in_branch("Vaults") and you.num_runes() == 0 then
         local branch = parse_level_range(gameplan)
         local override = false
         if branch then

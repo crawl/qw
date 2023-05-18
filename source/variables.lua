@@ -172,9 +172,10 @@ local full_hp_turn = 0
 local next_delay = 100
 local is_waiting
 
-local invis_caster = false
-local invis_caster_pos
-local invis_caster_turns = 0
+local invis_monster = false
+local invis_monster_pos
+local invis_monster_turns = 0
+local nasty_invis_caster = false
 
 local hostile_summon_timer = -200
 

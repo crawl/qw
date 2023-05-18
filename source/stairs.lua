@@ -109,7 +109,7 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
 
         current.safe = state.safe
 
-        if los_changed and not force then
+        if los_changed then
             current.los = state.los
             want_gameplan_update = true
         end
@@ -118,9 +118,10 @@ end
 
 function update_all_stone_stairs(branch, depth, dir, state, max_los)
     for i = 1, num_required_stairs(branch, depth, dir) do
-        local cur_state = get_stone_stairs(branch, depth, dir, i)
+        local num = ("i"):rep(i)
+        local cur_state = get_stone_stairs(branch, depth, dir, num)
         if cur_state and (not max_los or cur_state.los >= state.los) then
-            update_stone_stairs(branch, depth, dir, i, state, true)
+            update_stone_stairs(branch, depth, dir, num, state, true)
         end
     end
 end
@@ -193,11 +194,9 @@ function count_stairs(branch, depth, dir, los)
         return 0
     end
 
-    local num
     local count = 0
     for i = 1, num_required do
-        num = "i"
-        num = num:rep(i)
+        local num = ("i"):rep(i)
         local state = get_stone_stairs(branch, depth, dir, num)
         if state and state.los >= los then
             count = count + 1
@@ -209,10 +208,8 @@ end
 function have_all_stairs(branch, depth, dir, los)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required > 0 then
-        local num
         for i = 1, num_required do
-            num = "i"
-            num = num:rep(i)
+            local num = ("i"):rep(i)
             local state = get_stone_stairs(branch, depth, dir, num)
             if not state or state.los < los then
                 return false
@@ -223,7 +220,7 @@ function have_all_stairs(branch, depth, dir, los)
     return true
 end
 
-function update_branch_stairs(branch, depth, dest_branch, dir, state)
+function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     if state.safe == nil and not state.los then
         error("Undefined branch stairs state.")
     end
@@ -255,6 +252,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state)
     end
 
     local los_changed = current.los < state.los
+        or force and current.los ~= state.los
     if state.safe == current.safe and not los_changed then
         return
     end
@@ -339,7 +337,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed and not force then
+        if los_changed then
             current.los = state.los
         end
     end
@@ -393,7 +391,7 @@ function update_pan_transit(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed and not force then
+        if los_changed then
             current.los = state.los
         end
     end
@@ -440,7 +438,7 @@ function update_abyssal_stairs(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed and not force then
+        if los_changed then
             current.los = state.los
         end
     end

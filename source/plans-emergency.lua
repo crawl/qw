@@ -832,7 +832,7 @@ function want_magic_points()
         and not dangerous_to_attack()
         -- No point trying to restore MP with ghost moths around.
         and count_enemies_by_name(los_radius, "ghost moth") == 0
-            and (hp_is_low(50) or you.have_orb() or in_extended())
+            and (hp_is_low(50) or have_orb or in_extended())
         -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
@@ -854,7 +854,7 @@ function want_to_berserk()
         and not dangerous_to_melee()
         and (hp_is_low(50) and sense_danger(2, true)
             or check_enemies_in_list(2, scary_monsters)
-            or invis_caster and not options.autopick_on)
+            or invis_monster and nasty_invis_caster)
 end
 
 function want_to_heroism()

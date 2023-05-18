@@ -552,45 +552,59 @@ function sense_danger(radius, moveable)
     return false
 end
 
-function update_invis_monsters()
-    if not invis_caster or not position_is_safe or options.autopick_on then
-        if not options.autopick_on then
-            magic(control('a'))
-            coroutine.yield()
-        end
-
-        invis_caster = false
-        invis_caster_turns = 0
-        invis_caster_pos = nil
+function update_invis_monsters(closest_invis_pos)
+    if you.see_invisible() then
+        invis_monster = false
+        invis_monster_turns = 0
+        invis_monster_pos = nil
+        nasty_invis_caster = false
         return
     end
 
+    -- A visible nasty monster that can go invisible and whose position we
+    -- prioritize tracking over any currently invisible monster.
     if you.xl() < 10 then
         for _, enemy in ipairs(enemy_list) do
             if enemy:name() == "Sigmund" then
-                invis_caster = false
-                invis_caster_turns = 0
-                invis_caster_pos = enemy:pos()
+                invis_monster = false
+                nasty_invis_caster = true
+                invis_monster_turns = 0
+                invis_monster_pos = enemy:pos()
                 return
             end
         end
     end
 
-    if invis_caster_turns > 100 then
-        say("Invisibility caster not found???")
+    if closest_invis_pos then
+        invis_monster = true
+        if not invis_monster_turns then
+            invis_monster_turns = 0
+        end
+        invis_monster_pos = closest_invis_pos
+    end
 
+    if not position_is_safe or options.autopick_on then
+        invis_monster = false
+        nasty_invis_caster = false
+    end
+
+    if invis_monster and invis_monster_turns > 100 then
+        say("Invisibility monster not found???")
+        invis_monster = false
+    end
+
+    if not invis_monster then
         if not options.autopick_on then
             magic(control('a'))
             coroutine.yield()
         end
 
-        invis_caster = false
-        invis_caster_turns = 0
-        invis_caster_pos = nil
+        invis_monster_turns = 0
+        invis_monster_pos = nil
         return
     end
 
-    invis_caster_turns = invis_caster_turns + 1
+    invis_monster_turns = invis_monster_turns + 1
 end
 
 function monster_speed_number(mons)
@@ -639,6 +653,8 @@ end
 
 function update_monsters()
     enemy_list = {}
+    local closest_invis_pos
+    local sinv = you.see_invisible()
     for pos in radius_iter(origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
             local mons = monster.get_monster_at(pos.x, pos.y)
@@ -650,12 +666,18 @@ function update_monsters()
             else
                 monster_map[pos.x][pos.y] = nil
             end
+
+            if not sinv
+                    and not closest_invis_pos
+                    and view.invisible_monster(pos.x, pos.y) then
+                closest_invis_pos = pos
+            end
         else
             monster_map[pos.x][pos.y] = nil
         end
     end
 
-    update_invis_monsters()
+    update_invis_monsters(closest_invis_pos)
 end
 
 function monster_in_list(mons, mons_list)

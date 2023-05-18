@@ -24,42 +24,6 @@ function plan_use_gameplan_feature()
     return false
 end
 
-function plan_move_towards_monster()
-    if not position_is_safe or unable_to_move() or dangerous_to_move() then
-        return false
-    end
-
-    local mons_targets = {}
-    for _, enemy in ipairs(enemy_list) do
-        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
-    end
-
-    if #mons_targets == 0 then
-        for pos in square_iter(origin) do
-            local mons = monster.get_monster_at(pos.x, pos.y)
-            if mons and Monster:new(mons):is_enemy() then
-                table.insert(mons_targets, position_sum(global_pos, pos))
-            end
-        end
-    end
-
-    if #mons_targets == 0 then
-        return false
-    end
-
-    local move, dest = best_move_towards_map_positions(mons_targets)
-    if move then
-        if debug_channel("explore") then
-            dsay("Moving to enemy at "
-                .. cell_string_from_map_position(dest))
-        end
-        move_towards_destination(move, dest, "monster")
-        return true
-    end
-
-    return false
-end
-
 function plan_move_towards_unsafe_unexplored()
     if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false
@@ -155,7 +119,6 @@ end
 
 function set_plan_stuck()
     plan_stuck = cascade {
-        {plan_move_towards_monster, "move_towards_monster"},
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
         {plan_move_towards_unsafe_unexplored, "move_towards_unsafe_unexplored"},
         {plan_clear_exclusions, "try_clear_exclusions"},

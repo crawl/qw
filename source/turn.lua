@@ -91,7 +91,7 @@ function turn_update()
         end
     end
 
-    if you.have_orb() and where == zot_end then
+    if have_orb and where == zot_end then
         ignore_traps = true
     else
         ignore_traps = false
