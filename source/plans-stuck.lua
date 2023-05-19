@@ -2,28 +2,6 @@
 -- The normal plan cascade: choosing a move for a normal turn (not in the Abyss
 -- or on the Orb run).
 
-function plan_use_gameplan_feature()
-    if unable_to_use_stairs() or dangerous_to_move() then
-        return false
-    end
-
-    local feats = gameplan_features()
-    local feat = view.feature_at(0, 0)
-    if not feats or not util.contains(feats, feat) then
-        return false
-    end
-
-    if feature_uses_map_key(">", feat) then
-        go_downstairs()
-        return true
-    elseif feature_uses_map_key("<", feat) then
-        go_upstairs()
-        return true
-    end
-
-    return false
-end
-
 function plan_move_towards_unsafe_unexplored()
     if disable_autoexplore or unable_to_move() or dangerous_to_move() then
         return false

@@ -114,8 +114,11 @@ function turn_update()
     end
 
     update_monsters()
-    update_map(new_level, full_map_clear)
 
+    update_map(new_level, full_map_clear)
+    update_flee_positions()
+    update_reachable_position()
+    update_reachable_features()
     update_move_destination()
 
     if want_gameplan_update then
@@ -138,8 +141,6 @@ function turn_update()
     immediate_danger = sense_immediate_danger()
     melee_target = nil
 
-    find_flee_positions()
-    update_reachable_position()
     choose_tactical_step()
 
     map_mode_search_attempts = 0

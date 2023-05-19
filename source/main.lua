@@ -3,6 +3,7 @@
 
 -- Max memory available to clua in kilobytes
 MAX_MEMORY = 16000
+MAX_MEMORY_PERCENTAGE = 90
 
 function stop()
     automatic = false
@@ -102,7 +103,12 @@ function run_qw()
         do_dummy_action = true
     end
 
-    if collectgarbage("count") > memory_limit then
+    local memory_count = collectgarbage("count")
+    if debug_channel("throttle") and throttle then
+        dsay("Memory count is " .. tostring(memory_count))
+    end
+
+    if memory_count > memory_limit then
         collectgarbage("collect")
 
         if collectgarbage("count") > memory_limit then
@@ -112,6 +118,7 @@ function run_qw()
             return
         end
     end
+    throttle = false
 
     if do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))

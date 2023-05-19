@@ -14,6 +14,7 @@ local enum_att_neutral = 1
 
 -- Constants
 local MAX_MEMORY
+local MAX_MEMORY_PERCENTAGE
 local INF_TURNS
 local INF_DIST
 local GXM
@@ -55,6 +56,7 @@ local debug_channels = {}
 
 local coroutine_throttle = true
 local memory_limit
+local throttle
 local abort_qw = false
 local automatic = false
 local update_coroutine
@@ -110,6 +112,7 @@ local permanent_bazaar
 local dislike_pan_level = false
 
 local cache_parity
+local check_reachable_features
 local feature_map_positions_cache
 local feature_map_positions
 local item_searches

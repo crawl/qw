@@ -102,10 +102,12 @@ function find_features(feats, radius)
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Searched features in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -145,10 +147,12 @@ function find_items(item_names, radius)
     local i = 1
     for pos in square_iter(origin, radius, true) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Searched items in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -418,17 +422,19 @@ end
 function distance_map_propagate(dist_map)
     local ind = 1
     local count = ind
-    if debug_channel("update") then
+    if debug_channel("map") then
         dsay("Propagating distance map at "
             .. cell_string_from_map_position(dist_map.pos))
     end
     while ind <= #dist_map.queue do
         if COROUTINE_THROTTLE and count % 300 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Propagated block " .. tostring(count / 300)
                     .. " with " .. tostring(#dist_map.queue - ind)
                     .. " positions remaining")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -566,71 +572,83 @@ function map_is_unexcluded_at(pos)
     return exclusion_map[pos.x][pos.y]
 end
 
-function update_map_cell_feature(cell, map_updated)
-    -- These two features can appear spontaneously in an already seen LOS in
-    -- the Abyss, so we handle them separately.
-    if cell.feat == "abyssal_stair" then
-        update_abyssal_stairs(cell.hash,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
-        return
-    end
-
-    if cell.feat == "exit_abyss" then
-        update_branch_stairs(where_branch, where_depth, "Abyss", DIR.UP,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
-        return
-    end
-
-    if not map_updated then
-        return
-    end
-
-    local dir, num = stone_stairs_type(cell.feat)
+function update_feature(branch, depth, feat, hash, state)
+    local dir, num = stone_stairs_type(feat)
     if dir then
-        update_stone_stairs(where_branch, where_depth, dir, num,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
+        update_stone_stairs(branch, depth, dir, num,
+            { los = FEAT_LOS.REACHABLE })
         return
     end
 
-    local dir = escape_hatch_type(cell.feat)
+    if feat == "abyssal_stair" then
+        update_abyssal_stairs(hash, state)
+        return
+    end
+
+    local dest_branch, dir = branch_stairs_type(feat)
+    if dest_branch then
+        update_branch_stairs(branch, depth, dest_branch, dir,
+            { los = FEAT_LOS.REACHABLE })
+        return
+    end
+
+    local dir = escape_hatch_type(feat)
     if dir then
-        update_escape_hatch(where_branch, where_depth, dir, cell.hash,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
+        update_escape_hatch(branch, depth, dir, hash,
+            { los = FEAT_LOS.REACHABLE })
         return
     end
 
-    local branch, dir = branch_stairs_type(cell.feat)
-    if branch then
-        update_branch_stairs(where_branch, where_depth, branch, dir,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
+    if feat == "transit_pandemonium" then
+        update_pan_transit(hash, { los = FEAT_LOS.REACHABLE })
         return
     end
 
-    if cell.feat == "transit_pandemonium" then
-        update_pan_transit(cell.hash,
-            { safe = unexcluded, los = los_state(cell.los_pos) })
-        update_cell_feature_positions(cell)
+    if feat == "runelight" then
+        update_runelight(hash, { los = FEAT_LOS.REACHABLE })
         return
     end
 
-    if cell.feat == "runelight" then
-        local state = { safe = unexcluded, los = los_state(cell.los_pos) }
-        update_runelight(cell.hash, state)
-
-        update_cell_feature_positions(cell)
-        return
-    end
-
-    local god = altar_god(cell.feat)
+    local god = altar_god(feat)
     if god then
-        update_altar(where, god, los_state(cell.los_pos))
-        update_cell_feature_positions(cell)
+        update_altar(make_level(branch, depth), god, FEAT_LOS.REACHABLE)
         return
+    end
+end
+
+function feature_has_map_state(feat)
+    return stone_stairs_type(feat)
+        or feat == "abyssal_stair"
+        or branch_stairs_type(feat)
+        or escape_hatch_type(feat)
+        or feat == "transit_pandemonium"
+        or feat == "runelight"
+        or altar_god(feat)
+end
+
+function update_cell_feature(cell, map_updated)
+    -- These two features can appear spontaneously in an already seen LOS in
+    -- the Abyss, so we need to look for them even if no map update has
+    -- happened.
+    if cell.feat ~= "abyssal_stair"
+            and cell.feat ~= "exit_abyss"
+            and not (map_updated and feature_has_map_state(cell.feat)) then
+        return
+    end
+
+    local los = los_state(cell.los_pos)
+    update_feature(where_branch, where_depth, cell.feat, cell.hash,
+        { safe = unexcluded, los = los })
+
+    if los < FEAT_LOS.REACHABLE then
+        check_reachable_features[cell.feat] = true
+    end
+
+    if not feature_map_positions[cell.feat] then
+        feature_map_positions[cell.feat] = {}
+    end
+    if not feature_map_positions[cell.feat][cell.hash] then
+        feature_map_positions[cell.feat][cell.hash] = cell.pos
     end
 end
 
@@ -656,7 +674,7 @@ function update_map_at_cell(cell, queue, seen)
 
     seen[cell.hash] = true
 
-    update_map_cell_feature(cell, map_updated)
+    update_cell_feature(cell, map_updated)
 
     if not map_updated then
         return
@@ -671,16 +689,20 @@ function update_map_at_cell(cell, queue, seen)
 end
 
 function update_map_at_cells(queue)
+    check_reachable_features = {}
+
     local seen = {}
     local ind = 1
     local last = #queue
     local count = 1
     while ind <= last do
         if COROUTINE_THROTTLE and count % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Updated map in block " .. tostring(count / 1000)
                     .. " with " .. tostring(last - ind) .. " cells remaining")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -697,10 +719,12 @@ end
 function update_distance_maps_at_cells(queue)
     for i, cell in ipairs(queue) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Updated distance maps in block " .. tostring(i / 1000)
-                    .. " of " .. tostring(#queue) .. " map cells")
+                    .. " with " .. tostring(#queue - i) .. " cells remaining")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -902,16 +926,6 @@ function get_item_map_positions(item_names, radius)
 --  end
 
     return positions, found_items
-end
-
-function update_cell_feature_positions(cell)
-    if not feature_map_positions[cell.feat] then
-        feature_map_positions[cell.feat] = {}
-    end
-
-    if not feature_map_positions[cell.feat][cell.hash] then
-        feature_map_positions[cell.feat][cell.hash] = cell.pos
-    end
 end
 
 function remove_exclusions(record_only)

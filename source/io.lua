@@ -198,5 +198,7 @@ function c_message(text, channel)
         ignore_traps = false
     elseif text:find("You feel very bouyant") then
         temporary_flight = true
+    elseif text:find("You pick up the Orb of Zot") then
+        want_gameplan_update = true
     end
 end

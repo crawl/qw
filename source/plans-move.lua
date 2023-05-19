@@ -18,7 +18,7 @@ end
 function move_towards_destination(pos, dest, reason)
     move_destination = dest
     move_reason = reason
-    magic(delta_to_vi(pos) .. "YY")
+    move_to(pos)
 end
 
 function random_step(reason)
@@ -130,28 +130,6 @@ function plan_swamp_clouds_hack()
     end
 
     return plan_stuck_teleport()
-end
-
-function plan_stuck_use_stairs()
-    if dangerous_to_move() then
-        return false
-    end
-
-    local feats = gameplan_features()
-    local feat = view.feature_at(0, 0)
-    if not feats or not util.contains(feats, feat) then
-        return false
-    end
-
-    if feature_uses_map_key(">", feat) then
-        go_downstairs()
-        return true
-    elseif feature_uses_map_key("<", feat) then
-        go_upstairs()
-        return true
-    end
-
-    return false
 end
 
 function set_plan_move()

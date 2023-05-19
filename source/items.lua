@@ -2,7 +2,7 @@
 -- Equipment valuation and autopickup
 
 RUNE_SUFFIX = " rune of Zot"
-ORB_NAME = "the orb of Zot"
+ORB_NAME = "Orb of Zot"
 
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
@@ -1056,11 +1056,12 @@ function autopickup(it, name)
         return
     end
 
-    if name:find(RUNE_SUFFIX) then
-        record_seen_item(you.where(), it:name())
+    local item_name = it:name()
+    if item_name:find(RUNE_SUFFIX) then
+        record_seen_item(you.where(), item_name)
         return true
-    elseif name == ORB_NAME then
-        record_seen_item(you.where(), it:name())
+    elseif item_name == ORB_NAME then
+        record_seen_item(you.where(), item_name)
         c_persist.found_orb = true
         return true
     end
@@ -1069,9 +1070,6 @@ function autopickup(it, name)
         return false
     end
     local class = it.class(true)
-    old_value = 0
-    new_value = 0
-    ring = false
     if class == "armour" or class == "weapon" or class == "jewellery" then
         return not item_is_dominated(it)
     elseif class == "gold" then

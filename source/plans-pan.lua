@@ -57,7 +57,7 @@ function plan_enter_pan()
     if view.feature_at(0, 0) == branch_entrance("Pan")
             and want_to_be_in_pan()
             and not unable_to_use_stairs() then
-        magic(">Y")
+        go_downstairs(true)
         return true
     end
 

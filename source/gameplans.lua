@@ -831,9 +831,9 @@ function set_gameplan(status, gameplan)
     local min_depth, max_depth
     gameplan_branch, min_depth, max_depth = parse_level_range(gameplan)
 
-    -- God gameplans always set the gameplan branch/depth to the known location
-    -- of an altar, so we don't need further exploration.
-    if status:find("^God") then
+    -- God and Escape gameplans always set the gameplan branch/depth to a
+    -- specific level, so we don't need further exploration.
+    if status:find("^God") or status == "Escape" then
         gameplan_depth = min_depth
     elseif in_portal() then
         gameplan_depth = where_depth

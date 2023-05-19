@@ -85,7 +85,7 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
         local next_branch, next_depth
         if i > 1 then
             next_branch = parents[i - 1]
-            next_depth = entries[result.branch]
+            next_depth = entries[next_branch]
         else
             next_branch = dest_branch
             next_depth = dest_depth
@@ -314,7 +314,7 @@ function finalize_travel_depth(result)
     end
 end
 
-function travel_destination(dest_branch, dest_depth, stash_travel)
+function travel_destination(dest_branch, dest_depth, finalize_dest)
     if not dest_branch or in_portal() then
         return {}
     end
@@ -329,11 +329,15 @@ function travel_destination(dest_branch, dest_depth, stash_travel)
         if not result.depth then
             result.depth = min_depth
         end
-        finalize_travel_depth(result)
-    -- Get the final depth we should travel to given the state of stair
-    -- exploration at our travel destination. For stash search travel, we don't
-    -- do this, since we know what we want is on the destination level.
-    elseif not stash_travel then
+    end
+
+    -- Get the final depth to which we should actually travel given the state
+    -- of exploration at our travel destination. Some searches never finalize
+    -- at their destination because they are for a known objective on the
+    -- destination level.
+    if finalize_dest
+            or result.branch ~= dest_branch
+            or result.depth ~= dest_depth then
         finalize_travel_depth(result)
     end
 
@@ -358,7 +362,7 @@ function update_gameplan_travel()
             and branch_found("Pan")
 
     gameplan_travel = travel_destination(gameplan_branch, gameplan_depth,
-        want_stash)
+        not want_stash and gameplan_status ~= "Escape")
 
     if gameplan_status == "Escape" and where == "D:1" then
         gameplan_travel.first_dir = DIR.UP
@@ -382,14 +386,15 @@ function update_gameplan_travel()
         -- is fully explored, since then it's safe to pick up any surrounding
         -- items like thrown projectiles or loot from e.g. stairdancing.
         and (not explored_level(where_branch, where_depth)
-        -- However we don't allow autoexplore in this case if our current level
-        -- is the Abyss or is our travel destination. This latter exception is
-        -- to allow within-level plans like taking unexplored stairs and stash
-        -- searches to on-level destinations like altars to not be interrupted
-        -- when runed doors exist. In that case autoexplore would move us next
-        -- to a runed door and off of our intermediate stair/altar/etc. where
-        -- we need to be.
+        -- However we don't allow autoexplore in this case if we're in the
+        -- Abyss, we're escaping with the Orb, or our current level is our
+        -- travel destination. The last exception is to allow within-level
+        -- plans like taking unexplored stairs and stash searches to on-level
+        -- destinations like altars to not be interrupted when runed doors
+        -- exist. In that case autoexplore would move us next to a runed door
+        -- and off of our intermediate stair/altar/etc. where we need to be.
             or (in_branch("Abyss")
+                or gameplan_status == "Escape" and have_orb
                 or gameplan_travel.branch and not gameplan_travel.want_go))
 
     if debug_channel("explore") then
@@ -407,5 +412,32 @@ function update_gameplan_travel()
         dsay("Want stash travel: " .. bool_string(want_stash))
         dsay("Want go travel: " .. bool_string(gameplan_travel.want_go))
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore))
+    end
+end
+
+function gameplan_travel_features()
+    local on_travel_level = gameplan_travel.branch == where_branch
+        and gameplan_travel.depth == where_depth
+    if gameplan_travel.first_dir then
+        return level_stairs_features(where_branch, where_depth,
+            gameplan_travel.first_dir)
+    elseif gameplan_travel.first_branch then
+        return { branch_entrance(gameplan_travel.first_branch) }
+    elseif gameplan_travel.stairs_dir and on_travel_level then
+        local feats = level_stairs_features(where_branch, where_depth,
+            gameplan_travel.stairs_dir)
+        local wanted_feats = {}
+        for _, feat in ipairs(feats) do
+            local state = get_stairs(where_branch, where_depth, feat)
+            if not state or state.los < FEAT_LOS.EXPLORED then
+                table.insert(wanted_feats, feat)
+            end
+        end
+        return wanted_feats
+    elseif on_travel_level then
+        local god = gameplan_god(gameplan_status)
+        if god then
+            return { god_altar(god) }
+        end
     end
 end

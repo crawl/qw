@@ -29,7 +29,7 @@ function initialize()
     -- table. Generally qw only gets clua memory usage this high due to bugs.
     -- Leave some memory left over so we can e.g. reset the coroutine and
     -- attempt debugging.
-    memory_limit = MAX_MEMORY * 0.75
+    memory_limit = MAX_MEMORY * MAX_MEMORY_PERCENTAGE / 100
 
     initialize_enums()
     initialize_debug()

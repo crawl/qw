@@ -198,8 +198,8 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to INF_DIST if the move is not closer to any position in
-    -- flee_positions, otherwise equal to the (min) dist to such a stair
+    -- Equal to INF_DIST if the move is not closer to any flee position in
+    -- flee_positions, otherwise equal to the (min) dist to such a position.
     a.flee_distance = flee_improvement(pos)
 
     return a
@@ -368,8 +368,7 @@ function distance_map_minimum_enemy_distance(dist_map, pspeed)
     local min_dist
     for _, enemy in ipairs(enemy_list) do
         local gpos = position_sum(global_pos, enemy:pos())
-        local dist = dist_map.map[gpos.x][gpos.y]
-
+        local dist = dist_map.excluded_map[gpos.x][gpos.y]
         if dist then
             local speed_diff = enemy:speed() - pspeed
             if speed_diff > 1 then
@@ -390,7 +389,7 @@ function distance_map_minimum_enemy_distance(dist_map, pspeed)
     return min_dist
 end
 
-function find_flee_positions()
+function update_flee_positions()
     flee_positions = {}
 
     local stairs_feats = level_stairs_features(where_branch, where_depth,
@@ -410,23 +409,27 @@ function find_flee_positions()
     end
 
     local safe_positions = {}
-    for i, feat in ipairs(feats) do
+    for i, pos in ipairs(positions) do
         local state
-        if feat == "escape_hatch_up" then
-            state = get_map_escape_hatch(where_branch, where_depth,
-                positions[i])
+        if feats[i] == "escape_hatch_up" then
+            state = get_map_escape_hatch(where_branch, where_depth, pos)
         end
         if not state or state.safe then
-            table.insert(safe_positions, positions[i])
+            table.insert(safe_positions, pos)
         end
     end
 
     local pspeed = player_speed()
     for _, pos in ipairs(safe_positions) do
         local dist_map = get_distance_map(pos, true)
-        local pdist = dist_map.map[global_pos.x][global_pos.y]
+        local pdist = dist_map.excluded_map[global_pos.x][global_pos.y]
         local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
         if pdist and (not edist or pdist < edist) then
+            if debug_channel("map") then
+                dsay("Adding flee position #" .. tostring(#flee_positions + 1)
+                    .. " at " .. cell_string_from_map_position(pos))
+            end
+
             table.insert(flee_positions, pos)
         end
     end
@@ -436,10 +439,10 @@ function best_flee_destination_at(pos)
     local best_dist, best_pos
     for _, flee_pos in ipairs(flee_positions) do
         local dist_map = get_distance_map(flee_pos)
-        local dist = dist_map.map[global_pos.x + pos.x][global_pos.y + pos.y]
-        local current_dist = dist_map.map[global_pos.x][global_pos.y]
-        if dist and current_dist
-                and dist < current_dist
+        local map_pos = position_sum(global_pos, pos)
+        local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
+        local current_dist = dist_map.excluded_map[global_pos.x][global_pos.y]
+        if dist and (not current_dist or dist < current_dist)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
             best_pos = flee_pos
@@ -451,7 +454,7 @@ end
 function flee_improvement(pos)
     local flee_pos, flee_dist = best_flee_destination_at(pos)
     if supdist(pos) == 0 then
-        if flee_pos and positions_equall(pos, flee_pos) then
+        if flee_pos and positions_equal(pos, flee_pos) then
             return 0
         else
             return INF_DIST
@@ -698,6 +701,27 @@ function update_reachable_position()
     end
 end
 
+function update_reachable_features()
+    local check_feats = {}
+    for feat, _ in pairs(check_reachable_features) do
+        table.insert(check_feats, feat)
+    end
+    if #check_feats == 0 then
+        return
+    end
+
+    local positions, feats = get_feature_map_positions(check_feats)
+    if not positions then
+        return
+    end
+    for i, pos in ipairs(positions) do
+        if map_is_reachable_at(pos, true) then
+            update_feature(where_branch, where_depth, feats[i],
+                hash_position(pos), { los = FEAT_LOS.REACHABLE })
+        end
+    end
+end
+
 function map_is_reachable_at(pos, ignore_exclusions)
     local dist_map = get_distance_map(reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
@@ -708,10 +732,12 @@ function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
     local i = 1
     for near_pos in radius_iter(pos, GXM) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Searched for unexplored near unreachable in block "
                     .. tostring(i / 1000) .. " of map positions")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -739,22 +765,8 @@ function best_move_towards_items(item_names, ignore_exclusions)
     end
 end
 
-function gameplan_features()
-    if gameplan_travel.first_dir then
-        return level_stairs_features(where_branch, where_depth,
-            gameplan_travel.first_dir)
-    elseif gameplan_travel.first_branch then
-        return { branch_entrance(gameplan_travel.first_branch) }
-    else
-        local god = gameplan_god(gameplan_status)
-        if god then
-            return { god_altar(god) }
-        end
-    end
-end
-
 function best_move_towards_gameplan(ignore_exclusions)
-    local feats = gameplan_features()
+    local feats = gameplan_travel_features()
     if not feats then
         return
     end
@@ -776,10 +788,12 @@ function best_move_towards_unexplored(unsafe)
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Searched for unexplored in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
+
+            throttle = true
             coroutine.yield()
         end
 
@@ -798,10 +812,12 @@ function best_move_towards_safety()
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
         if COROUTINE_THROTTLE and i % 1000 == 0 then
-            if debug_channel("update") then
+            if debug_channel("throttle") then
                 dsay("Searched for safety in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
+
+            throttle = true
             coroutine.yield()
         end
 

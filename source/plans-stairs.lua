@@ -247,7 +247,8 @@ end
 -- take a hatch up in Zot if the destination level is fully explored.
 function want_to_use_escape_hatches(dir)
     return dir == DIR.UP
-        and have_orb
+        and gameplan_status == "Escape"
+        and not level_is_temporary()
         and where_depth > 1
             and (where_branch ~= "Zot"
                 or explored_level(where_branch, where_depth - 1))
@@ -270,10 +271,25 @@ function plan_take_escape_hatch()
     return true
 end
 
-function plan_go_to_escape_hatch()
-    if unable_to_travel() or not want_to_use_escape_hatches(DIR.UP) then
+function plan_move_towards_escape_hatch()
+    if want_to_use_escape_hatches(DIR.UP) then
         return false
     end
 
-    magic("X<\r")
+    local flee_pos = best_flee_destination_at(origin)
+    if not flee_pos then
+        return false
+    end
+
+    if not c_persist.up_hatches[hash_position(flee_pos)] then
+        return false
+    end
+
+    local move, dest = best_move_towards_map_position(flee_pos, true)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
 end

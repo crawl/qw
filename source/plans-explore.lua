@@ -75,7 +75,9 @@ function plan_go_command()
         return false
     end
 
-    if gameplan_status == "Escape" then
+    if gameplan_status == "Escape"
+            and gameplan_travel.branch == "D"
+            and gameplan_travel.depth == 1 then
         send_travel("D", 0)
     else
         send_travel(gameplan_travel.branch, gameplan_travel.depth)
@@ -134,6 +136,28 @@ function plan_exit_portal()
 
     go_upstairs()
     return true
+end
+
+function plan_use_gameplan_feature()
+    if unable_to_use_stairs() or dangerous_to_move() then
+        return false
+    end
+
+    local feats = gameplan_travel_features()
+    local feat = view.feature_at(0, 0)
+    if not feats or not util.contains(feats, feat) then
+        return false
+    end
+
+    if feature_uses_map_key(">", feat) then
+        go_downstairs()
+        return true
+    elseif feature_uses_map_key("<", feat) then
+        go_upstairs()
+        return true
+    end
+
+    return false
 end
 
 function plan_move_towards_gameplan()
@@ -273,7 +297,7 @@ function set_plan_explore()
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_take_escape_hatch, "take_escape_hatch"},
-        {plan_go_to_escape_hatch, "try_go_to_escape_hatch"},
+        {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
         {plan_move_towards_destination, "move_towards_destination"},
         {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
         {plan_move_towards_runelight, "move_towards_runelight"},
