@@ -677,10 +677,9 @@ function weapon_value(it, cur, it2, sit)
     -- The evaluating weapon doesn't match our desired skill...
     if it.weap_skill ~= weap_skill
             -- ...and our current weapon already matches our desired skill or
-            -- we use UC or the evaluating weapon is not a melee weapon
+            -- we use UC...
             and (weap and weap.weap_skill == weap_skill
-                or weap_skill == "Unarmed Combat"
-                or it.weap_skill == "Ranged Weapons")
+                or weap_skill == "Unarmed Combat")
             -- ...and we either don't need a hydra swap weapon or the
             -- evaluating weapon isn't a hydra swap weapon for our desired
             -- skill.
@@ -1324,6 +1323,16 @@ function shield_skill_utility()
         * (27 - you.base_skill("Shields"))
         / (5 * (20 - 3 * shield_factor)) / 27
     return 0.25 + 0.5 * shield_penalty
+end
+
+function weapon_min_delay(weapon, skill)
+    local delay = weapon.delay - min(weapon.delay / 2, 13.5)
+
+    if weap.weap_skill == "Short Blades" then
+
+    local name = weapon:name()
+    if name:find('heavy crossbow "Sniper"') then
+
 end
 
 function min_delay_skill()
