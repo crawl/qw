@@ -101,7 +101,7 @@ function find_features(feats, radius)
     local found_feats = {}
     local i = 1
     for pos in square_iter(origin, radius, true) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched features in block " .. tostring(i / 1000)
                     .. " of map positions")
@@ -146,7 +146,7 @@ function find_items(item_names, radius)
     local found_items = {}
     local i = 1
     for pos in square_iter(origin, radius, true) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched items in block " .. tostring(i / 1000)
                     .. " of map positions")
@@ -427,7 +427,7 @@ function distance_map_propagate(dist_map)
             .. cell_string_from_map_position(dist_map.pos))
     end
     while ind <= #dist_map.queue do
-        if COROUTINE_THROTTLE and count % 300 == 0 then
+        if coroutine_throttle and count % 300 == 0 then
             if debug_channel("throttle") then
                 dsay("Propagated block " .. tostring(count / 300)
                     .. " with " .. tostring(#dist_map.queue - ind)
@@ -498,9 +498,9 @@ function new_update_position(pos)
 end
 
 function distance_map_update_position(pos, dist_map)
-    if not (dist_map.radius
+    if dist_map.radius
             and supdist(position_difference(dist_map.pos, pos))
-                > dist_map.radius) then
+                > dist_map.radius then
         return
     end
 
@@ -575,8 +575,7 @@ end
 function update_feature(branch, depth, feat, hash, state)
     local dir, num = stone_stairs_type(feat)
     if dir then
-        update_stone_stairs(branch, depth, dir, num,
-            { los = FEAT_LOS.REACHABLE })
+        update_stone_stairs(branch, depth, dir, num, state)
         return
     end
 
@@ -587,53 +586,53 @@ function update_feature(branch, depth, feat, hash, state)
 
     local dest_branch, dir = branch_stairs_type(feat)
     if dest_branch then
-        update_branch_stairs(branch, depth, dest_branch, dir,
-            { los = FEAT_LOS.REACHABLE })
+        update_branch_stairs(dest_branch, branch, depth, dir, state)
         return
     end
 
     local dir = escape_hatch_type(feat)
     if dir then
-        update_escape_hatch(branch, depth, dir, hash,
-            { los = FEAT_LOS.REACHABLE })
+        update_escape_hatch(branch, depth, dir, hash, state)
         return
     end
 
     if feat == "transit_pandemonium" then
-        update_pan_transit(hash, { los = FEAT_LOS.REACHABLE })
+        update_pan_transit(hash, state)
         return
     end
 
     if feat == "runelight" then
-        update_runelight(hash, { los = FEAT_LOS.REACHABLE })
+        update_runelight(hash, state)
         return
     end
 
     local god = altar_god(feat)
     if god then
-        update_altar(make_level(branch, depth), god, FEAT_LOS.REACHABLE)
+        update_altar(god, make_level(branch, depth), hash, state)
         return
     end
 end
 
+local state_features = {}
 function feature_has_map_state(feat)
-    return stone_stairs_type(feat)
-        or feat == "abyssal_stair"
-        or branch_stairs_type(feat)
-        or escape_hatch_type(feat)
-        or feat == "transit_pandemonium"
-        or feat == "runelight"
-        or altar_god(feat)
+    local has_state = state_features[feat]
+    if has_state == nil then
+        has_state = stone_stairs_type(feat)
+            or feat == "abyssal_stair"
+            or branch_stairs_type(feat)
+            or escape_hatch_type(feat)
+            or feat == "transit_pandemonium"
+            or feat == "runelight"
+            or altar_god(feat)
+        state_features[feat] = has_state
+    end
+
+    return has_state
 end
 
-function update_cell_feature(cell, map_updated)
-    -- These two features can appear spontaneously in an already seen LOS in
-    -- the Abyss, so we need to look for them even if no map update has
-    -- happened.
-    if cell.feat ~= "abyssal_stair"
-            and cell.feat ~= "exit_abyss"
-            and not (map_updated and feature_has_map_state(cell.feat)) then
-        return
+function update_cell_feature(cell)
+    if not feature_has_map_state(cell.feat) then
+        return false
     end
 
     local los = los_state(cell.los_pos)
@@ -672,9 +671,8 @@ function update_map_at_cell(cell, queue, seen)
         map_updated = true
     end
 
+    update_cell_feature(cell)
     seen[cell.hash] = true
-
-    update_cell_feature(cell, map_updated)
 
     if not map_updated then
         return
@@ -689,17 +687,14 @@ function update_map_at_cell(cell, queue, seen)
 end
 
 function update_map_at_cells(queue)
-    check_reachable_features = {}
-
     local seen = {}
     local ind = 1
-    local last = #queue
     local count = 1
-    while ind <= last do
-        if COROUTINE_THROTTLE and count % 1000 == 0 then
+    while ind <= #queue do
+        if coroutine_throttle and count % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Updated map in block " .. tostring(count / 1000)
-                    .. " with " .. tostring(last - ind) .. " cells remaining")
+                    .. " with " .. tostring(#queue - ind) .. " cells remaining")
             end
 
             throttle = true
@@ -712,13 +707,12 @@ function update_map_at_cells(queue)
 
         count = ind
         ind = ind + 1
-        last = #queue
     end
 end
 
 function update_distance_maps_at_cells(queue)
     for i, cell in ipairs(queue) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Updated distance maps in block " .. tostring(i / 1000)
                     .. " with " .. tostring(#queue - i) .. " cells remaining")

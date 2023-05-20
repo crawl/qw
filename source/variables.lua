@@ -44,16 +44,7 @@ local plan_move
 -- All variables past this point are qw state.
 local initialized = false
 local debug_mode = false
-local branch_data = {}
-local hell_branches
-local portal_data = {}
-local god_data = {}
-local good_gods
-local upstairs_features
-local downstairs_features
-
 local debug_channels = {}
-
 local coroutine_throttle = true
 local memory_limit
 local throttle
@@ -66,6 +57,14 @@ local skill_count = you.turns() - (you.turns() % 5)
 local have_message = false
 local read_message = true
 local restart_cascade = false
+
+local branch_data = {}
+local hell_branches
+local portal_data = {}
+local god_data = {}
+local good_gods
+local upstairs_features
+local downstairs_features
 
 local gameplan_list
 local which_gameplan = 1
@@ -112,7 +111,7 @@ local permanent_bazaar
 local dislike_pan_level = false
 
 local cache_parity
-local check_reachable_features
+local check_reachable_features = {}
 local feature_map_positions_cache
 local feature_map_positions
 local item_searches

@@ -601,6 +601,7 @@ function update_invis_monsters(closest_invis_pos)
     if not invis_monster then
         if not options.autopick_on then
             magic(control('a'))
+            do_dummy_action = false
             coroutine.yield()
         end
 

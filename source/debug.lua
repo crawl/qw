@@ -25,14 +25,18 @@ end
 
 function toggle_debug()
     debug_mode = not debug_mode
-end
-
-function toggle_debug_channel(channel)
-    debug_channels[channel] = not debug_channels[channel]
+    dsay((debug_mode and "Enabling" or "Disabling")
+      .. " debug mode")
 end
 
 function debug_channel(channel)
     return debug_mode and debug_channels[channel]
+end
+
+function toggle_debug_channel(channel)
+    debug_channels[channel] = not debug_channels[channel]
+    dsay((debug_channels[channel] and "Enabling " or "Disabling ")
+      .. channel .. " debug channel")
 end
 
 function dsay(x, channel)
@@ -49,12 +53,6 @@ function dsay(x, channel)
     -- Convert x to string to make debugging easier. We don't do this for
     -- say() and note() so we can catch errors.
     crawl.mpr(you.turns() .. " ||| " .. str)
-end
-
-function toggle_throttle()
-    coroutine_throttle = not coroutine_throttle
-    dsay("Coroutine throttle "
-        .. (coroutine_throttle and "enabled" or "disabled"))
 end
 
 function test_radius_iter()
@@ -106,21 +104,24 @@ function print_traversal_map(center)
 
     local map_center = position_sum(global_pos, center)
     say("Traversal map at " .. cell_string_from_map_position(map_center))
-    local str
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
-        str = ""
+        local str = ""
         for x = -20, 20 do
             local pos = position_sum(map_center, { x = x, y = y })
             local traversable = map_is_traversable_at(pos)
             local char
-            if positions_equal(pos, map_center) then
-                if positions_equal(center, origin) then
-                    str = str .. "@"
-                elseif traversable == nil then
+            if positions_equal(pos, global_pos) then
+                if traversable == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (traversable and "@" or "7")
+                end
+            elseif positions_equal(pos, map_center) then
+                if traversable == nil then
                     str = str .. "W"
                 else
-                    str = str .. (traversable and "&" or "G")
+                    str = str .. (traversable and "&" or "8")
                 end
             elseif traversable == nil then
                 str = str .. " "
@@ -149,11 +150,24 @@ function print_distance_map(dist_map, center, excluded)
     for y = -20, 20 do
         local str = ""
         for x = -20, 20 do
-            if map[map_center.x + x][map_center.y + y] == nil then
-                str = str .. " "
+            local pos = position_sum(map_center, { x = x, y = y })
+            local dist = map[pos.x][pos.y]
+            if positions_equal(pos, global_pos) then
+                if dist == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (dist > 180 and "7" or "@")
+                end
+            elseif positions_equal(pos, map_center) then
+                if dist == nil then
+                    str = str .. "8"
+                else
+                    str = str .. (dist > 180 and "9" or "&")
+                end
             else
-                local dist = map[map_center.x + x][map_center.y + y]
-                if dist > 180 then
+                if dist == nil then
+                    str = str .. " "
+                elseif dist > 180 then
                     str = str .. "∞"
                 else
                     str = str .. string.char(string.byte('A') + dist)
@@ -214,7 +228,9 @@ function cell_string_from_map_position(pos)
 end
 
 function toggle_throttle()
-    COROUTINE_THROTTLE = not COROUTINE_THROTTLE
+    coroutine_throttle = not coroutine_throttle
+    dsay((coroutine_throttle and "Enabling" or "Disabling")
+      .. " coroutine throttle")
 end
 
 function reset_coroutine()

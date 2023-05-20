@@ -182,12 +182,13 @@ function plan_move_towards_gameplan()
         return false
     end
 
-    if c_persist.altars[god]
-            and c_persist.altars[god][where] >= FEAT_LOS.REACHABLE then
-        c_persist.altars[god][where] = FEAT_LOS.SEEN
-        want_gameplan_update = true
-        restart_cascade = true
-        return
+    if c_persist.altars[god] and c_persist.altars[god][where] then
+        for hash, _ in pairs(c_persist.altars[god][where]) do
+            if update_altar(god, where, hash,
+                    { los = FEAT_LOS.SEEN }, true) then
+                restart_cascade = true
+            end
+        end
     end
 
     return false

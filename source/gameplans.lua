@@ -227,7 +227,7 @@ function choose_level_portal(level)
 end
 
 -- If we found a viable portal on the current level, that becomes our gameplan.
-function check_portal_gameplan()
+function get_portal_gameplan()
     local chosen_portal, chosen_level, chosen_turns
     for level, portals in pairs(c_persist.portals) do
         local portal, turns = choose_level_portal(level)
@@ -316,7 +316,7 @@ function determine_gameplan()
     end
 
     local portal
-    portal, permanent_bazaar = check_portal_gameplan()
+    portal, permanent_bazaar = get_portal_gameplan()
     if portal then
         status = portal
         gameplan = portal
@@ -419,7 +419,7 @@ function gameplans_visit_branch(branch)
     end
 end
 
-function check_future_branches()
+function update_future_planning()
     planning_zig = gameplans_visit_branch("Zig")
 
     planning_undead_demon_branches = false
@@ -444,9 +444,7 @@ function check_future_branches()
     planning_pan = in_branch("Pan") or gameplans_visit_branch("Pan")
     planning_cocytus = gameplans_visit_branch("Coc")
     planning_gehenna = gameplans_visit_branch("Geh")
-end
 
-function check_future_gods()
     planning_god_uses_mp = god_uses_mp()
     planning_tso = you.god() == "the Shining One"
     planning_good_god = is_good_god()
@@ -779,13 +777,15 @@ end
 
 function update_gameplan()
     update_expired_portals()
-    update_altars()
+    update_permanent_flight()
+
+    if coroutine_throttle and #enemy_list >= 20 then
+        throttle = true
+        coroutine.yield()
+    end
 
     determine_gameplan()
-
-    check_future_branches()
-    check_future_gods()
-
+    update_future_planning()
     update_gameplan_travel()
 
     want_gameplan_update = false

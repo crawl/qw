@@ -2,7 +2,7 @@
 -- ready function and main coroutine
 
 -- Max memory available to clua in kilobytes
-MAX_MEMORY = 16000
+MAX_MEMORY = 32000
 MAX_MEMORY_PERCENTAGE = 90
 
 function stop()
@@ -70,6 +70,7 @@ function qw_main()
         stop()
     end
 
+    local did_restart = restart_cascade
     if automatic then
         crawl.flush_input()
         crawl.more_autoclear(true)
@@ -78,6 +79,11 @@ function qw_main()
         else
             plan_move()
         end
+    end
+    -- restart_cascade must remain true for the entire move cascade while we're
+    -- restarting.
+    if did_restart then
+        restart_cascade = false
     end
 end
 
@@ -98,9 +104,9 @@ function run_qw()
 
     if coroutine.status(update_coroutine) == "dead" then
         update_coroutine = nil
-        do_dummy_action = false
+        do_dummy_action = do_dummy_action == nil and restart_cascade
     else
-        do_dummy_action = true
+        do_dummy_action = do_dummy_action == nil
     end
 
     local memory_count = collectgarbage("count")
@@ -123,6 +129,7 @@ function run_qw()
     if do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))
     end
+    do_dummy_action = nil
 end
 
 function ready()

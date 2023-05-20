@@ -220,7 +220,7 @@ function have_all_stairs(branch, depth, dir, los)
     return true
 end
 
-function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
+function update_branch_stairs(dest_branch, branch, depth, dir, state, force)
     if state.safe == nil and not state.los then
         error("Undefined branch stairs state.")
     end
@@ -330,7 +330,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating escape hatch " .. (dir == DIR.UP and "up" or "down")
-                .. " at " .. pos_string(pos) .. " on " .. level
+                .. " on " .. level .. " at " .. pos_string(pos)
                 .. " from " .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end

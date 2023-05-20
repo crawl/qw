@@ -58,15 +58,13 @@ function cascade(plans)
     local plan_turns = {}
     local plan_result = {}
     return function ()
-        local restart = restart_cascade
-        restart_cascade = false
         for i, plandata in ipairs(plans) do
             local plan = plandata[1]
             if plan == nil then
                 error("No plan function for " .. plandata[2])
             end
 
-            if restart
+            if restart_cascade
                     or you.turns() ~= plan_turns[plan]
                     or plan_result[plan] == nil then
                 local result = plan()

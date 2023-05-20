@@ -124,9 +124,11 @@ function altar_found(god, los_state)
         return
     end
 
-    for level, state in pairs(c_persist.altars[god]) do
-        if state >= los_state then
-            return level
+    for level, entries in pairs(c_persist.altars[god]) do
+        for _, state in pairs(entries) do
+            if state.los >= los_state then
+                return level
+            end
         end
     end
 end
@@ -361,18 +363,59 @@ function count_beogh_allies(radius)
     return i
 end
 
-function update_altar(level, god, los)
+function update_altar(god, level, hash, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined altar state.")
+    end
+
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}
     end
 
-    if c_persist.altars[god][level]
-            and c_persist.altars[god][level] >= los then
-        return
+    if not c_persist.altars[god][level] then
+        c_persist.altars[god][level] = {}
     end
 
-    c_persist.altars[god][level] = los
-    want_gameplan_update = true
+    if not c_persist.altars[god][level][hash] then
+        c_persist.altars[god][level][hash] = {}
+    end
+
+    local current = c_persist.altars[god][level][hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(unhash_position(hash), global_pos)
+            dsay("Updating " .. god .. " altar on " .. level .. " at "
+                .. pos_string(pos) .. " from " .. stairs_state_string(current)
+                .. " to " .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
+            want_gameplan_update = true
+        end
+        return true
+    end
+
+    return false
 end
 
 function estimate_slouch_damage()
@@ -399,15 +442,18 @@ function estimate_slouch_damage()
     return count
 end
 
-function update_altars()
+function update_permanent_flight()
     if not gained_permanent_flight then
         return
     end
 
     for god, levels in pairs(c_persist.altars) do
-        for level, state in pairs(levels) do
-            if state >= FEAT_LOS.SEEN and state < FEAT_LOS.REACHABLE then
-                c_persist.altars[god][level] = FEAT_LOS.REACHABLE
+        for level, altars in pairs(levels) do
+            for hash, state in pairs(altars) do
+                if state.los >= FEAT_LOS.SEEN
+                        and state.los < FEAT_LOS.REACHABLE then
+                    update_altar(god, level, hash, { los = FEAT_LOS.REACHABLE })
+                end
             end
         end
     end

@@ -190,7 +190,7 @@ function update_runelight(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed and not force then
+        if los_changed then
             current.los = state.los
         end
     end

@@ -116,10 +116,10 @@ function turn_update()
     update_monsters()
 
     update_map(new_level, full_map_clear)
+    update_move_destination()
     update_flee_positions()
     update_reachable_position()
     update_reachable_features()
-    update_move_destination()
 
     if want_gameplan_update then
         update_gameplan()

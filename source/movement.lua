@@ -346,7 +346,18 @@ function choose_tactical_step()
         return
     end
     local best_pos, best_reason, besta
+    local count = 1
     for pos in adjacent_iter(origin) do
+        if coroutine_throttle and #enemy_list >= 20 then
+            if debug_channel("throttle") then
+                dsay("Assessing tactical step of adjacent square #"
+                    .. tostring(count))
+            end
+
+            throttle = true
+            coroutine.yield()
+        end
+
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
         if reason then
@@ -357,6 +368,8 @@ function choose_tactical_step()
                 best_reason = reason
             end
         end
+
+        count = count + 1
     end
     if besta then
         tactical_step = delta_to_vi(best_pos)
@@ -682,25 +695,20 @@ function best_move_towards_map_position(pos, ignore_exclusions)
 end
 
 function update_reachable_position()
-    if #flee_positions > 0 then
-        reachable_position = flee_positions[1]
-        return
-    end
-
-    if reachable_position then
-        local hash = hash_position(reachable_position)
-        local dist_map = distance_maps[hash]
-        if not (dist_map
-                and dist_map.excluded_map[global_pos.x][global_pos.y]) then
-            reachable_position = nil
+    for _, dist_map in pairs(distance_maps) do
+        if dist_map.excluded_map[global_pos.x][global_pos.y] then
+            reachable_position = dist_map.pos
+            return
         end
     end
 
-    if not reachable_position then
-        reachable_position = global_pos
-    end
+    reachable_position = global_pos
 end
 
+--[[ Check any feature types flagged in check_reachable_features during the map
+--update. These have been seen but not are not currently reachable LOS-wise, so
+--check whether our reachable_position distance map indicates they are in fact
+--reachable, and update their los state if so. ]]--
 function update_reachable_features()
     local check_feats = {}
     for feat, _ in pairs(check_reachable_features) do
@@ -720,6 +728,8 @@ function update_reachable_features()
                 hash_position(pos), { los = FEAT_LOS.REACHABLE })
         end
     end
+
+    check_reachable_features = {}
 end
 
 function map_is_reachable_at(pos, ignore_exclusions)
@@ -731,7 +741,7 @@ end
 function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
     local i = 1
     for near_pos in radius_iter(pos, GXM) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored near unreachable in block "
                     .. tostring(i / 1000) .. " of map positions")
@@ -787,7 +797,7 @@ end
 function best_move_towards_unexplored(unsafe)
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored in block " .. tostring(i / 1000)
                     .. " of map positions")
@@ -811,7 +821,7 @@ end
 function best_move_towards_safety()
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
-        if COROUTINE_THROTTLE and i % 1000 == 0 then
+        if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for safety in block " .. tostring(i / 1000)
                     .. " of map positions")
@@ -837,15 +847,16 @@ function update_move_destination()
         return
     end
 
-    local monster = move_reason == "monster"
     local clear = false
-    if monster and danger then
-        clear = true
-    elseif monster then
-        local pos = position_difference(move_destination, global_pos)
-        if supdist(pos) <= los_radius
-                and you.see_cell_solid_see(pos.x, pos.y) then
+    if move_reason == "monster" then
+        if danger then
             clear = true
+        else
+            local pos = position_difference(move_destination, global_pos)
+            if supdist(pos) <= los_radius
+                    and you.see_cell_solid_see(pos.x, pos.y) then
+                clear = true
+            end
         end
     elseif move_reason == "gameplan" and want_gameplan_update then
         clear = true
