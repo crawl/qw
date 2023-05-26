@@ -37,6 +37,50 @@ function plan_stuck_initial()
     return false
 end
 
+function plan_stuck_take_escape_hatch()
+    local dir = escape_hatch_type(view.feature_at(0, 0))
+    if not dir or unable_to_use_stairs() then
+        return false
+    end
+
+    if dir == DIR.UP then
+        go_upstairs()
+    else
+        go_downstairs()
+    end
+
+    return true
+end
+
+function plan_stuck_move_towards_escape_hatch()
+    if want_to_use_escape_hatches(DIR.UP) then
+        return false
+    end
+
+    local hatch_dir
+    if gameplan_travel.first_dir then
+        hatch_dir = gameplan_travel.first_dir
+    else
+        hatch_dir = DIR.UP
+    end
+    local feat = escape_hatch_features[hatch_dir]
+
+    local move, dest = best_move_towards_features({ feat }, true)
+    if move then
+        move_towards_destination(move, dest, "hatch")
+        return true
+    end
+
+    feat = escape_hatch_features[-hatch_dir]
+    move, dest = best_move_towards_features({ feat }, true)
+    if move then
+        move_towards_destination(move, dest, "hatch")
+        return true
+    end
+
+    return false
+end
+
 function plan_clear_exclusions()
     local n = clear_exclusion_count[where] or 0
     if n > 20 then
@@ -99,6 +143,8 @@ function set_plan_stuck()
     plan_stuck = cascade {
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
         {plan_move_towards_unsafe_unexplored, "move_towards_unsafe_unexplored"},
+        {plan_stuck_take_escape_hatch, "stuck_take_escape_hatch"},
+        {plan_stuck_move_towards_escape_hatch, "stuck_move_towards_escape_hatch"},
         {plan_clear_exclusions, "try_clear_exclusions"},
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_forget_map, "try_forget_map"},

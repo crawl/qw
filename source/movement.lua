@@ -1,10 +1,14 @@
 ----------------------
 -- Movement evaluation
 
-function can_move_to(pos)
+function can_move_to(pos, ignore_monsters)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
-        and not monster_in_way(pos)
+        and (ignore_monsters or not monster_in_way(pos))
+end
+
+function map_can_move_to(pos, ignore_monsters)
+    return can_move_to(position_difference(pos, global_pos), ignore_monsters)
 end
 
 -- XXX: This needs to run before update_map() and hence before traversal_map is
@@ -41,7 +45,6 @@ function monster_in_way(pos)
     local mons = monster_map[pos.x][pos.y]
     local feat = view.feature_at(0, 0)
     return mons and (mons:attitude() <= enum_att_neutral
-            and not branch_step_mode
         or mons:attitude() > enum_att_neutral
             and (mons:is_constricted()
                 or mons:is_caught()
@@ -438,7 +441,7 @@ function update_flee_positions()
         local pdist = dist_map.excluded_map[global_pos.x][global_pos.y]
         local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
         if pdist and (not edist or pdist < edist) then
-            if debug_channel("map") then
+            if debug_channel("flee") then
                 dsay("Adding flee position #" .. tostring(#flee_positions + 1)
                     .. " at " .. cell_string_from_map_position(pos))
             end
@@ -450,12 +453,14 @@ end
 
 function best_flee_destination_at(pos)
     local best_dist, best_pos
+    local is_origin = position_is_origin(pos)
     for _, flee_pos in ipairs(flee_positions) do
         local dist_map = get_distance_map(flee_pos)
         local map_pos = position_sum(global_pos, pos)
         local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
-        local current_dist = dist_map.excluded_map[global_pos.x][global_pos.y]
-        if dist and (not current_dist or dist < current_dist)
+        local current_dist = is_origin and dist
+            or dist_map.excluded_map[global_pos.x][global_pos.y]
+        if dist and (is_origin or not current_dist or dist < current_dist)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
             best_pos = flee_pos
@@ -466,16 +471,8 @@ end
 
 function flee_improvement(pos)
     local flee_pos, flee_dist = best_flee_destination_at(pos)
-    if supdist(pos) == 0 then
-        if flee_pos and positions_equal(pos, flee_pos) then
-            return 0
-        else
-            return INF_DIST
-        end
-    end
-
-    if dist then
-        return dist
+    if flee_pos then
+        return flee_dist
     end
 
     return INF_DIST
@@ -675,11 +672,17 @@ function best_move_towards_map_positions(positions, ignore_exclusions)
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-        for dpos in adjacent_iter(global_pos) do
-            local dist = map[dpos.x][dpos.y]
-            if dist and (not best_dist or dist < best_dist) then
+
+        if map[global_pos.x][global_pos.y] == 0 then
+            return
+        end
+
+        for apos in adjacent_iter(global_pos) do
+            local dist = map[apos.x][apos.y]
+            if dist and (not best_dist or dist < best_dist)
+                    and map_can_move_to(apos, true) then
                 best_dist = dist
-                best_move = position_difference(dpos, global_pos)
+                best_move = position_difference(apos, global_pos)
                 best_dest = pos
             end
         end
@@ -834,7 +837,8 @@ function best_move_towards_safety()
         local los_pos = position_difference(pos, global_pos)
         if supdist(pos) <= GXM
                 and view.is_safe_square(los_pos.x, los_pos.y)
-                and map_is_reachable_at(pos, true) then
+                and map_is_reachable_at(pos, true)
+                and map_can_move_to(pos) then
             return best_move_towards_map_position(pos, true)
         end
 

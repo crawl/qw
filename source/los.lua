@@ -150,3 +150,7 @@ end
 function positions_equal(a, b)
     return a.x == b.x and a.y == b.y
 end
+
+function position_is_origin(a)
+    return a.x == 0 and a.y == 0
+end

@@ -8,11 +8,6 @@ function plan_flail_at_invis()
     end
 
     local can_ctrl = not you.confused()
-    if invis_monster_pos and is_adjacent(invis_monster_pos) then
-        attack_melee(invis_monster_pos, can_ctrl)
-        return true
-    end
-
     if invis_monster_pos then
         if is_adjacent(invis_monster_pos)
                 and not is_solid_at(invis_monster_pos) then
@@ -172,7 +167,7 @@ function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
         -- Never hit ourselves.
-        if positions_equall(pos, origin) then
+        if position_is_origin(pos) then
             return
         end
 

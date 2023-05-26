@@ -6,7 +6,8 @@ function plan_move_towards_safety()
             or disable_autoexplore
             or position_is_safe
             or unable_to_move()
-            or dangerous_to_move() then
+            or dangerous_to_move()
+            or you.mesmerised() then
         return false
     end
 

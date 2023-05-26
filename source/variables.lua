@@ -27,6 +27,7 @@ local MAX_TEMP_DISTANCE_MAPS
 local AUTOEXP
 local FEAT_LOS
 local DIR
+local MAP_SELECT
 
 -- Plan functions. These must later be initialized as cascades.
 local plan_emergency

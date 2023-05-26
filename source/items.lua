@@ -707,7 +707,7 @@ function weapon_value(it, cur, it2, sit)
         elseif you.mutation("hated by all") or you.god() == "Okawaru" then
             value = value - 200
         -- XXX: De-value this on certain levels or give qw better strats
-        -- while mesmerized.
+        -- while mesmerised.
         else
             value = value + 200
         end

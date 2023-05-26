@@ -638,7 +638,7 @@ function want_to_greater_servant()
 end
 
 function want_to_cleansing_flame()
-    if not danger or dangerous_to_attack() or you.teleporting() then
+    if not danger or dangerous_to_attack() then
         return false
     end
 
@@ -901,10 +901,10 @@ function plan_continue_flee()
         if can_move_to(pos)
                 and not is_solid_at(pos)
                 and view.is_safe_square(pos.x, pos.y) then
-            local dist_map = get_distance_map(target_flee_position)
-            local val = dist_map[global_pos.x + pos.x][global_pos.y + pos.y]
-            if val and val < dist_map[global_pos.x][global_pos.y] then
-                if debug_channel("main") then
+            local map = get_distance_map(target_flee_position).excluded_map
+            local dist = map[global_pos.x + pos.x][global_pos.y + pos.y]
+            if dist and dist < map[global_pos.x][global_pos.y] then
+                if debug_channel("flee") then
                     dsay("STILL FLEEEEING.")
                 end
                 move_to(pos)

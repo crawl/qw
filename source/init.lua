@@ -22,6 +22,7 @@ end
 function initialize_enums()
     AUTOEXP = enum(AUTOEXP)
     FEAT_LOS = enum(FEAT_LOS)
+    MAP_SELECT = enum(MAP_SELECT)
 end
 
 function initialize()
@@ -67,7 +68,6 @@ function initialize()
         clear_map_cache(2, true)
 
         cache_parity = 1
-        previous_where = "nowhere"
     end
 
     set_options()

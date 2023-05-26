@@ -17,11 +17,28 @@ AUTOEXP = {
     "FULL",
 }
 
+MAP_SELECT = {
+    "NONE",
+    "EXCLUDED",
+    "MAIN",
+    "BOTH",
+}
+
+function main_map_selected(map_select)
+    return map_select == MAP_SELECT.MAIN
+        or map_select == MAP_SELECT.BOTH
+end
+
+function excluded_map_selected(map_select)
+    return map_select == MAP_SELECT.EXCLUDED
+        or map_select == MAP_SELECT.BOTH
+end
+
 function dir_key(dir)
     return dir == DIR.DOWN and ">" or (dir == DIR.UP and "<" or nil)
 end
 
-function update_waypoint()
+function update_waypoint(new_level)
     local place = where
     if in_portal() then
         place = "Portal"
@@ -29,7 +46,12 @@ function update_waypoint()
 
     local new_waypoint = false
     local waypoint_num = c_persist.waypoints[place]
-    if not waypoint_num then
+    -- XXX: Hack to make Tomb hatch plans work. Re-create the waypoint each
+    -- time we enter a level.
+    if new_level and waypoint_num and in_branch("Tomb") then
+        travel.set_waypoint(waypoint_num, 0, 0)
+        new_waypoint = true
+    elseif not waypoint_num then
         waypoint_num = c_persist.waypoint_count
         c_persist.waypoints[place] = waypoint_num
         c_persist.waypoint_count = waypoint_num + 1
@@ -192,6 +214,23 @@ function distance_map_remove(dist_map)
     distance_maps[dist_map.hash] = nil
 end
 
+function distance_map_initialize_maps(dist_map, excluded_only)
+    if not excluded_only then
+        dist_map.map = {}
+        for x = -GXM, GXM do
+            dist_map.map[x] = {}
+        end
+        dist_map.map[dist_map.pos.x][dist_map.pos.y] = 0
+    end
+
+    dist_map.excluded_map = {}
+    for x = -GXM, GXM do
+        dist_map.excluded_map[x] = {}
+    end
+    dist_map.excluded_map[dist_map.pos.x][dist_map.pos.y] =
+        map_is_unexcluded_at(dist_map.pos) and 0 or nil
+end
+
 function distance_map_initialize(pos, permanent, radius)
     if permanent == nil then
         permanent = false
@@ -210,23 +249,9 @@ function distance_map_initialize(pos, permanent, radius)
     dist_map.permanent = permanent
     dist_map.radius = radius
 
-    dist_map.map = {}
-    for x = -GXM, GXM do
-        dist_map.map[x] = {}
-    end
-    dist_map.map[pos.x][pos.y] = 0
-
-    dist_map.excluded_map = {}
-    for x = -GXM, GXM do
-        dist_map.excluded_map[x] = {}
-    end
-    dist_map.excluded_map[pos.x][pos.y] = 0
-
+    distance_map_initialize_maps(dist_map)
     local dest_pos = new_update_position(pos)
-    dest_pos.propagate_traversable = true
-    dest_pos.propagate_unexcluded = true
     dist_map.queue = { dest_pos }
-    dist_map.queue_next = { dest_pos.hash }
     return dist_map
 end
 
@@ -243,30 +268,40 @@ function map_is_unseen_at(pos)
     return traversal_map[pos.x][pos.y] == nil
 end
 
-function distance_map_adjacent_dist(pos, dist_map)
+function distance_map_adjacent_dist(pos, dist_map, map_select)
     local best_dist, best_excluded_dist
+    local main_selected = main_map_selected(map_select)
+    local excluded_selected = excluded_map_selected(map_select)
     for pos in adjacent_iter(pos) do
         if map_is_traversable_at(pos) then
-            local dist = dist_map.map[pos.x][pos.y]
-            if dist and (not best_dist or best_dist > dist) then
-                best_dist = dist
+            local dist
+            if main_selected then
+                dist = dist_map.map[pos.x][pos.y]
+                if dist and (not best_dist or best_dist > dist) then
+                    best_dist = dist
+                end
             end
 
-            dist = dist_map.excluded_map[pos.x][pos.y]
-            if map_is_unexcluded_at(pos)
-                    and dist
-                    and (not best_excluded_dist
-                        or best_excluded_dist > dist) then
-                best_excluded_dist = dist
+            if excluded_selected then
+                dist = dist_map.excluded_map[pos.x][pos.y]
+                if map_is_unexcluded_at(pos)
+                        and dist
+                        and (not best_excluded_dist
+                            or best_excluded_dist > dist) then
+                    best_excluded_dist = dist
+                end
             end
         end
     end
-    return best_dist, best_excluded_dist
+    if main_selected then
+        return best_dist, best_excluded_dist
+    else
+        return best_excluded_dist
+    end
 end
 
 function distance_map_update_adjacent_pos(pos, center, dist_map)
-    if dist_map.queue_next[pos.hash]
-            or positions_equal(pos, dist_map.pos)
+    if positions_equal(pos, dist_map.pos)
             or (dist_map.radius
                 and supdist(position_difference(pos, dist_map.pos))
                     > dist_map.radius)
@@ -275,157 +310,49 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
         return
     end
 
-    local unexcluded = map_is_unexcluded_at(pos)
     local adjacent_dist, adjacent_excluded_dist, update_pos
     local have_adjacent_excluded = false
-    if center.propagate_traversable then
-        local center_dist = dist_map.map[center.x][center.y]
-        local dist = dist_map.map[pos.x][pos.y]
-        if center_dist and (not dist or dist > center_dist + 1) then
-            dist_map.map[pos.x][pos.y] = center_dist + 1
+    local center_dist = dist_map.map[center.x][center.y]
+    local dist = dist_map.map[pos.x][pos.y]
+    if not center.excluded_only
+            and center_dist
+            and (not dist or dist > center_dist + 1) then
+        dist_map.map[pos.x][pos.y] = center_dist + 1
 
-            update_pos = new_update_position(pos)
-            update_pos.propagate_traversable = true
-        end
-
-        center_dist = dist_map.excluded_map[center.x][center.y]
-        dist = dist_map.excluded_map[pos.x][pos.y]
-        if unexcluded
-                and not center.proagate_unexcluded
-                and not center.proagate_excluded
-                and center_dist
-                and (not dist or dist > center_dist + 1) then
-            dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
-
-            if not update_pos then
-                update_pos = new_update_position(pos)
-            end
-            update_pos.propagate_traversable = true
-        end
-    elseif center.propagate_untraversable then
-        adjacent_dist, adjacent_excluded_dist = distance_map_adjacent_dist(pos,
-            dist_map)
-        have_adjacent_excluded = true
-        local dist = dist_map.map[pos.x][pos.y]
-        local target_dist = adjacent_dist and adjacent_dist + 1 or nil
-        if dist ~= target_dist then
-            -- If we have a non-nil distance that disagrees with our target
-            -- distance, we always set our distance to nil. This way we first
-            -- propagate nil to all cells that have an invalid non-nil distance
-            -- and update them to to correct non-nil value through later
-            -- propagation after all the nils have propagated. Otherwise
-            -- invalid distances can increase and propagate indefinitely
-            -- between a set of adjacent cells when those cells become
-            -- disconnected from the rest of the map due to the traversability
-            -- change.
-            if dist then
-                dist_map.map[pos.x][pos.y] = nil
-            else
-                dist_map.map[pos.x][pos.y] = target_dist
-            end
-
-            update_pos = new_update_position(pos)
-            update_pos.propagate_untraversable = true
-        end
-
-        target_dist = adjacent_excluded_dist and adjacent_excluded_dist + 1
-            or nil
-        local excluded_dist = dist_map.excluded_map[pos.x][pos.y]
-        if unexcluded
-                -- The original cell becoming unexcluded yet also untraversable
-                -- means no change to propagate to the excluded map.
-                and not center.propagate_unexcluded
-                -- If we're also propagating becoming excluded, we'll handle
-                -- the update below. This way we don't propagate traversability
-                -- further if there was no change to the unexcluded map.
-                and not center.propagate_excluded
-                and excluded_dist ~= target_dist then
-            if excluded_dist then
-                dist_map.excluded_map[pos.x][pos.y] = nil
-            else
-                dist_map.excluded_map[pos.x][pos.y] = target_dist
-            end
-
-            if not update_pos then
-                update_pos = new_update_position(pos)
-            end
-            update_pos.propagate_untraversable = true
-        end
-
-        if update_pos and debug_channel("update-all") then
-            dsay("Propagating untraversability for distance map at "
-                .. pos_string(position_difference(dist_map.pos, global_pos))
-                .. " via center "
-                .. pos_string(position_difference(center, global_pos))
-                .. " to position "
-                .. pos_string(position_difference(pos, global_pos))
-                .. " with original distances "
-                .. tostring(dist) .. "/" .. tostring(excluded_dist)
-                .. " and adjacent distances "
-                .. tostring(adjacent_dist) .. "/"
-                .. tostring(adjacent_excluded_dist)
-                .. " and new distances "
-                .. tostring(dist_map.map[pos.x][pos.y])
-                .. "/" .. tostring(dist_map.excluded_map[pos.x][pos.y]))
-        end
+        update_pos = new_update_position(pos)
     end
 
-    -- No change to propagate to the excluded map if the original cell became
-    -- unexcluded yet also untraversable, since the original cell's excluded
-    -- map had a nil distance and still has a nil distance.
-    if not center.propagate_untraversable
-            and center.propagate_unexcluded
-            and unexcluded then
-        local center_dist = dist_map.excluded_map[center.x][center.y]
-        local dist = dist_map.excluded_map[pos.x][pos.y]
-        if center_dist and (not dist or dist > center_dist + 1) then
-            dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
+    center_dist = dist_map.excluded_map[center.x][center.y]
+    dist = dist_map.excluded_map[pos.x][pos.y]
+    if map_is_unexcluded_at(pos)
+            and center_dist
+            and (not dist or dist > center_dist + 1) then
+        dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
 
-            if not update_pos then
-                update_pos = new_update_position(pos)
-            end
-            update_pos.propagate_unexcluded = true
-        end
-    -- No change to propagate to the excluded map if the original cell became
-    -- excluded yet just became traversable.
-    elseif center.propagate_excluded
-            and not center.propagate_traversable
-            and unexcluded then
-        if not have_adjacent_excluded then
-            adjacent_excluded_dist = select(2,
-                distance_map_adjacent_dist(pos, dist_map))
-        end
-
-        local dist = dist_map.excluded_map[pos.x][pos.y]
-        local target_dist = adjacent_excluded_dist
-            and adjacent_excluded_dist + 1 or nil
-        if dist ~= target_dist then
-            if dist then
-                dist_map.excluded_map[pos.x][pos.y] = nil
-            else
-                dist_map.excluded_map[pos.x][pos.y] = target_dist
-            end
-
-            if not update_pos then
-                update_pos = new_update_position(pos)
-            end
-            update_pos.propagate_excluded = true
+        if not update_pos then
+            update_pos = new_update_position(pos)
+            update_pos.excluded_only = true
         end
     end
 
     if update_pos then
-        dist_map.queue_next[hash_position(update_pos)] = true
         table.insert(dist_map.queue, update_pos)
     end
 end
 
 function distance_map_propagate(dist_map)
-    local ind = 1
-    local count = ind
+    if #dist_map.queue == 0 then
+        return
+    end
+
     if debug_channel("map") then
         dsay("Propagating distance map at "
-            .. cell_string_from_map_position(dist_map.pos))
+            .. cell_string_from_map_position(dist_map.pos)
+            .. " with " .. tostring(#dist_map.queue) .. " update positions")
     end
+
+    local ind = 1
+    local count = ind
     while ind <= #dist_map.queue do
         if coroutine_throttle and count % 300 == 0 then
             if debug_channel("throttle") then
@@ -439,8 +366,6 @@ function distance_map_propagate(dist_map)
         end
 
         local center = dist_map.queue[ind]
-        dist_map.queue_next[center.hash] = nil
-
         for pos in adjacent_iter(center) do
             distance_map_update_adjacent_pos(pos, center, dist_map)
         end
@@ -490,14 +415,11 @@ function new_update_position(pos)
         x = pos.x,
         y = pos.y,
         hash = hash_position(pos),
-        propagate_traversable = false,
-        propagate_untraversable = false,
-        propagate_excluded = false,
-        propagate_unexcluded = false
+        excluded_only = false,
     }
 end
 
-function distance_map_update_position(pos, dist_map)
+function distance_map_update_position(pos, dist_map, map_select)
     if dist_map.radius
             and supdist(position_difference(dist_map.pos, pos))
                 > dist_map.radius then
@@ -505,52 +427,39 @@ function distance_map_update_position(pos, dist_map)
     end
 
     local traversable = map_is_traversable_at(pos)
-    local unexcluded = map_is_unexcluded_at(pos)
     local dist, excluded_dist, update_pos
     local have_adjacent = false
     -- If we're traversable and don't have a map distance, we just became
     -- traversable, so update the map distance from adjacent squares.
-    if traversable and not dist_map.map[pos.x][pos.y] then
-        dist, excluded_dist = distance_map_adjacent_dist(pos, dist_map)
+    if main_map_selected(map_select)
+            and traversable
+            and not dist_map.map[pos.x][pos.y] then
+        dist, excluded_dist = distance_map_adjacent_dist(pos, dist_map,
+            map_select)
         have_adjacent = true
         if dist then
             dist_map.map[pos.x][pos.y] = dist + 1
             update_pos = new_update_position(pos)
-            update_pos.propagate_traversable = true
         end
-    -- If we're not traversable yet have a map distance, we just became
-    -- untraversable, so nil both map distances.
-    elseif not traversable and dist_map.map[pos.x][pos.y] then
-        dist_map.map[pos.x][pos.y] = nil
-        dist_map.excluded_map[pos.x][pos.y] = nil
-        update_pos = new_update_position(pos)
-        update_pos.propagate_untraversable = true
     end
 
     -- We're traversable and not excluded, yet have no excluded distance.
-    if traversable
-            and unexcluded
+    if excluded_map_selected(map_select)
+            and traversable
+            and map_is_unexcluded_at(pos)
             and not dist_map.excluded_map[pos.x][pos.y] then
         if not have_adjacent then
-            excluded_dist = select(2,
-                distance_map_adjacent_dist(pos, dist_map))
+            excluded_dist = distance_map_adjacent_dist(pos, dist_map,
+                MAP_SELECT.EXCLUDED)
         end
 
         if excluded_dist then
             dist_map.excluded_map[pos.x][pos.y] = excluded_dist + 1
             if not update_pos then
                 update_pos = new_update_position(pos)
+                update_pos.excluded_only = true
             end
-            update_pos.propagate_unexcluded = true
         end
-    -- We're excluded yet have an excluded distance, so we just became
-    -- excluded.
-    elseif excluded and dist_map.excluded_map[pos.x][pos.y] then
-        dist_map.excluded_map[pos.x][pos.y] = nil
-        if not update_pos then
-            update_pos = new_update_position(pos)
-        end
-        update_pos.propagate_excluded = true
     end
 
     if update_pos then
@@ -652,22 +561,30 @@ function update_cell_feature(cell)
 end
 
 function update_map_at_cell(cell, queue, seen)
+    local map_reset = MAP_SELECT.NONE
+
     if seen[cell.hash] then
-        return
+        return map_reset
     end
 
     local map_updated = false
     local traversable = feature_is_traversable(cell.feat)
     if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
         traversal_map[cell.pos.x][cell.pos.y] = traversable
+        if not traversable then
+            map_reset = MAP_SELECT.BOTH
+        end
         map_updated = true
     end
 
-    local unexcluded = not (view.in_known_map_bounds(cell.los_pos.x,
-            cell.los_pos.y)
-        and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
-    if exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
+    local unexcluded =
+        not (view.in_known_map_bounds(cell.los_pos.x, cell.los_pos.y)
+            and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
+    if traversable and exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
         exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
+        if not unexcluded and map_reset < MAP_SELECT.BOTH then
+            map_reset = MAP_SELECT.EXCLUDED
+        end
         map_updated = true
     end
 
@@ -675,7 +592,7 @@ function update_map_at_cell(cell, queue, seen)
     seen[cell.hash] = true
 
     if not map_updated then
-        return
+        return map_reset
     end
 
     for pos in adjacent_iter(cell.los_pos) do
@@ -684,12 +601,22 @@ function update_map_at_cell(cell, queue, seen)
             table.insert(queue, acell)
         end
     end
+    return map_reset
 end
 
-function update_map_at_cells(queue)
+function update_map_cells()
+    local queue = {}
+    for pos in square_iter(origin, los_radius, true) do
+        local cell = cell_from_position(pos, true)
+        if cell then
+            table.insert(queue, cell)
+        end
+    end
+
     local seen = {}
     local ind = 1
     local count = 1
+    local map_reset = MAP_SELECT.NONE
     while ind <= #queue do
         if coroutine_throttle and count % 1000 == 0 then
             if debug_channel("throttle") then
@@ -702,15 +629,26 @@ function update_map_at_cells(queue)
         end
 
         local cell = queue[ind]
-        update_map_at_cell(cell, queue, seen)
+        local cell_map_reset = update_map_at_cell(cell, queue, seen)
+        if cell_map_reset > map_reset then
+            map_reset = cell_map_reset
+        end
+
         handle_item_searches(cell)
 
         count = ind
         ind = ind + 1
     end
+
+    if get_map_runelight(global_pos) then
+        update_runelight(hash_position(global_pos),
+            { los = FEAT_LOS.EXPLORED })
+    end
+
+    return queue, map_reset
 end
 
-function update_distance_maps_at_cells(queue)
+function update_distance_maps_at_cells(queue, map_select)
     for i, cell in ipairs(queue) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
@@ -723,28 +661,29 @@ function update_distance_maps_at_cells(queue)
         end
 
         for _, dist_map in pairs(distance_maps) do
-            distance_map_update_position(cell.pos, dist_map)
+            distance_map_update_position(cell.pos, dist_map, map_select)
         end
-    end
-
-    for _, dist_map in pairs(distance_maps) do
-        distance_map_propagate(dist_map)
     end
 end
 
-function update_map(new_level, full_clear)
-    local new_waypoint = update_waypoint()
-
+function reset_c_persist(new_waypoint, new_level)
     -- A new waypoint means a new instance of a portal, a new level in Pan, or
     -- that that our Abyssal area has shifted, so we expire data for the
     -- relevant features.
+    if new_waypoint then
+        c_persist.up_hatches[where] = nil
+        c_persist.down_hatches[where] = nil
+
+        for god, _ in pairs(c_persist.altars) do
+            if c_persist.altars[god][where] then
+                c_persist.altars[god][where] = nil
+            end
+        end
+    end
+
     if new_waypoint and level_is_temporary() then
         c_persist.autoexplore[where_branch] = AUTOEXP.NEEDED
         c_persist.branch_exits[where_branch] = {}
-    end
-
-    if new_waypoint and in_branch("Pan") then
-        c_persist.pan_transits = {}
     end
 
     if in_branch("Abyss") then
@@ -753,14 +692,20 @@ function update_map(new_level, full_clear)
             c_persist.runelights = {}
         end
 
-        -- If previous_where is nil, we're resuming froma save and were already
-        -- in the Abyss, hence we don't want to unset this.
-        if new_level and previous_where then
+        -- If previous_where is nil, we're resuming from a save and were
+        -- already in the Abyss, hence we don't want to unset this.
+        if new_level and previous_where ~= nil then
             c_persist.sensed_abyssal_rune = false
         end
-
     end
 
+    if new_waypoint and in_branch("Pan") then
+        c_persist.pan_transits = {}
+    end
+
+end
+
+function reset_map_cache(new_level, full_clear, new_waypoint)
     if new_waypoint or full_clear then
         clear_map_cache(cache_parity, full_clear)
     end
@@ -773,7 +718,9 @@ function update_map(new_level, full_clear)
         item_map_positions = item_map_positions_cache[cache_parity]
         map_mode_searches = map_mode_searches_cache[cache_parity]
     end
+end
 
+function reset_item_tracking()
     if in_branch("Abyss")
             and not (c_persist.seen_items[where]
                 and c_persist.seen_items[where][abyssal_rune]) then
@@ -781,8 +728,6 @@ function update_map(new_level, full_clear)
 --              and not c_persist.sensed_abyssal_rune then
         item_map_positions[abyssal_rune] = nil
     end
-
-    update_exclusions(new_waypoint)
 
     item_searches = {}
     if c_persist.seen_items[where] then
@@ -802,32 +747,9 @@ function update_map(new_level, full_clear)
     for name, _ in ipairs(purged) do
         item_map_positions[name] = nil
     end
+end
 
-    local cell_queue = {}
-    for pos in square_iter(origin, los_radius, true) do
-        local cell = cell_from_position(pos, true)
-        if cell then
-            table.insert(cell_queue, cell)
-        end
-    end
-    update_map_at_cells(cell_queue)
-
-    if get_map_runelight(global_pos) then
-        local state = { los = FEAT_LOS.EXPLORED }
-        update_runelight(hash_position(global_pos), state)
-    end
-
-    -- Any seen item for which we don't have an item position is unregistered.
-    if c_persist.seen_items[where] then
-        local seen_items = {}
-        for name, _ in pairs(c_persist.seen_items[where]) do
-            if item_map_positions[name] then
-                seen_items[name] = true
-            end
-        end
-        c_persist.seen_items[where] = seen_items
-    end
-
+function update_distance_maps(queue, reset)
     local removed_maps = {}
     for _, dist_map in pairs(distance_maps) do
         if not map_is_traversable_at(dist_map.pos) then
@@ -838,21 +760,78 @@ function update_map(new_level, full_clear)
         distance_map_remove(dist_map)
     end
 
-    update_distance_maps_at_cells(cell_queue)
-
-    if map_mode_search_key then
-        local feat = view.feature_at(0, 0)
-        -- We assume we've landed on the next feature in our current "X<key>"
-        -- cycle because the feature at our position uses that key.
-        if feature_uses_map_key(map_mode_search_key, feat) then
-            record_map_mode_search(map_mode_search_key, map_mode_search_hash,
-                map_mode_search_count, hash_position(global_pos))
+    local excluded_only = reset == MAP_SELECT.EXCLUDED
+    if reset > MAP_SELECT.NONE then
+        if debug_channel("map") then
+            dsay("Resetting "
+                .. (excluded_only and "excluded map" or "both maps")
+                .. " for all distance maps")
         end
-        map_mode_search_key = nil
-        map_mode_search_hash = nil
-        map_mode_search_count = nil
+
+        for hash, dist_map in pairs(distance_maps) do
+            distance_map_initialize_maps(dist_map, excluded_only)
+            local pos = new_update_position(dist_map.pos)
+            pos.excluded_only = excluded_only
+            dist_map.queue = { pos }
+        end
     end
 
+    if reset < MAP_SELECT.BOTH then
+        update_distance_maps_at_cells(queue,
+            reset == MAP_SELECT.NONE and MAP_SELECT.BOTH or MAP_SELECT.MAIN)
+    end
+
+    for _, dist_map in pairs(distance_maps) do
+        distance_map_propagate(dist_map)
+    end
+end
+
+function update_seen_items()
+    if not c_persist.seen_items[where] then
+        return
+    end
+
+    -- Any seen item for which we don't have an item position is unregistered.
+    local seen_items = {}
+    for name, _ in pairs(c_persist.seen_items[where]) do
+        if item_map_positions[name] then
+            seen_items[name] = true
+        end
+    end
+    c_persist.seen_items[where] = seen_items
+end
+
+function update_map_mode_search()
+    if not map_mode_search_key then
+        return
+    end
+
+    local feat = view.feature_at(0, 0)
+    -- We assume we've landed on the next feature in our current "X<key>"
+    -- cycle because the feature at our position uses that key.
+    if feature_uses_map_key(map_mode_search_key, feat) then
+        record_map_mode_search(map_mode_search_key, map_mode_search_hash,
+            map_mode_search_count, hash_position(global_pos))
+    end
+    map_mode_search_key = nil
+    map_mode_search_hash = nil
+    map_mode_search_count = nil
+end
+
+function update_map(new_level, full_clear)
+    local new_waypoint = update_waypoint(new_level)
+    reset_c_persist(new_waypoint, new_level)
+    reset_map_cache(new_level, full_clear, new_waypoint)
+    reset_item_tracking()
+
+    update_exclusions(new_waypoint)
+
+    local cell_queue, map_reset = update_map_cells()
+    update_seen_items()
+
+    update_distance_maps(cell_queue, map_reset)
+
+    update_map_mode_search()
     update_transporters()
 end
 
@@ -973,6 +952,11 @@ end
 function update_exclusions(new_waypoint)
     if new_waypoint then
         remove_exclusions()
+    end
+
+    -- We're unlikely to be able to run away when mesmerised.
+    if you.mesmerised() then
+        return
     end
 
     -- Unreachable monsters that we can't ranged attack get excluded

@@ -135,6 +135,46 @@ function print_traversal_map(center)
     crawl.setopt("msg_condense_repeats = true")
 end
 
+function print_unexcluded_map(center)
+    if not center then
+        center = origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(global_pos, center)
+    say("Unexcluded map at " .. cell_string_from_map_position(map_center))
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            local pos = position_sum(map_center, { x = x, y = y })
+            local unexcluded = map_is_unexcluded_at(pos)
+            local char
+            if positions_equal(pos, global_pos) then
+                if unexcluded == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (unexcluded and "@" or "7")
+                end
+            elseif positions_equal(pos, map_center) then
+                if unexcluded == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (unexcluded and "&" or "8")
+                end
+            elseif unexcluded == nil then
+                str = str .. " "
+            else
+                str = str .. (unexcluded and "." or "#")
+            end
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
+end
+
 function print_distance_map(dist_map, center, excluded)
     if not center then
         center = origin
@@ -167,8 +207,10 @@ function print_distance_map(dist_map, center, excluded)
             else
                 if dist == nil then
                     str = str .. " "
-                elseif dist > 180 then
+                elseif dist > 160 then
                     str = str .. "∞"
+                elseif dist > 61 then
+                    str = str .. "Ø"
                 else
                     str = str .. string.char(string.byte('A') + dist)
                 end

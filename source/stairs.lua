@@ -18,6 +18,11 @@ downstairs_features = {
     "stone_stairs_down_iii",
 }
 
+escape_hatch_features = {
+    [DIR.UP] = "escape_hatch_up",
+    [DIR.DOWN] = "escape_hatch_down",
+}
+
 --[[
 Return a list of stair features we're allowed to take on the given level and in
 the given direction that takes us to the next depth for that direction. For
