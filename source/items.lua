@@ -1325,34 +1325,37 @@ function shield_skill_utility()
     return 0.25 + 0.5 * shield_penalty
 end
 
-function weapon_min_delay(weapon, skill)
-    local delay = weapon.delay - min(weapon.delay / 2, 13.5)
+function weapon_min_delay(weapon)
+    local delay = weapon.delay
 
-    if weap.weap_skill == "Short Blades" then
+    if contains_string_in(weapon:subtype(),
+            { "hand crossbow", "arbalest", "triple crossbow" }) then
+        return max(10, weapon.delay - 13.5)
+    end
 
-    local name = weapon:name()
-    if name:find('heavy crossbow "Sniper"') then
+    if weapon.weap_skill == "Short Blades" then
+        return 5
+    end
 
+    if contains_string_in(weapon:subtype(), { "demon whip", "trishula" }) then
+        return 5
+    end
+
+    if contains_string_in(weapon:subtype(),
+            { "demon blade", "eudemon blade", "dire flail" }) then
+        return 6
+    end
+
+    return max(7, weapon.delay - 13.5)
 end
 
 function min_delay_skill()
-    weap = items.equipped_at("Weapon")
-    if not weap then
-        return 27
+    weapon = items.equipped_at("Weapon")
+    if not weapon then
+        return
     end
-    if weap.weap_skill ~= weapon_skill() then
-        return last_min_delay_skill
-    end
-    if weap.weap_skill == "Short Blades" and weap.delay == 12 then
-        last_min_delay_skill = 14
-        return 14
-    end
-    local mindelay = math.floor(weap.delay / 2)
-    if mindelay > 7 then
-        mindelay = 7
-    end
-    last_min_delay_skill = 2 * (weap.delay - mindelay)
-    return last_min_delay_skill
+
+    return 2 * (weapon.delay - weapon_min_delay(weapon))
 end
 
 function at_min_delay()
