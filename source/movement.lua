@@ -231,13 +231,15 @@ function step_reason(a1, a2)
             -- attacked.
             and a1.adjacent == 0
             and a2.adjacent == 0
-            -- At low XL, we want to flee to known stairs when autoexplore is
-            -- disabled, instead of engaging in combat. Since autoexplore is
-            -- disabled, we don't want to explore the current level and will be
-            -- taking stairs to some new destination, which is usually a level
-            -- above us. This rule makes Delvers to climb upwards if they
-            -- can, instead of fighting dangerous monsters.
-            and (reason_to_rest(90) or you.xl() <= 8 and disable_autoexplore)
+            and (reason_to_rest(90)
+                -- When we're at low XL and trying to go up, we want to flee to
+                -- known stairs when autoexplore is disabled, instead of
+                -- engaging in combat. This rule helps Delvers in particular
+                -- avoid fights near their starting level that would get them
+                -- killed.
+                or you.xl() <= 8
+                    and disable_autoexplore
+                    and gameplan_travel.first_dir == DIR.UP)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
         return "fleeing"
@@ -420,7 +422,7 @@ function update_flee_positions()
     end
 
     local positions, feats = get_feature_map_positions(search_feats)
-    if not positions then
+    if #positions == 0 then
         return
     end
 
@@ -646,7 +648,8 @@ function monster_can_move_to_player_melee(mons)
     end
 
     local name = mons:name()
-    if name == "wandering mushroom"
+    if mons:is_stationary()
+            or name == "wandering mushroom"
             or name:find("vortex")
             or mons:is("fleeing")
             or mons:status("paralysed")
@@ -668,7 +671,7 @@ end
 
 function best_move_towards_map_positions(positions, ignore_exclusions)
     local best_dist, best_dest
-    local best_move = {}
+    local best_move
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
@@ -722,9 +725,10 @@ function update_reachable_features()
     end
 
     local positions, feats = get_feature_map_positions(check_feats)
-    if not positions then
+    if #positions == 0 then
         return
     end
+
     for i, pos in ipairs(positions) do
         if map_is_reachable_at(pos, true) then
             update_feature(where_branch, where_depth, feats[i],
@@ -766,25 +770,17 @@ end
 
 function best_move_towards_features(feats, ignore_exclusions)
     local positions = get_feature_map_positions(feats)
-    if positions then
-        return best_move_towards_map_positions(positions, ignore_exclusions)
-    end
+    return best_move_towards_map_positions(positions, ignore_exclusions)
 end
 
 function best_move_towards_items(item_names, ignore_exclusions)
     local positions = get_item_map_positions(item_names)
-    if #positions > 0 then
-        return best_move_towards_map_positions(positions, ignore_exclusions)
-    end
+    return best_move_towards_map_positions(positions, ignore_exclusions)
 end
 
 function best_move_towards_gameplan(ignore_exclusions)
-    local feats = gameplan_travel_features()
-    if not feats then
-        return
-    end
-
-    return best_move_towards_features(feats, ignore_exclusions)
+    return best_move_towards_features(gameplan_travel_features(),
+        ignore_exclusions)
 end
 
 function map_has_adjacent_unseen_at(pos)
@@ -848,20 +844,13 @@ end
 
 function update_move_destination()
     if not move_destination then
+        move_reason = nil
         return
     end
 
     local clear = false
-    if move_reason == "monster" then
-        if danger then
-            clear = true
-        else
-            local pos = position_difference(move_destination, global_pos)
-            if supdist(pos) <= los_radius
-                    and you.see_cell_solid_see(pos.x, pos.y) then
-                clear = true
-            end
-        end
+    if move_reason == "monster" and danger then
+        clear = true
     elseif move_reason == "gameplan" and want_gameplan_update then
         clear = true
     elseif positions_equal(global_pos, move_destination) then
@@ -889,4 +878,22 @@ function update_move_destination()
         move_destination = nil
         move_reason = nil
     end
+end
+
+function best_map_position_near(pos)
+    if map_is_reachable_at(pos) then
+        return pos
+    end
+
+    local best_dist, best_pos
+    for apos in adjacent_iter(pos) do
+        local dist = supdist(position_difference(apos, global_pos))
+        if map_is_reachable_at(apos)
+                and (not best_dist or dist < best_dist) then
+            best_dist = dist
+            best_pos = apos
+        end
+    end
+
+    return best_pos
 end

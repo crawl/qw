@@ -52,6 +52,12 @@ function c_answer_prompt(prompt)
     if prompt:find("Really drink that potion of mutation") then
         return true
     end
+    if prompt:find("next level anyway") then
+        return true
+    end
+    if prompt:find("fire in the non-hostile") then
+        return true
+    end
 end
 
 function control(c)

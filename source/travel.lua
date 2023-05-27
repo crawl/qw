@@ -376,12 +376,26 @@ function update_gameplan_travel()
                 and (where_branch ~= gameplan_travel.branch
                     or where_depth ~= gameplan_travel.depth))
 
+    local gameplan_reachable = true
+    local feats = gameplan_travel_features()
+    if #feats > 0 then
+        local positions = get_feature_map_positions(feats)
+        gameplan_reachable = false
+        for _, pos in ipairs(positions) do
+            if map_is_reachable_at(pos) then
+                gameplan_reachable = true
+                break
+            end
+        end
+    end
+
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.
     disable_autoexplore = (want_to_move_to_abyss_objective()
-            or gameplan_travel.stairs_dir
-            or gameplan_travel.want_go
-            or gameplan_travel.want_stash)
+            or (gameplan_travel.stairs_dir
+                    or gameplan_travel.want_go
+                    or gameplan_travel.want_stash)
+                and gameplan_reachable)
         -- We do allow autoexplore even when we want to travel if the current
         -- is fully explored, since then it's safe to pick up any surrounding
         -- items like thrown projectiles or loot from e.g. stairdancing.
@@ -440,4 +454,5 @@ function gameplan_travel_features()
             return { god_altar(god) }
         end
     end
+    return {}
 end

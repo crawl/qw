@@ -69,6 +69,12 @@ function update_waypoint(new_level)
         new_waypoint = true
     end
 
+    if new_level or new_waypoint then
+        move_destination = nil
+        enemy_map_memory = nil
+        last_enemy_map_memory = nil
+    end
+
     return new_waypoint
 end
 
@@ -869,9 +875,7 @@ function get_feature_map_positions(feats, radius)
             end
         end
     end
-    if #positions > 0 then
-        return positions, features
-    end
+    return positions, features
 end
 
 function get_item_map_positions(item_names, radius)

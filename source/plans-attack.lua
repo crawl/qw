@@ -530,14 +530,14 @@ function plan_move_towards_enemy()
     end
 
     enemy_memory = position_difference(mons:pos(), move)
+    enemy_map_memory = position_sum(global_pos, mons:pos())
     turns_left_moving_towards_enemy = 2
     move_to(move)
     return true
 end
 
 function plan_continue_move_towards_enemy()
-    if turns_left_moving_towards_enemy == 0
-            or supdist(enemy_memory) == 0
+    if not enemy_memory
             or not options.autopick_on
             or unable_to_move()
             or dangerous_to_attack()
@@ -545,14 +545,46 @@ function plan_continue_move_towards_enemy()
         return false
     end
 
-    local move = get_move_towards(origin, enemy_memory, tabbable_square,
-        reach_range())
-    if not move then
+    if enemy_memory and position_is_origin(enemy_memory) then
+        enemy_memory = nil
+        turns_left_moving_towards_enemy = 0
+        enemy_map_memory = nil
         return false
     end
 
-    move_to(move)
-    return true
+    if turns_left_moving_towards_enemy > 0 then
+        local move = get_move_towards(origin, enemy_memory, tabbable_square,
+            reach_range())
+        if not move then
+            return false
+        end
+
+        move_to(move)
+        return true
+    end
+
+    enemy_memory = nil
+
+    if last_enemy_map_memory
+            and enemy_map_memory
+            and positions_equal(last_enemy_map_memory, enemy_map_memory) then
+        enemy_map_memory = nil
+
+        local dest = best_map_position_near(last_enemy_map_memory)
+        if not dest then
+            return false
+        end
+
+        local move = best_move_towards_map_position(dest)
+        if move then
+            move_towards_destination(move, dest, "monster")
+            return true
+        end
+    end
+
+    last_enemy_map_memory = enemy_map_memory
+    enemy_map_memory = nil
+    return false
 end
 
 function set_plan_attack()

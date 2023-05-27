@@ -146,7 +146,7 @@ function plan_use_gameplan_feature()
 
     local feats = gameplan_travel_features()
     local feat = view.feature_at(0, 0)
-    if not feats or not util.contains(feats, feat) then
+    if not util.contains(feats, feat) then
         return false
     end
 

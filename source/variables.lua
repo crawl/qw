@@ -184,6 +184,8 @@ local hostile_summon_timer = -200
 
 local enemy_memory
 local turns_left_moving_towards_enemy = 0
+local enemy_map_memory
+local last_enemy_map_memory
 
 local stuck_turns = 0
 local move_destination

@@ -131,16 +131,13 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    if turns_left_moving_towards_enemy > 0 then
-        turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
-    else
-        enemy_memory = nil
-    end
-
     danger = sense_danger(los_radius) or not map_is_unexcluded_at(global_pos)
     immediate_danger = sense_immediate_danger()
-    melee_target = nil
 
+    if turns_left_moving_towards_enemy > 0 then
+        turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
+    end
+    melee_target = nil
     choose_tactical_step()
 
     map_mode_search_attempts = 0

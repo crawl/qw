@@ -98,7 +98,7 @@ function plan_swamp_clouds_hack()
 
     if swamp_rune_reachable then
         say("Waiting for clouds to move.")
-        rest()
+        wait_one_turn()
         return true
     end
 
