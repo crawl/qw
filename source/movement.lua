@@ -4,7 +4,9 @@
 function can_move_to(pos, ignore_monsters)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
-        and (ignore_monsters or not monster_in_way(pos))
+        and (ignore_monsters
+            or supdist(pos) > los_radius
+            or not monster_in_way(pos))
 end
 
 function map_can_move_to(pos, ignore_monsters)
@@ -670,8 +672,7 @@ function monster_can_move_to_player_melee(mons)
 end
 
 function best_move_towards_map_positions(positions, ignore_exclusions)
-    local best_dist, best_dest
-    local best_move
+    local best_dist, best_move, best_dest
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
@@ -834,7 +835,7 @@ function best_move_towards_safety()
         if supdist(pos) <= GXM
                 and view.is_safe_square(los_pos.x, los_pos.y)
                 and map_is_reachable_at(pos, true)
-                and map_can_move_to(pos) then
+                and map_can_move_to(pos, true) then
             return best_move_towards_map_position(pos, true)
         end
 

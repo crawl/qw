@@ -326,6 +326,15 @@ function get_ranged_target(weapon, prefer_melee)
 
     local best_result
     for _, enemy in ipairs(enemy_list) do
+        -- If we prefer melee and have any ranged enemy that we could move
+        -- towards, don't try to get a ranged target. We prefer to try to move
+        -- towards the biggest threat.
+        if prefer_melee
+                and enemy:is_ranged()
+                and enemy:get_player_move_towards() then
+            return
+        end
+
         local pos = enemy:pos()
         if enemy:distance() <= attack.range
                 and you.see_cell_solid_see(pos.x, pos.y)
@@ -333,8 +342,7 @@ function get_ranged_target(weapon, prefer_melee)
                 -- have a reachable ranged monster or are just outside of their
                 -- melee range.
                 and not (prefer_melee
-                    and (enemy:is_ranged()
-                        or enemy:distance() == reach_range() + 1)
+                    and enemy:distance() == reach_range() + 1
                     and enemy:get_player_move_towards()) then
             local result
             if explosion then
