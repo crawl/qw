@@ -59,7 +59,7 @@ function travel_up_branches(result, parents, entries, dest_branch)
         end
 
         if is_hell_branch(result.branch) then
-            if not branch_found(result.branch)
+            if not branch_found(result.branch, FEAT_LOS.REACHABLE)
                     or parents[i] ~= parent_branch(result.branch) then
                 return
             end
@@ -93,7 +93,7 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
 
         -- We stop if we haven't found the next branch or if we can't actually
         -- enter it with travel.
-        if not branch_found(next_branch)
+        if not branch_found(next_branch, FEAT_LOS.REACHABLE)
                 or not branch_travel(next_branch) then
             result.stop_branch = next_branch
             break
@@ -260,7 +260,28 @@ function finalize_depth_dir(result, dir)
     return true
 end
 
+function travel_opens_runed_doors(result)
+    if result.stop_branch == "Pan"
+                and not branch_found("Pan", FEAT_LOS.REACHABLE)
+            or result.stop_branch == "Slime"
+                and branch_found("Slime")
+                and not branch_found("Slime", FEAT_LOS.REACHABLE) then
+        local parent, min_depth, max_depth = parent_branch(result.stop_branch)
+        local level = make_level(result.branch, result.depth)
+        return result.branch == parent
+            and result.depth >= min_depth
+            and result.depth <= max_depth
+    end
+
+    return false
+end
+
 function finalize_travel_depth(result)
+    if travel_opens_runed_doors(result) then
+        result.open_runed_doors = true
+        return
+    end
+
     if not autoexplored_level(result.branch, result.depth)
             or level_has_exclusions(result.branch, result.depth) then
         return
@@ -322,7 +343,8 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
     local result = travel_destination_search(dest_branch, dest_depth)
     -- We were unable enter the branch in result.stop_branch, so figure out the
     -- next best travel location in the branch's parent.
-    if result.stop_branch and not branch_found(result.stop_branch) then
+    if result.stop_branch
+            and not branch_found(result.stop_branch, FEAT_LOS.REACHABLE) then
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
         result.branch = parent
         result.depth = next_exploration_depth(parent, min_depth, max_depth)
@@ -353,13 +375,13 @@ function update_gameplan_travel()
         or gameplan_status:find("^God") and gameplan_branch ~= "Temple"
         or is_portal_branch(gameplan_branch)
             and not in_portal()
-            and branch_found(gameplan_branch)
+            and branch_found(gameplan_branch, FEAT_LOS.REACHABLE)
         or gameplan_branch == "Abyss"
             and not in_branch("Abyss")
-            and branch_found("Abyss")
+            and branch_found("Abyss", FEAT_LOS.REACHABLE)
         or gameplan_branch == "Pan"
             and not in_branch("Pan")
-            and branch_found("Pan")
+            and branch_found("Pan", FEAT_LOS.REACHABLE)
 
     gameplan_travel = travel_destination(gameplan_branch, gameplan_depth,
         not want_stash and gameplan_status ~= "Escape")
@@ -432,12 +454,7 @@ end
 function gameplan_travel_features()
     local on_travel_level = gameplan_travel.branch == where_branch
         and gameplan_travel.depth == where_depth
-    if gameplan_travel.first_dir then
-        return level_stairs_features(where_branch, where_depth,
-            gameplan_travel.first_dir)
-    elseif gameplan_travel.first_branch then
-        return { branch_entrance(gameplan_travel.first_branch) }
-    elseif gameplan_travel.stairs_dir and on_travel_level then
+    if gameplan_travel.stairs_dir and on_travel_level then
         local feats = level_stairs_features(where_branch, where_depth,
             gameplan_travel.stairs_dir)
         local wanted_feats = {}
@@ -448,6 +465,11 @@ function gameplan_travel_features()
             end
         end
         return wanted_feats
+    elseif gameplan_travel.first_dir then
+        return level_stairs_features(where_branch, where_depth,
+            gameplan_travel.first_dir)
+    elseif gameplan_travel.first_branch then
+        return { branch_entrance(gameplan_travel.first_branch) }
     elseif on_travel_level then
         local god = gameplan_god(gameplan_status)
         if god then

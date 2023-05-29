@@ -69,13 +69,6 @@ function turn_update()
         base_corrosion = in_branch("Dis") and 2 or 0
 
         local pan_parent, min_depth, max_depth = parent_branch("Pan")
-        open_runed_doors = in_branch("Abyss")
-            or in_branch("Pan")
-            or in_portal()
-            or planning_pan
-                and in_branch(pan_parent)
-                and where_depth >= min_depth
-                and where_depth <= max_depth
 
         target_flee_position = nil
         transp_zone = 0

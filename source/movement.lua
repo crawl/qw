@@ -794,6 +794,17 @@ function map_has_adjacent_unseen_at(pos)
     return false
 end
 
+function map_has_adjacent_runed_doors_at(pos)
+    for apos in adjacent_iter(pos) do
+        local los_pos = position_difference(apos, global_pos)
+        if view.feature_at(los_pos.x, los_pos.y) == "runed_clear_door" then
+            return true
+        end
+    end
+
+    return false
+end
+
 function best_move_towards_unexplored(unsafe)
     local i = 1
     for pos in radius_iter(global_pos, GXM) do
@@ -810,7 +821,8 @@ function best_move_towards_unexplored(unsafe)
         if supdist(pos) <= GXM
                 and (unsafe or map_is_unexcluded_at(pos))
                 and map_is_reachable_at(pos, true)
-                and map_has_adjacent_unseen_at(pos) then
+                and (open_runed_doors and map_has_adjacent_runed_doors_at(pos)
+                    or map_has_adjacent_unseen_at(pos)) then
             return best_move_towards_map_position(pos, true)
         end
 

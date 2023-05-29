@@ -311,13 +311,13 @@ function absolute_resist_value(str, n)
     elseif str == "Fly" then
         return 200
     elseif str == "Faith" then
-        -- We either don't use invocations much for these gods
+        -- We don't use invocations enough for these gods to care about Faith.
         if you.god() == "Cheibriados"
                 or you.god() == "Beogh"
                 or you.god() == "Qazlal"
-                or you.god() == "Hepliaklqana"
-                or you.god() ~= "Ru"
-                or you.god() ~= "Xom" then
+                or you.god() == "Hepliaklqana" then
+        -- These gods gain little from Faith.
+        elseif you.god() == "Ru" or you.god() == "Xom" then
             return 0
         -- Otherwise, we like Faith a lot.
         else
@@ -389,9 +389,9 @@ function max_resist_value(str, d)
         if you.god() == "Cheibriados"
                 or you.god() == "Beogh"
                 or you.god() == "Qazlal"
-                or you.god() == "Hepliaklqana"
-                or you.god() ~= "Ru"
-                or you.god() ~= "Xom" then
+                or you.god() == "Hepliaklqana" then
+            return -10000
+        elseif you.god() == "Ru" or you.god() == "Xom" then
             return 0
         else
             return 1000
@@ -403,7 +403,7 @@ function max_resist_value(str, d)
     elseif str == "Reflect" then
         return 20
     elseif str == "Repulsion" then
-        return 200
+        return 100
     end
 
     return 0

@@ -828,8 +828,10 @@ function want_resistance()
 end
 
 function want_magic_points()
+    local mp, mmp = you.mp()
     return danger
         and not dangerous_to_attack()
+        and mmp >= 20
         -- No point trying to restore MP with ghost moths around.
         and count_enemies_by_name(los_radius, "ghost moth") == 0
             and (hp_is_low(50) or have_orb or in_extended())

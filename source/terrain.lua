@@ -7,9 +7,9 @@ function get_feature_name(where_name)
 end
 
 function feature_is_traversable(feat, assume_flight)
-    return (open_runed_doors or not feature_is_runed_door(feat))
-        -- XXX: Can we pass a default nil value instead?
-        and travel.feature_traversable(feat, assume_flight and true or false)
+    -- XXX: Can we pass a default nil value instead?
+    return  travel.feature_traversable(feat, assume_flight and true or false)
+        and not feature_is_runed_door(feat)
 end
 
 function is_cornerish_at(pos)

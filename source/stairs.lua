@@ -225,7 +225,7 @@ function have_all_stairs(branch, depth, dir, los)
     return true
 end
 
-function update_branch_stairs(dest_branch, branch, depth, dir, state, force)
+function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     if state.safe == nil and not state.los then
         error("Undefined branch stairs state.")
     end
@@ -487,7 +487,7 @@ function get_destination_stairs(branch, depth, feat)
                 return get_branch_stairs(parent, min_depth, branch, -dir)
             end
         else
-            return get_branch_stairs(branch, 1, -dir)
+            return get_branch_stairs(branch, 1, branch, -dir)
         end
     end
 end

@@ -212,18 +212,7 @@ function branch_found(branch, min_los)
     end
 
     if not min_los then
-        -- Hack. Temple entries sometimes restrict access when they reveal the
-        -- branch, requiring entry via stairs inside the vault. Requiring
-        -- reachable means we won't try to access temple until we've explored
-        -- these stairs and can therefore successfully travel to it. Other
-        -- branches tend to not cause travel problems yet are sometimes
-        -- initially spotted behind e.g. statues, so we allow only seeing them
-        -- to consider them found.
-        if branch == "Temple" then
-            min_los = FEAT_LOS.REACHABLE
-        else
-            min_los = FEAT_LOS.SEEN
-        end
+        min_los = FEAT_LOS.SEEN
     end
 
     if not c_persist.branch_entries[branch] then
@@ -394,4 +383,13 @@ function easy_runes()
         end
     end
     return count
+end
+
+function branch_entry_level(branch)
+    local parent, min_depth, max_depth = parent_branch(branch)
+    if not min_depth or min_depth ~= max_depth then
+        return
+    end
+
+    return make_level(parent, min_depth)
 end

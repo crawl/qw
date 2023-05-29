@@ -806,6 +806,7 @@ function clear_out_shopping_list()
     if not shoplist then
         return false
     end
+
     say("CLEARING SHOPPING LIST")
     -- Press ! twice to toggle action to 'delete'
     local clear_shoplist_magic = "$!!"
@@ -813,6 +814,9 @@ function clear_out_shopping_list()
         clear_shoplist_magic = clear_shoplist_magic .. "a"
     end
     magic(clear_shoplist_magic)
+
+    do_dummy_action = false
+    coroutine.yield()
     return false
 end
 

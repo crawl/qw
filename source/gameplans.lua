@@ -788,6 +788,8 @@ function update_gameplan()
     update_future_planning()
     update_gameplan_travel()
 
+    open_runed_doors = level_is_temporary() or gameplan_travel.open_runed_doors
+
     want_gameplan_update = false
 end
 

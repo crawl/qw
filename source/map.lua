@@ -501,7 +501,7 @@ function update_feature(branch, depth, feat, hash, state)
 
     local dest_branch, dir = branch_stairs_type(feat)
     if dest_branch then
-        update_branch_stairs(dest_branch, branch, depth, dir, state)
+        update_branch_stairs(branch, depth, dest_branch, dir, state)
         return
     end
 
@@ -864,7 +864,7 @@ function get_distance_map(pos, permanent, radius)
     return distance_maps[hash]
 end
 
-function get_feature_map_positions(feats, radius)
+function get_feature_map_positions(feats)
     local positions = {}
     local features = {}
     for _, feat in ipairs(feats) do
