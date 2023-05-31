@@ -105,12 +105,14 @@ end
 
 function want_buckler()
     local sp = you.race()
+    local skill = weapon_skill()
     return sp ~= "Felid"
+        and (skill ~= "Ranged Weapons" or sp == "Formicid")
         and (SHIELD_CRAZY
             or sp == "Formicid"
             or sp == "Kobold"
-            or weapon_skill() == "Short Blades"
-            or weapon_skill() == "Unarmed Combat")
+            or skill == "Short Blades"
+            or skill == "Unarmed Combat")
 end
 
 function want_shield()

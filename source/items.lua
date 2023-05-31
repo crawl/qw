@@ -710,11 +710,7 @@ function weapon_value(it, cur, it2, sit)
         if it.plus then
             value = value + 30 * it.plus
         end
-        delay_estimate = min(7, math.floor(it.delay / 2))
-        if it.weap_skill == "Short Blades" and delay_estimate > 5 then
-            delay_estimate = 5
-        end
-        value = value + 1200 * it.damage / delay_estimate
+        value = value + 1200 * it.damage / weapon_min_delay(it)
         return value + val1, value + val2
     end
 
@@ -831,13 +827,8 @@ function weapon_value(it, cur, it2, sit)
         value = value + 30 * it.plus
     end
 
-    delay_estimate = min(7, math.floor(it.delay / 2))
-    if it.weap_skill == "Short Blades" and delay_estimate > 5 then
-        delay_estimate = 5
-    end
     -- We might be delayed by a shield or not yet at min delay, so add a little.
-    delay_estimate = delay_estimate + 1
-    value = value + 1200 * it.damage / delay_estimate
+    value = value + 1200 * it.damage / (weapon_min_delay(it) + 1)
 
     -- Subtract a bit for very slow weapons because of how much skill they
     -- require to reach min delay.
@@ -1329,7 +1320,9 @@ function weapon_min_delay(weapon)
     local delay = weapon.delay
 
     if contains_string_in(weapon:subtype(),
-            { "hand crossbow", "arbalest", "triple crossbow" }) then
+            { "crossbow", "arbalest" }) then
+        -- The max is to cover cases like Sniper, which has high delay and
+        -- can't reach the usual 1.0 min delay.
         return max(10, weapon.delay - 13.5)
     end
 
@@ -1346,6 +1339,7 @@ function weapon_min_delay(weapon)
         return 6
     end
 
+    -- Dark Maul has very high delay.
     return max(7, weapon.delay - 13.5)
 end
 
@@ -1359,8 +1353,7 @@ function min_delay_skill()
 end
 
 function at_min_delay()
-    return you.base_skill(weapon_skill()) >= min(27,
-        min_delay_skill() + (you.god() == "Ru" and 1 or 0))
+    return you.base_skill(weapon_skill()) >= min(27, min_delay_skill())
 end
 
 function cleaving()
