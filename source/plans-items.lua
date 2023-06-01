@@ -511,7 +511,7 @@ function want_cure_mutations()
         or base_mutation("inability to read after injury") > 0
         or base_mutation("deformed body") > 0
             and you.race() ~= "Naga"
-            and you.race() ~= "Palentonga"
+            and you.race() ~= "Armataur"
             and (armour_plan() == "heavy"
                 or armour_plan() == "large")
         or base_mutation("berserk") > 0

@@ -298,7 +298,8 @@ function weapon_test_spell(weapon)
 end
 
 function weapon_range(weapon)
-    if weapon.class(true) == "missile" then
+    local class = weapon.class(true)
+    if class == "missile" or class == "weapon" and weapon.subtype() then
         return los_radius
     end
 end
@@ -367,6 +368,24 @@ function get_ranged_target(weapon, prefer_melee)
     if best_result then
         return best_result.pos
     end
+end
+
+function plan_shoot()
+    if not danger or unable_to_shoot() or dangerous_to_attack() then
+        return false
+    end
+
+    local missile = best_missile()
+    if not missile then
+        return false
+    end
+
+    local target = get_ranged_target(missile, true)
+    if not target then
+        return false
+    end
+
+    return throw_missile(missile, target)
 end
 
 function throw_missile(missile, pos)
@@ -607,6 +626,7 @@ function set_plan_attack()
     plan_attack = cascade {
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
+        {plan_ranged, "ranged"},
         {plan_melee, "melee"},
         {plan_throw, "throw"},
         {plan_wait_for_enemy, "wait_for_enemy"},

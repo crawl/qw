@@ -46,7 +46,7 @@ function intrinsic_fumble()
 
     local sp = you.race()
     return not (sp == "Grey Draconian"
-        or sp == "Palentonga"
+        or sp == "Armataur"
         or sp == "Naga"
         or sp == "Troll"
         or sp == "Ogre")
@@ -77,7 +77,8 @@ function armour_plan()
         return "large"
     elseif sp == "Deep Elf" or sp == "Kobold" or sp == "Merfolk" then
         return "dodgy"
-    elseif sp:find("Draconian")
+    elseif weapon_skill() == "Ranged Weapons"
+            or sp:find("Draconian")
             or sp == "Felid"
             or sp == "Octopode"
             or sp == "Spriggan" then
@@ -100,7 +101,7 @@ end
 
 function unfitting_armour()
     local sp = you.race()
-    return armour_plan() == "large" or sp == "Palentonga" or sp == "Naga"
+    return armour_plan() == "large" or sp == "Armataur" or sp == "Naga"
 end
 
 function want_buckler()
@@ -293,7 +294,7 @@ function body_size()
     elseif you.race() == "Troll"
             or you.race() == "Ogre"
             or you.race() == "Naga"
-            or you.race() == "Palentonga" then
+            or you.race() == "Armataur" then
         return 1
     else
         return 0
@@ -323,6 +324,18 @@ function dangerous_to_move()
                     or count_divine_warriors(1) > 0
                     or count_beogh_allies(1) > 0)
         end)
+end
+
+function unable_to_shoot()
+    if you.berserk() or you.caught() then
+        return true
+    end
+
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "lich")
 end
 
 function unable_to_throw()
