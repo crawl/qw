@@ -63,12 +63,13 @@ end
 
 function plan_wield_weapon()
     local weap = items.equipped_at("Weapon")
-    if is_melee_weapon(weap) or you.berserk() or transformed() then
+    if is_weapon(weap)
+            or weapon_skill() == "Unarmed Combat"
+            or you.berserk()
+            or transformed() then
         return false
     end
-    if weapon_skill() == "Unarmed Combat" then
-        return false
-    end
+
     for it in inventory() do
         if it and it.class(true) == "weapon" then
             if should_equip(it) then
@@ -84,6 +85,7 @@ function plan_wield_weapon()
         magic("w-")
         return true
     end
+
     return false
 end
 

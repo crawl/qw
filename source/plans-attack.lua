@@ -375,11 +375,6 @@ function plan_shoot()
         return false
     end
 
-    local missile = best_missile()
-    if not missile then
-        return false
-    end
-
     local target = get_ranged_target(missile, true)
     if not target then
         return false
@@ -389,6 +384,15 @@ function plan_shoot()
 end
 
 function throw_missile(missile, pos)
+    local cur_missile = items.fired_item()
+    if not cur_missile or missile.name() ~= cur_missile.name() then
+        magic("Q*" .. letter(missile))
+    end
+
+    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
+end
+
+function fire_launcher(missile, pos)
     local cur_missile = items.fired_item()
     if not cur_missile or missile.name() ~= cur_missile.name() then
         magic("Q*" .. letter(missile))

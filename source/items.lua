@@ -1414,8 +1414,6 @@ function can_swap(equip_slot)
     return true
 end
 
-function is_melee_weapon(it)
-    return it
-        and it.class(true) == "weapon"
-        and it.weap_skill ~= "Ranged Weapons"
+function is_weapon(it)
+    return it and it.class(true) == "weapon"
 end
