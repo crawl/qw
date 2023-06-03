@@ -387,7 +387,7 @@ function branch_soon(branch)
     return branch == gameplan_branch
 end
 
-function in_extended()
+function in_undead_or_demon_branch()
     return branch_soon("Pan")
         or branch_soon("Tomb")
         or branch_soon("Hell")
@@ -395,10 +395,8 @@ function in_extended()
         or branch_soon("Zig")
 end
 
-function gameplans_visit_branch(branch)
-    if branch == "Zot" then
-        return true
-    elseif not which_gameplan then
+function gameplans_visit_branches(branches)
+    if not which_gameplan then
         return false
     end
 
@@ -412,30 +410,66 @@ function gameplans_visit_branch(branch)
         end
 
         if plan_branch
-                and plan_branch == branch
+                and util.contains(branches, plan_branch)
                 and not gameplan_complete(plan, i == #gameplan_list) then
             return true
         end
     end
+
+    if not have_orb and util.contains(branches, "Zot") then
+        return true
+    end
+
+    return false
+end
+
+function gameplans_visit_branch(branch)
+    return gameplans_visit_branches({ branch })
+end
+
+function gameplans_conversion_gods()
+    if not which_gameplan then
+        return {}
+    end
+
+    local gods = {}
+    for i = which_gameplan, #gameplan_list do
+        local plan = gameplan_list[i]
+        local plan_god = gameplan_god(plan)
+        if plan_god then
+            table.insert(gods, plan_god)
+        end
+    end
+
+    return gods
+end
+
+function planning_convert_to_gods(gods)
+    for _, god in ipairs(gods) do
+        if util.contains(planning_god_conversions, god) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function planning_convert_to_god(god)
+    return planning_convert_to_gods({ god })
+end
+
+function planning_convert_to_mp_using_gods()
+    return planning_convert_to_gods(mp_using_gods)
 end
 
 function update_future_planning()
     planning_zig = gameplans_visit_branch("Zig")
 
-    planning_undead_demon_branches = false
+    planning_undead_or_demon_branches = planning_zig
+        or gameplans_visit_branches(hell_branches)
 
-    for _, br in ipairs(hell_branches) do
-        if gameplans_visit_branch(br) then
-            planning_undead_demon_branches = true
-            break
-        end
-    end
-
-    planning_undead_demon_branches = planning_undead_demon_branches
-        or gameplans_visit_branch("Crypt")
-        or gameplans_visit_branch("Pan")
-        or gameplans_visit_branch("Tomb")
-        or planning_zig
+    planning_undead_or_demon_branches = planning_undead_or_demon_branches
+        or gameplans_visit_branches({ "Crypt", "Pan", "Tomb" })
 
     planning_vaults = gameplans_visit_branch("Vaults")
     planning_slime = gameplans_visit_branch("Slime")
@@ -445,36 +479,10 @@ function update_future_planning()
     planning_cocytus = gameplans_visit_branch("Coc")
     planning_gehenna = gameplans_visit_branch("Geh")
 
-    planning_god_uses_mp = god_uses_mp()
-    planning_tso = you.god() == "the Shining One"
-    planning_good_god = is_good_god()
-
-    if not which_gameplan then
-        return
-    end
-
-    for i = which_gameplan, #gameplan_list do
-        local plan = gameplan_list[i]
-        local next_plan = gameplan_list[i + 1]
-        local plan_final = not next_plan
-        local next_final = not gameplan_list[i + 2]
-
-        if plan:find("^God:") then
-            local god = gameplan_god(plan)
-            if not gameplan_complete(plan, plan_final)
-                    and not (next_plan
-                        and not gameplan_complete(next_plan, next_final)) then
-                if god_uses_mp(god) then
-                    planning_god_uses_mp = true
-                elseif is_good_god(god) then
-                    planning_good_god = true
-                    if god == "the Shining One" then
-                        planning_tso = true
-                    end
-                end
-            end
-        end
-    end
+    planning_god_conversions = gameplans_conversion_gods()
+    planning_conversion_gods_use_mp = planning_convert_to_gods(mp_using_gods)
+    planning_tso_conversion = planning_convert_to_god("the Shining One")
+    planning_okawaru_conversion = planning_convert_to_god("Okawaru")
 end
 
 -- Make a level range for the given branch and ranges, e.g. D:1-11. The

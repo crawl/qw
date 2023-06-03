@@ -63,7 +63,7 @@ function plan_starting_spell()
     if you.mp() < spells.mana_cost(sp) then
         return false
     end
-    if you.xl() > 4 and not is_waiting then
+    if you.xl() > 4 then
         return false
     end
     local dist = distance_to_tabbable_enemy(0, 0)

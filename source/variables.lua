@@ -64,6 +64,7 @@ local hell_branches
 local portal_data = {}
 local god_data = {}
 local good_gods
+local mp_using_gods = {}
 local upstairs_features
 local downstairs_features
 
@@ -86,13 +87,15 @@ local early_zot
 local zot_end
 local abyssal_rune
 
-local planning_god_uses_mp
-local planning_good_god
-local planning_tso
+local planning_conversion_gods = {}
+local planning_conversion_gods_use_mp
+local planning_tso_conversion
+local planning_okawaru_conversion
+
 local planning_vaults
 local planning_slime
 local planning_pan
-local planning_undead_demon_branches
+local planning_undead_or_demon_branches
 local planning_cocytus
 local planning_gehenna
 local planning_zig
@@ -173,7 +176,6 @@ local incoming_melee_turn = -1
 local full_hp_turn = 0
 
 local next_delay = 100
-local is_waiting
 
 local invis_monster = false
 local invis_monster_pos

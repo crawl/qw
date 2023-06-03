@@ -54,6 +54,9 @@ function initialize_god_data()
         god_data[god] = {}
         god_data[god]["uses_invocations"] = entry[2]
         god_data[god]["uses_mp"] = entry[3]
+        if entry[3] then
+            table.insert(mp_using_gods, god)
+        end
 
         god_lookups[god:upper()] = god
         if god == "the Shining One" then
@@ -89,6 +92,90 @@ function god_uses_mp(god)
     end
 
     return god_data[god].uses_mp
+end
+
+function enough_max_mp_for_god(max_mp, god)
+    -- Hero costs 2 and Finesse costs 5, so we want at least 7mmp
+    if god == "Okawaru" then
+        return max_mp >= 7
+    end
+
+    -- These gods want to spam MP-using abilities .
+    if god == "Cheibriados" or god == "the Shining One" then
+        return max_mp >= 30
+    end
+
+    return true
+end
+
+function planning_conversion_gods_enough_max_mp(max_mp)
+    for _, god in ipairs(planning_conversion_gods) do
+        if not enough_max_mp_for_god(max_mp, god) then
+            return false
+        end
+    end
+
+    return true
+end
+
+function item_is_evil(it)
+    local subtype = it:subtype()
+    if subtype and subtype:find("^demon") then
+        return true
+    end
+
+    local ego = it:ego()
+    if ego == "pain"
+            or ego == "vampirism"
+            or ego == "draining"
+            or ego == "chaos"
+            or ego == "reaping" then
+        return true
+    end
+
+    if not subtype then
+        return false
+    end
+
+    local name = it:name()
+    return name:find("Vitality") and subtype:find("^amulet")
+        or name:find("Damnation") and subtype == "arbalest"
+        or name:find("Cerebov") and subtype == "great sword"
+        or name:find("Asmodeus") and subtype == "eveningstar"
+        or name:find("Cigotuvi's embrace")
+        or name:find("Black Knight's barding")
+end
+
+function god_hates_item(it)
+    local god = you.god()
+    if is_good_god(god) and item_is_evil(it) then
+        return true
+    end
+
+    local ego = it:ego()
+    if god == "Cheibriados" then
+        return ego == "speed" or ego == "chaos"
+    end
+
+    if god == "Yredelemnul" then
+        return ego == "holy wrath"
+    end
+
+    if god == "Trog" then
+        return ego == "pain"
+    end
+
+    return false
+end
+
+function planning_conversion_gods_hate_item(it)
+    for _, god in ipairs(planning_conversion_gods) do
+        if god_hates_item(god, it) then
+            return true
+        end
+    end
+
+    return false
 end
 
 function altar_god(feat)

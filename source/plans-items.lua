@@ -104,8 +104,8 @@ function plan_swap_weapon()
         end
     end
 
-    if in_extended() then
-        sit = "extended"
+    if in_undead_or_demon_branch() then
+        sit = "undead_or_demon"
     end
 
     twohands = true
@@ -185,17 +185,21 @@ function plan_upgrade_weapon()
     if acquirement_class == "Weapon" then
         acquirement_class = nil
     end
+
     if you.race() == "Troll" then
         return false
     end
+
     local sit
-    if in_extended() then
-        sit = "extended"
+    if in_undead_or_demon_branch() then
+        sit = "undead_or_demon"
     end
+
     twohands = true
     if items.equipped_at("Shield") and you.race() ~= "Formicid" then
         twohands = false
     end
+
     it_old = items.equipped_at("Weapon")
     swappable = can_swap("Weapon")
     for it in inventory() do
@@ -493,7 +497,7 @@ function brand_is_great(brand)
     elseif brand == "vampirism" then
         return not have_orb
     elseif brand == "holy wrath" then
-        return have_orb or planning_undead_demon_branches
+        return have_orb or planning_undead_or_demon_branches
     else
         return false
     end

@@ -135,7 +135,7 @@ function weapon_choice()
 end
 
 function weapon_skill()
-    -- cache in case you unwield a weapon somehow
+    -- Cache in case we unwield a weapon somehow.
     if c_persist.cached_wskill then
         return c_persist.cached_wskill
     end
