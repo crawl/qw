@@ -58,6 +58,10 @@ function c_answer_prompt(prompt)
     if prompt:find("fire in the non-hostile") then
         return true
     end
+    if prompt:find("Really.*into that.*trap")
+            or prompt:find("into the Zot trap") then
+        return true
+    end
 end
 
 function control(c)

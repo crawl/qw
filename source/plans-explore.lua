@@ -349,16 +349,3 @@ function set_plan_explore2()
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }
 end
-
--- Hook to determine which traps are safe to move over without requiring an
--- answer to a yesno prompt. We currently only disable permanent teleport and
--- dispersal traps by default since these can create infinite movement loops as
--- we repeatedly move onto them without having -Tele somehow. This can be
--- conditionally disabled with ignore_traps, e.g. as we do on Zot:5.
--- XXX: We ideally would have more robust logic that wouldn't have us move on
--- Zot traps unless we really needed to.
-function c_trap_is_safe(trap)
-    return you.race() == "Formicid"
-        or ignore_traps
-        or trap ~= "permanent teleport" and trap ~= "dispersal"
-end

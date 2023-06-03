@@ -1,16 +1,11 @@
 ----------------------
 -- Movement evaluation
 
-function can_move_to(pos, ignore_monsters)
+function can_move_to(pos, ignore_hostiles)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
-        and (ignore_monsters
-            or supdist(pos) > los_radius
-            or not monster_in_way(pos))
-end
-
-function map_can_move_to(pos, ignore_monsters)
-    return can_move_to(position_difference(pos, global_pos), ignore_monsters)
+        and (supdist(pos) > los_radius
+            or not monster_in_way(pos, ignore_hostiles))
 end
 
 -- XXX: This needs to run before update_map() and hence before traversal_map is
@@ -30,7 +25,7 @@ function tabbable_square(pos)
     return view.feature_at(pos.x, pos.y) ~= "unseen"
         and (not monster_map[pos.x][pos.y]
             or monster_map[pos.x][pos.y]:is_firewood())
-        and view.is_safe_square(pos.x, pos.y)
+        and is_safe_at(pos)
         and not view.withheld(pos.x, pos.y)
 end
 
@@ -38,15 +33,16 @@ function flight_tabbable_square(pos)
     return view.feature_at(pos.x, pos.y) ~= "unseen"
         and (not monster_map[pos.x][pos.y]
             or monster_map[pos.x][pos.y]:is_firewood())
-        and view.is_safe_square(pos.x, pos.y, true)
+        and is_safe_at(pos, true)
         and not view.withheld(pos.x, pos.y)
 end
 
 -- Should only be called for adjacent squares.
-function monster_in_way(pos)
+function monster_in_way(pos, ignore_hostiles)
     local mons = monster_map[pos.x][pos.y]
     local feat = view.feature_at(0, 0)
-    return mons and (mons:attitude() <= enum_att_neutral
+    return mons and (mons:name() == "orb of destruction"
+        or not ignore_hostiles and mons:attitude() <= enum_att_neutral
         or mons:attitude() > enum_att_neutral
             and (mons:is_constricted()
                 or mons:is_caught()
@@ -194,7 +190,7 @@ function assess_square(pos)
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Is the square safe to step in? (checks traps & clouds)
-    a.safe = view.is_safe_square(pos.x, pos.y)
+    a.safe = is_safe_at(pos)
     cloud = view.cloud_at(pos.x, pos.y)
 
     -- Would we want to move out of a cloud? note that we don't worry about
@@ -672,27 +668,45 @@ function monster_can_move_to_player_melee(mons)
 end
 
 function best_move_towards_map_positions(positions, ignore_exclusions)
+    local best_safe_dist, best_safe_move, best_safe_dest
     local best_dist, best_move, best_dest
     for _, pos in ipairs(positions) do
         local dist_map = get_distance_map(pos)
         local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
+        local current_dist = map[global_pos.x][global_pos.y]
 
-        if map[global_pos.x][global_pos.y] == 0 then
+        if current_dist == 0 then
             return
         end
 
         for apos in adjacent_iter(global_pos) do
+            local los_apos = position_difference(apos, global_pos)
             local dist = map[apos.x][apos.y]
-            if dist and (not best_dist or dist < best_dist)
-                    and map_can_move_to(apos, true) then
+            local better_dist = dist
+                and (not current_dist or dist < current_dist)
+            if better_dist
+                    and can_move_to(los_apos)
+                    and is_safe_at(apos)
+                    and (not best_safe_dist or dist < best_safe_dist) then
+                best_safe_dist = dist
+                best_safe_move = los_apos
+                best_safe_dest = pos
+            end
+
+            if better_dist
+                    and not best_safe_dist
+                    and can_move_to(los_apos, true)
+                    and (not best_dist or dist < best_dist) then
                 best_dist = dist
-                best_move = position_difference(apos, global_pos)
+                best_move = los_apos
                 best_dest = pos
             end
         end
     end
 
-    if best_dist then
+    if best_safe_dist then
+        return best_safe_move, best_safe_dest
+    elseif best_dist then
         return best_move, best_dest
     end
 end
@@ -845,9 +859,9 @@ function best_move_towards_safety()
 
         local los_pos = position_difference(pos, global_pos)
         if supdist(pos) <= GXM
-                and view.is_safe_square(los_pos.x, los_pos.y)
+                and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
-                and map_can_move_to(pos, true) then
+                and can_move_to(los_pos, true) then
             return best_move_towards_map_position(pos, true)
         end
 

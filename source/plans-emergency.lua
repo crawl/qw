@@ -394,7 +394,7 @@ function plan_blinking()
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
                 and not monster_map[pos.x][pos.y]
-                and view.is_safe_square(pos.x, pos.y)
+                and is_safe_at(pos)
                 and not view.withheld(pos.x, pos.y)
                 and you.see_cell_no_trans(pos.x, pos.y) then
             local count = 0
@@ -900,9 +900,7 @@ function plan_continue_flee()
     end
 
     for pos in adjacent_iter(origin) do
-        if can_move_to(pos)
-                and not is_solid_at(pos)
-                and view.is_safe_square(pos.x, pos.y) then
+        if can_move_to(pos) and not is_solid_at(pos) and is_safe_at(pos) then
             local map = get_distance_map(target_flee_position).excluded_map
             local dist = map[global_pos.x + pos.x][global_pos.y + pos.y]
             if dist and dist < map[global_pos.x][global_pos.y] then

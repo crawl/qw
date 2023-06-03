@@ -6,10 +6,23 @@ function get_feature_name(where_name)
     end
 end
 
+function feature_is_traversable_trap(feat)
+    return feat:find("^trap") ~= nil
+        and (ignore_traps
+            or feat ~= "trap_teleport_permanent" and feat ~= "trap_dispersal"
+            or you.race() == "Formicid")
+end
+
 function feature_is_traversable(feat, assume_flight)
     -- XXX: Can we pass a default nil value instead?
-    return  travel.feature_traversable(feat, assume_flight and true or false)
-        and not feature_is_runed_door(feat)
+    return travel.feature_traversable(feat, assume_flight and true or false)
+                and not feature_is_runed_door(feat)
+            or feature_is_traversable_trap(feat)
+end
+
+function is_safe_at(pos, assume_flight)
+    return view.is_safe_square(pos.x, pos.y, assume_flight)
+        and view.feature_at(pos.x, pos.y) ~= "trap_zot"
 end
 
 function is_cornerish_at(pos)
@@ -199,4 +212,19 @@ end
 function get_map_runelight(pos)
     local hash = hash_position(pos)
     return c_persist.runelights[hash]
+end
+
+-- Hook to determine which traps are safe to move over without requiring an
+-- answer to a yesno prompt. We currently mark only web traps as safe, since
+-- not doing so leads to a lot of "unreachable" monsters in Spider. This can be
+-- conditionally disabled with ignore_traps, e.g. as we do on Zot:5.
+-- XXX: We have to mark Zot traps as safe so we don't get the prompt, as
+-- c_answer_prompt isn't called in that case. Should have the crawl yes_or_no()
+-- function call c_answer_prompt to fix this.
+function c_trap_is_safe(trap)
+    return ignore_traps
+        or trap == "web"
+        or trap == "Zot"
+        or you.race() == "Formicid"
+            and (trap == "permanent teleport" or trap == "dispersal")
 end

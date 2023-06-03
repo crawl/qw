@@ -28,7 +28,7 @@ function plan_move_to_zigfig_location()
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
                 and not monster_in_way(pos)
-                and view.is_safe_square(x, y)
+                and is_safe_at(pos)
                 and not feature_is_critical(view.feature_at(pos.x, pos.y)) then
             move_to(pos)
             return true

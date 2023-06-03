@@ -84,7 +84,7 @@ function is_swamp_end_cloud(pos)
     return (view.cloud_at(pos.x, pos.y) == "freezing vapour"
             or view.cloud_at(pos.x, pos.y) == "foul pestilence")
         and you.see_cell_no_trans(pos.x, pos.y)
-        and not view.is_safe_square(pos.x, pos.y)
+        and not is_safe_at(pos)
 end
 
 function plan_swamp_clouds_hack()
@@ -105,7 +105,7 @@ function plan_swamp_clouds_hack()
     local best_pos
     local best_dist = 11
     for pos in adjacent_iter(origin) do
-        if can_move_to(pos) and view.is_safe_square(pos.x, pos.y) then
+        if can_move_to(pos) and is_safe_at(pos) then
             for dpos in radius_iter(pos) do
                 local dist = supdist(position_difference(dpos, pos))
                 if is_swamp_end_cloud(dpos) and dist < best_dist then

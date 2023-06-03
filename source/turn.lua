@@ -41,7 +41,7 @@ function turn_update()
     if hp_is_full() then
         full_hp_turn = turn_count
     end
-    position_is_safe = view.is_safe_square(0, 0)
+    position_is_safe = is_safe_at(origin)
     position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
 
     local new_level = false
