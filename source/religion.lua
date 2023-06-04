@@ -146,8 +146,19 @@ function item_is_evil(it)
         or name:find("Black Knight's barding")
 end
 
-function god_hates_item(it)
-    local god = you.god()
+function current_god_hates_item(it)
+    -- We don't want to be wearing hated items when we convert to a new god,
+    -- since we might incur pennance while taking them off.
+    local new_god = gameplan_god(gameplan_status)
+    if new_god and view.feature_at(0, 0) ~= god_altar(new_god) then
+        new_god = nil
+    end
+
+    return god_hates_item(you.god(), it)
+        or new_god and god_hates_item(new_god, it)
+end
+
+function god_hates_item(god, it)
     if is_good_god(god) and item_is_evil(it) then
         return true
     end

@@ -554,7 +554,7 @@ function armour_value(it, cur, it2)
     local name = it.name()
     local value = 0
     local val1, val2 = 0, 0
-    if god_hates_item(it) then
+    if current_god_hates_item(it) then
         if cur then
             return -1, -1
         else
@@ -719,7 +719,7 @@ function weapon_value(it, cur, it2, sit)
         return value + val1, value + val2
     end
 
-    if god_hates_item(it) then
+    if current_god_hates_item(it) then
         if cur then
             return -1, -1
         else
@@ -864,7 +864,7 @@ function amulet_value(it, cur, it2)
     end
 
     local val1, val2 = 0, 0
-    if god_hates_item(it) then
+    if current_god_hates_item(it) then
         if cur then
             return -1, -1
         else
