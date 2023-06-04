@@ -805,7 +805,11 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "venom" and not undead_demon then
             value = value + 50
         elseif ego == "antimagic" then
-            local new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
+            local new_mmp = select(2, you.mp())
+            -- Swapping to antimagic reduces our max MP by 2/3.
+            if weap:ego() ~= "antimagic" then
+                new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
+            end
             if not enough_max_mp_for_god(new_mmp, you.god()) then
                 if cur then
                     return -1, -1

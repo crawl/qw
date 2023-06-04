@@ -268,7 +268,6 @@ function have_branch_runes(branch)
         return true
     end
 
-
     for _, rune in ipairs(runes) do
         if not you.have_rune(rune) then
             return false

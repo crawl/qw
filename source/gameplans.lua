@@ -815,6 +815,15 @@ function gameplan_options()
 end
 
 function next_exploration_depth(branch, min_depth, max_depth)
+    if branch == "Abyss" then
+        local rune_depth = branch_rune_depth("Abyss")
+        if in_branch("Abyss") and where_depth > rune_depth then
+            return where_depth
+        else
+            return rune_depth
+        end
+    end
+
     -- The earliest depth that either lacks autoexplore or doesn't have all
     -- stairs reachable.
     local branch_max = branch_depth(branch)

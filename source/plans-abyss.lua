@@ -140,7 +140,8 @@ function plan_abyss_wait_one_turn()
 end
 
 function plan_pick_up_abyssal_rune()
-    if item_map_positions[abyssal_rune]
+    if not have_branch_runes("Abyss")
+            and item_map_positions[abyssal_rune]
             and positions_equal(global_pos,
                 item_map_positions[abyssal_rune]) then
         magic(",")
