@@ -28,6 +28,10 @@ function los_state(pos)
     return FEAT_LOS.SEEN
 end
 
+function have_line_of_fire(pos)
+    return you.see_cell_solid_see(pos.x, pos.y)
+end
+
 function square_iter(pos, radius, include_center)
     if not radius then
         radius = los_radius

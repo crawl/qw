@@ -364,6 +364,19 @@ function player_can_melee_mons(mons)
     end
 end
 
+function dangerous_to_shoot()
+    return turn_memo("dangerous_to_shoot",
+        function()
+            return dangerous_to_attack()
+                -- Don't attempt to shoot with summoned allies adjacent.
+                or you.confused()
+                    and (count_brothers_in_arms(los_radius) > 0
+                        or count_greater_servants(los_radius) > 0
+                        or count_divine_warriors(los_radius) > 0
+                        or count_beogh_allies(los_radius) > 0)
+        end)
+end
+
 function dangerous_to_melee()
     return turn_memo("dangerous_to_melee",
         function()

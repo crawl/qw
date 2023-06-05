@@ -3,7 +3,7 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_monster or dangerous_to_melee() then
+    if not invis_monster or weapon_is_ranged() or dangerous_to_melee() then
         return false
     end
 
@@ -38,6 +38,49 @@ function plan_flail_at_invis()
         tries = tries + 1
         if supdist(pos) > 0 and not is_solid_at(pos) then
             attack_melee(pos, can_ctrl)
+            return true
+        end
+    end
+
+    return false
+end
+
+function plan_shoot_at_invis()
+    if not invis_monster or not weapon_is_ranged() or dangerous_to_shoot() then
+        return false
+    end
+
+    local can_ctrl = not you.confused()
+    if invis_monster_pos then
+        if not is_solid_at(invis_monster_pos)
+                and have_line_of_fire(invis_monster_pos)then
+            shoot_launcher(invis_monster_pos)
+            return true
+        end
+
+        if invis_monster_pos.x == 0 then
+            local apos = { x = 0, y = sign(invis_monster_pos.y) }
+            if not is_solid_at(apos) and have_line_of_fire(apos)then
+                shoot_launcher(apos)
+                return true
+            end
+        end
+
+        if invis_monster_pos.y == 0 then
+            local apos = { x = sign(invis_monster_pos.x), y = 0 }
+            if not is_solid_at(apos) and have_line_of_fire(apos)then
+                shoot_launcher(apos)
+                return true
+            end
+        end
+    end
+
+    local tries = 0
+    while tries < 100 do
+        local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
+        tries = tries + 1
+        if supdist(pos) > 0 and not is_solid_at(pos) then
+            shoot_launcher(pos)
             return true
         end
     end
@@ -299,7 +342,7 @@ end
 
 function weapon_range(weapon)
     local class = weapon.class(true)
-    if class == "missile" or class == "weapon" and weapon.subtype() then
+    if class == "missile" or class == "weapon" and weapon.is_ranged() then
         return los_radius
     end
 end
@@ -370,17 +413,20 @@ function get_ranged_target(weapon, prefer_melee)
     end
 end
 
-function plan_shoot()
-    if not danger or unable_to_shoot() or dangerous_to_attack() then
+function plan_launcher()
+    if not danger
+            or not weapon_is_ranged()
+            or unable_to_shoot()
+            or dangerous_to_attack() then
         return false
     end
 
-    local target = get_ranged_target(missile, true)
+    local target = get_ranged_target(get_weapon())
     if not target then
         return false
     end
 
-    return throw_missile(missile, target)
+    return shoot_launcher(target)
 end
 
 function throw_missile(missile, pos)
@@ -392,10 +438,10 @@ function throw_missile(missile, pos)
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
 end
 
-function fire_launcher(missile, pos)
+function fire_launcher(weapon, pos)
     local cur_missile = items.fired_item()
-    if not cur_missile or missile.name() ~= cur_missile.name() then
-        magic("Q*" .. letter(missile))
+    if not cur_missile or weapon.name() ~= cur_missile.name() then
+        magic("Q*" .. letter(weapon))
     end
 
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
@@ -425,8 +471,8 @@ function wait_combat()
     wait_one_turn()
 end
 
-function plan_wait_for_enemy()
-    if not danger then
+function plan_melee_wait_for_enemy()
+    if not danger or weapon_is_ranged() then
         return false
     end
 
@@ -487,6 +533,43 @@ function plan_wait_for_enemy()
     return false
 end
 
+function plan_ranged_wait_for_enemy()
+    if not danger or not weapon_is_ranged() then
+        return false
+    end
+
+    if unable_to_move() or dangerous_to_move() then
+        wait_combat()
+        return true
+    end
+
+    if dangerous_to_attack()
+            or position_is_cloudy
+            or not options.autopick_on
+            or view.feature_at(0, 0) == "shallow_water"
+                and intrinsic_fumble()
+                and not you.flying()
+            or in_branch("Abyss")
+            or wait_count >= 10 then
+        wait_count = 0
+        return false
+    end
+
+    if you.turns() >= last_wait + 10 then
+        wait_count = 0
+    end
+
+    local want_wait = false
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:can_move_to_player_melee() then
+            wait_combat()
+            return true
+        end
+    end
+
+    return false
+end
+
 function plan_poison_spit()
     if not danger
         or dangerous_to_attack()
@@ -521,6 +604,7 @@ end
 
 function plan_flight_move_towards_enemy()
     if not danger
+            or weapon_is_ranged()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -551,6 +635,7 @@ end
 
 function plan_move_towards_enemy()
     if not danger
+            or weapon_is_ranged()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -630,13 +715,15 @@ function set_plan_attack()
     plan_attack = cascade {
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
-        {plan_ranged, "ranged"},
+        {plan_launcher, "launcher"},
         {plan_melee, "melee"},
         {plan_throw, "throw"},
-        {plan_wait_for_enemy, "wait_for_enemy"},
+        {plan_launcher_wait_for_enemy, "launcher_wait_for_enemy"},
+        {plan_melee_wait_for_enemy, "melee_wait_for_enemy"},
         {plan_continue_move_towards_enemy, "continue_move_towards_enemy"},
         {plan_move_towards_enemy, "move_towards_enemy"},
         {plan_flight_move_towards_enemy, "flight_move_towards_enemy"},
+        {plan_shoot_at_invis, "shoot_at_invis"},
         {plan_flail_at_invis, "flail_at_invis"},
         {plan_disturbance_random_step, "disturbance_random_step"},
     }

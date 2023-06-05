@@ -966,7 +966,7 @@ function update_exclusions(new_waypoint)
     -- Unreachable monsters that we can't ranged attack get excluded
     -- unconditionally.
     local auto_exclude = {}
-    local have_ranged = best_missile()
+    local have_ranged = have_ranged_attack()
     local have_temp_flight = find_item("potion", "flight")
     for _, enemy in ipairs(enemy_list) do
         if not has_exclusion_center_at(enemy:pos())

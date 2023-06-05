@@ -456,6 +456,10 @@ function resist_value(str, it, cur, it2)
 end
 
 function linear_resist_value(str)
+    local skill = weapon_skill()
+    dex_weapon = skill == "Long Blades"
+        or skill == "Short Blades"
+        or skill == "Ranged Weapons"
     if str == "Regen" then
         return 200
     elseif str == "Slay" or str == "AC" or str == "EV" then
@@ -463,9 +467,9 @@ function linear_resist_value(str)
     elseif str == "SH" then
         return 40
     elseif str == "Str" then
-        return 30
+        return dex_weapon and 10 or 35
     elseif str == "Dex" then
-        return 20
+        return dex_weapon and 55 or 15
     -- Begin negative properties.
     elseif str == "*Tele" then
         return you.race() == "Formicid" and 0 or -300
@@ -1274,6 +1278,18 @@ function best_missile()
         end
     end
     return best_missile
+end
+
+function get_weapon()
+    return items.equipped_at("Weapon")
+end
+
+function weapon_is_ranged()
+    return weapon_skill() == "Ranged Weapons"
+end
+
+function have_ranged_attack()
+    weapon_is_ranged() or best_missile()
 end
 
 function find_wand(name)

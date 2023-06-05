@@ -265,7 +265,7 @@ end
 function Monster:have_line_of_fire()
     return self:get_property("player_can_ranged_attack",
         function()
-            return you.see_cell_solid_see(self:x_pos(), self:y_pos())
+            return have_line_of_fire(self:pos())
         end)
 end
 
