@@ -149,9 +149,12 @@ end
 function current_god_hates_item(it)
     -- We don't want to be wearing hated items when we convert to a new god,
     -- since we might incur pennance while taking them off.
-    local new_god = gameplan_god(gameplan_status)
-    if new_god and view.feature_at(0, 0) ~= god_altar(new_god) then
-        new_god = nil
+    local new_god
+    if gameplan_status then
+        new_god = gameplan_god(gameplan_status)
+        if new_god and view.feature_at(0, 0) ~= god_altar(new_god) then
+            new_god = nil
+        end
     end
 
     return god_hates_item(you.god(), it)
