@@ -22,24 +22,30 @@ function flight_traversable_square(pos)
 end
 
 function tabbable_square(pos)
+    local mons = get_monster_at(pos)
+    if mons and not mons:is_firewood() then
+        return false
+    end
+
     return view.feature_at(pos.x, pos.y) ~= "unseen"
-        and (not monster_map[pos.x][pos.y]
-            or monster_map[pos.x][pos.y]:is_firewood())
         and is_safe_at(pos)
         and not view.withheld(pos.x, pos.y)
 end
 
 function flight_tabbable_square(pos)
+    local mons = get_monster_at(pos)
+    if mons and not mons:is_firewood() then
+        return false
+    end
+
     return view.feature_at(pos.x, pos.y) ~= "unseen"
-        and (not monster_map[pos.x][pos.y]
-            or monster_map[pos.x][pos.y]:is_firewood())
         and is_safe_at(pos, true)
         and not view.withheld(pos.x, pos.y)
 end
 
 -- Should only be called for adjacent squares.
 function monster_in_way(pos, ignore_hostiles)
-    local mons = monster_map[pos.x][pos.y]
+    local mons = get_monster_at(pos)
     local feat = view.feature_at(0, 0)
     return mons and (mons:name() == "orb of destruction"
         or not ignore_hostiles and mons:attitude() <= enum_att_neutral

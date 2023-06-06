@@ -33,7 +33,7 @@ function spell_castable(sp)
     elseif sp == "Summon Small Mammal" then
         local count = 0
         for pos in square_iter(origin) do
-            local mons = monster_map[pos.x][pos.y]
+            local mons = get_monster_at(pos)
             if mons and mons:attitude() == enum_att_friendly then
                 count = count + 1
             end

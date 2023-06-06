@@ -149,7 +149,7 @@ function plan_melee()
         return false
     end
 
-    local enemy = monster_map[target.x][target.y]
+    local enemy = get_monster_at(target)
     if not enemy:player_can_melee() then
         return false
     end
@@ -171,7 +171,7 @@ function assess_explosion(attack, target)
             return
         end
 
-        local mons = monster_map[epos.x][epos.y]
+        local mons = get_monster_at(pos)
         if mons then
             if mons:is_friendly()
                 and not mons:ignores_player_projectiles() then
@@ -199,7 +199,7 @@ function assess_ranged_target(attack, target)
     for i, coords in ipairs(positions) do
         pos = { x = coords[1], y = coords[2] }
         local hit_target = positions_equal(pos, target)
-        local enemy = monster_map[pos.x][pos.y]
+        local enemy = get_monster_at(pos)
         -- Non-penetrating attacks must reach the target before reaching any
         -- other enemy, otherwise they're considered blocked and unusable.
         if not attack.is_penetrating
@@ -262,6 +262,14 @@ function assess_ranged_target(attack, target)
             past_target = true
         end
     end
+
+    -- We never hit anything, so make sure we return nil. This can happen in
+    -- rare cases like an eldritch tentacle residing in its portal feature,
+    -- which is solid terrain.
+    if not result.hit or result.hit == 0 then
+        return
+    end
+
     return result
 end
 
@@ -506,7 +514,7 @@ function plan_flight_move_towards_enemy()
         return false
     end
 
-    local move = monster_map[target.x][target.y]:get_player_move_towards(true)
+    local move = get_monster_at(target):get_player_move_towards(true)
     local feat = view.feature_at(move.x, move.y)
     -- Only quaff flight when we finally reach an impassable square.
     if (feat == "deep_water" or feat == "lava")
@@ -531,7 +539,7 @@ function plan_move_towards_enemy()
         return false
     end
 
-    local mons = monster_map[target.x][target.y]
+    local mons = get_monster_at(target)
     local move = mons:get_player_move_towards()
     if not move then
         return false

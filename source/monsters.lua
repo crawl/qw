@@ -663,11 +663,12 @@ function update_monsters()
     local sinv = you.see_invisible()
     for pos in radius_iter(origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
-            local mons = monster.get_monster_at(pos.x, pos.y)
-            if mons then
-                monster_map[pos.x][pos.y] = Monster:new(mons)
-                if monster_map[pos.x][pos.y]:is_enemy() then
-                    table.insert(enemy_list, monster_map[pos.x][pos.y])
+            local mon_info = monster.get_monster_at(pos.x, pos.y)
+            if mon_info then
+                local mons = Monster:new(mon_info)
+                monster_map[pos.x][pos.y] = mons
+                if mons:is_enemy() then
+                    table.insert(enemy_list, mons)
                 end
             else
                 monster_map[pos.x][pos.y] = nil
@@ -684,6 +685,10 @@ function update_monsters()
     end
 
     update_invis_monsters(closest_invis_pos)
+end
+
+function get_monster_at(pos)
+    return monster_map[pos.x][pos.y]
 end
 
 function monster_in_list(mons, mons_list)

@@ -377,7 +377,7 @@ function plan_blinking()
 
     local cur_count = 0
     for pos in adjacent_iter(origin) do
-        local mons = monster_map[pos.x][pos.y]
+        local mons = get_monster_at(pos)
         if mons and mons:name() == "floating eye" then
             cur_count = cur_count + 3
         elseif mons and mons:name() == "starcursed mass" then
@@ -393,16 +393,15 @@ function plan_blinking()
     for pos in square_iter(origin) do
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
-                and not monster_map[pos.x][pos.y]
+                and not get_monster_at(pos)
                 and is_safe_at(pos)
                 and not view.withheld(pos.x, pos.y)
                 and you.see_cell_no_trans(pos.x, pos.y) then
             local count = 0
             for dpos in adjacent_iter(pos) do
                 if supdist(dpos) <= los_radius then
-                    local mons = monster_map[dpos.x][dpos.y]
-                    if mons
-                            and mons:is_enemy()
+                    local mons = get_monster_at(dpos)
+                    if mons and mons:is_enemy()
                             and mons:name() == "floating eye" then
                         count = count + 3
                     elseif mons
