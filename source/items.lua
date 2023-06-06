@@ -1285,11 +1285,17 @@ function get_weapon()
 end
 
 function weapon_is_ranged()
-    return weapon_skill() == "Ranged Weapons"
+    return turn_memo("weapon_is_ranged",
+        function()
+            return weapon_skill() == "Ranged Weapons"
+        end)
 end
 
 function have_ranged_attack()
-    weapon_is_ranged() or best_missile()
+    return turn_memo("have_ranged_attack",
+        function()
+            return weapon_is_ranged() or best_missile()
+        end)
 end
 
 function find_wand(name)

@@ -247,10 +247,16 @@ function step_reason(a1, a2)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
         return "fleeing"
-    elseif not a1.near_ally and a2.ranged == 0 and a2.adjacent == 0
+    elseif not weapon_is_ranged()
+            and not a1.near_ally
+            and a2.ranged == 0
+            and a2.adjacent == 0
             and a1.longranged > 0 then
         return "hiding"
-    elseif not a1.near_ally and a2.ranged == 0 and a2.adjacent == 0
+    elseif not weapon_is_ranged()
+            and not a1.near_ally
+            and a2.ranged == 0
+            and a2.adjacent == 0
             and a2.unalert < a1.unalert then
         return "stealth"
     elseif not a1.cloud_safe then

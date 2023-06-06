@@ -79,7 +79,9 @@ function plan_shoot_at_invis()
     while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0 and not is_solid_at(pos) then
+        if supdist(pos) > 0
+                and not is_solid_at(pos)
+                and have_line_of_fire(pos) then
             shoot_launcher(pos)
             return true
         end
@@ -337,12 +339,14 @@ function weapon_test_spell(weapon)
         else
             return "Magic Dart"
         end
+    else
+        return "Magic Dart"
     end
 end
 
 function weapon_range(weapon)
     local class = weapon.class(true)
-    if class == "missile" or class == "weapon" and weapon.is_ranged() then
+    if class == "missile" or class == "weapon" and weapon.is_ranged then
         return los_radius
     end
 end
@@ -438,7 +442,8 @@ function throw_missile(missile, pos)
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
 end
 
-function fire_launcher(weapon, pos)
+function shoot_launcher(pos)
+    local weapon = get_weapon()
     local cur_missile = items.fired_item()
     if not cur_missile or weapon.name() ~= cur_missile.name() then
         magic("Q*" .. letter(weapon))
@@ -533,7 +538,7 @@ function plan_melee_wait_for_enemy()
     return false
 end
 
-function plan_ranged_wait_for_enemy()
+function plan_launcher_wait_for_enemy()
     if not danger or not weapon_is_ranged() then
         return false
     end
