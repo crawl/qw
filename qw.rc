@@ -18,11 +18,10 @@
 # Default username.
 name = qw
 
-# Make sure this is true when playing online.
+# Set to true to have qw play with a delay between each action.
 : DELAYED = true
 
-# Delay per action in milliseconds. Set this to at least 125 or so when playing
-# on a public server.
+# Delay per action in milliseconds.
 : DELAY_TIME = 125
 
 # Whether to start playing immediately when a new game is started.
@@ -37,7 +36,7 @@ name = qw
 : COMBO_CYCLE = false
 
 # The combos to cycle through. Here are some sample choices:
-: COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OM, GrFi.waraxe^O!15runes"
+: COMBO_CYCLE_LIST = "GrBe.handaxe, MiFi.waraxe^OR, GrHu^O"
 
 # Choose randomly between these combos. This will not apply if the COMBO_CYCLE
 # option was on in your _previous_ game.
@@ -64,7 +63,7 @@ combo = GrBe.handaxe
 # Should Chaos Knight abandon Xom on turn 0.
 : CK_ABANDON_XOM = true
 
-# Use a shield at all cost.
+# Use a shield at all cost. Only applies to characters using a melee weapon.
 : SHIELD_CRAZY = true
 
 # Do second lair rune branch before depths.
@@ -80,18 +79,18 @@ combo = GrBe.handaxe
 # * dsmart - Swamp/Spider > Snake > Shoals (DsBe data)
 : RUNE_PREFERENCE = "random"
 
-# A table of possible gameplans.
-: GAMEPLANS = {
+# A table of possible goals.
+: GOALS = {
 :     ["3 Runes"]  = "Normal",
-:     ["15 Runes"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Pan, Slime:5"
-:                    .. ", Hells, Abyss, Orb",
-:     ["Zig"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Zig, Orb",
-:     ["All"] = "Normal, Zot:1-4, God:TSO, Crypt, Tomb, Pan, Slime:5, Hells"
-:                    .. ", Abyss, Orb",
+:     ["15 Runes"] = "Normal, Zot:1-4, Slime:5, God:TSO, Crypt, Tomb, Pan"
+:                    .. ", Hells, Abyss, Win",
+:     ["Zig"] = "Normal, Zot:1-4, God:TSO, Crypt, Zig, Win",
+:     ["All"] = "Normal, Zot:1-4, Slime:5, God:TSO, Crypt, Tomb, Pan, Hells"
+:                    .. ", Abyss, Win",
 : }
 
-# The default gameplan.
-: DEFAULT_GAMEPLAN = "3 Runes"
+# The default goal that qw will attempt.
+: DEFAULT_GOAL = "3 Runes"
 
 # Timed portals we're allowed to attempt.
 : ALLOWED_PORTALS = {"Bazaar", "Sewer", "Ossuary", "Gauntlet", "WizLab",
@@ -107,13 +106,14 @@ combo = GrBe.handaxe
 ### Miscellaneous options ###
 #############################
 
+autofight_stop = 0
 restart_after_game = false
 equip_bar = true
 ability_menu = false
 force_ability_targeter =
 force_spell_targeter =
 view_delay = 20
-use_animations = beam, pickup, ability, player, branch_entry
+use_animations = beam, pickup, player, branch_entry
 darken_beyond_range = false
 clear_messages = true
 travel_delay = -1
@@ -125,7 +125,6 @@ auto_exclude =
 hp_warning = 0
 show_more = false
 show_newturn_mark = false
-list_rotten = false
 force_more_message =
 show_travel_trail = false
 skill_focus = false
@@ -175,9 +174,20 @@ bindkey = [.] CMD_NO_CMD_DEFAULT
 bindkey = [\{-253}] CMD_NO_CMD_DEFAULT
 bindkey = [^D] CMD_LUA_CONSOLE
 
-# Autopickup is all handled via lua.
+# Autopickup is handled directly by qw.
 autopickup =
 autopickup_exceptions =
+
+# Use the coroutine to break up execution so as to avoid lua throttling and
+# high memory usage.
+: COROUTINE_THROTTLE = true
+
+# Tell qw how much memory it has available in megabytes.
+: MAX_MEMORY = 32
+
+# qw will halt execution if it uses more than this percentage of the above max
+# memory.
+: MAX_MEMORY_PERCENTAGE = 90
 
 #################
 ### Debugging ###
@@ -187,7 +197,7 @@ autopickup_exceptions =
 : DEBUG_MODE = false
 
 # Which debug message channels to output.
-: DEBUG_CHANNELS = {"main", "explore"}
+: DEBUG_CHANNELS = { "main", "explore" }
 
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false

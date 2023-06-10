@@ -52,6 +52,56 @@ function c_answer_prompt(prompt)
     if prompt:find("Really drink that potion of mutation") then
         return true
     end
+    if prompt:find("next level anyway") then
+        return true
+    end
+    if prompt:find("fire in the non-hostile") then
+        return true
+    end
+    if prompt:find("Really.*into that.*trap")
+            or prompt:find("into the Zot trap") then
+        return true
+    end
+end
+
+function control(c)
+    return string.char(string.byte(c) - string.byte('a') + 1)
+end
+
+local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
+function arrowkey(c)
+    return a2c[c]
+end
+
+local d2v = {
+    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
+    [0]  = { [-1] = 'k', [1] = 'j' },
+    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
+}
+local v2d = {}
+for x, _ in pairs(d2v) do
+    for y, c in pairs(d2v[x]) do
+        v2d[c] = { x = x, y = y }
+    end
+end
+
+function delta_to_vi(pos)
+    return d2v[pos.x][pos.y]
+end
+
+function vi_to_delta(c)
+    return v2d[c]
+end
+
+function vector_move(pos)
+    local str = ''
+    for i = 1, abs(pos.x) do
+        str = str .. delta_to_vi({ x = sign(pos.x), y = 0 })
+    end
+    for i = 1, abs(pos.y) do
+        str = str .. delta_to_vi({ x = 0, y = sign(pos.y) })
+    end
+    return str
 end
 
 function ch_stash_search_annotate_item(it)
@@ -64,25 +114,23 @@ end
 -- variables managed by turn_update(). Use the clua interfaces like you.where()
 -- directly to get info about game status.
 function c_message(text, channel)
-    if text:find("Sigmund flickers and vanishes") then
-        invis_sigmund = true
-    elseif text:find("Your surroundings suddenly seem different") then
-        invis_sigmund = false
+    if text:find("Your surroundings suddenly seem different") then
+        invis_monster = false
     elseif text:find("Your pager goes off") then
         have_message = true
     elseif text:find("Done exploring") then
         c_persist.autoexplore[you.where()] = AUTOEXP.FULL
-        want_gameplan_update = true
+        want_goal_update = true
     elseif text:find("Partly explored") then
         if text:find("transporter") then
             c_persist.autoexplore[you.where()] = AUTOEXP.TRANSPORTER
         else
             c_persist.autoexplore[you.where()] = AUTOEXP.PARTIAL
         end
-        want_gameplan_update = true
+        want_goal_update = true
     elseif text:find("Could not explore") then
         c_persist.autoexplore[you.where()] = AUTOEXP.RUNED_DOOR
-        want_gameplan_update = true
+        want_goal_update = true
     -- Track which stairs we've fully explored by watching pairs of messages
     -- corresponding to standing on stairs and then taking them. The climbing
     -- message happens before the level transition.
@@ -95,26 +143,29 @@ function c_message(text, channel)
     elseif text:find("There is a stone staircase") then
         if stairs_travel then
             local feat = view.feature_at(0, 0)
-            local dir, num = stone_stair_type(feat)
-            local travel_dir, travel_num = stone_stair_type(stairs_travel)
+            local dir, num = stone_stairs_type(feat)
+            local travel_dir, travel_num = stone_stairs_type(stairs_travel)
             -- Sanity check to make sure the stairs correspond.
             if travel_dir and dir and travel_dir == -dir
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
-                record_stairs(branch, depth, feat, FEAT_LOS.EXPLORED)
-                record_stairs(branch, depth + dir, stairs_travel,
-                    FEAT_LOS.EXPLORED)
+                update_stone_stairs(branch, depth, dir, num,
+                    { los = FEAT_LOS.EXPLORED })
+                update_stone_stairs(branch, depth + dir, travel_dir,
+                    travel_num, { los = FEAT_LOS.EXPLORED })
             end
         end
         stairs_travel = nil
-    elseif text:find("Orb of Zot") then
-        c_persist.found_orb = true
-        want_gameplan_update = true
+    elseif text:find("abyssal rune vanishes from your memory and reappears")
+            or text:find("detect the abyssal rune") then
+        c_persist.sensed_abyssal_rune = true
     -- Timed portals are recorded by the "Hurry and find it" message handling,
     -- but a permanent bazaar doesn't have this. Check messages for "a gateway
     -- to a bazaar", which happens via autoexplore. Timed bazaars are described
     -- as "a flickering gateway to a bazaar", so by looking for the right
     -- message, we prevent counting timed bazaars twice.
+    elseif text:find("abyssal rune vanishes from your memory") then
+        c_persist.sensed_abyssal_rune = false
     elseif text:find("Found a gateway to a bazaar") then
         record_portal(you.where(), "Bazaar", true)
     elseif text:find("Hurry and find it")
@@ -155,5 +206,12 @@ function c_message(text, channel)
     elseif text:find("You enter a dispersal trap")
             or text:find("You enter a permanent teleport trap") then
         ignore_traps = false
+    elseif text:find("You feel very bouyant") then
+        temporary_flight = true
+    elseif text:find("You pick up the Orb of Zot") then
+        want_goal_update = true
+    elseif text:find("You die...") then
+        crawl.sendkeys(string.char(27) .. string.char(27)
+            .. string.char(27))
     end
 end

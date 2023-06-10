@@ -1,15 +1,38 @@
 # The accomplishments of qw
 
-## Recent results (0.29-a)
-These games were played on the account qwqw on CDI, which is not tracked by
-Sequell, so example win morgues are shown below.
+Online games of qw can be queried normally in Sequell under the account name
+`qw`, with the exception of games noted below.
 
-### GrFi^Okawaru
+## Recent results
 
-https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220622-203610.txt
-https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220622-124356.txt
+### 0.31-a
 
-### GrBe
+#### MiHu^Oka
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20230610-045118.txt
+
+#### GrHu^Oka
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20230608-143531.txt
+
+### 0.30
+
+#### GrFi^Oka
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20230520-020802.txt
+
+#### GrFi^TSO (Best 15 rune attempt, 12 runes)
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20230605-232059.txt
+
+### 0.29
+
+Some games were played on the account qwqw on CDI, which is not tracked by
+Sequell.
+
+#### MiBe
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20220913-002803.txt
+
+#### GrDe
+https://crawl.dcss.io/crawl/morgue/qw/morgue-qw-20220911-050638.txt
+
+#### GrBe
 https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220624-000910.txt
 https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220623-035612.txt
 
@@ -24,13 +47,6 @@ https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220626-022334.txt
 ### MiBe
 https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220622-105527.txt
 https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220620-154427.txt
-
-### Best 15 rune attempts
-
-11 runes, GrFi, Okawaru converting to The Shining one
-https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220629-192016.txt
-10 runes, GrFi, Okawaru converting to The Shining one
-https://crawl.dcss.io/crawl/morgue/qwqw/morgue-qwqw-20220704-105022.txt
 
 ## Past Results
 Historically qw's best 3-rune winrate was 15% with DDFi^Makhleb. For 15 runes

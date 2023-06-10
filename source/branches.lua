@@ -26,25 +26,25 @@ local branch_data_values = {
     { "Orc", "O", 2, "enter_orcish_mines", "D", 9, 12 },
     { "Elf", "E", 3, "enter_elven_halls", "Orc", 2, 2 },
     { "Lair", "L", 5, "enter_lair", "D", 8, 11 },
-    { "Swamp", "S", 4, "enter_swamp", "Lair", 2, 4, "decaying" },
-    { "Shoals", "A", 4, "enter_shoals", "Lair", 2, 4, "barnacled" },
-    { "Snake", "P", 4, "enter_snake_pit", "Lair", 2, 4, "serpentine" },
-    { "Spider", "N", 4, "enter_spider_nest", "Lair", 2, 4, "gossamer" },
-    { "Slime", "M", 5, "enter_slime_pits", "Lair", 5, 6, "slimy" },
-    { "Vaults", "V", 5, "enter_vaults", "D", 13, 14, "silver" },
+    { "Swamp", "S", 4, "enter_swamp", "Lair", 2, 4, { "decaying" } },
+    { "Shoals", "A", 4, "enter_shoals", "Lair", 2, 4, { "barnacled" } },
+    { "Snake", "P", 4, "enter_snake_pit", "Lair", 2, 4, { "serpentine" } },
+    { "Spider", "N", 4, "enter_spider_nest", "Lair", 2, 4, { "gossamer" } },
+    { "Slime", "M", 5, "enter_slime_pits", "Lair", 5, 6, { "slimy" } },
+    { "Vaults", "V", 5, "enter_vaults", "D", 13, 14, { "silver" } },
     { "Crypt", "C", 3, "enter_crypt", "Vaults", 3, 4 },
-    { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, "golden" },
+    { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, { "golden" } },
     { "Depths", "U", 4, "enter_depths", "D", 15, 15 },
     { "Zig", nil, 27, "enter_ziggurat", "Depths", 1, 4 },
     { "Zot", "Z", 5, "enter_zot", "Depths", 4, 4 },
     { "Pan", nil, 1, "enter_pandemonium", "Depths", 2, 2,
         { "dark", "demonic", "fiery", "glowing", "magical" } },
-    { "Abyss", nil, 7, "enter_abyss", "Depths", 4, 4, "abyssal" },
+    { "Abyss", nil, 7, "enter_abyss", "Depths", 3, 3, { "abyssal" } },
     { "Hell", "H", 1, "enter_hell", "Depths", 1, 4 },
-    { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, "iron" },
-    { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, "obsidian" },
-    { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, "icy" },
-    { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, "bone" },
+    { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, { "iron" } },
+    { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, { "obsidian" } },
+    { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, { "icy" } },
+    { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, { "bone" } },
 }
 
 hell_branches = { "Coc", "Dis", "Geh", "Tar" }
@@ -65,7 +65,7 @@ local portal_data_values = {
 
 function initialize_branch_data()
     for _, entry in ipairs(branch_data_values) do
-        local br = entry[1]
+        local branch = entry[1]
         local data = {}
         data["travel"] = entry[2]
         data["depth"] = entry[3]
@@ -78,8 +78,8 @@ function initialize_branch_data()
         -- Update the parent entry depth with that of an entry found in the
         -- parent either if the entry depth is unconfirmed our the found entry
         -- is at a lower depth.
-        if c_persist.branches[br] then
-            for level, _ in pairs(c_persist.branches[br]) do
+        if c_persist.branch_entries[branch] then
+            for level, _ in pairs(c_persist.branch_entries[branch]) do
                 local parent, depth = parse_level_range(level)
                 if parent == data.parent
                         and (not data.parent_min_depth
@@ -92,7 +92,7 @@ function initialize_branch_data()
             end
         end
 
-        branch_data[br] = data
+        branch_data[branch] = data
     end
 
     for _, entry in ipairs(portal_data_values) do
@@ -112,6 +112,8 @@ function initialize_branch_data()
 
     early_zot = make_level_range("Zot", 1, -1)
     zot_end = branch_end("Zot")
+
+    abyssal_rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
 end
 
 function branch_travel(branch)
@@ -136,6 +138,21 @@ function branch_entrance(branch)
     end
 
     return branch_data[branch].entrance
+end
+
+function branch_exit(branch)
+    if not branch_data[branch] then
+        error("Unknown branch: " .. tostring(branch))
+    end
+
+    local result
+    if branch_data[branch].entrance then
+        -- We want only the first result from gsub().
+        result = branch_data[branch].entrance:gsub("enter", "exit", 1)
+    elseif branch == "D" then
+        result = "exit_dungeon"
+    end
+    return result
 end
 
 function portal_entrance_description(portal)
@@ -173,7 +190,7 @@ function parent_branch(branch)
 
 end
 
-function branch_rune(branch)
+function branch_runes(branch)
     if not branch_data[branch] then
         error("Unknown branch: " .. tostring(branch))
     end
@@ -189,33 +206,22 @@ function branch_exists(branch)
         or not branch_data[branch])
 end
 
-function branch_found(branch, los_state)
+function branch_found(branch, min_los)
     if branch == "D" then
         return {"D:0"}
     end
 
-    if not los_state then
-        -- Hack. Temple entries sometimes restrict access when they reveal the
-        -- branch, requiring entry via stairs inside the vault. Requiring
-        -- reachable means we won't try to access temple until we've explored
-        -- these stairs and can therefore successfully travel to it. Other
-        -- branches tend to not cause travel problems yet are sometimes
-        -- initially spotted behind e.g. statues, so we allow only seeing them
-        -- to consider them found.
-        if branch == "Temple" then
-            los_state = FEAT_LOS.REACHABLE
-        else
-            los_state = FEAT_LOS.SEEN
-        end
+    if not min_los then
+        min_los = FEAT_LOS.SEEN
     end
 
-    if not c_persist.branches[branch] then
+    if not c_persist.branch_entries[branch] then
         return
     end
 
-    for w, s in pairs(c_persist.branches[branch]) do
-        if s >= los_state then
-            return w
+    for level, state in pairs(c_persist.branch_entries[branch]) do
+        if state.los >= min_los then
+            return level
         end
     end
 end
@@ -245,39 +251,29 @@ function in_hell_branch()
 end
 
 function branch_rune_depth(branch)
-    if not branch_rune(branch) then
+    if not branch_runes(branch) then
         return
     end
 
     if branch == "Abyss" then
-        return 3
+        return 4
     else
         return branch_depth(branch)
     end
 end
 
 function have_branch_runes(branch)
-    local rune = branch_rune(branch)
-    if not rune then
-        return true
-    elseif type(rune) == "table" then
-        for _, r in ipairs(rune) do
-            if not you.have_rune(r) then
-                return false
-            end
-        end
-
+    local runes = branch_runes(branch)
+    if not runes then
         return true
     end
 
-    return you.have_rune(rune)
-end
-
-function is_waypointable(loc)
-    local branch = parse_level_range(loc)
-    return not (is_portal_branch(branch)
-        or branch == "Abyss"
-        or branch == "Pan")
+    for _, rune in ipairs(runes) do
+        if not you.have_rune(rune) then
+            return false
+        end
+    end
+    return true
 end
 
 function is_portal_branch(branch)
@@ -309,12 +305,15 @@ function record_portal(level, portal, permanent)
         return
     end
 
+    if debug_channel("explore") then
+        dsay("Found " .. portal)
+    end
+
     -- Permanent portals go at the beginning, so they'll always be chosen last.
     -- We can't have multiple timed portals of the same type on the same level,
     -- so this scheme puts portals in the correct order. For timed portals,
     -- record the turns to allow prioritizing among timed portals across
     -- levels.
-    dsay("Found " .. portal .. ".", "explore")
     if permanent then
         table.insert(c_persist.portals[level][portal], 1, INF_TURNS)
     else
@@ -322,7 +321,7 @@ function record_portal(level, portal, permanent)
     end
 
     if portal_allowed(portal) then
-        want_gameplan_update = true
+        want_goal_update = true
     end
 end
 
@@ -347,13 +346,13 @@ function remove_portal(level, portal, silent)
             say("RIP " .. portal:upper())
         end
 
-        want_gameplan_update = true
+        want_goal_update = true
     end
 end
 
 -- Expire any timed portals for levels we've fully explored or where they're
 -- older than their max timeout.
-function check_expired_portals()
+function update_expired_portals()
     for level, portals in pairs(c_persist.portals) do
         local explored = explored_level_range(level)
         for portal, turns_list in pairs(portals) do
@@ -368,4 +367,28 @@ function check_expired_portals()
             end
         end
     end
+end
+
+function level_is_temporary()
+    return in_portal() or in_branch("Pan") or in_branch("Abyss")
+end
+
+function easy_runes()
+    local branches = {"Swamp", "Snake", "Shoals", "Spider"}
+    local count = 0
+    for _, br in ipairs(branches) do
+        if have_branch_runes(br) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function branch_entry_level(branch)
+    local parent, min_depth, max_depth = parent_branch(branch)
+    if not min_depth or min_depth ~= max_depth then
+        return
+    end
+
+    return make_level(parent, min_depth)
 end

@@ -1,53 +1,38 @@
+------------------
+-- The exploration plan cascades.
+
+function plan_move_towards_safety()
+    if autoexplored_level(where_branch, where_depth)
+            or disable_autoexplore
+            or position_is_safe
+            or unable_to_move()
+            or dangerous_to_move()
+            or you.mesmerised() then
+        return false
+    end
+
+    local move, dest = best_move_towards_safety()
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to safe position at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "safety")
+        return true
+    end
+
+    return false
+end
+
 function plan_autoexplore()
-    if disable_autoexplore or free_inventory_slots() == 0 then
+    if unable_to_travel()
+            or disable_autoexplore
+            or free_inventory_slots() == 0 then
         return false
     end
 
     magic("o")
     return true
-end
-
-function add_ignore(dx, dy)
-    local m = monster_array[dx][dy]
-    if not m then
-        return
-    end
-
-    local name = m:name()
-    if not util.contains(ignore_list, name) then
-        table.insert(ignore_list, name)
-        crawl.setopt("runrest_ignore_monster ^= " .. name .. ":1")
-        if DEBUG_MODE then
-            dsay("Ignoring " .. name .. ".")
-        end
-    end
-end
-
-function remove_ignore(dx, dy)
-    local m = monster_array[dx][dy]
-    local name = m:name()
-    for i, mname in ipairs(ignore_list) do
-        if mname == name then
-            table.remove(ignore_list, i)
-            crawl.setopt("runrest_ignore_monster -= " .. name .. ":1")
-            if DEBUG_MODE then
-                dsay("Unignoring " .. name .. ".")
-            end
-            return
-        end
-    end
-end
-
-function clear_ignores()
-    local size = #ignore_list
-    local mname
-    if size > 0 then
-        for i = 1, size do
-            mname = table.remove(ignore_list)
-            crawl.setopt("runrest_ignore_monster -= " .. mname .. ":1")
-            dsay("Unignoring " .. mname .. ".")
-        end
-    end
 end
 
 function send_travel(branch, depth)
@@ -61,75 +46,64 @@ function send_travel(branch, depth)
     magic("G" .. branch_travel(branch) .. depth_str .. "\rY")
 end
 
+function unable_to_travel()
+    return danger or position_is_cloudy or unable_to_move()
+end
+
 function plan_go_to_portal_entrance()
-    if in_portal()
-            or not is_portal_branch(gameplan_branch)
-            or not branch_found(gameplan_branch)
-            or cloudy then
+    if unable_to_travel()
+            or in_portal()
+            or not is_portal_branch(goal_branch)
+            or not branch_found(goal_branch) then
         return false
     end
 
-    if stash_travel_attempts == 0 then
-        local desc = portal_entrance_description(gameplan_branch)
-        -- For timed bazaars, make a search string that can' match permanent
-        -- ones.
-        if gameplan_branch == "Bazaar" and not permanent_bazaar then
-            desc = "a flickering " .. desc
-        end
-        magicfind(desc)
-
-        stash_travel_attempts = 1
-        return
+    local desc = portal_entrance_description(goal_branch)
+    -- For timed bazaars, make a search string that can' match permanent
+    -- ones.
+    if goal_branch == "Bazaar" and not permanent_bazaar then
+        desc = "a flickering " .. desc
     end
-
-    stash_travel_attempts = 0
-    disable_autoexplore = false
-    return false
+    magicfind(desc)
+    return true
 end
 
 -- Use the 'G' command to travel to our next destination.
 function plan_go_command()
-    if not want_go_travel or cloudy then
+    if unable_to_travel() or not goal_travel.want_go then
         return false
     end
 
-    if go_travel_attempts == 0 then
-        go_travel_attempts = 1
-        send_travel(travel_branch, travel_depth)
-        return
+    if goal_status == "Escape"
+            and goal_travel.branch == "D"
+            and goal_travel.depth == 1 then
+        send_travel("D", 0)
+    else
+        send_travel(goal_travel.branch, goal_travel.depth)
     end
-
-    go_travel_attempts = 0
-    disable_autoexplore = false
-    return false
+    return true
 end
 
 function plan_go_to_portal_exit()
     -- Zig has its own stair handling in plan_zig_go_to_stairs().
-    if in_portal() and where_branch ~= "Zig" then
-        magic("X<\r")
-        return true
+    if unable_to_travel() or not in_portal() or where_branch == "Zig" then
+        return false
     end
 
-    return false
+    magic("X<\r")
+    return true
 end
 
 -- Open runed doors in Pan to get to the pan lord vault and open them on levels
 -- that are known to contain entrances to Pan if we intend to visit Pan.
 function plan_open_runed_doors()
-    if not in_branch("Pan") and not in_branch("Abyss") and not in_portal() then
-        local br, min_depth, max_depth = parent_branch("Pan")
-        if where_branch ~= parent_branch("Pan")
-                or where_depth < min_depth
-                or where_depth > max_depth
-                or not planning_pan then
-            return false
-        end
+    if not open_runed_doors then
+        return false
     end
 
-    for x, y in adjacent_iter(0, 0) do
-        if view.feature_at(x, y) == "runed_clear_door" then
-            magic(delta_to_vi(x, y) .. "Y")
+    for pos in adjacent_iter(origin) do
+        if view.feature_at(pos.x, pos.y) == "runed_clear_door" then
+            magic(delta_to_vi(pos) .. "Y")
             return true
         end
     end
@@ -137,29 +111,165 @@ function plan_open_runed_doors()
 end
 
 function plan_enter_portal()
-    if not is_portal_branch(gameplan_branch)
-            or view.feature_at(0, 0) ~= branch_entrance(gameplan_branch) then
+    if not is_portal_branch(goal_branch)
+            or view.feature_at(0, 0) ~= branch_entrance(goal_branch)
+            or unable_to_use_stairs() then
         return false
     end
 
-    magic(">" .. (gameplan_branch == "Zig" and "Y" or ""))
+    go_downstairs(goal_branch == "Zig", true)
     return true
 end
 
 function plan_exit_portal()
     if not in_portal()
             -- Zigs have their own exit rules.
-            or gameplan_branch == "Zig"
-            or you.mesmerised()
-            or not view.feature_at(0, 0):find("exit_" .. where:lower()) then
+            or where_branch == "Zig"
+            or view.feature_at(0, 0) ~= branch_exit(where_branch)
+            or unable_to_use_stairs() then
         return false
     end
 
     local parent, depth = parent_branch(where_branch)
     remove_portal(make_level(parent, depth), where_branch, true)
 
-    magic("<")
+    go_upstairs()
     return true
+end
+
+function plan_use_goal_feature()
+    if unable_to_use_stairs() or dangerous_to_move() then
+        return false
+    end
+
+    local feats = goal_travel_features()
+    local feat = view.feature_at(0, 0)
+    if not util.contains(feats, feat) then
+        return false
+    end
+
+    if feature_uses_map_key(">", feat) then
+        go_downstairs()
+        return true
+    elseif feature_uses_map_key("<", feat) then
+        go_upstairs()
+        return true
+    end
+
+    return false
+end
+
+function plan_move_towards_goal()
+    if unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local feats = goal_travel_features()
+    if util.contains(feats, view.feature_at(0, 0)) then
+        return false
+    end
+
+    local move, dest = best_move_towards_features(feats)
+    if move then
+        move_towards_destination(move, dest, "goal")
+        return true
+    end
+
+    local move, dest = best_move_towards_features(feats, true)
+    if move then
+        move_towards_destination(move, dest, "goal")
+        return true
+    end
+
+    local god = goal_god(goal_status)
+    if not god then
+        return false
+    end
+
+    if c_persist.altars[god] and c_persist.altars[god][where] then
+        for hash, _ in pairs(c_persist.altars[god][where]) do
+            if update_altar(god, where, hash,
+                    { los = FEAT_LOS.SEEN }, true) then
+                restart_cascade = true
+            end
+        end
+    end
+
+    return false
+end
+
+function plan_move_towards_destination()
+    if not move_destination or dangerous_to_move() then
+        return false
+    end
+
+    local move = best_move_towards_map_position(move_destination)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    local move = best_move_towards_map_position(move_destination, true)
+    if move then
+        move_to(move)
+        return true
+    end
+
+    return false
+end
+
+function plan_move_towards_monster()
+    if not position_is_safe or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local mons_targets = {}
+    for _, enemy in ipairs(enemy_list) do
+        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
+    end
+
+    if #mons_targets == 0 then
+        for pos in square_iter(origin) do
+            local mons = monster.get_monster_at(pos.x, pos.y)
+            if mons and Monster:new(mons):is_enemy() then
+                table.insert(mons_targets, position_sum(global_pos, pos))
+            end
+        end
+    end
+
+    if #mons_targets == 0 then
+        return false
+    end
+
+    local move, dest = best_move_towards_map_positions(mons_targets)
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to enemy at "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "monster")
+        return true
+    end
+
+    return false
+end
+
+function plan_move_towards_unexplored()
+    if disable_autoexplore or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local move, dest = best_move_towards_unexplored()
+    if move then
+        if debug_channel("explore") then
+            dsay("Moving to explore near "
+                .. cell_string_from_map_position(dest))
+        end
+        move_towards_destination(move, dest, "unexplored")
+        return true
+    end
+
+    return false
 end
 
 function set_plan_pre_explore()
@@ -170,12 +280,12 @@ function set_plan_pre_explore()
         {plan_bless_weapon, "bless_weapon"},
         {plan_upgrade_weapon, "upgrade_weapon"},
         {plan_use_good_consumables, "use_good_consumables"},
+        {plan_unwield_weapon, "unwield_weapon"},
     }
 end
 
 function set_plan_pre_explore2()
     plan_pre_explore2 = cascade {
-        {plan_disturbance_random_step, "disturbance_random_step"},
         {plan_upgrade_armour, "upgrade_armour"},
         {plan_upgrade_amulet, "upgrade_amulet"},
         {plan_upgrade_rings, "upgrade_rings"},
@@ -191,6 +301,12 @@ function set_plan_explore()
     plan_explore = cascade {
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
+        {plan_take_escape_hatch, "take_escape_hatch"},
+        {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
+        {plan_move_towards_destination, "move_towards_destination"},
+        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
+        {plan_move_towards_runelight, "move_towards_runelight"},
+        {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
     }
 end
@@ -198,12 +314,11 @@ end
 function set_plan_explore2()
     plan_explore2 = cascade {
         {plan_abandon_god, "abandon_god"},
-        {plan_join_god, "try_join_god"},
-        {plan_find_altar, "try_find_altar"},
-        {plan_convert, "convert"},
-        {plan_find_conversion_altar, "try_find_conversion_altar"},
+        {plan_use_altar, "use_altar"},
+        {plan_go_to_altar, "try_go_to_altar"},
+        {plan_go_down_abyss, "go_down_abyss"},
         {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
-        {plan_use_zigfig, "try_use_zigfig"},
+        {plan_use_zigfig, "use_zigfig"},
         {plan_zig_dig, "zig_dig"},
         {plan_go_to_zig_dig, "try_go_to_zig_dig"},
         {plan_enter_portal, "enter_portal"},
@@ -229,20 +344,11 @@ function set_plan_explore2()
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
+        {plan_use_goal_feature, "use_goal_feature"},
+        {plan_move_towards_goal, "move_towards_goal"},
         {plan_autoexplore, "try_autoexplore2"},
+        {plan_move_towards_monster, "move_towards_monster"},
+        {plan_move_towards_unexplored, "move_towards_unexplored"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
     }
-end
-
--- Hook to determine which traps are safe to move over without requiring an
--- answer to a yesno prompt. We currently only disable permanent teleport and
--- dispersal traps by default since these can create infinite movement loops as
--- we repeatedly move onto them without having -Tele somehow. This can be
--- conditionally disabled with ignore_traps, e.g. as we do on Zot:5.
--- XXX: We ideally would have more robust logic that wouldn't have us move on
--- Zot traps unless we really needed to.
-function c_trap_is_safe(trap)
-    return you.race() == "Formicid"
-        or ignore_traps
-        or trap ~= "permanent teleport" and trap ~= "dispersal"
 end

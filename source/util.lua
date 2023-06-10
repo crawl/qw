@@ -10,9 +10,17 @@ function enum(tbl)
     return e
 end
 
+function enum_string(val, tbl)
+    for k, v in pairs(tbl) do
+        if v == val then
+            return k
+        end
+    end
+end
+
 function contains_string_in(name, t)
     for _, value in ipairs(t) do
-        if string.find(name, value) then
+        if name:find(value) then
             return true
         end
     end
@@ -20,9 +28,9 @@ function contains_string_in(name, t)
 end
 
 function split(str, del)
-    local res = { }
+    local res = {}
     local v
-    for v in string.gmatch(str, "([^" .. del .. "]+)") do
+    for v in str:gmatch("([^" .. del .. "]+)") do
         table.insert(res, v)
     end
     return res
@@ -39,36 +47,9 @@ end
 
 -- Remove leading and trailing whitespace.
 function trim(str)
-    return str:gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-function control(c)
-    return string.char(string.byte(c) - string.byte('a') + 1)
-end
-
-function arrowkey(c)
-    local a2c = { ['u'] = -254, ['d'] = -253, ['l'] = -252 ,['r'] = -251 }
-    return a2c[c]
-end
-
-local d2v = {
-    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
-    [0]  = { [-1] = 'k', [1] = 'j' },
-    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
-}
-local v2d = { }
-for x, _ in pairs(d2v) do
-    for y, c in pairs(d2v[x]) do
-        v2d[c] = { x=x, y=y }
-    end
-end
-
-function delta_to_vi(dx, dy)
-    return d2v[dx][dy]
-end
-
-function vi_to_delta(c)
-    return v2d[c].x, v2d[c].y
+    -- We do this to avoid returning multiple results from string.gsub().
+    local result = str:gsub("^%s+", ""):gsub("%s+$", "")
+    return result
 end
 
 function sign(a)
@@ -77,17 +58,6 @@ end
 
 function abs(a)
     return a * sign(a)
-end
-
-function vector_move(dx, dy)
-    local str = ''
-    for i = 1, abs(dx) do
-        str = str .. delta_to_vi(sign(dx), 0)
-    end
-    for i = 1, abs(dy) do
-        str = str .. delta_to_vi(0, sign(dy))
-    end
-    return str
 end
 
 function max(x, y)
@@ -106,10 +76,11 @@ function min(x, y)
     end
 end
 
-function supdist(dx, dy)
-    return max(abs(dx), abs(dy))
-end
-
-function adjacent(dx, dy)
-    return abs(dx) <= 1 and abs(dy) <= 1
+function table_is_empty(t)
+    local empty = true
+    for _, v in pairs(t) do
+        empty = false
+        break
+    end
+    return empty
 end

@@ -2,8 +2,8 @@
 -- Cascading plans common functions.
 
 function magic(command)
-    crawl.process_keys(command .. string.char(27) .. string.char(27) ..
-                                         string.char(27))
+    crawl.process_keys(command .. string.char(27) .. string.char(27)
+        .. string.char(27))
 end
 
 function magicfind(target, secondary)
@@ -18,9 +18,16 @@ end
 function use_ability(name, extra, mute)
     for letter, abil in pairs(you.ability_table()) do
         if abil == name then
-            if not mute or DEBUG_MODE then
+            -- Want to make sure we don't get a skill selection screen if we
+            -- were training Dodging.
+            if name == "Sacrifice Nimbleness" then
+                you.train_skill("Fighting", 1)
+            end
+
+            if not mute then
                 say("INVOKING " .. name .. ".")
             end
+
             magic("a" .. letter .. (extra or ""))
             return true
         end
@@ -58,7 +65,13 @@ function cascade(plans)
     return function ()
         for i, plandata in ipairs(plans) do
             local plan = plandata[1]
-            if you.turns() ~= plan_turns[plan] or plan_result[plan] == nil then
+            if plan == nil then
+                error("No plan function for " .. plandata[2])
+            end
+
+            if restart_cascade
+                    or you.turns() ~= plan_turns[plan]
+                    or plan_result[plan] == nil then
                 local result = plan()
                 if not automatic then
                     return true
@@ -67,9 +80,8 @@ function cascade(plans)
                 plan_turns[plan] = you.turns()
                 plan_result[plan] = result
 
-                if DEBUG_MODE then
-                    dsay("Ran " .. plandata[2] .. ": " .. tostring(result),
-                        "plans")
+                if debug_channel("plans") then
+                    dsay("Ran " .. plandata[2] .. ": " .. tostring(result))
                 end
 
                 if result == nil or result == true then
@@ -77,6 +89,7 @@ function cascade(plans)
                         crawl.delay(next_delay)
                     end
                     next_delay = DELAY_TIME
+
                     return
                 end
             elseif plan_turns[plan] and plan_result[plan] == true then
@@ -90,12 +103,6 @@ function cascade(plans)
                 end
                 fail_count = fail_count + 1
                 c_persist.plan_fail_count[plandata[2]] = fail_count
-
-                -- We haven't consumed a turn but might still need a planning
-                -- update.
-                if want_gameplan_update then
-                    update_gameplan()
-                end
             end
         end
 
@@ -105,18 +112,13 @@ end
 
 function initialize_plans()
     set_plan_emergency()
+    set_plan_attack()
     set_plan_rest()
     set_plan_handle_acquirement_result()
     set_plan_pre_explore()
     set_plan_pre_explore2()
     set_plan_explore()
     set_plan_explore2()
+    set_plan_stuck()
     set_plan_move()
-
-    set_plan_abyss_rest()
-    set_plan_abyss_move()
-
-    set_plan_orbrun_rest()
-    set_plan_orbrun_emergency()
-    set_plan_orbrun_move()
 end

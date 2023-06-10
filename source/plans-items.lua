@@ -1,3 +1,6 @@
+------------------
+-- Plans for using items, including the acquirement plan cascade.
+
 function read(c, etc)
     if not can_read() then
         return false
@@ -55,26 +58,23 @@ function selfzap_by_name(name)
 end
 
 function teleport()
-    if read_by_name("teleportation") then
-        return true
-    end
-    return false
+    return read_by_name("teleportation")
 end
 
 function plan_wield_weapon()
     local weap = items.equipped_at("Weapon")
-    if is_melee_weapon(weap) or you.berserk() or transformed() then
+    if is_weapon(weap)
+            or weapon_skill() == "Unarmed Combat"
+            or you.berserk()
+            or transformed() then
         return false
     end
-    if wskill() == "Unarmed Combat" then
-        return false
-    end
+
     for it in inventory() do
         if it and it.class(true) == "weapon" then
             if should_equip(it) then
-                l = items.index_to_letter(it.slot)
                 say("Wielding weapon " .. it.name() .. ".")
-                magic("w" .. l .. "YY")
+                magic("w" .. items.index_to_letter(it.slot) .. "YY")
                 -- this might have a 0-turn fail because of unIDed holy
                 return nil
             end
@@ -84,48 +84,52 @@ function plan_wield_weapon()
         magic("w-")
         return true
     end
+
     return false
 end
 
 function plan_swap_weapon()
-    if you.race() == "Troll" or you.berserk() or transformed()
+    if you.race() == "Troll"
+            or you.berserk()
+            or transformed()
             or not items.equipped_at("Weapon") then
         return false
     end
 
     local sit
-    if you.xl() < 18 then
-        for _, e in ipairs(enemy_list) do
-            if supdist(e.x, e.y) <= 3
-                    and string.find(e.m:desc(), "hydra")
-                    and will_tab(0, 0, e.x, e.y, tabbable_square) then
+    -- If our current weapon doesn't cut hydra heads, we're fine, and we stop
+    -- caring at all at xl 18.
+    if hydra_weapon_value(get_weapon()) < 0 and you.xl() < 18 then
+        for _, enemy in ipairs(enemy_list) do
+            if enemy:distance() <= 3
+                    and string.find(enemy:desc(), "hydra")
+                    and enemy:player_can_melee() then
                 sit = "hydra"
             end
         end
     end
 
-    if in_extended() then
-        sit = "extended"
+    if not sit then
+        return false
     end
 
-    twohands = true
+    local twohands = true
     if items.equipped_at("Shield") and you.race() ~= "Formicid" then
         twohands = false
     end
 
-    it_old = items.equipped_at("Weapon")
-    swappable = can_swap("Weapon")
+    local it_old = get_weapon()
+    local swappable = can_swap(it_old)
     if not swappable then
         return false
     end
 
-    cur_val = weapon_value(it_old, true, it_old, sit)
-    max_val = cur_val
-    max_it = nil
+    local max_val = weapon_value(it_old, true, it_old, sit)
+    local max_it
     for it in inventory() do
         if it and it.class(true) == "weapon" and not it.equipped then
             if twohands or it.hands < 2 then
-                val2 = weapon_value(it, true, it_old, sit)
+                local val2 = weapon_value(it, true, it_old, sit)
                 if val2 > max_val then
                     max_val = val2
                     max_it = it
@@ -134,21 +138,22 @@ function plan_swap_weapon()
         end
     end
     if max_it then
-        l = items.index_to_letter(max_it.slot)
         say("SWAPPING to " .. max_it.name() .. ".")
-        magic("w" .. l .. "YY")
-        -- this might have a 0-turn fail because of unIDed holy
-        return
+        magic("w" .. items.index_to_letter(max_it.slot) .. "YY")
+        return true
     end
 
     return false
 end
 
 function plan_bless_weapon()
-    if you.god() ~= "the Shining One" or you.one_time_ability_used()
-         or you.piety_rank() < 6 or you.silenced() then
+    if you.god() ~= "the Shining One"
+            or you.one_time_ability_used()
+            or you.piety_rank() < 6
+            or not can_invoke() then
         return false
     end
+
     local bestv = -1
     local minv, maxv, bestletter
     for it in inventory() do
@@ -164,12 +169,13 @@ function plan_bless_weapon()
         use_ability("Brand Weapon With Holy Wrath", bestletter .. "Y")
         return true
     end
+
     return false
 end
 
 function plan_maybe_pickup_acquirement()
     if acquirement_pickup then
-        magic(";")
+        magic(",")
         acquirement_pickup = false
         return true
     end
@@ -181,39 +187,36 @@ function plan_upgrade_weapon()
     if acquirement_class == "Weapon" then
         acquirement_class = nil
     end
+
     if you.race() == "Troll" then
         return false
     end
-    local sit
-    if in_extended() then
-        sit = "extended"
-    end
-    twohands = true
+
+    local twohands = true
     if items.equipped_at("Shield") and you.race() ~= "Formicid" then
         twohands = false
     end
-    it_old = items.equipped_at("Weapon")
-    swappable = can_swap("Weapon")
+
+    local it_old = get_weapon()
+    swappable = can_swap(it_old)
     for it in inventory() do
         if it and it.class(true) == "weapon" and not it.equipped then
             local equip = false
             local drop = false
-            if should_upgrade(it, it_old, sit) then
+            if should_upgrade(it, it_old) then
                 equip = true
             elseif should_drop(it) then
                 drop = true
             end
             if equip and swappable and (twohands or it.hands < 2) then
-                l = items.index_to_letter(it.slot)
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("w" .. l .. "YY")
+                magic("w" .. items.index_to_letter(it.slot) .. "YY")
                 -- this might have a 0-turn fail because of unIDed holy
                 return nil
             end
             if drop then
-                l = items.index_to_letter(it.slot)
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. l .. "\r")
+                magic("d" .. items.index_to_letter(it.slot) .. "\r")
                 return true
             end
         end
@@ -247,8 +250,8 @@ function plan_maybe_upgrade_amulet()
 end
 
 function plan_upgrade_amulet()
-    it_old = items.equipped_at("Amulet")
-    swappable = can_swap("Amulet")
+    local it_old = items.equipped_at("Amulet")
+    swappable = can_swap(it_old)
     for it in inventory() do
         if it and equip_slot(it) == "Amulet" and not it.equipped then
             local equip = false
@@ -259,15 +262,13 @@ function plan_upgrade_amulet()
                 drop = true
             end
             if equip and swappable then
-                l = items.index_to_letter(it.slot)
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("P" .. l .. "YY")
+                magic("P" .. items.index_to_letter(it.slot) .. "YY")
                 return true
             end
             if drop then
-                l = items.index_to_letter(it.slot)
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. l .. "\r")
+                magic("d" .. items.index_to_letter(it.slot) .. "\r")
                 return true
             end
         end
@@ -310,7 +311,7 @@ function plan_upgrade_rings()
                 drop = true
             end
             if equip then
-                l = items.index_to_letter(it.slot)
+                local l = items.index_to_letter(it.slot)
                 say("UPGRADING to " .. it.name() .. ".")
                 if swap then
                     items.swap_slots(swap, items.letter_to_index('Y'), false)
@@ -322,9 +323,8 @@ function plan_upgrade_rings()
                 return true
             end
             if drop then
-                l = items.index_to_letter(it.slot)
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. l .. "\r")
+                magic("d" .. items.index_to_letter(it.slot) .. "\r")
                 return true
             end
         end
@@ -355,17 +355,18 @@ function plan_maybe_upgrade_armour()
 end
 
 function plan_upgrade_armour()
-    if cloudy or you.mesmerised() then
+    if position_is_cloudy or you.mesmerised() then
         return false
     end
+
     for it in inventory() do
         if it and it.class(true) == "armour" and not it.equipped then
             local st, _ = it.subtype()
             local equip = false
             local drop = false
             local swappable
-            it_old = items.equipped_at(good_slots[st])
-            swappable = can_swap(good_slots[st])
+            local it_old = items.equipped_at(good_slots[st])
+            local swappable = can_swap(it_old)
             if should_upgrade(it, it_old) then
                 equip = true
             elseif should_drop(it) then
@@ -409,27 +410,26 @@ function plan_upgrade_armour()
             end
 
             if equip and swappable then
-                l = items.index_to_letter(it.slot)
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("W" .. l .. "YN")
+                magic("W" .. items.index_to_letter(it.slot) .. "YN")
                 upgrade_phase = true
                 return true
             end
 
             if drop then
-                l = items.index_to_letter(it.slot)
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. l .. "\r")
+                magic("d" .. items.index_to_letter(it.slot) .. "\r")
                 return true
             end
         end
     end
     for it in inventory() do
-        if it and it.equipped and it.class(true) == "armour" and not it.cursed
-                    and should_remove(it) then
-            l = items.index_to_letter(it.slot)
+        if it and it.equipped
+                and it.class(true) == "armour"
+                and not it.cursed
+                and should_remove(it) then
             say("REMOVING " .. it.name() .. ".")
-            magic("T" .. l .. "YN")
+            magic("T" .. items.index_to_letter(it.slot) .. "YN")
             return true
         end
     end
@@ -437,12 +437,11 @@ function plan_upgrade_armour()
 end
 
 function plan_unwield_weapon()
-    if wskill() ~= "Unarmed Combat" then
+    if weapon_skill() ~= "Unarmed Combat"
+           or not items.equipped_at("Weapon") then
         return false
     end
-    if not items.equipped_at("Weapon") then
-        return false
-    end
+
     magic("w-")
     return true
 end
@@ -484,14 +483,18 @@ end
 
 -- do we want to keep this brand?
 function brand_is_great(brand)
-    if brand == "speed" or brand == "spectralizing" then
+    if brand == "speed"
+            or brand == "spectralizing"
+            or brand == "holy wrath" then
         return true
+    -- The best that brand weapon can give us for ranged weapons.
+    elseif brand == "heavy" and weapon_is_ranged() then
+        return true
+    -- The best that brand weapon can give us for melee weapons. No longer as
+    -- good once we have the ORB. XXX: Nor if we're only doing undead or demon
+    -- branches from now on.
     elseif brand == "vampirism" then
-        return not you.have_orb()
-    elseif brand == "electrocution" then
-        return at_branch_end("Zot")
-    elseif brand == "holy wrath" then
-        return gameplan == "Orb" or planning_undead_demon_branches
+        return not have_orb
     else
         return false
     end
@@ -505,7 +508,7 @@ function want_cure_mutations()
         or base_mutation("inability to read after injury") > 0
         or base_mutation("deformed body") > 0
             and you.race() ~= "Naga"
-            and you.race() ~= "Palentonga"
+            and you.race() ~= "Armataur"
             and (armour_plan() == "heavy"
                 or armour_plan() == "large")
         or base_mutation("berserk") > 0
@@ -526,7 +529,7 @@ function plan_use_good_consumables()
     for it in inventory() do
         if it.class(true) == "scroll" and can_read() then
             if it.name():find("acquirement")
-                    and not deep_water_or_lava(0, 0) then
+                    and not destroys_items_at(origin) then
                 if read(it) then
                     return true
                 end
@@ -672,17 +675,18 @@ function plan_use_id_scrolls()
     if not can_read() then
         return false
     end
+
     local id_scroll
     for it in inventory() do
         if it.class(true) == "scroll" and it.name():find("identify") then
             id_scroll = it
+            break
         end
     end
     if not id_scroll then
         return false
     end
-    local oldslots = { }
-    local newslots = {[0] = 'B', [1] = 'N', [2] = 'Y'} -- harmless keys
+
     local count = 0
     if id_scroll.quantity > 1 then
         for it in inventory() do
@@ -695,6 +699,7 @@ function plan_use_id_scrolls()
             end
         end
     end
+
     return false
 end
 
@@ -757,17 +762,17 @@ function plan_shop()
 end
 
 function plan_shopping_spree()
-    if gameplan_status ~= "Shopping" then
+    if unable_to_travel() or goal_status ~= "Shopping" then
         return false
     end
 
     which_item = can_afford_any_shoplist_item()
     if not which_item then
-        -- Remove everything on shoplist
+        -- Remove everything on shoplist.
         clear_out_shopping_list()
-        -- record that we are done shopping this game
+        -- Record that we are done shopping this game.
         c_persist.done_shopping = true
-        update_gameplan()
+        update_goal()
         return false
     end
 
@@ -800,8 +805,9 @@ end
 function clear_out_shopping_list()
     local shoplist = items.shopping_list()
     if not shoplist then
-        return false
+        return
     end
+
     say("CLEARING SHOPPING LIST")
     -- Press ! twice to toggle action to 'delete'
     local clear_shoplist_magic = "$!!"
@@ -809,7 +815,8 @@ function clear_out_shopping_list()
         clear_shoplist_magic = clear_shoplist_magic .. "a"
     end
     magic(clear_shoplist_magic)
-    return false
+    do_dummy_action = false
+    coroutine.yield()
 end
 
 -- These plans will only execute after a successful acquirement.

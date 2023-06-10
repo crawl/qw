@@ -1,5 +1,8 @@
-function gameplan_normal_next(final)
-    local gameplan
+------------------
+-- Goal configuration and assessment
+
+function goal_normal_next(final)
+    local goal
 
     -- Don't try to convert from Ignis too early.
     if explored_level_range("D:1-8")
@@ -40,36 +43,36 @@ function gameplan_normal_next(final)
         if branch_found("Lair")
                 and not explored_level_range("Lair")
                 and ready_for_lair() then
-            gameplan = "Lair"
+            goal = "Lair"
         else
-            gameplan = "D:1-11"
+            goal = "D:1-11"
         end
     -- D:1-11 explored, but not Lair.
     elseif not explored_level_range("Lair") then
-        gameplan = "Lair"
+        goal = "Lair"
     -- D:1-11 and Lair explored, but not D:12.
     elseif not explored_level_range("D:12") then
         if LATE_ORC then
-            gameplan = "D"
+            goal = "D"
         else
-            gameplan = "D:12"
+            goal = "D:12"
         end
     -- D:1-12 and Lair explored, but not all of D.
     elseif not explored_level_range("D") then
         if not LATE_ORC
                 and branch_found("Orc")
                 and not explored_level_range("Orc") then
-            gameplan = "Orc"
+            goal = "Orc"
         else
-            gameplan = "D"
+            goal = "D"
         end
     -- D and Lair explored, but not Orc.
     elseif not explored_level_range("Orc") then
-        gameplan = "Orc"
+        goal = "Orc"
     end
 
-    if gameplan then
-        return gameplan
+    if goal then
+        return goal
     end
 
     -- At this point we're sure we've found Lair branches.
@@ -85,60 +88,60 @@ function gameplan_normal_next(final)
 
     -- D, Lair, and Orc explored, but no Lair branch.
     if not explored_level_range(early_first_lair_branch) then
-        gameplan = early_first_lair_branch
+        goal = early_first_lair_branch
     -- D, Lair, and Orc explored, levels 1-3 of the first Lair branch.
     elseif not explored_level_range(early_second_lair_branch) then
-        gameplan = early_second_lair_branch
+        goal = early_second_lair_branch
     -- D, Lair, and Orc explored, levels 1-3 of both Lair branches.
     elseif not explored_level_range(first_lair_branch_end) then
-        gameplan = first_lair_branch_end
+        goal = first_lair_branch_end
     -- D, Lair, Orc, and at least one Lair branch explored, but not early
     -- Vaults.
     elseif not explored_level_range(early_vaults) then
-        gameplan = early_vaults
+        goal = early_vaults
     -- D, Lair, Orc, one Lair branch, and early Vaults explored, but the
     -- second Lair branch not fully explored.
     elseif not explored_level_range(second_lair_branch_end) then
         if not explored_level_range("Depths")
                 and not EARLY_SECOND_RUNE then
-            gameplan = "Depths"
+            goal = "Depths"
         else
-            gameplan = second_lair_branch_end
+            goal = second_lair_branch_end
         end
     -- D, Lair, Orc, both Lair branches, and early Vaults explored, but not
     -- Depths.
     elseif not explored_level_range("Depths") then
-        gameplan = "Depths"
+        goal = "Depths"
     -- D, Lair, Orc, both Lair branches, early Vaults, and Depths explored,
     -- but no Vaults rune.
     elseif not explored_level_range(vaults_end) then
-        gameplan = vaults_end
+        goal = vaults_end
     -- D, Lair, Orc, both Lair branches, Vaults, and Depths explored, and it's
     -- time to shop.
     elseif not c_persist.done_shopping then
-        gameplan = "Shopping"
-    -- If we have other gameplan entries, the Normal plan stops here, otherwise
+        goal = "Shopping"
+    -- If we have other goal entries, the Normal plan stops here, otherwise
     -- early Zot.
     elseif final and not explored_level_range(early_zot) then
-        gameplan = early_zot
+        goal = early_zot
     -- Time to win.
     elseif final then
-        gameplan = "Orb"
+        goal = "Win"
     end
 
-    return gameplan
+    return goal
 end
 
-function gameplan_complete(plan, final)
+function goal_complete(plan, final)
     if plan:find("^God:") then
-        return you.god() == gameplan_god(plan)
+        return you.god() == goal_god(plan)
     elseif plan:find("^Rune:") then
-        local branch = gameplan_rune_branch(plan)
+        local branch = goal_rune_branch(plan)
         return not branch_exists(branch) or have_branch_runes(branch)
     end
 
     local branch = parse_level_range(plan)
-    return plan == "Normal" and not gameplan_normal_next(final)
+    return plan == "Normal" and not goal_normal_next(final)
         or branch and not branch_exists(branch)
         or branch and explored_level_range(plan)
         or plan == "Shopping" and c_persist.done_shopping
@@ -146,45 +149,62 @@ function gameplan_complete(plan, final)
             and have_branch_runes("Abyss")
         or plan == "Pan" and have_branch_runes("Pan")
         or plan == "Zig" and c_persist.zig_completed
+        or plan == "Orb" and have_orb
 end
 
-function choose_gameplan()
-    local next_gameplan, chosen_gameplan, normal_gameplan
-    while not chosen_gameplan and which_gameplan <= #gameplan_list do
-        chosen_gameplan = gameplan_list[which_gameplan]
-        next_gameplan = gameplan_list[which_gameplan + 1]
-        local chosen_final = not next_gameplan
-        local next_final = not gameplan_list[which_gameplan + 2]
+function choose_goal()
+    local next_goal, chosen_goal, normal_goal
 
-        if chosen_gameplan == "Normal" then
-            normal_gameplan = gameplan_normal_next(chosen_final)
-            if not normal_gameplan then
-                chosen_gameplan = nil
+    if debug_goal then
+        if debug_goal == "Normal" then
+            normal_goal = goal_normal_next(false)
+            if normal_goal then
+                chosen_goal = debug_goal
+            else
+                debug_goal = nil
+            end
+        elseif goal_complete(debug_goal) then
+            debug_goal = nil
+        else
+            chosen_goal = debug_goal
+        end
+    end
+
+    while not chosen_goal and which_goal <= #goal_list do
+        chosen_goal = goal_list[which_goal]
+        next_goal = goal_list[which_goal + 1]
+        local chosen_final = not next_goal
+        local next_final = not goal_list[which_goal + 2]
+
+        if chosen_goal == "Normal" then
+            normal_goal = goal_normal_next(chosen_final)
+            if not normal_goal then
+                chosen_goal = nil
             end
         -- For God conversions, we don't perform them if we see that the next
-        -- plan is complete. This way if a gameplan list has god conversions,
+        -- plan is complete. This way if a goal list has god conversions,
         -- past ones won't be re-attempted when we save and reload.
-        elseif chosen_gameplan:find("^God:")
-                and (gameplan_complete(chosen_gameplan, chosen_final)
-                    or next_gameplan
-                        and gameplan_complete(next_gameplan, next_final)) then
-            chosen_gameplan = nil
-        elseif gameplan_complete(chosen_gameplan, chosen_final) then
-            chosen_gameplan = nil
+        elseif chosen_goal:find("^God:")
+                and (goal_complete(chosen_goal, chosen_final)
+                    or next_goal
+                        and goal_complete(next_goal, next_final)) then
+            chosen_goal = nil
+        elseif goal_complete(chosen_goal, chosen_final) then
+            chosen_goal = nil
         end
 
-        if not chosen_gameplan then
-            which_gameplan = which_gameplan + 1
+        if not chosen_goal then
+            which_goal = which_goal + 1
         end
     end
 
-    -- We're out of gameplans, so we make our final task be getting the ORB.
-    if not chosen_gameplan then
-        which_gameplan = nil
-        chosen_gameplan = "Orb"
+    -- We're out of goals, so we make our final task be winning.
+    if not chosen_goal then
+        which_goal = nil
+        chosen_goal = "Win"
     end
 
-    return chosen_gameplan, normal_gameplan
+    return chosen_goal, normal_goal
 end
 
 -- Choose an active portal on this level. We only consider allowed portals, and
@@ -206,8 +226,8 @@ function choose_level_portal(level)
     return oldest_portal, oldest_turns
 end
 
--- If we found a viable portal on the current level, that becomes our gameplan.
-function check_portal_gameplan()
+-- If we found a viable portal on the current level, that becomes our goal.
+function get_portal_goal()
     local chosen_portal, chosen_level, chosen_turns
     for level, portals in pairs(c_persist.portals) do
         local portal, turns = choose_level_portal(level)
@@ -231,36 +251,36 @@ function check_portal_gameplan()
     return chosen_portal, chosen_turns == INF_TURNS
 end
 
-function want_altar()
+function want_god()
     return you.race() ~= "Demigod"
         and you.god() == "No God"
         and god_options()[1] ~= "No God"
 end
 
-function determine_gameplan()
+function determine_goal()
     permanent_bazaar = nil
-    local chosen_gameplan, normal_gameplan = choose_gameplan()
-    local old_status = gameplan_status
-    local status = chosen_gameplan
-    local gameplan = status
+    local chosen_goal, normal_goal = choose_goal()
+    local old_status = goal_status
+    local status = chosen_goal
+    local goal = status
     local desc
 
     if status == "Normal" then
-        status = normal_gameplan
-        gameplan = normal_gameplan
+        status = normal_goal
+        goal = normal_goal
     end
 
-    -- Once we have the rune for this branch, this gameplan will be complete.
+    -- Once we have the rune for this branch, this goal will be complete.
     -- Until then, we're diving to and exploring the branch end.
     if status:find("^Rune:") then
-        local branch = gameplan_rune_branch(status)
-        gameplan = branch_end(branch)
-        desc = status .. " rune"
+        local branch = goal_rune_branch(status)
+        goal = make_level(branch, branch_rune_depth(branch))
+        desc = branch .. " rune"
     end
 
     -- If we're configured to join a god, prioritize finding one from our god
     -- list, possibly exploring Temple once it's found.
-    if want_altar() then
+    if want_god() then
         local found = {}
         local gods = god_options()
         for _, g in ipairs(gods) do
@@ -273,7 +293,7 @@ function determine_gameplan()
                 and branch_found("Temple")
                 and not explored_level_range("Temple") then
             status = "Temple"
-            gameplan = "Temple"
+            goal = "Temple"
         elseif #found > 0 then
             if not c_persist.chosen_god then
                 c_persist.chosen_god = found[crawl.roll_dice(1, #found)]
@@ -284,40 +304,68 @@ function determine_gameplan()
     end
 
     if status:find("^God:") then
-        local god = gameplan_god(status)
+        local god = goal_god(status)
         desc = god .. " worship"
-        local altar_lev = altar_found(god)
-        if altar_lev then
-            gameplan = altar_lev
+        local altar_level = altar_found(god)
+        if altar_level then
+            goal = altar_level
         elseif branch_found("Temple")
                 and not explored_level_range("Temple") then
-            gameplan = "Temple"
+            goal = "Temple"
         end
     end
 
     local portal
-    portal, permanent_bazaar = check_portal_gameplan()
+    portal, permanent_bazaar = get_portal_goal()
     if portal then
         status = portal
-        gameplan = portal
+        goal = portal
     end
 
+    -- Make sure we respect Vaults locking when we don't have the rune.
+    if in_branch("Vaults") and you.num_runes() == 0 then
+        local branch = parse_level_range(goal)
+        local override = false
+        if branch then
+            local parent = parent_branch(branch)
+            if branch ~= "Vaults"
+                    and parent ~= "Vaults"
+                    and parent ~= "Crypt"
+                    and parent ~= "Tomb" then
+                override = true
+            end
+        else
+            override = true
+        end
+
+        if override then
+            branch = "Vaults"
+            status = "Rune:Vaults"
+            goal = vaults_end
+            desc = "Vaults rune"
+        end
+    end
+
+    if status == "Win" then
+        status = have_orb and "Escape" or "Orb"
+    end
+
+    if status == "Escape" then
+        goal = "D:1"
     -- Dive to and explore the end of Zot. We'll start trying to pick up the
     -- ORB via stash search travel as soon as it's found.
-    if status == "Orb" then
-        gameplan = zot_end
+    elseif status == "Orb" then
+        goal = zot_end
     end
 
-    -- Portals remain our gameplan while we're there.
+    -- Portals remain our goal while we're there.
     if in_portal() then
         status = where_branch
-        gameplan = where_branch
+        goal = where_branch
     end
 
-    local branch = parse_level_range(gameplan)
-    if branch == "Vaults" and you.num_runes() < 1 then
-        error("Couldn't get a rune to enter Vaults!")
-    elseif branch == "Zot" and you.num_runes() < 3 then
+    local branch = parse_level_range(goal)
+    if branch == "Zot" and you.num_runes() < 3 then
         error("Couldn't get three runes to enter Zot!")
     end
 
@@ -332,103 +380,104 @@ function determine_gameplan()
         say("PLANNING " .. desc:upper())
     end
 
-    set_gameplan(status, gameplan)
+    set_goal(status, goal)
 end
 
 function branch_soon(branch)
-    return branch == gameplan_branch
+    return branch == goal_branch
 end
 
-function in_extended()
-    return branch_soon("Pan")
-        or branch_soon("Tomb")
+function undead_or_demon_branch_soon()
+    return branch_soon("Abyss")
+        or branch_soon("Crypt")
         or branch_soon("Hell")
-        or is_hell_branch(gameplan_branch)
+        or is_hell_branch(goal_branch)
+        or branch_soon("Pan")
+        or branch_soon("Tomb")
         or branch_soon("Zig")
+        -- Once you have the ORB, every branch is an demon branch.
+        or have_orb
 end
 
-function gameplans_visit_branch(branch)
-    if branch == "Zot" then
-        return true
-    elseif not which_gameplan then
+function goals_visit_branches(branches)
+    if not which_goal then
         return false
     end
 
-    for i = which_gameplan, #gameplan_list do
-        local plan = gameplan_list[i]
+    for i = which_goal, #goal_list do
+        local plan = goal_list[i]
         local plan_branch
         if plan:find("^Rune:") then
-            plan_branch = gameplan_rune_branch(plan)
+            plan_branch = goal_rune_branch(plan)
         else
             plan_branch = parse_level_range(plan)
         end
 
         if plan_branch
-                and plan_branch == branch
-                and not gameplan_complete(plan, i == #gameplan_list) then
+                and util.contains(branches, plan_branch)
+                and not goal_complete(plan, i == #goal_list) then
             return true
         end
     end
+
+    if not have_orb and util.contains(branches, "Zot") then
+        return true
+    end
+
+    return false
 end
 
-function check_future_branches()
-    planning_zig = gameplans_visit_branch("Zig")
+function goals_visit_branch(branch)
+    return goals_visit_branches({ branch })
+end
 
-    planning_undead_demon_branches = false
+function goals_future_gods()
+    if not which_goal then
+        return {}
+    end
 
-    for _, br in ipairs(hell_branches) do
-        if gameplans_visit_branch(br) then
-            planning_undead_demon_branches = true
-            break
+    local gods = {}
+    for i = which_goal, #goal_list do
+        local plan = goal_list[i]
+        local plan_god = goal_god(plan)
+        if plan_god then
+            table.insert(gods, plan_god)
         end
     end
 
-    planning_undead_demon_branches = planning_undead_demon_branches
-        or gameplans_visit_branch("Crypt")
-        or gameplans_visit_branch("Pan")
-        or gameplans_visit_branch("Tomb")
-        or planning_zig
-
-    planning_vaults = gameplans_visit_branch("Vaults")
-    planning_slime = gameplans_visit_branch("Slime")
-    -- Escaping Pan can take a while, so consider ourselves to be planning it
-    -- while we're there even if we have all the runes.
-    planning_pan = in_branch("Pan") or gameplans_visit_branch("Pan")
-    planning_cocytus = gameplans_visit_branch("Coc")
-    planning_gehenna = gameplans_visit_branch("Geh")
+    return gods
 end
 
-function check_future_gods()
-    planning_god_uses_mp = god_uses_mp()
-    planning_tso = you.god() == "the Shining One"
-    planning_good_god = is_good_god()
-
-    if not which_gameplan then
-        return
-    end
-
-    for i = which_gameplan, #gameplan_list do
-        local plan = gameplan_list[i]
-        local next_plan = gameplan_list[i + 1]
-        local plan_final = not next_plan
-        local next_final = not gameplan_list[i + 2]
-
-        if plan:find("^God:") then
-            local god = gameplan_god(plan)
-            if not gameplan_complete(plan, plan_final)
-                    and not (next_plan
-                        and not gameplan_complete(next_plan, next_final)) then
-                if god_uses_mp(god) then
-                    planning_god_uses_mp = true
-                elseif is_good_god(god) then
-                    planning_good_god = true
-                    if god == "the Shining One" then
-                        planning_tso = true
-                    end
-                end
-            end
+function planning_convert_to_gods(gods)
+    for _, god in ipairs(gods) do
+        if util.contains(future_gods, god) then
+            return true
         end
     end
+
+    return false
+end
+
+function planning_convert_to_god(god)
+    return planning_convert_to_gods({ god })
+end
+
+function planning_convert_to_mp_using_gods()
+    return planning_convert_to_gods(mp_using_gods)
+end
+
+function update_planning()
+    planning_zig = goals_visit_branch("Zig")
+
+    planning_vaults = goals_visit_branch("Vaults")
+    planning_slime = goals_visit_branch("Slime")
+    planning_tomb = goals_visit_branch("Tomb")
+    planning_cocytus = goals_visit_branch("Coc")
+
+    future_gods = goals_future_gods()
+    future_gods_use_mp = planning_convert_to_gods(mp_using_gods)
+    future_tso = planning_convert_to_god("the Shining One")
+    future_okawaru = planning_convert_to_god("Okawaru")
 end
 
 -- Make a level range for the given branch and ranges, e.g. D:1-11. The
@@ -438,7 +487,7 @@ end
 -- @number      first  The first level in the range.
 -- @number[opt] last   The last level in the range, defaulting to the branch end.
 --                     If negative, the range stops that many levels from the
---                     end of the end of the branch
+--                     end of the branch.
 -- @treturn string The level range.
 function make_level_range(branch, first, last)
     local max_depth = branch_depth(branch)
@@ -476,6 +525,7 @@ end
 
 -- Parse components of a level range.
 -- @string      range The level range.
+--
 -- @treturn string The branch. Will be nil if the level is invalid.
 -- @treturn int    The starting level.
 -- @treturn int    The ending level.
@@ -551,11 +601,11 @@ function explored_level_range(range)
 end
 
 function ready_for_lair()
-    if want_altar()
-            or gameplan_branch
-                and gameplan_branch == "D"
-                and gameplan_depth <= 11
-                and not explored_level(gameplan_branch, gameplan_depth) then
+    if want_god()
+            or goal_branch
+                and goal_branch == "D"
+                and goal_depth <= 11
+                and not explored_level(goal_branch, goal_depth) then
         return false
     end
 
@@ -635,7 +685,7 @@ function lair_branch_order()
 end
 
 -- Remove the "God:" prefix and return the god's full name.
-function gameplan_god(plan)
+function goal_god(plan)
     if not plan:find("^God:") then
         return
     end
@@ -644,7 +694,7 @@ function gameplan_god(plan)
 end
 
 -- Remove the "Rune:" prefix and return the branch name.
-function gameplan_rune_branch(plan)
+function goal_rune_branch(plan)
     if not plan:find("^Rune:") then
         return
     end
@@ -653,7 +703,7 @@ function gameplan_rune_branch(plan)
 end
 
 -- Remove any prefix and return the Zig depth we want to reach.
-function gameplan_zig_depth(plan)
+function goal_zig_depth(plan)
     if plan == "Zig" or plan:find("^MegaZig") then
         return 27
     end
@@ -665,15 +715,15 @@ function gameplan_zig_depth(plan)
     return tonumber(plan:sub(5))
 end
 
-function make_initial_gameplans()
-    local gameplans = split(gameplan_options(), ",")
-    gameplan_list = {}
-    for _, pl in ipairs(gameplans) do
+function make_initial_goals()
+    local goals = split(goal_options(), ",")
+    goal_list = {}
+    for _, pl in ipairs(goals) do
         -- Two-part plan specs: God conversion and rune.
         local plan
         pl = trim(pl)
         if pl:lower():find("^god:") then
-            local name = gameplan_god(pl)
+            local name = goal_god(pl)
             if not name then
                 error("Unkown god: " .. name)
             end
@@ -681,10 +731,10 @@ function make_initial_gameplans()
             plan = "God:" .. name
             processed = true
         elseif pl:lower():find("^rune:") then
-            local branch = capitalize(gameplan_rune_branch(pl))
+            local branch = capitalize(goal_rune_branch(pl))
             if not branch_data[branch] then
                 error("Unknown rune branch: " .. branch)
-            elseif not branch_rune(branch) then
+            elseif not branch_runes(branch) then
                 error("Branch has no rune: " .. branch)
             end
 
@@ -696,7 +746,7 @@ function make_initial_gameplans()
             plan = capitalize(pl)
         end
 
-        -- We turn Hells into a sequence of gameplans for each Hell branch rune
+        -- We turn Hells into a sequence of goals for each Hell branch rune
         -- in random order.
         if plan == "Hells" then
             -- Save our selection so it can be recreated across saving.
@@ -706,7 +756,7 @@ function make_initial_gameplans()
             end
 
             for _, br in ipairs(c_persist.hell_branches) do
-                table.insert(gameplan_list, "Rune:" .. br)
+                table.insert(goal_list, "Rune:" .. br)
             end
         end
 
@@ -718,39 +768,57 @@ function make_initial_gameplans()
                 or plan == "Normal"
                 or plan == "Shopping"
                 or plan == "Orb"
+                or plan == "Escape"
+                or plan == "Win"
                 or plan == "Zig") then
-            error("Invalid gameplan '" .. tostring(plan) .. "'.")
+            error("Invalid goal '" .. tostring(plan) .. "'.")
         end
 
-        table.insert(gameplan_list, plan)
+        table.insert(goal_list, plan)
     end
 end
 
-function update_gameplan()
-    check_expired_portals()
-    determine_gameplan()
-    check_future_branches()
-    check_future_gods()
+function update_goal()
+    update_expired_portals()
+    update_permanent_flight()
 
-    update_gameplan_travel()
+    if coroutine_throttle and #enemy_list >= 20 then
+        throttle = true
+        coroutine.yield()
+    end
 
-    want_gameplan_update = false
+    determine_goal()
+    update_planning()
+    update_goal_travel()
+
+    open_runed_doors = level_is_temporary() or goal_travel.open_runed_doors
+
+    want_goal_update = false
 end
 
 function god_options()
     return c_persist.current_god_list
 end
 
-function gameplan_options()
-    if override_gameplans then
-        return override_gameplans
+function goal_options()
+    if override_goals then
+        return override_goals
     end
 
-    local plan = c_persist.current_gameplans or DEFAULT_GAMEPLAN
-    return GAMEPLANS[plan]
+    local plan = c_persist.current_goals or DEFAULT_GOAL
+    return GOALS[plan]
 end
 
 function next_exploration_depth(branch, min_depth, max_depth)
+    if branch == "Abyss" then
+        local rune_depth = branch_rune_depth("Abyss")
+        if in_branch("Abyss") and where_depth > rune_depth then
+            return where_depth
+        else
+            return rune_depth
+        end
+    end
+
     -- The earliest depth that either lacks autoexplore or doesn't have all
     -- stairs reachable.
     local branch_max = branch_depth(branch)
@@ -769,26 +837,26 @@ function next_exploration_depth(branch, min_depth, max_depth)
     end
 end
 
-function set_gameplan(status, gameplan)
-    gameplan_status = status
+function set_goal(status, goal)
+    goal_status = status
 
-    gameplan_branch = nil
-    gameplan_depth = nil
+    goal_branch = nil
+    goal_depth = nil
     local min_depth, max_depth
-    gameplan_branch, min_depth, max_depth = parse_level_range(gameplan)
+    goal_branch, min_depth, max_depth = parse_level_range(goal)
 
-    -- God gameplans always set the gameplan branch/depth to the known location
-    -- of an altar, so we don't need further exploration.
-    if status:find("^God") then
-        gameplan_depth = min_depth
+    -- God and Escape goals always set the goal branch/depth to a
+    -- specific level, so we don't need further exploration.
+    if status:find("^God") or status == "Escape" then
+        goal_depth = min_depth
     elseif in_portal() then
-        gameplan_depth = where_depth
-    elseif gameplan_branch then
-        gameplan_depth
-            = next_exploration_depth(gameplan_branch, min_depth, max_depth)
+        goal_depth = where_depth
+    elseif goal_branch then
+        goal_depth
+            = next_exploration_depth(goal_branch, min_depth, max_depth)
 
-        if gameplan == zot_end and not gameplan_depth then
-            gameplan_depth = branch_depth("Zot")
+        if goal == zot_end and not goal_depth then
+            goal_depth = branch_depth("Zot")
             if where == zot_end then
                 ignore_traps = true
                 c_persist.autoexplore[zot_end] = AUTOEXP.NEEDED
@@ -796,15 +864,30 @@ function set_gameplan(status, gameplan)
         end
     end
 
-    if DEBUG_MODE then
-        dsay("Gameplan status: " .. gameplan_status, "explore")
-        dsay("Gameplan branch: " .. tostring(gameplan_branch), "explore")
-        dsay("Gameplan depth: " .. tostring(gameplan_depth), "explore")
+    if debug_channel("explore") then
+        dsay("Goal status: " .. goal_status)
+        if goal_branch then
+            dsay("Goal branch: " .. tostring(goal_branch)
+                .. ", depth: " .. tostring(goal_depth))
+        end
     end
 end
 
+function reset_autoexplore(level)
+    if c_persist.autoexplore[level] == AUTOEXP.NEEDED then
+        return
+    end
+
+    if debug_channel("explore") then
+        dsay("Resetting autoexplore of " .. level)
+    end
+
+    c_persist.autoexplore[level] = AUTOEXP.NEEDED
+    want_goal_update = true
+end
+
 function want_to_stay_in_abyss()
-    return gameplan_branch == "Abyss"
+    return goal_branch == "Abyss"
         and not have_branch_runes("Abyss")
         and not hp_is_low(50)
 end

@@ -1,31 +1,25 @@
 -----------------------------------------
--- player functions
+-- Player functions
 
 function intrinsic_rpois()
     local sp = you.race()
-    if sp == "Gargoyle" or sp == "Naga" or sp == "Ghoul" or sp == "Mummy" then
-        return true
-    end
-    return false
+    return sp == "Gargoyle" or sp == "Naga" or sp == "Ghoul" or sp == "Mummy"
 end
 
 function intrinsic_relec()
-    local sp = you.race()
-    if sp == "Gargoyle" then
-        return true
-    end
-    return false
+    return sp == "Gargoyle"
 end
 
 function intrinsic_sinv()
     local sp = you.race()
-    if sp == "Naga" or sp == "Felid" or sp == "Formicid"
+    if sp == "Naga"
+            or sp == "Felid"
+            or sp == "Formicid"
             or sp == "Vampire" then
         return true
     end
 
-    -- We assume TSO piety won't drop below 2* and that we won't change gods
-    -- away from TSO.
+    -- We assume that we won't change gods away from TSO.
     if you.god() == "the Shining One" and you.piety_rank() >= 2 then
         return true
     end
@@ -35,7 +29,8 @@ end
 
 function intrinsic_flight()
     local sp = you.race()
-    return (sp == "Gargoyle" or sp == "Black Draconian") and you.xl() >= 14
+    return (sp == "Gargoyle"
+        or sp == "Black Draconian") and you.xl() >= 14
         or sp == "Tengu" and you.xl() >= 5
 end
 
@@ -44,15 +39,14 @@ function intrinsic_amphibious()
     return sp == "Merfolk" or sp == "Octopode" or sp == "Barachi"
 end
 
-function intrinsic_amphibious_or_flight()
-    return intrinsic_amphibious() or intrinsic_flight()
-end
-
 function intrinsic_fumble()
+    if intrinsic_amphibious() or intrinsic_flight() then
+        return false
+    end
+
     local sp = you.race()
-    return not (intrinsic_amphibious_or_flight()
-        or sp == "Grey Draconian"
-        or sp == "Palentonga"
+    return not (sp == "Grey Draconian"
+        or sp == "Armataur"
         or sp == "Naga"
         or sp == "Troll"
         or sp == "Ogre")
@@ -81,11 +75,13 @@ function armour_plan()
     local sp = you.race()
     if sp == "Ogre" or sp == "Troll" then
         return "large"
-    elseif sp == "Deep Elf" or sp == "Kobold"
-                 or sp == "Merfolk" then
+    elseif sp == "Deep Elf" or sp == "Kobold" or sp == "Merfolk" then
         return "dodgy"
-    elseif sp:find("Draconian") or sp == "Felid" or sp == "Octopode"
-                 or sp == "Spriggan" then
+    elseif weapon_skill() == "Ranged Weapons"
+            or sp:find("Draconian")
+            or sp == "Felid"
+            or sp == "Octopode"
+            or sp == "Spriggan" then
         return "light"
     else
         return "heavy"
@@ -105,34 +101,24 @@ end
 
 function unfitting_armour()
     local sp = you.race()
-    return armour_plan() == "large" or sp == "Palentonga" or sp == "Naga"
+    return armour_plan() == "large" or sp == "Armataur" or sp == "Naga"
 end
 
 function want_buckler()
     local sp = you.race()
-    if sp == "Felid" then
-        return false
-    end
-    if SHIELD_CRAZY then
-        return true
-    end
-    if wskill() == "Short Blades" or wskill() == "Unarmed Combat" then
-        return true
-    end
-    if sp == "Formicid" or sp == "Kobold" then
-        return true
-    end
-    return false
+    local skill = weapon_skill()
+    return sp ~= "Felid"
+        and (skill ~= "Ranged Weapons" or sp == "Formicid")
+        and (SHIELD_CRAZY
+            or sp == "Formicid"
+            or sp == "Kobold"
+            or skill == "Short Blades"
+            or skill == "Unarmed Combat")
 end
 
 function want_shield()
-    if not want_buckler() then
-        return false
-    end
-    if SHIELD_CRAZY then
-        return true
-    end
-    return (you.race() == "Troll" or you.race() == "Formicid")
+    return want_buckler()
+        and (SHIELD_CRAZY or you.race() == "Troll" or you.race() == "Formicid")
 end
 
 -- used for backgrounds who don't get to choose a weapon
@@ -151,15 +137,16 @@ function weapon_choice()
     end
 end
 
-function wskill()
-    -- cache in case you unwield a weapon somehow
+function weapon_skill()
+    -- Cache in case we unwield a weapon somehow.
     if c_persist.cached_wskill then
         return c_persist.cached_wskill
     end
+
     weap = items.equipped_at("Weapon")
     if weap and weap.class(true) == "weapon"
-         and weap.weap_skill ~= "Short Blades"
-         and you.class() ~= "Wanderer" then
+            and weap.weap_skill ~= "Short Blades"
+            and you.class() ~= "Wanderer" then
         c_persist.cached_wskill = weap.weap_skill
     else
         c_persist.cached_wskill = weapon_choice()
@@ -179,28 +166,25 @@ end
 
 function hp_is_low(percentage)
     local hp, mhp = you.hp()
-    return (100 * hp <= percentage * mhp)
+    return 100 * hp <= percentage * mhp
 end
 
-function chp()
+function hp_is_full()
     local hp, mhp = you.hp()
-    return hp
-end
-
-function cmp()
-    local mp, mmp = you.mp()
-    return mp
+    return hp == mhp
 end
 
 function meph_immune()
     -- should also check clarity and unbreathing
-    return (you.res_poison() >= 1)
+    return you.res_poison() >= 1
 end
 
 function miasma_immune()
     -- this isn't all the cases, I know
-    return (you.race() == "Gargoyle" or you.race() == "Vine Stalker"
-                    or you.race() == "Ghoul" or you.race() == "Mummy")
+    return you.race() == "Gargoyle"
+        or you.race() == "Vine Stalker"
+        or you.race() == "Ghoul"
+        or you.race() == "Mummy"
 end
 
 function transformed()
@@ -216,23 +200,17 @@ function can_read()
 end
 
 function can_drink()
-    if you.berserk()
-            or you.race() == "Mummy"
-            or you.transform() == "lich"
-            or you.status("unable to drink") then
-        return false
-    end
-    return true
+    return not (you.berserk()
+        or you.race() == "Mummy"
+        or you.transform() == "lich"
+        or you.status("unable to drink"))
 end
 
 function can_zap()
-    if you.berserk() or you.confused() or transformed() then
-        return false
-    end
-    if you.mutation("inability to use devices") > 0 then
-        return false
-    end
-    return true
+    return not (you.berserk()
+        or you.confused()
+        or transformed()
+        or you.mutation("inability to use devices") > 0)
 end
 
 function can_teleport()
@@ -241,15 +219,21 @@ function can_teleport()
             or you.anchored()
             or you.transform() == "tree"
             or you.race() == "Formicid"
-            or where_branch == "Gauntlet")
+            or in_branch("Gauntlet"))
+end
+
+function can_use_altars()
+    return not (you.berserk()
+        or you.silenced()
+        or you.status("engulfed (cannot breathe)"))
 end
 
 function can_invoke()
     return not (you.berserk()
-            or you.confused()
-            or you.silenced()
-            or you.under_penance(you.god())
-            or you.status("engulfed (cannot breathe)"))
+        or you.confused()
+        or you.silenced()
+        or you.under_penance(you.god())
+        or you.status("engulfed (cannot breathe)"))
 end
 
 function can_berserk()
@@ -265,7 +249,7 @@ function can_berserk()
         and can_invoke()
 end
 
-function player_speed_num()
+function player_speed()
     local num = 3
     if you.god() == "Cheibriados" then
         num = 1
@@ -284,20 +268,6 @@ function player_speed_num()
     end
 
     return num
-end
-
-function dangerous_to_rest()
-    if danger then
-        return true
-    end
-
-    for x, y in adjacent_iter(0, 0) do
-        if view.feature_at(x, y) == "slimy_wall" then
-            return true
-        end
-    end
-
-    return false
 end
 
 function base_mutation(str)
@@ -324,7 +294,7 @@ function body_size()
     elseif you.race() == "Troll"
             or you.race() == "Ogre"
             or you.race() == "Naga"
-            or you.race() == "Palentonga" then
+            or you.race() == "Armataur" then
         return 1
     else
         return 0
@@ -341,7 +311,104 @@ function calc_los_radius()
     end
 end
 
-function can_move()
-    return not (you.transform() == "tree"
-        or you.transform() == "fungus" and danger)
+function unable_to_move()
+    return you.transform() == "tree" or you.transform() == "fungus" and danger
+end
+
+function dangerous_to_move()
+    return turn_memo("dangerous_to_move",
+        function()
+            return you.confused()
+                and (count_brothers_in_arms(1) > 0
+                    or count_greater_servants(1) > 0
+                    or count_divine_warriors(1) > 0
+                    or count_beogh_allies(1) > 0)
+        end)
+end
+
+function unable_to_shoot()
+    if you.berserk() or you.caught() then
+        return true
+    end
+
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "lich")
+end
+
+function unable_to_throw()
+    if you.berserk() or you.confused() or you.caught() then
+        return true
+    end
+
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "lich")
+end
+
+function player_can_melee_mons(mons)
+    if you.caught() or you.confused() then
+        return false
+    end
+
+    local range = reach_range()
+    local dist = mons:distance()
+    if range == 2 then
+        return dist <= range and view.can_reach(mons:x_pos(), mons:y_pos())
+    else
+        return dist <= range
+    end
+end
+
+function dangerous_to_shoot()
+    return turn_memo("dangerous_to_shoot",
+        function()
+            return dangerous_to_attack()
+                -- Don't attempt to shoot with summoned allies adjacent.
+                or you.confused()
+                    and (count_brothers_in_arms(los_radius) > 0
+                        or count_greater_servants(los_radius) > 0
+                        or count_divine_warriors(los_radius) > 0
+                        or count_beogh_allies(los_radius) > 0)
+        end)
+end
+
+function dangerous_to_melee()
+    return turn_memo("dangerous_to_melee",
+        function()
+            return dangerous_to_attack()
+                -- Don't attempt melee with summoned allies adjacent.
+                or you.confused()
+                    and (count_brothers_in_arms(1) > 0
+                        or count_greater_servants(1) > 0
+                        or count_divine_warriors(1) > 0
+                        or count_beogh_allies(1) > 0)
+        end)
+end
+
+-- Currently we only use this to disallow attacking when in an exclusion.
+function dangerous_to_attack()
+    return not map_is_unexcluded_at(global_pos)
+end
+
+function have_ranged_target()
+    return turn_memo("have_ranged_target",
+        function()
+            if weapon_is_ranged() then
+                return get_launcher_target()
+            else
+                return get_throwing_target()
+            end
+        end)
+end
+
+function get_dig_wand()
+    return turn_memo("get_dig_wand",
+        function()
+            return find_item("wand", "digging")
+        end)
 end

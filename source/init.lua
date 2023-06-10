@@ -1,34 +1,48 @@
+------------------
+-- Start of game and session initialization.
+
 function initialize_c_persist()
-    if not c_persist.portals then
-        c_persist.portals = { }
+    if not c_persist.waypoint_count then
+        c_persist.waypoint_count = 0
     end
-    if not c_persist.plan_fail_count then
-        c_persist.plan_fail_count = { }
-    end
-    if not c_persist.branches then
-        c_persist.branches = { }
-    end
-    if not c_persist.altars then
-        c_persist.altars = { }
-    end
-    if not c_persist.autoexplore then
-        c_persist.autoexplore = { }
-    end
-    if not c_persist.upstairs then
-        c_persist.upstairs = { }
-    end
-    if not c_persist.downstairs then
-        c_persist.downstairs = { }
+
+    local tables = {
+        "waypoints", "exclusions", "portals", "branch_entries",
+        "branch_exits", "altars", "autoexplore", "upstairs", "downstairs",
+        "up_hatches", "down_hatches", "pan_transits", "abyssal_stairs",
+        "runelights", "seen_items", "plan_fail_count"
+    }
+    for _, table in ipairs(tables) do
+        if not c_persist[table] then
+            c_persist[table] = {}
+        end
     end
 end
 
 function initialize_enums()
     AUTOEXP = enum(AUTOEXP)
     FEAT_LOS = enum(FEAT_LOS)
+    MAP_SELECT = enum(MAP_SELECT)
 end
 
 function initialize()
+    -- We don't want to hit max_memory since that will delete the c_persist
+    -- table. Generally qw only gets clua memory usage above 32MB due to bugs.
+    -- Leave some memory left over so we can avoid deleting c_persist as well
+    -- as reset the coroutine and attempt debugging.
+    if MAX_MEMORY then
+        max_memory = MAX_MEMORY
+    end
+    if MAX_MEMORY_PERCENTAGE then
+        max_memory_percentage = MAX_MEMORY_PERCENTAGE
+    end
+    if max_memory and max_memory_percentage then
+        set_memory_limit(max_memory * max_memory_percentage / 100)
+    end
+
     initialize_enums()
+    initialize_debug()
+    coroutine_throttle = COROUTINE_THROTTLE
 
     if you.turns() == 0 then
         initialize_c_persist()
@@ -42,27 +56,26 @@ function initialize()
     initialize_god_data()
 
     calc_los_radius()
-    initialize_monster_array()
+    initialize_monster_map()
 
-    make_initial_gameplans()
-    where = "nowhere"
-    where_branch = "nowhere"
-    where_depth = nil
+    clear_autopickup_funcs()
+    add_autopickup_func(autopickup)
 
-    if not level_map then
-        level_map = {}
-        stair_dists = {}
-        map_search = {}
-        clear_level_map(1)
-        clear_level_map(2)
-        waypoint_parity = 1
-        previous_where = "nowhere"
-    end
+    make_initial_goals()
 
-    for _, god in ipairs(god_options()) do
-        if god == "the Shining One" or god == "Elyvilon" or god == "Zin" then
-            might_be_good = true
-        end
+    if not cache_parity then
+        traversal_maps_cache = {}
+        exclusion_maps_cache = {}
+
+        distance_maps_cache = {}
+        feature_map_positions_cache = {}
+        item_map_positions_cache = {}
+        map_mode_searches_cache = {}
+
+        clear_map_cache(1, true)
+        clear_map_cache(2, true)
+
+        cache_parity = 1
     end
 
     set_options()
@@ -84,7 +97,7 @@ function note_qw_data()
         bool_string(EARLY_SECOND_RUNE))
     note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
 
-    local plans = gameplan_options()
+    local plans = goal_options()
     note("qw: Plans: " .. plans)
 end
 
@@ -106,7 +119,7 @@ function first_turn_initialize()
     c_persist.record.counter = counter
 
     local god_list = c_persist.next_god_list
-    local plans = c_persist.next_gameplans
+    local plans = c_persist.next_goals
     for key, _ in pairs(c_persist) do
         if key ~= "record" then
             c_persist[key] = nil
@@ -138,7 +151,7 @@ function first_turn_initialize()
     end
     c_persist.current_god_list = god_list
 
-    c_persist.current_gameplans = plans
+    c_persist.current_goals = plans
     note_qw_data()
 
     if COMBO_CYCLE then
@@ -150,16 +163,16 @@ function first_turn_initialize()
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
             local plan_parts = split(combo_parts[2], "!")
-            c_persist.next_god_list = { }
+            c_persist.next_god_list = {}
             for g in plan_parts[1]:gmatch(".") do
                 table.insert(c_persist.next_god_list, god_full_name(g))
             end
             if #plan_parts > 1 then
-                if not GAMEPLANS[plan_parts[2]] then
+                if not GOALS[plan_parts[2]] then
                     error("Unknown plan name '" .. plan_parts[2] .. "'" ..
                     " given in combo spec '" .. combo_string .. "'")
                 end
-                c_persist.next_gameplans = plan_parts[2]
+                c_persist.next_goals = plan_parts[2]
             end
         end
     end

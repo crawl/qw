@@ -1,88 +1,165 @@
+------------------
+-- Stair-related functions
+
 -- Stair direction enum
 DIR = { UP = -1, DOWN = 1 }
 
-function clear_level_map(num)
-    level_map[num] = {}
-    for i = -100, 100 do
-        level_map[num][i] = {}
+INF_DIST = 10000
+
+upstairs_features = {
+    "stone_stairs_up_i",
+    "stone_stairs_up_ii",
+    "stone_stairs_up_iii",
+}
+
+downstairs_features = {
+    "stone_stairs_down_i",
+    "stone_stairs_down_ii",
+    "stone_stairs_down_iii",
+}
+
+escape_hatch_features = {
+    [DIR.UP] = "escape_hatch_up",
+    [DIR.DOWN] = "escape_hatch_down",
+}
+
+--[[
+Return a list of stair features we're allowed to take on the given level and in
+the given direction that takes us to the next depth for that direction. For
+going up, this includes branch exits that take us out of the branch. Up escape
+hatches are included on the Orb run under the right conditions. For going down,
+this does not include any branch entrances, but does include features in Abyss
+and Pan that lead to the next level in the branch.
+--]]
+function level_stairs_features(branch, depth, dir)
+    local feats
+    if dir == DIR.UP then
+        if is_portal_branch(branch)
+                or branch == "Abyss"
+                or is_hell_branch(branch)
+                or depth == 1 then
+            feats = { branch_exit(branch) }
+        else
+            feats = util.copy_table(upstairs_features)
+        end
+
+        if want_to_use_escape_hatches(DIR.UP) then
+            table.insert(feats, "escape_hatch_up")
+        end
+    elseif dir == DIR.DOWN then
+        if branch == "Abyss" then
+            feats = { "abyssal_stair" }
+        elseif branch == "Pan" then
+            feats = { "transit_pandemonium" }
+        elseif is_hell_branch(branch) and depth < branch_depth(branch) then
+            feats = { downstairs_features[1] }
+        elseif depth < branch_depth(branch) then
+            feats = util.copy_table(downstairs_features)
+        end
     end
-    stair_dists[num] = {}
-    map_search[num] = {}
+    return feats
 end
 
-function record_stairs(branch, depth, feat, state, force)
-    local dir, num
-    dir, num = stone_stair_type(feat)
-    local data = dir == DIR.DOWN and c_persist.downstairs or c_persist.upstairs
+function stairs_state_string(state)
+    return enum_string(state.los, FEAT_LOS) .. "/"
+        .. (state.safe and "safe" or "unsafe")
+end
+
+function update_stone_stairs(branch, depth, dir, num, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined stone stairs state.")
+    end
+
+    local data
+    if dir == DIR.DOWN then
+        data = c_persist.downstairs
+    else
+        data = c_persist.upstairs
+    end
 
     local level = make_level(branch, depth)
     if not data[level] then
         data[level] = {}
     end
-    local old_state = not data[level][num] and FEAT_LOS.NONE
-        or data[level][num]
-    if old_state < state or force then
-        if DEBUG_MODE then
-            dsay("Updating " .. level .. " stair " .. feat .. " from "
-                .. old_state .. " to " .. state, "explore")
-        end
-        data[level][num] = state
 
-        if not force then
-            want_gameplan_update = true
+    if not data[level][num] then
+        data[level][num] = {}
+    end
+
+    local current = data[level][num]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            dsay("Updating stone " .. (dir == DIR.UP and "up" or "down")
+                .. "stairs " .. num .. " on " .. level
+                .. " from " .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
+            want_goal_update = true
         end
     end
 end
 
-function set_stairs(branch, depth, dir, feat_los, min_feat_los)
-    local level = make_level(branch, depth)
-
-    if not min_feat_los then
-        min_feat_los = feat_los
-    end
-
+function update_all_stone_stairs(branch, depth, dir, state, max_los)
     for i = 1, num_required_stairs(branch, depth, dir) do
-        if stairs_state(branch, depth, dir, num) >= min_feat_los then
-            local feat = "stone_stairs_"
-                .. (dir == DIR.DOWN and "down_" or "up_") .. ("i"):rep(i)
-            record_stairs(branch, depth, feat, feat_los, true)
+        local num = ("i"):rep(i)
+        local cur_state = get_stone_stairs(branch, depth, dir, num)
+        if cur_state and (not max_los or cur_state.los >= state.los) then
+            update_stone_stairs(branch, depth, dir, num, state, true)
         end
     end
 end
 
-function dir_key(dir)
-    return dir == DIR.DOWN and ">" or "<"
-end
+function reset_stone_stairs(branch, depth, dir)
+    update_all_stone_stairs(branch, depth, dir, { los = FEAT_LOS.REACHABLE },
+        true)
 
-function level_stair_reset(branch, depth, dir)
-    set_stairs(branch, depth, dir, FEAT_LOS.REACHABLE)
-
-    local lev = make_level(branch, depth)
-    if lev == where then
-        map_search[waypoint_parity][dir_key(dir)] = nil
-    elseif lev == previous_where then
-        map_search[3 - waypoint_parity][dir_key(dir)] = nil
+    local level = make_level(branch, depth)
+    if level == where then
+        map_mode_searches[dir_key(dir)] = nil
+    elseif level == previous_where then
+        map_mode_searches_cache[3 - cache_parity][dir_key(dir)] = nil
     end
 
-    if where ~= lev then
-        dsay("Resetting autoexplore of " .. lev, "explore")
-        c_persist.autoexplore[lev] = AUTOEXP.NEEDED
+    if where ~= level then
+        reset_autoexplore(level)
     end
 end
 
-function stairs_state(branch, depth, dir, num)
+function get_stone_stairs(branch, depth, dir, num)
     local level = make_level(branch, depth)
     if dir == DIR.UP then
         if not c_persist.upstairs[level]
                 or not c_persist.upstairs[level][num] then
-            return FEAT_LOS.NONE
+            return
         end
 
         return c_persist.upstairs[level][num]
     elseif dir == DIR.DOWN then
         if not c_persist.downstairs[level]
                 or not c_persist.downstairs[level][num] then
-            return FEAT_LOS.NONE
+            return
         end
 
         return c_persist.downstairs[level][num]
@@ -95,7 +172,8 @@ function num_required_stairs(branch, depth, dir)
                 or is_portal_branch(branch)
                 or branch == "Tomb"
                 or branch == "Abyss"
-                or util.contains(hell_branches, branch) then
+                or branch == "Pan"
+                or is_hell_branch(branch) then
             return 0
         else
             return 3
@@ -104,9 +182,10 @@ function num_required_stairs(branch, depth, dir)
         if depth == branch_depth(branch)
                     or is_portal_branch(branch)
                     or branch == "Tomb"
-                    or branch == "Abyss" then
+                    or branch == "Abyss"
+                    or branch == "Pan" then
             return 0
-        elseif util.contains(hell_branches, branch) then
+        elseif is_hell_branch(branch) then
             return 1
         else
             return 3
@@ -114,32 +193,30 @@ function num_required_stairs(branch, depth, dir)
     end
 end
 
-function count_stairs(branch, depth, dir, state)
+function count_stairs(branch, depth, dir, los)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required == 0 then
         return 0
     end
 
-    local num
     local count = 0
     for i = 1, num_required do
-        num = "i"
-        num = num:rep(i)
-        if stairs_state(branch, depth, dir, num) >= state then
+        local num = ("i"):rep(i)
+        local state = get_stone_stairs(branch, depth, dir, num)
+        if state and state.los >= los then
             count = count + 1
         end
     end
     return count
 end
 
-function have_all_stairs(branch, depth, dir, state)
+function have_all_stairs(branch, depth, dir, los)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required > 0 then
-        local num
         for i = 1, num_required do
-            num = "i"
-            num = num:rep(i)
-            if stairs_state(branch, depth, dir, num) < state then
+            local num = ("i"):rep(i)
+            local state = get_stone_stairs(branch, depth, dir, num)
+            if not state or state.los < los then
                 return false
             end
         end
@@ -148,251 +225,281 @@ function have_all_stairs(branch, depth, dir, state)
     return true
 end
 
-function record_map_search(parity, key, start_pos, count, end_pos)
-    if not map_search[parity][key] then
-        map_search[parity][key] = {}
+function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined branch stairs state.")
     end
 
-    if not map_search[parity][key][start_pos] then
-        map_search[parity][key][start_pos]  = {}
+    local data = dir == DIR.DOWN and c_persist.branch_entries
+        or c_persist.branch_exits
+    if not data[dest_branch] then
+        data[dest_branch] = {}
     end
 
-    map_search[parity][key][start_pos][count] = end_pos
-end
-
-function record_branch(x, y)
-    local feat = view.feature_at(x, y)
-    for br, entry in pairs(branch_data) do
-        if entry.entrance == feat then
-            if not c_persist.branches[br] then
-                c_persist.branches[br] = {}
-            end
-
-            local state = los_state(x, y)
-            -- We already have a suitable entry recorded.
-            if c_persist.branches[br][where]
-                    and c_persist.branches[br][where] >= state then
-                return
-            end
-
-            c_persist.branches[br][where] = state
-
-            -- Update the parent entry depth with that of an entry
-            -- found in the parent either if the entry depth is
-            -- unconfirmed our the found entry is at a lower depth.
-            local cur_br, cur_depth = parse_level_range(where)
-            local parent_br, parent_min, parent_max = parent_branch(br)
-            if cur_br == parent_br
-                    and (parent_min ~= parent_max
-                        or cur_depth < parent_min) then
-                branch_data[br].parent_min_depth = cur_depth
-                branch_data[br].parent_max_depth = cur_depth
-            end
-
-            want_gameplan_update = true
-            return
-        end
-    end
-end
-
-function update_level_map(num)
-    local distqueue = {}
-    local staircount = #stair_dists[num]
-    for j = 1, staircount do
-        distqueue[j] = {}
+    local level = make_level(branch, depth)
+    if not data[dest_branch][level] then
+        data[dest_branch][level] = {}
     end
 
-    local wx, wy = travel.waypoint_delta(num)
-    local mapqueue = {}
-    for x, y in square_iter(0, 0, los_radius, true) do
-        local feat = view.feature_at(x, y)
-        if feat:find("stone_stairs") then
-            record_stairs(where_branch, where_depth, feat, los_state(x, y))
-        elseif feat:find("enter_") then
-            record_branch(x, y)
-        elseif feat:find("altar_") and feat ~= "altar_ecumenical" then
-            record_altar(x, y)
-        end
-        table.insert(mapqueue, {x + wx, y + wy})
+    local current = data[dest_branch][level]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
     end
 
-    local newcount = staircount
-    local first = 1
-    local last = #mapqueue
-    local x, y, feat, val, oldval
-    while first < last do
-        if first % 1000 == 0 then
-            coroutine.yield()
-        end
-        x = mapqueue[first][1]
-        y = mapqueue[first][2]
-        first = first + 1
-        feat = view.feature_at(x - wx, y - wy)
-        if feat ~= "unseen" then
-            if level_map[num][x][y] == nil then
-                for dx, dy in adjacent_iter(x, y) do
-                    last = last + 1
-                    mapqueue[last] = {dx, dy}
-                end
-            end
-            if travel.feature_traversable(feat)
-                    and not travel.feature_solid(feat) then
-                if level_map[num][x][y] ~= "." then
-                    if feat_is_upstairs(feat) then
-                        newcount = #stair_dists[num] + 1
-                        stair_dists[num][newcount] = {}
-                        for i = -100, 100 do
-                            stair_dists[num][newcount][i] = {}
-                        end
-                        stair_dists[num][newcount][x][y] = 0
-                        distqueue[newcount] = {{x, y}}
-                    end
-
-                    for j = 1, staircount do
-                        oldval = stair_dists[num][j][x][y]
-                        for dx, dy in adjacent_iter(x, y) do
-                            val = stair_dists[num][j][dx][dy]
-                            if val ~= nil
-                                    and (oldval == nil
-                                        or oldval > val + 1) then
-                                oldval = val + 1
-                            end
-                        end
-                        if stair_dists[num][j][x][y] ~= oldval then
-                            stair_dists[num][j][x][y] = oldval
-                            table.insert(distqueue[j], {x, y})
-                        end
-                    end
-                end
-                level_map[num][x][y] = "."
-            else
-                level_map[num][x][y] = "#"
-            end
-        end
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+    if state.los == nil then
+        state.los = current.los
     end
 
-    for j = 1, newcount do
-        update_dist_map(stair_dists[num][j], distqueue[j])
-    end
-
-    if map_search_key then
-        local feat = view.feature_at(0, 0)
-        -- We assume we've landed on the next feature in our current "X<key>"
-        -- cycle because the feature at our position uses that key.
-        if feat_uses_map_key(map_search_key, feat) then
-            record_map_search(num, map_search_key, map_search_pos,
-                map_search_count, 100 * wx + wy)
-        end
-        map_search_key = nil
-        map_search_pos = nil
-        map_search_count = nil
-    end
-end
-
-function update_dist_map(dist_map, queue)
-    local first = 1
-    local last = #queue
-    local x, y, val
-    while first <= last do
-        if first % 300 == 0 then
-            coroutine.yield()
-        end
-        x = queue[first][1]
-        y = queue[first][2]
-        first = first + 1
-        val = dist_map[x][y] + 1
-        for dx, dy in adjacent_iter(x, y) do
-            if level_map[waypoint_parity][dx][dy] == "." then
-                oldval = dist_map[dx][dy]
-                if oldval == nil or oldval > val then
-                    dist_map[dx][dy] = val
-                    last = last + 1
-                    queue[last] = {dx, dy}
-                end
-            end
-        end
-    end
-end
-
-function find_good_stairs()
-    good_stair_list = { }
-
-    if not can_waypoint then
+    local los_changed = current.los < state.los
+        or force and current.los ~= state.los
+    if state.safe == current.safe and not los_changed then
         return
     end
 
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local staircount = #(stair_dists[num])
-    local pdist, mdist, minmdist, speed_diff
-    local pspeed = player_speed_num()
-    for i = 1, staircount do
-        pdist = stair_dists[num][i][dx][dy]
-        if pdist == nil then
-            pdist = 10000
+    if debug_channel("explore") then
+        dsay("Updating " .. dest_branch .. " branch "
+            .. (dir == DIR.UP and "exit" or "entrance") .. " stairs " .. " on "
+            .. level .. " from " .. stairs_state_string(current) .. " to "
+            .. stairs_state_string(state))
+    end
+
+    current.safe = state.safe
+
+    if not los_changed then
+        return
+    end
+
+    current.los = state.los
+
+    if dir == DIR.DOWN then
+        -- Update the entry depth in the branch data with the depth where
+        -- we found this entry if the entry depth is currently unconfirmed
+        -- or if the found depth is higher.
+        local parent_br, parent_min, parent_max = parent_branch(dest_branch)
+        if branch == parent_br
+                and (parent_min ~= parent_max or depth < parent_min) then
+            branch_data[dest_branch].parent_min_depth = depth
+            branch_data[dest_branch].parent_max_depth = depth
         end
-        minmdist = 1000
-        for _, e in ipairs(enemy_list) do
-            mdist = stair_dists[num][i][dx + e.x][dy + e.y]
-            if mdist == nil then
-                mdist = 10000
-            end
-            speed_diff = mon_speed_num(e.m) - pspeed
-            if speed_diff > 1 then
-                mdist = mdist / 2
-            elseif speed_diff > 0 then
-                mdist = mdist / 1.5
-            end
-            if is_ranged(e.m) then
-                mdist = mdist - 4
-            end
-            if mdist < minmdist then
-                minmdist = mdist
-            end
+    end
+
+    want_goal_update = true
+end
+
+function update_escape_hatch(branch, depth, dir, hash, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined escape hatch state.")
+    end
+
+    local data
+    if dir == DIR.DOWN then
+        data = c_persist.down_hatches
+    else
+        data = c_persist.up_hatches
+    end
+
+    local level = make_level(branch, depth)
+    if not data[level] then
+        data[level] = {}
+    end
+
+    if not data[level][hash] then
+        data[level][hash] = {}
+    end
+
+    local current = data[level][hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(unhash_position(hash), global_pos)
+            dsay("Updating escape hatch " .. (dir == DIR.UP and "up" or "down")
+                .. " on " .. level .. " at " .. pos_string(pos)
+                .. " from " .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
         end
-        if pdist < minmdist then
-            table.insert(good_stair_list, i)
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
         end
     end
 end
 
-function stair_improvement(x, y)
-    if not can_waypoint then
-        return 10000
+function get_map_escape_hatch(branch, depth, pos)
+    local level = make_level(branch, depth)
+    local hash = hash_position(pos)
+    if c_persist.up_hatches[level] and c_persist.up_hatches[level][hash] then
+        return c_persist.up_hatches[level][hash]
+    elseif c_persist.down_hatches[level]
+            and c_persist.down_hatches[level][hash] then
+        return c_persist.down_hatches[level][hash]
     end
-    if x == 0 and y == 0 then
-        if feat_is_upstairs(view.feature_at(0, 0)) then
-            return 0
+end
+
+function update_pan_transit(hash, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined Pan transit state.")
+    end
+
+    if not c_persist.pan_transits[hash] then
+        c_persist.pan_transits[hash] = {}
+    end
+
+    local current = c_persist.pan_transits[hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(unhash_position(hash), global_pos)
+            dsay("Updating Pan transit at " .. pos_string(pos) .. " from "
+                .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
+        end
+    end
+end
+
+function get_map_pan_transit(pos)
+    return c_persist.pan_transits[hash_position(pos)]
+end
+
+function update_abyssal_stairs(hash, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined Abyssal stairs state.")
+    end
+
+    if not c_persist.abyssal_stairs[hash] then
+        c_persist.abyssal_stairs[hash] = {}
+    end
+
+    local current = c_persist.abyssal_stairs[hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(unhash_position(hash), global_pos)
+            dsay("Updating Abyssal stairs at " .. pos_string(pos) .. " from "
+                .. stairs_state_string(current) .. " to "
+                .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
+        end
+    end
+end
+
+function get_map_abyssal_stairs(pos)
+    return c_persist.abyssal_stairs[hash_position(pos)]
+end
+
+function get_branch_stairs(branch, depth, stairs_branch, dir)
+    local level = make_level(branch, depth)
+    if dir == DIR.UP then
+        if not c_persist.branch_exits[stairs_branch]
+                or not c_persist.branch_exits[stairs_branch][level] then
+            return
+        end
+
+        return c_persist.branch_exits[stairs_branch][level]
+    elseif dir == DIR.DOWN then
+        if not c_persist.branch_entries[stairs_branch]
+                or not c_persist.branch_entries[stairs_branch][level] then
+            return
+        end
+
+        return c_persist.branch_entries[stairs_branch][level]
+    end
+end
+
+function get_destination_stairs(branch, depth, feat)
+    local state
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        return get_stone_stairs(branch, depth + dir, -dir, num)
+    end
+
+    local branch, dir = branch_stairs_type(feat)
+    if branch then
+        if dir == DIR.UP then
+            local parent, min_depth, max_depth = parent_branch(branch)
+            if min_depth == max_depth then
+                return get_branch_stairs(parent, min_depth, branch, -dir)
+            end
         else
-            return 10000
+            return get_branch_stairs(branch, 1, branch, -dir)
         end
     end
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local val
-    local minval = 10000
-    for _, i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx + x][dy + y]
-        if val < stair_dists[num][i][dx][dy] and val < minval then
-            minval = val
-        end
-    end
-    return minval
 end
 
-function set_stair_target(c)
-    local x, y = vi_to_delta(c)
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local val
-    local minval = 10000
-    local best_stair
-    for _, i in ipairs(good_stair_list) do
-        val = stair_dists[num][i][dx + x][dy + y]
-        if val < stair_dists[num][i][dx][dy] and val < minval then
-            minval = val
-            best_stair = i
-        end
+function get_stairs(branch, depth, feat)
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        return get_stone_stairs(branch, depth, dir, num)
     end
-    target_stair = best_stair
+
+    local branch, dir = branch_stairs_type(feat)
+    if branch then
+        return get_branch_stairs(where_branch, where_depth, branch, dir)
+    end
 end

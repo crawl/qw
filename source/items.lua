@@ -1,5 +1,8 @@
 -------------------------------------
--- equipment valuation and autopickup
+-- Equipment valuation and autopickup
+
+RUNE_SUFFIX = " rune of Zot"
+ORB_NAME = "Orb of Zot"
 
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
@@ -17,8 +20,6 @@
 -- if cur, return the current value instead of minmax
 -- if it2, pretend we aren't equipping it2
 -- if sit = "hydra", assume we are fighting a hydra at lowish XL
---        = "extended", assume we are in (or about to enter) extended branches
---        if planning to convert to TSO, we need this weapon to be TSO-friendly
 --        = "bless", assume we want to bless the weapon with TSO eventually
 function equip_value(it, cur, it2, sit)
     if not it then
@@ -258,6 +259,7 @@ function absolute_resist_value(str, n)
     if n == 0 then
         return 0
     end
+
     if branch_soon("Slime")
             and (str == "rF"
                 or str == "rElec"
@@ -267,6 +269,7 @@ function absolute_resist_value(str, n)
                 or str == "SInv") then
         return 0
     end
+
     local val = 0
     if str == "rF" or str == "rC" then
         if n < 0 then
@@ -278,12 +281,8 @@ function absolute_resist_value(str, n)
         elseif n >= 3 then
             val = 250
         end
-        if str == "rF" then
-            if branch_soon("Zot") then
-                val = val * 2.5
-            elseif branch_soon("Geh") then
-                val = val * 2.5
-            end
+        if str == "rF" and (branch_soon("Zot") or branch_soon("Geh")) then
+            val = val * 2.5
         elseif str == "rC" then
             if branch_soon("Coc") then
                 val = val * 2.5
@@ -308,13 +307,13 @@ function absolute_resist_value(str, n)
     elseif str == "Fly" then
         return 200
     elseif str == "Faith" then
-        -- We either don't use invocations much for these gods
+        -- We don't use invocations enough for these gods to care about Faith.
         if you.god() == "Cheibriados"
                 or you.god() == "Beogh"
                 or you.god() == "Qazlal"
-                or you.god() == "Hepliaklqana"
-                or you.god() ~= "Ru"
-                or you.god() ~= "Xom" then
+                or you.god() == "Hepliaklqana" then
+        -- These gods gain little from Faith.
+        elseif you.god() == "Ru" or you.god() == "Xom" then
             return 0
         -- Otherwise, we like Faith a lot.
         else
@@ -386,21 +385,23 @@ function max_resist_value(str, d)
         if you.god() == "Cheibriados"
                 or you.god() == "Beogh"
                 or you.god() == "Qazlal"
-                or you.god() == "Hepliaklqana"
-                or you.god() ~= "Ru"
-                or you.god() ~= "Xom" then
+                or you.god() == "Hepliaklqana" then
+            return -10000
+        elseif you.god() == "Ru" or you.god() == "Xom" then
             return 0
         else
             return 1000
         end
     elseif str == "Spirit" then
-        return ires < 1 and not god_uses_mp() and 100 or 0
+        return ires < 1
+            and (not (god_uses_mp() and future_gods_use_mp)) and 0
+                or 100
     elseif str == "Acrobat" then
         return 100
     elseif str == "Reflect" then
         return 20
     elseif str == "Repulsion" then
-        return 200
+        return 100
     end
 
     return 0
@@ -453,6 +454,10 @@ function resist_value(str, it, cur, it2)
 end
 
 function linear_resist_value(str)
+    local skill = weapon_skill()
+    dex_weapon = skill == "Long Blades"
+        or skill == "Short Blades"
+        or skill == "Ranged Weapons"
     if str == "Regen" then
         return 200
     elseif str == "Slay" or str == "AC" or str == "EV" then
@@ -460,9 +465,9 @@ function linear_resist_value(str)
     elseif str == "SH" then
         return 40
     elseif str == "Str" then
-        return 30
+        return dex_weapon and 10 or 35
     elseif str == "Dex" then
-        return 20
+        return dex_weapon and 55 or 15
     -- Begin negative properties.
     elseif str == "*Tele" then
         return you.race() == "Formicid" and 0 or -300
@@ -507,7 +512,7 @@ function total_resist_value(it, cur, it2)
 end
 
 function resist_vec(it)
-    local vec = { }
+    local vec = {}
     for _, str in ipairs(nonlinear_resists) do
         local a, b = resist_value(str, it)
         table.insert(vec, b > 0 and b or a)
@@ -542,17 +547,6 @@ function resist_dominated(it, it2)
     return diff >= 0
 end
 
-function easy_runes()
-    local branches = {"Swamp", "Snake", "Shoals", "Spider"}
-    local count = 0
-    for _, br in ipairs(branches) do
-        if have_branch_runes(br) then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 -- A list of armour slots, this is used to normalize names for them and also to
 -- iterate over the slots
 good_slots = {cloak="Cloak", helmet="Helmet", gloves="Gloves", boots="Boots",
@@ -561,42 +555,59 @@ good_slots = {cloak="Cloak", helmet="Helmet", gloves="Gloves", boots="Boots",
 function armour_value(it, cur, it2)
     local name = it.name()
     local value = 0
-    local val1, val2 = total_resist_value(it, cur, it2)
+    local val1, val2 = 0, 0
+    if current_god_hates_item(it) then
+        if cur then
+            return -1, -1
+        else
+            val1 = -10000
+        end
+    elseif not cur and future_gods_hate_item(it) then
+        val1 = -10000
+    end
+
+    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    val1 = val1 + res_val1
+    val2 = val2 + res_val2
+
     local ego = it.ego()
     if it.artefact then
         if not it.fully_identified then -- could be good or bad
-            val2 = val2 + 400
             val1 = val1 + (cur and 400 or -400)
+            val2 = val2 + 400
         end
 
         -- Unrands
         if name:find("hauberk") then
             return -1, -1
         end
+
         if it.name():find("Mad Mage's Maulers") then
             if god_uses_mp() then
-                return -1, -1
-            else
-                value = value + 200
+                if cur then
+                    return -1, -1
+                else
+                    val1 = -10000
+                end
+            elseif not cur and future_gods_use_mp then
+                val1 = -10000
             end
+
+            value = value + 200
         elseif it.name():find("lightning scales") then
-            if you.god() == "Cheibriados" then
-                return -1, -1
-            else
-                value = value + 100
-            end
+            value = value + 100
         end
     elseif name:find("runed") or name:find("glowing") or name:find("dyed")
             or name:find("embroidered") or name:find("shiny") then
-        val2 = val2 + 400
         val1 = val1 + (cur and 400 or -200)
+        val2 = val2 + 400
     end
 
     value = value + 50 * expected_armour_multiplier() * it.ac
     if it.plus then
         value = value + 50 * it.plus
     end
-    st, _ = it.subtype()
+    local st = it.subtype()
     if good_slots[st] == "Shield" then
         if it.encumbrance == 0 then
             if not want_buckler() then
@@ -607,16 +618,16 @@ function armour_value(it, cur, it2)
             return -1, -1
         end
     end
-    -- name always starts with {boots armour} here
-    -- ^ is no longer true I think?
+
     if good_slots[st] == "Boots" then
-        local want_barding = you.race() == "Palentonga" or you.race() == "Naga"
+        local want_barding = you.race() == "Armataur" or you.race() == "Naga"
         local is_barding = name:find("barding") or name:find("lightning scales")
         if want_barding and not is_barding
                 or not want_barding and is_barding then
             return -1, -1
         end
     end
+
     if good_slots[st] == "Body Armour" then
         if unfitting_armour() then
             value = value - 25 * it.ac
@@ -643,7 +654,10 @@ function armour_value(it, cur, it2)
             end
         end
     end
-    return value + val1, value + val2
+
+    val1 = val1 + value
+    val2 = val2 + value
+    return val1, val2
 end
 
 function weapon_value(it, cur, it2, sit)
@@ -652,25 +666,22 @@ function weapon_value(it, cur, it2, sit)
     end
 
     local hydra_swap = sit == "hydra"
-    local extended = sit == "extended"
-    local name = it.name()
-    local value = 1000
-    local weap = items.equipped_at("Weapon")
+    local weap = get_weapon()
+    local weap_skill = weapon_skill()
     -- The evaluating weapon doesn't match our desired skill...
-    if it.weap_skill ~= wskill()
+    if it.weap_skill ~= weap_skill
             -- ...and our current weapon already matches our desired skill or
-            -- we use UC or the evaluating weapon is not a melee weapon
-            and (weap and weap.weap_skill == wskill()
-                or wskill() == "Unarmed Combat"
-                or it.weap_skill == "Ranged Weapons")
+            -- we use UC...
+            and (weap and weap.weap_skill == weap_skill
+                or weap_skill == "Unarmed Combat")
             -- ...and we either don't need a hydra swap weapon or the
             -- evaluating weapon isn't a hydra swap weapon for our desired
             -- skill.
             and (not hydra_swap
                 or not (it.weap_skill == "Maces & Flails"
-                            and wskill() == "Axes"
+                            and weap_skill == "Axes"
                         or it.weap_skill == "Short Blades"
-                            and wskill() == "Long Blades")) then
+                            and weap_skill == "Long Blades")) then
         return -1, -1
     end
 
@@ -678,62 +689,68 @@ function weapon_value(it, cur, it2, sit)
         return -1, -1
     end
 
+    local undead_demon = undead_or_demon_branch_soon()
+    local name = it.name()
+    local value = 1000
+    local val1, val2 = 0, 0
     if sit == "bless" then
-        local val1, val2 = 0, 0
         if it.artefact then
             return -1, -1
         elseif name:find("runed") or name:find("glowing")
                      or name:find("enchanted")
                      or it.ego() and not it.fully_identified then
-            val2 = val2 + 150
             val1 = val1 + (cur and 150 or -150)
+            val2 = val2 + 150
         end
         if it.plus then
             value = value + 30 * it.plus
         end
-        delay_estimate = min(7, math.floor(it.delay / 2))
-        if it.weap_skill == "Short Blades" and delay_estimate > 5 then
-            delay_estimate = 5
-        end
-        value = value + 1200 * it.damage / delay_estimate
+        value = value + 1200 * it.damage / weapon_min_delay(it)
         return value + val1, value + val2
     end
 
-    if planning_good_god and name:find("demon") and not name:find("eudemon") then
-        return -1, -1
-    end
-
-    if (intrinsic_evil() or you.god() == "Yredelemnul")
-            and name:find("holy") then
-        return -1, -1
-    end
-
-    if name:find("obsidian axe") then
-        if planning_good_god then
+    if current_god_hates_item(it) then
+        if cur then
             return -1, -1
+        else
+            val1 = -10000
+        end
+    elseif not cur and future_gods_hate_item(it) then
+        val1 = -10000
+    end
+
+    -- XXX: De-value this on certain levels or give qw better strats while
+    -- mesmerised.
+    if name:find("obsidian axe") then
         -- This is much less good when it can't make friendly demons.
-        elseif you.mutation("hated by all") or you.god() == "Okawaru" then
+        if you.mutation("hated by all") or you.god() == "Okawaru" then
             value = value - 200
-        -- XXX: De-value this on certain levels or give qw better strats
-        -- while mesmerized.
+        elseif future_okawaru then
+            val1 = val1 + (cur and 200 or -200)
+            val2 = val2 + 200
         else
             value = value + 200
         end
+    elseif name:find("storm bow") then
+        value = value + 50
     end
 
-    local val1, val2 = total_resist_value(it, cur, it2)
+    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    val1 = val1 + res_val1
+    val2 = val2 + res_val2
+
     if it.artefact and not it.fully_identified
             or name:find("runed")
             or name:find("glowing") then
-        val2 = val2 + 500
         val1 = val1 + (cur and 500 or -250)
+        val2 = val2 + 500
     end
 
     if hydra_swap then
-        local hydra_quality = hydra_weapon_status(it)
-        if hydra_quality == -1 then
+        local hydra_value = hydra_weapon_value(it)
+        if hydra_value == -1 then
             return -1, -1
-        elseif hydra_quality == 1 then
+        elseif hydra_value == 1 then
             value = value + 500
         end
     end
@@ -743,61 +760,95 @@ function weapon_value(it, cur, it2, sit)
         if ego == "distortion" then
             return -1, -1
         elseif ego == "holy wrath" then
-            if intrinsic_evil() or you.god() == "Yredelemnul" then
+            -- We can never use this.
+            if intrinsic_evil() then
                 return -1, -1
             end
 
-            if extended then
-                value = value + 500
+            if undead_demon then
+                val1 = val1 + (cur and 500 or 0)
+                val2 = val2 + 500
+            -- This will eventaully be good on the Orb run.
+            else
+                val2 = val2 + 500
             end
+        -- Not good against demons or undead, otherwise this is what we want.
         elseif ego == "vampirism" then
-            if planning_good_god then
-                return -1, -1
+            -- It may be good at some point if we go to non undead-demon places
+            -- before the Orb. XXX: Determine this from goals and adjust this
+            -- value based on the result.
+            if undead_demon then
+                val2 = val2 + 500
+            else
+                val1 = val1 + (cur and 500 or 0)
+                val2 = val2 + 500
             end
-
-            if extended then
-                value = value - 400
-            end
-
-             -- This is what we want.
-            value = value + 500
         elseif ego == "speed" then
-            if you.god() == "Cheibriados" then
-                return -1, -1
-            end
-
             -- This is good too
             value = value + 300
         elseif ego == "spectralizing" then
-            value = value + 200
-        elseif ego == "electrocution" then
-            value = value + 150
+            value = value + 400
         elseif ego == "draining" then
-            if planning_good_god then
-                return -1, -1
+            -- XXX: Same issue as for vampirism above.
+            if undead_demon then
+                val2 = val2 + 75
+            else
+                val1 = val1 + (cur and 75 or 0)
+                val2 = val2 + 75
+            end
+        elseif ego == "heavy" then
+            value = value + 100
+        elseif ego == "flaming"
+                or ego == "freezing"
+                or ego == "electrocution" then
+            value = value + 75
+        elseif ego == "protection" or ego == "penetration" then
+            value = value + 50
+        elseif ego == "venom" and not undead_demon then
+            -- XXX: Same issue as for vampirism above.
+            if undead_demon then
+                val2 = val2 + 50
+            else
+                val1 = val1 + (cur and 50 or 0)
+                val2 = val2 + 50
+            end
+        elseif ego == "antimagic" then
+            local new_mmp = select(2, you.mp())
+            -- Swapping to antimagic reduces our max MP by 2/3.
+            if weap:ego() ~= "antimagic" then
+                new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
+            end
+            if not enough_max_mp_for_god(new_mmp, you.god()) then
+                if cur then
+                    return -1, -1
+                else
+                    val1 = -10000
+                end
+            elseif not cur and not future_gods_enough_max_mp(new_mmp) then
+                val1 = -10000
             end
 
-            if not extended then
-                value = value + 75
-            end
-        elseif ego == "flaming" or ego == "freezing" or ego == "vorpal" then
-            value = value + 75
-        elseif ego == "protection" then
-            value = value + 50
-        elseif ego == "venom" and not extended then
-            value = value + 50
-        elseif ego == "antimagic" then
             if you.race() == "Vine Stalker" then
                 value = value - 300
             else
                 value = value + 75
             end
-        elseif ego == "pain"
-                and (planning_good_god or you.god() == "Trog") then
-            return -1, -1
-        elseif ego == "chaos"
-                and (planning_good_god or you.god() == "Cheibriados") then
-            return -1, -1
+        elseif ego == "acid" then
+            if branch_soon("Slime") then
+                if cur then
+                    return -1, -1
+                else
+                    val1 = -10000
+                end
+            elseif not cur and planning_slime then
+                val1 = -10000
+            end
+
+            -- The best possible ranged brand aside from possibly holy wrath vs
+            -- undead or demons. Keeping this value higher than 500 for now to
+            -- make Punk more competitive than all well-enchanted longbows save
+            -- those with speed or holy wrath versus demons and undead.
+            value = value + 750
         end
     end
 
@@ -805,27 +856,20 @@ function weapon_value(it, cur, it2, sit)
         value = value + 30 * it.plus
     end
 
-    delay_estimate = min(7, math.floor(it.delay / 2))
-    if it.weap_skill == "Short Blades" and delay_estimate > 5 then
-        delay_estimate = 5
-    end
     -- We might be delayed by a shield or not yet at min delay, so add a little.
-    delay_estimate = delay_estimate + 1
-    value = value + 1200 * it.damage / delay_estimate
+    value = value + 1200 * it.damage / (weapon_min_delay(it) + 1)
 
-    -- Subtract a bit for very slow weapons because of how much skill they
-    -- require to reach min delay.
-    if it.delay > 17 then
-        value = value - 120 * (it.delay - 17)
-    end
-
-    if it.weap_skill ~= wskill() then
+    if it.weap_skill ~= weap_skill then
         value = value / 10
-        val1 = val1 / 10
+        if val1 > 0 then
+            val1 = val1 / 10
+        end
         val2 = val2 / 10
     end
 
-    return value + val1, value + val2
+    val1 = val1 + value
+    val2 = val2 + value
+    return val1, val2
 end
 
 function amulet_value(it, cur, it2)
@@ -834,15 +878,31 @@ function amulet_value(it, cur, it2)
         return -1, -1
     end
 
+    local val1, val2 = 0, 0
+    if current_god_hates_item(it) then
+        if cur then
+            return -1, -1
+        else
+            val1 = -10000
+        end
+    elseif not cur and future_gods_hate_item(it) then
+        val1 = -10000
+    end
+
     if not it.fully_identified then
         if cur then
             return 800, 800
-        else
-            return -1, 1000
         end
+
+        if val1 > -1 then
+            val1 = -1
+        end
+        val2 = 1000
     end
 
-    local val1, val2 = total_resist_value(it, cur, it2)
+    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    val1 = val1 + res_val1
+    val2 = val2 + res_val2
     return val1, val2
 end
 
@@ -877,25 +937,23 @@ function want_wand(it)
     end
 
     local sub = it.subtype()
-    if sub and sub == "digging" then
-        return true
-    end
+    return not sub or sub == "digging"
 end
 
 function want_potion(it)
-    sub = it.subtype()
+    local sub = it.subtype()
     if sub == nil then
         return true
     end
 
-    wanted = { "curing", "heal wounds", "haste", "resistance",
+    local wanted = { "curing", "heal wounds", "haste", "resistance",
         "experience", "might", "mutation", "cancellation" }
 
-    if planning_god_uses_mp then
+    if god_uses_mp() or future_gods_use_mp then
         table.insert(wanted, "magic")
     end
 
-    if planning_undead_demon_branches then
+    if planning_tomb then
         table.insert(wanted, "lignification")
         table.insert(wanted, "attraction")
     end
@@ -904,12 +962,12 @@ function want_potion(it)
 end
 
 function want_scroll(it)
-    sub = it.subtype()
+    local sub = it.subtype()
     if sub == nil then
         return true
     end
 
-    wanted = { "acquirement", "brand weapon", "enchant armour",
+    local wanted = { "acquirement", "brand weapon", "enchant armour",
         "enchant weapon", "identify", "teleportation"}
 
     if planning_zig then
@@ -947,21 +1005,19 @@ function item_is_dominated(it)
     if slotname == "Weapon" and you.xl() < 18
             and not item_is_sit_dominated(it, "hydra") then
         return false
-    elseif planning_undead_demon_branches
-            and slotname == "Weapon"
-            and not item_is_sit_dominated(it, "extended") then
-        return false
     elseif slotname == "Weapon"
                 and (you.god() == "the Shining One"
                         and not you.one_time_ability_used()
-                    or planning_tso)
+                    or future_tso)
                 and not item_is_sit_dominated(it, "bless") then
         return false
     end
+
     local minv, maxv = equip_value(it)
     if maxv <= 0 then
         return true
     end
+
     local num_slots = 1
     if slotname == "Ring" then
         num_slots = max_rings()
@@ -971,8 +1027,8 @@ function item_is_dominated(it)
             local minv2, maxv2 = equip_value(it2)
             if minv2 >= maxv
                     or minv2 >= minv
-                    and maxv2 >= maxv
-                    and resist_dominated(it, it2) then
+                        and maxv2 >= maxv
+                        and resist_dominated(it, it2) then
                 num_slots = num_slots - 1
                 if num_slots == 0 then
                     return true
@@ -994,7 +1050,7 @@ function should_upgrade(it, old_it, sit)
     end
 
     if not it.fully_identified and not should_drop(it) then
-        if equip_slot(it) == "Weapon" and it.weap_skill ~= wskill() then
+        if equip_slot(it) == "Weapon" and it.weap_skill ~= weapon_skill() then
             return true
         end
 
@@ -1017,6 +1073,10 @@ function should_remove(it)
 end
 
 function want_missile(it)
+    if weapon_is_ranged() then
+        return false
+    end
+
     local st = it.subtype()
     if st == "javelin"
             or st == "large rock"
@@ -1038,14 +1098,31 @@ function want_miscellaneous(it)
     return false
 end
 
+function record_seen_item(level, name)
+    if not c_persist.seen_items[level] then
+        c_persist.seen_items[level] = {}
+    end
+
+    c_persist.seen_items[level][name] = true
+end
+
+function have_progression_item(name)
+    return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
+        or name == ORB_NAME and have_orb
+end
 
 function autopickup(it, name)
     if not initialized then
         return
     end
 
-    if name:find("rune of Zot")
-            or (gameplan_status == "Orb" and name:find("Orb of Zot")) then
+    local item_name = it:name()
+    if item_name:find(RUNE_SUFFIX) then
+        record_seen_item(you.where(), item_name)
+        return true
+    elseif item_name == ORB_NAME then
+        record_seen_item(you.where(), item_name)
+        c_persist.found_orb = true
         return true
     end
 
@@ -1053,9 +1130,6 @@ function autopickup(it, name)
         return false
     end
     local class = it.class(true)
-    old_value = 0
-    new_value = 0
-    ring = false
     if class == "armour" or class == "weapon" or class == "jewellery" then
         return not item_is_dominated(it)
     elseif class == "gold" then
@@ -1074,9 +1148,6 @@ function autopickup(it, name)
         return false
     end
 end
-
-clear_autopickup_funcs()
-add_autopickup_func(autopickup)
 
 -----------------------------------------
 -- item functions
@@ -1152,11 +1223,13 @@ end
 
 function have_two_hander()
     for it in inventory() do
-        if it.class(true) == "weapon" and it.weap_skill == wskill()
-             and it.hands == 2 then
+        if it.class(true) == "weapon"
+                and it.weap_skill == weapon_skill()
+                and it.hands == 2 then
             return true
         end
     end
+
     return false
 end
 
@@ -1171,7 +1244,6 @@ function count_item(cls, name)
 end
 
 function find_item(cls, name)
-    if cls == "wand" then return find_wand(name) end
     for it in inventory() do
         if it.class(true) == cls and it.name():find(name) then
             return items.index_to_letter(it.slot)
@@ -1187,50 +1259,80 @@ function have_item(cls, name)
     end
 end
 
-function best_missile()
-    local missiles = {"boomerang", "javelin", "large rock"}
-    local best_rating = 0
-    local best_item = nil
-    local it, i, name
-    for it in inventory() do
-        local rating = 0
-        if it.class(true) == "missile" then
-            for i, name in ipairs(missiles) do
-                if it.name():find(name) then
-                    rating = i
-                    if it.ego() then
-                        rating = rating + 0.5
-                    end
-                    if rating > best_rating then
-                        best_rating = rating
-                        best_item = it
-                    end
-                end
-            end
-        end
-    end
-    return best_rating, best_item
+function get_dig_wand()
+    turn_memo("get_dig_wand",
+        function()
+            return find_item("wand", "digging")
+        end)
 end
 
-function find_wand(name)
-    for it in inventory() do
-        if it.class(true) == "wand" and it.name():find(name) then
-            return items.index_to_letter(it.slot)
+local missile_ratings = {
+    ["boomerang"] = 1,
+    ["javelin"] = 2,
+    ["large rock"] = 3
+}
+function missile_rating(missile)
+    for name, rating in pairs(missile_ratings) do
+        if missile:name():find(name) then
+            if missile:ego() then
+                rating = rating + 0.5
+            end
+
+            return rating
         end
     end
+end
+
+function best_missile()
+    return turn_memo("best_missile",
+        function()
+            local best_rating = 0
+            local best_item
+            for it in inventory() do
+                local rating = missile_rating(it)
+                if rating and rating > best_rating then
+                    best_rating = rating
+                    best_item = it
+                end
+            end
+            return best_item
+        end)
+end
+
+function get_weapon()
+    return items.equipped_at("Weapon")
+end
+
+function weapon_is_ranged()
+    return turn_memo("weapon_is_ranged",
+        function()
+            return weapon_skill() == "Ranged Weapons"
+        end)
+end
+
+function have_ranged_attack()
+    return turn_memo("have_ranged_attack",
+        function()
+            return weapon_is_ranged() or best_missile()
+        end)
 end
 
 function count_item(cls, name)
-    f = find_item(cls, name)
-    if f then
-        return item(f).quantity
+    local it = find_item(cls, name)
+    if it then
+        return item(it).quantity
     end
     return 0
 end
 
+function reach_range()
+    local wp = get_weapon()
+    return wp and not wp.is_melded and wp.reach_range or 1
+end
+
 function have_reaching()
-    local wp = items.equipped_at("weapon")
-    return wp and wp.reach_range == 2 and not wp.is_melded
+    local wp = get_weapon()
+    return wp and wp.reach_range >= 2 and not wp.is_melded
 end
 
 function shield_skill_utility()
@@ -1247,37 +1349,49 @@ function shield_skill_utility()
     return 0.25 + 0.5 * shield_penalty
 end
 
+function weapon_min_delay(weapon)
+    local delay = weapon.delay
+
+    if contains_string_in(weapon:subtype(),
+            { "crossbow", "arbalest" }) then
+        -- The maxes used in this function are used to cover cases like Dark
+        -- Maul and Sniper, which have high base delays that can't reach the
+        -- usual min delays.
+        return max(10, weapon.delay - 13.5)
+    end
+
+    if weapon.weap_skill == "Short Blades" then
+        return 5
+    end
+
+    if contains_string_in(weapon:subtype(), { "demon whip", "scourge" }) then
+        return 5
+    end
+
+    if contains_string_in(weapon:subtype(),
+            { "demon blade", "eudemon blade", "trishula", "dire flail" }) then
+        return 6
+    end
+
+    return max(7, weapon.delay - 13.5)
+end
+
 function min_delay_skill()
-    weap = items.equipped_at("Weapon")
-    if not weap then
-        return 27
+    local weapon = get_weapon()
+    if not weapon then
+        return
     end
-    if weap.weap_skill ~= wskill() then
-        return last_min_delay_skill
-    end
-    if weap.weap_skill == "Short Blades" and weap.delay == 12 then
-        last_min_delay_skill = 14
-        return 14
-    end
-    local mindelay = math.floor(weap.delay / 2)
-    if mindelay > 7 then
-        mindelay = 7
-    end
-    last_min_delay_skill = 2 * (weap.delay - mindelay)
-    return last_min_delay_skill
+
+    return 2 * (weapon.delay - weapon_min_delay(weapon))
 end
 
 function at_min_delay()
-    return you.base_skill(wskill()) >= min(27,
-        min_delay_skill() + (you.god() == "Ru" and 1 or 0))
+    return you.base_skill(weapon_skill()) >= min(27, min_delay_skill())
 end
 
 function cleaving()
-    weap = items.equipped_at("Weapon")
-    if weap and weap.weap_skill == "Axes" then
-        return true
-    end
-    return false
+    local weapon = get_weapon()
+    return weapon and weapon.weap_skill == "Axes"
 end
 
 function armour_ac()
@@ -1311,11 +1425,8 @@ function armour_evp()
     end
 end
 
-function can_swap(equip_slot)
-    local it = items.equipped_at(equip_slot)
-    if it and (it.cursed
-                or it.name():find("obsidian axe")
-                    and you.status("mesmerised")) then
+function can_swap(it)
+    if it and it.name():find("obsidian axe") and you.status("mesmerised") then
         return false
     end
 
@@ -1323,15 +1434,13 @@ function can_swap(equip_slot)
     if you.flying()
             and (feat == "deep_water" and not intrinsic_amphibious()
                 or feat == "lava" and not intrinsic_flight())
-            and player_resist("Fly", items.equipped_at("Weapon")) == 0 then
+            and player_resist("Fly", it) == 0 then
         return false
     end
 
     return true
 end
 
-function is_melee_weapon(it)
-    return it
-        and it.class(true) == "weapon"
-        and it.weap_skill ~= "Ranged Weapons"
+function is_weapon(it)
+    return it and it.class(true) == "weapon"
 end

@@ -32,9 +32,9 @@ function spell_castable(sp)
         end
     elseif sp == "Summon Small Mammal" then
         local count = 0
-        for x, y in square_iter(0, 0) do
-            m = monster_array[x][y]
-            if m and m:attitude() == enum_att_friendly then
+        for pos in square_iter(origin) do
+            local mons = get_monster_at(pos)
+            if mons and mons:attitude() == enum_att_friendly then
                 count = count + 1
             end
         end
@@ -60,16 +60,16 @@ function plan_starting_spell()
     if not sp then
         return false
     end
-    if cmp() < spells.mana_cost(sp) then
+    if you.mp() < spells.mana_cost(sp) then
         return false
     end
-    if you.xl() > 4 and not is_waiting then
+    if you.xl() > 4 then
         return false
     end
     local dist = distance_to_tabbable_enemy(0, 0)
-    if dist < 2 and wskill() ~= "Unarmed Combat" then
+    if dist < 2 and weapon_skill() ~= "Unarmed Combat" then
         local weap = items.equipped_at("Weapon")
-        if weap and weap.weap_skill == wskill() then
+        if weap and weap.weap_skill == weapon_skill() then
             return false
         end
     end

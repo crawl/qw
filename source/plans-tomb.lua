@@ -1,24 +1,27 @@
 function plan_tomb_use_hatch()
     if (where == "Tomb:2" and not have_branch_runes("Tomb")
-            or where == "Tomb:1")
-         and view.feature_at(0, 0) == "escape_hatch_down" then
+                or where == "Tomb:1")
+            and view.feature_at(0, 0) == "escape_hatch_down" then
         prev_hatch_dist = 1000
-        magic(">")
+        go_downstairs()
         return true
     end
+
     if (where == "Tomb:3" and have_branch_runes("Tomb")
-            or where == "Tomb:2")
-         and view.feature_at(0, 0) == "escape_hatch_up" then
+                or where == "Tomb:2")
+            and view.feature_at(0, 0) == "escape_hatch_up" then
         prev_hatch_dist = 1000
-        magic("<")
+        go_upstairs()
         return true
     end
+
     return false
 end
 
 function plan_tomb_go_to_final_hatch()
-    if where == "Tomb:2" and not have_branch_runes("Tomb")
-         and view.feature_at(0, 0) ~= "escape_hatch_down" then
+    if where == "Tomb:2"
+            and not have_branch_runes("Tomb")
+            and view.feature_at(0, 0) ~= "escape_hatch_down" then
         magic("X>\r")
         return true
     end
@@ -26,45 +29,46 @@ function plan_tomb_go_to_final_hatch()
 end
 
 function plan_tomb_go_to_hatch()
-    if where == "Tomb:3" then
-        if have_branch_runes("Tomb")
-             and view.feature_at(0, 0) ~= "escape_hatch_up" then
-            magic("X<\r")
-            return true
-        end
+    if where == "Tomb:3"
+            and have_branch_runes("Tomb")
+            and view.feature_at(0, 0) ~= "escape_hatch_up" then
+        magic("X<\r")
+        return true
     elseif where == "Tomb:2" then
         if not have_branch_runes("Tomb")
-             and view.feature_at(0, 0) == "escape_hatch_down" then
+                and view.feature_at(0, 0) == "escape_hatch_down" then
             return false
         end
+
         if view.feature_at(0, 0) == "escape_hatch_up" then
-            local x, y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x, y)
+            local new_hatch_dist = supdist(global_pos)
             if new_hatch_dist >= prev_hatch_dist
-                 and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
+                    and not positions_equal(global_pos, prev_hatch) then
                 return false
             end
+
             prev_hatch_dist = new_hatch_dist
-            prev_hatch_x = x
-            prev_hatch_y = y
+            prev_hatch = util.copy_table(global_pos)
         end
+
         magic("X<\r")
         return true
     elseif where == "Tomb:1" then
         if view.feature_at(0, 0) == "escape_hatch_down" then
-            local x, y = travel.waypoint_delta(waypoint_parity)
-            local new_hatch_dist = supdist(x, y)
+            local new_hatch_dist = supdist(global_pos)
             if new_hatch_dist >= prev_hatch_dist
-                 and (x ~= prev_hatch_x or y ~= prev_hatch_y) then
+                    and not positions_equal(global_pos, prev_hatch) then
                 return false
             end
+
             prev_hatch_dist = new_hatch_dist
-            prev_hatch_x = x
-            prev_hatch_y = y
+            prev_hatch = util.copy_table(global_pos)
         end
+
         magic("X>\r")
         return true
     end
+
     return false
 end
 

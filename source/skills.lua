@@ -58,12 +58,15 @@ function skill_value(sk)
     elseif sk == "Shields" then
         return shield_skill_utility()
     elseif sk == "Throwing" then
-        local rating
-        rating, _ = best_missile()
-        return 0.2 * rating
+        local missile = best_missile()
+        if missile then
+            return 0.2 * missile_rating(missile)
+        else
+            return 0
+        end
     elseif sk == "Invocations" then
         if you.god() == "the Shining One" then
-            return planning_undead_demon_branch and 1.5 or 0.5
+            return undead_or_demon_branch_soon() and 1.5 or 0.5
         elseif you.god() == "Uskayaw" or you.god() == "Zin" then
             return 0.75
         elseif you.god() == "Elyvilon" then
@@ -71,8 +74,8 @@ function skill_value(sk)
         else
             return 0
         end
-    elseif sk == wskill() then
-        return (at_min_delay() and 0.5 or 1.5)
+    elseif sk == weapon_skill() then
+        return at_min_delay() and 0.5 or 1.5
     end
 end
 
@@ -80,8 +83,8 @@ function choose_skills()
     local skills = {}
     -- Choose one martial skill to train.
     local martial_skills = {
-        wskill(), "Fighting", "Shields", "Armour", "Dodging", "Invocations",
-        "Throwing"
+        weapon_skill(), "Fighting", "Shields", "Armour", "Dodging",
+        "Invocations", "Throwing"
     }
 
     local best_sk
@@ -97,9 +100,8 @@ function choose_skills()
         end
     end
     if best_utility > 0 then
-        if DEBUG_MODE then
-            dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility,
-                "skills")
+        if debug_channel("skills") then
+            dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility)
         end
 
         table.insert(skills, best_sk)
@@ -138,7 +140,7 @@ function choose_skills()
             and you.god() ~= "No God"
             and mp_skill_level < 12
             and (at_min_delay()
-                 or you.base_skill(wskill()) >= 3 * mp_skill_level) then
+                 or you.base_skill(weapon_skill()) >= 3 * mp_skill_level) then
         table.insert(skills, mp_skill)
     end
 

@@ -1,4 +1,6 @@
---
+------------------
+-- Functions and data related to god worship.
+
 -- God data: name (as reported by you.god()), whether the god uses Invocations,
 -- whether the god has abilities that use MP.
 --
@@ -52,6 +54,9 @@ function initialize_god_data()
         god_data[god] = {}
         god_data[god]["uses_invocations"] = entry[2]
         god_data[god]["uses_mp"] = entry[3]
+        if entry[3] then
+            table.insert(mp_using_gods, god)
+        end
 
         god_lookups[god:upper()] = god
         if god == "the Shining One" then
@@ -89,6 +94,116 @@ function god_uses_mp(god)
     return god_data[god].uses_mp
 end
 
+function enough_max_mp_for_god(max_mp, god)
+    -- Hero costs 2 and Finesse costs 5, so we want at least 7mmp
+    if god == "Okawaru" then
+        return max_mp >= 7
+    end
+
+    -- These gods want to spam MP-using abilities .
+    if god == "Cheibriados" or god == "the Shining One" then
+        return max_mp >= 30
+    end
+
+    return true
+end
+
+function future_gods_enough_max_mp(max_mp)
+    for _, god in ipairs(future_gods) do
+        if not enough_max_mp_for_god(max_mp, god) then
+            return false
+        end
+    end
+
+    return true
+end
+
+function item_is_evil(it)
+    local subtype = it:subtype()
+    if subtype and subtype:find("^demon") then
+        return true
+    end
+
+    local ego = it:ego()
+    if ego == "pain"
+            or ego == "vampirism"
+            or ego == "draining"
+            or ego == "chaos"
+            or ego == "reaping" then
+        return true
+    end
+
+    if not subtype then
+        return false
+    end
+
+    local name = it:name()
+    return name:find("Vitality") and subtype:find("^amulet")
+        or name:find("Damnation") and subtype == "arbalest"
+        or name:find("Cerebov") and subtype == "great sword"
+        or name:find("Asmodeus") and subtype == "eveningstar"
+        or name:find("Cigotuvi's embrace")
+        or name:find("Black Knight's barding")
+end
+
+function current_god_hates_item(it)
+    -- We don't want to be wearing hated items when we convert to a new god,
+    -- since we might incur pennance while taking them off.
+    local new_god
+    if goal_status then
+        new_god = goal_god(goal_status)
+        if new_god and view.feature_at(0, 0) ~= god_altar(new_god) then
+            new_god = nil
+        end
+    end
+
+    return god_hates_item(you.god(), it)
+        or new_god and god_hates_item(new_god, it)
+end
+
+function god_hates_item(god, it)
+    if is_good_god(god) and item_is_evil(it) then
+        return true
+    end
+
+    local ego = it:ego()
+    if god == "Cheibriados" then
+        return ego == "speed" or ego == "chaos"
+    end
+
+    if god == "Yredelemnul" then
+        return ego == "holy wrath"
+    end
+
+    if god == "Trog" then
+        return ego == "pain"
+    end
+
+    return false
+end
+
+function future_gods_hate_item(it)
+    for _, god in ipairs(future_gods) do
+        if god_hates_item(god, it) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function altar_god(feat)
+    return god_full_name(feat:gsub("^altar_", ""):gsub("_", " "))
+end
+
+function god_altar(god)
+    if not god then
+        god = you.god()
+    end
+
+    return "altar_" .. god:lower():gsub(" ", "_")
+end
+
 function god_uses_invocations(god)
     if not god then
         god = you.god()
@@ -110,21 +225,23 @@ function altar_found(god, los_state)
         return
     end
 
-    for w, s in pairs(c_persist.altars[god]) do
-        if s >= los_state then
-            return w
+    for level, entries in pairs(c_persist.altars[god]) do
+        for _, state in pairs(entries) do
+            if state.los >= los_state then
+                return level
+            end
         end
     end
 end
 
-function can_hand()
+function can_trogs_hand()
     return you.god() == "Trog"
                  and you.piety_rank() >= 2
                  and not you.regenerating()
                  and can_invoke()
 end
 
-function can_bia()
+function can_brothers_in_arms()
     return you.god() == "Trog"
                  and you.piety_rank() >= 4
                  and can_invoke()
@@ -134,7 +251,7 @@ end
 function can_heroism()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 1
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and not you.status("heroic")
                  and can_invoke()
 end
@@ -142,50 +259,50 @@ end
 function can_finesse()
     return you.god() == "Okawaru"
                  and you.piety_rank() >= 5
-                 and cmp() >= 5
+                 and you.mp() >= 5
                  and not you.status("finesse-ful")
                  and can_invoke()
 end
 
 function can_recall()
-    return (you.god() == "Yredelemnul" and you.piety_rank() >= 2)
-                    or (you.god() == "Beogh" and you.piety_rank() >= 4)
-                 and not you.status("recalling")
-                 and cmp() >= 2
-                 and can_invoke()
+    return you.god() == "Yredelemnul"
+            or you.god() == "Beogh" and you.piety_rank() >= 4
+        and not you.status("recalling")
+        and you.mp() >= 2
+        and can_invoke()
 end
 
 function can_drain_life()
     return you.god() == "Yredelemnul"
                  and you.piety_rank() >= 4
-                 and cmp() >= 6
+                 and you.mp() >= 6
                  and can_invoke()
 end
 
 function can_recall_ancestor()
     return you.god() == "Hepliaklqana"
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and can_invoke()
 end
 
 function can_slouch()
     return you.god() == "Cheibriados"
                  and you.piety_rank() >= 4
-                 and cmp() >= 5
+                 and you.mp() >= 5
                  and can_invoke()
 end
 
 function can_ely_healing()
     return you.god() == "Elyvilon"
                  and you.piety_rank() >= 4
-                 and cmp() >= 2
+                 and you.mp() >= 2
                  and can_invoke()
 end
 
 function can_purification()
     return you.god() == "Elyvilon"
                  and you.piety_rank() >= 3
-                 and cmp() >= 3
+                 and you.mp() >= 3
                  and can_invoke()
 end
 
@@ -206,7 +323,7 @@ end
 function can_apocalypse()
     return you.god() == "Ru"
                  and you.piety_rank() >= 5
-                 and cmp() >= 8
+                 and you.mp() >= 8
                  and not you.exhausted()
                  and can_invoke()
 end
@@ -214,34 +331,34 @@ end
 function can_grand_finale()
     return you.god() == "Uskayaw"
                  and you.piety_rank() >= 5
-                 and cmp() >= 8
+                 and you.mp() >= 8
                  and can_invoke()
 end
 
-function can_sgd()
+function can_greater_servant()
     return you.god() == "Makhleb"
                  and you.piety_rank() >= 5
-                 and chp() > 10
+                 and you.hp() > 10
                  and can_invoke()
 end
 
 function can_cleansing_flame(ignore_mp)
     return you.god() == "the Shining One"
         and you.piety_rank() >= 3
-        and (ignore_mp or cmp() >= 5)
+        and (ignore_mp or you.mp() >= 5)
         and can_invoke()
 end
 
 function can_divine_warrior(ignore_mp)
     return you.god() == "the Shining One"
                  and you.piety_rank() >= 5
-                 and (ignore_mp or cmp() >= 8)
+                 and (ignore_mp or you.mp() >= 8)
                  and can_invoke()
 end
 
 function can_destruction()
     return you.god() == "Makhleb"
-                 and chp() > 6
+                 and you.hp() > 6
                  and you.piety_rank() >= 4
                  and can_invoke()
 end
@@ -259,92 +376,186 @@ function can_foxfire_swarm()
                  and can_invoke()
 end
 
-function count_bia(r)
+function count_brothers_in_arms(radius)
     if you.god() ~= "Trog" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        m = monster_array[x][y]
-        if m and m:is_safe()
-                and m:is("berserk")
-                and contains_string_in(m:name(),
-                    {"ogre", "giant", "bear", "troll"}) then
+    for pos in square_iter(origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_safe()
+                and mons:is("berserk")
+                and contains_string_in(mons:name(),
+                    { "ogre", "giant", "bear", "troll" }) then
             i = i + 1
         end
     end
     return i
 end
 
-function count_elliptic(r)
+function count_elliptic(radius)
     if you.god() ~= "Hepliaklqana" then
         return 0
     end
 
-    local x, y
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        m = monster_array[x][y]
-        if m and m:is_safe()
-                and contains_string_in(m:name(), {"elliptic"}) then
+    for pos in square_iter(origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"elliptic"}) then
             i = i + 1
         end
     end
     return i
 end
 
-function mons_is_greater_demon(m)
-    return contains_string_in(m:name(), {"Executioner", "green death",
-        "blizzard demon", "balrug", "cacodemon"})
+function monster_is_greater_servant(mons)
+    return contains_string_in(mons:name(), { "Executioner", "green death",
+        "blizzard demon", "balrug", "cacodemon" })
 end
 
-function count_sgd(r)
+function count_greater_servants(radius)
     if you.god() ~= "Makhleb" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        local m = monster_array[x][y]
-        if m and m:is_safe()
-                and m:is("summoned")
-                and mons_is_greater_demon(m) then
+    for pos in square_iter(origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_safe()
+                and mons:is("summoned")
+                and monster_is_greater_servant(m) then
             i = i + 1
         end
     end
     return i
 end
 
-function count_divine_warrior(r)
+function count_divine_warriors(radius)
     if you.god() ~= "the Shining One" then
         return 0
     end
 
     local i = 0
-    for x, y in square_iter(0, 0, r) do
-        local m = monster_array[x][y]
-        if m and m:is_safe()
-                and contains_string_in(m:name(), {"angel", "daeva"}) then
+    for pos in square_iter(origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"angel", "daeva"}) then
             i = i + 1
         end
     end
     return i
 end
 
-function record_altar(x, y)
-    local feat = view.feature_at(x, y)
-    local god = god_full_name(feat:gsub("altar_", ""):gsub("_", " "))
-    local state = los_state(x, y)
+function count_beogh_allies(radius)
+    if you.god() ~= "Beogh" then
+        return 0
+    end
+
+    local i = 0
+    for pos in square_iter(origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_safe()
+                and contains_string_in(mons:name(), {"orc "}) then
+            i = i + 1
+        end
+    end
+    return i
+end
+
+function update_altar(god, level, hash, state, force)
+    if state.safe == nil and not state.los then
+        error("Undefined altar state.")
+    end
+
     if not c_persist.altars[god] then
         c_persist.altars[god] = {}
     end
 
-    if c_persist.altars[god][where]
-            and c_persist.altars[god][where] >= state then
+    if not c_persist.altars[god][level] then
+        c_persist.altars[god][level] = {}
+    end
+
+    if not c_persist.altars[god][level][hash] then
+        c_persist.altars[god][level][hash] = {}
+    end
+
+    local current = c_persist.altars[god][level][hash]
+    if current.safe == nil then
+        current.safe = true
+    end
+    if current.los == nil then
+        current.los = FEAT_LOS.NONE
+    end
+
+    if state.safe == nil then
+        state.safe = current.safe
+    end
+
+    if state.los == nil then
+        state.los = current.los
+    end
+
+    local los_changed = current.los < state.los
+            or force and current.los ~= state.los
+    if state.safe ~= current.safe or los_changed then
+        if debug_channel("explore") then
+            local pos = position_difference(unhash_position(hash), global_pos)
+            dsay("Updating " .. god .. " altar on " .. level .. " at "
+                .. pos_string(pos) .. " from " .. stairs_state_string(current)
+                .. " to " .. stairs_state_string(state))
+        end
+
+        current.safe = state.safe
+
+        if los_changed then
+            current.los = state.los
+            want_goal_update = true
+        end
+        return true
+    end
+
+    return false
+end
+
+function estimate_slouch_damage()
+    local count = 0
+    for _, enemy in ipairs(enemy_list) do
+        local speed = enemy:speed()
+        local val = 0
+        if speed >= 6 then
+            val = 3
+        elseif speed == 5 then
+            val = 2.5
+        elseif speed == 4 then
+            val = 1.5
+        elseif speed == 3 then
+            val = 1
+        end
+        if enemy:name() == "orb of fire" then
+            val = val + 1
+        elseif v > 0 and enemy:threat() <= 1 then
+            val = 0.5
+        end
+        count = count + val
+    end
+    return count
+end
+
+function update_permanent_flight()
+    if not gained_permanent_flight then
         return
     end
 
-    c_persist.altars[god][where] = state
-    want_gameplan_update = true
+    for god, levels in pairs(c_persist.altars) do
+        for level, altars in pairs(levels) do
+            for hash, state in pairs(altars) do
+                if state.los >= FEAT_LOS.SEEN
+                        and state.los < FEAT_LOS.REACHABLE then
+                    update_altar(god, level, hash, { los = FEAT_LOS.REACHABLE })
+                end
+            end
+        end
+    end
 end

@@ -1,47 +1,65 @@
 ------------------
 -- Debug functions
 
-function set_gameplans(str)
-    override_gameplans = str
+function set_goals(str)
+    override_goals = str
     initialized = false
     update_coroutine = coroutine.create(turn_update)
     run_update()
 end
 
-function restore_gameplans()
-    override_gameplans = nil
+function restore_goals()
+    override_goals = nil
     initialized = false
     update_coroutine = coroutine.create(turn_update)
     run_update()
+end
+
+function initialize_debug()
+    debug_mode = DEBUG_MODE
+    debug_channels = {}
+    for _, channel in ipairs(DEBUG_CHANNELS) do
+        debug_channels[channel] = true
+    end
 end
 
 function toggle_debug()
-    DEBUG_MODE = not DEBUG_MODE
+    debug_mode = not debug_mode
+    dsay((debug_mode and "Enabling" or "Disabling")
+      .. " debug mode")
+end
+
+function debug_channel(channel)
+    return debug_mode and debug_channels[channel]
 end
 
 function toggle_debug_channel(channel)
-    if util.contains(DEBUG_CHANNELS, channel) then
-        local list = util.copy_table(DEBUG_CHANNELS)
-        for i, e in ipairs(DEBUG_CHANNELS) do
-            if e == "plans" then
-                table.remove(list, i)
-            end
-        end
-        DEBUG_CHANNELS = list
+    debug_channels[channel] = not debug_channels[channel]
+    dsay((debug_channels[channel] and "Enabling " or "Disabling ")
+      .. channel .. " debug channel")
+end
+
+function dsay(x)
+    local str
+    if type(x) == "table" then
+        str = stringify_table(x)
     else
-        table.insert(DEBUG_CHANNELS, channel)
+        str = tostring(x)
     end
+    -- Convert x to string to make debugging easier. We don't do this for
+    -- say() and note() so we can catch errors.
+    crawl.mpr(you.turns() .. " ||| " .. str)
 end
 
 function test_radius_iter()
     dsay("Testing 3, 3 with radius 1")
-    for x, y in radius_iter(3, 3, 1) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
+    for pos in radius_iter({ x = 3, y = 3 }, 1) do
+        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 
-    dsay("Testing 0, 0 with radius 3")
-    for x, y in radius_iter(0, 0, 3) do
-        dsay("x: " .. tostring(x) .. ", y: " .. tostring(y))
+    dsay("Testing origin with radius 3")
+    for pos in radius_iter(origin, 3) do
+        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 end
 
@@ -52,7 +70,8 @@ function ttt()
         for j = -los_radius, los_radius do
             m = monster.get_monster_at(i, j)
             if m then
-                crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name() .. ", desc = " .. m:desc() .. ".")
+                crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name()
+                    .. ", desc = " .. m:desc() .. ".")
             end
         end
     end
@@ -72,43 +91,140 @@ function ttt()
     end
 end
 
-function print_level_map()
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local str
+function print_traversal_map(center)
+    if not center then
+        center = origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(global_pos, center)
+    say("Traversal map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
-        str = ""
+        local str = ""
         for x = -20, 20 do
-            if level_map[num][dx + x][dy + y] == nil then
+            local pos = position_sum(map_center, { x = x, y = y })
+            local traversable = map_is_traversable_at(pos)
+            local char
+            if positions_equal(pos, global_pos) then
+                if traversable == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (traversable and "@" or "7")
+                end
+            elseif positions_equal(pos, map_center) then
+                if traversable == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (traversable and "&" or "8")
+                end
+            elseif traversable == nil then
                 str = str .. " "
             else
-                str = str .. level_map[num][dx + x][dy + y]
+                str = str .. (traversable and "." or "#")
             end
         end
         say(str)
     end
+
+    crawl.setopt("msg_condense_repeats = true")
 end
 
-function print_stair_dists()
-    local num = waypoint_parity
-    local dx, dy = travel.waypoint_delta(num)
-    local str
-    for i = 1, #stair_dists[num] do
-    say("---------------------------------------")
+function print_unexcluded_map(center)
+    if not center then
+        center = origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(global_pos, center)
+    say("Unexcluded map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
-        str = ""
+        local str = ""
         for x = -20, 20 do
-            if stair_dists[num][i][dx + x][dy + y] == nil then
+            local pos = position_sum(map_center, { x = x, y = y })
+            local unexcluded = map_is_unexcluded_at(pos)
+            local char
+            if positions_equal(pos, global_pos) then
+                if unexcluded == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (unexcluded and "@" or "7")
+                end
+            elseif positions_equal(pos, map_center) then
+                if unexcluded == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (unexcluded and "&" or "8")
+                end
+            elseif unexcluded == nil then
                 str = str .. " "
             else
-                str = str .. string.char(string.byte('A') +
-                stair_dists[num][i][dx + x][dy + y])
+                str = str .. (unexcluded and "." or "#")
             end
         end
         say(str)
     end
+
+    crawl.setopt("msg_condense_repeats = true")
+end
+
+function print_distance_map(dist_map, center, excluded)
+    if not center then
+        center = origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map = excluded and dist_map.excluded_map or dist_map.map
+    local map_center = position_sum(global_pos, center)
+    say("Distance map at " .. cell_string_from_map_position(dist_map.pos)
+        .. " from position " .. cell_string_from_map_position(map_center))
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            local pos = position_sum(map_center, { x = x, y = y })
+            local dist = map[pos.x][pos.y]
+            if positions_equal(pos, global_pos) then
+                if dist == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (dist > 180 and "7" or "@")
+                end
+            elseif positions_equal(pos, map_center) then
+                if dist == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (dist > 180 and "8" or "&")
+                end
+            else
+                if dist == nil then
+                    str = str .. " "
+                elseif dist > 180 then
+                    str = str .. "∞"
+                elseif dist > 61 then
+                    str = str .. "Ø"
+                else
+                    str = str .. string.char(string.byte('A') + dist)
+                end
+            end
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
+end
+
+function print_distance_maps(center, excluded)
+    if not center then
+        center = origin
+    end
+
+    for _, dist_map in pairs(distance_maps) do
+        print_distance_map(dist_map, center, excluded)
     end
 end
 
@@ -119,20 +235,47 @@ function set_counter()
     note("Game counter set to " .. c_persist.record.counter)
 end
 
-function dsay(x, channel)
-    if not channel then
-        channel = "main"
+function override_goal(goal)
+    debug_goal = goal
+    update_goal()
+end
+
+function get_global_pos()
+    return global_pos
+end
+
+function pos_string(pos)
+    return tostring(pos.x) .. "," .. tostring(pos.y)
+end
+
+function cell_string(cell)
+    local str = pos_string(cell.los_pos) .. " ("
+    if supdist(cell.los_pos) <= los_radius then
+        local mons = monster.get_monster_at(cell.los_pos.x, cell.los_pos.y)
+        if mons then
+            str = str .. mons:name() .. "; "
+        end
     end
 
-    if DEBUG_MODE and util.contains(DEBUG_CHANNELS, channel) then
-        local str
-        if type(x) == "table" then
-            str = stringify_table(x)
-        else
-            str = tostring(x)
-        end
-        -- Convert x to string to make debugging easier. We don't do this for
-        -- say() and note() so we can catch errors.
-        crawl.mpr(you.turns() .. " ||| " .. str)
-    end
+    return str .. cell.feat .. ")"
+end
+
+function cell_string_from_map_position(pos)
+    local cell = cell_from_position(position_difference(pos, global_pos))
+    return cell_string(cell)
+end
+
+function toggle_throttle()
+    coroutine_throttle = not coroutine_throttle
+    dsay((coroutine_throttle and "Enabling" or "Disabling")
+      .. " coroutine throttle")
+end
+
+function reset_coroutine()
+    update_coroutine = nil
+    collectgarbage("collect")
+end
+
+function resume_qw()
+    abort_qw = false
 end
