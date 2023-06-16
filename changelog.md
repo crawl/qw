@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3-a
+
+This version supports DCSS 0.31-a.
+
 ## 0.2.0 (2023-06-16)
 
 This version supports DCSS 0.30.
