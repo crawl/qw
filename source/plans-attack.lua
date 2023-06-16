@@ -651,7 +651,7 @@ function plan_flight_move_towards_enemy()
         return false
     end
 
-    local slot = find_item("potion", "flight")
+    local slot = find_item("potion", "enlightenment")
     if not slot then
         return false
     end
@@ -666,7 +666,7 @@ function plan_flight_move_towards_enemy()
     -- Only quaff flight when we finally reach an impassable square.
     if (feat == "deep_water" or feat == "lava")
             and not is_traversable_at(move) then
-        return drink_by_name("flight")
+        return drink_by_name("enlightenment")
     else
         move_to(move)
         return true

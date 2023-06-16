@@ -323,7 +323,7 @@ end
 function Monster:player_has_path_to()
     return self:get_property("player_has_path_to",
         function()
-            local have_flight = find_item("potion", "flight")
+            local have_flight = find_item("potion", "enlightenment")
             local square_func = traversal_function(assume_flight)
             return get_move_towards(origin, self:pos(), square_func,
                 reach_range())

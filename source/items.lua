@@ -946,8 +946,9 @@ function want_potion(it)
         return true
     end
 
-    local wanted = { "curing", "heal wounds", "haste", "resistance",
-        "experience", "might", "mutation", "cancellation" }
+    local wanted = { "cancellation", "curing", "enlightenment", "experience",
+        "heal wounds", "haste", "resistance", "might", "mutation",
+        "cancellation" }
 
     if god_uses_mp() or future_gods_use_mp then
         table.insert(wanted, "magic")
