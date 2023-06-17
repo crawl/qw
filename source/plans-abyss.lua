@@ -160,8 +160,7 @@ function plan_move_towards_abyssal_rune()
 
     local move, dest = best_move_towards_items({ abyssal_rune })
     if move then
-        move_towards_destination(move, dest, "rune")
-        return true
+        return move_towards_destination(move, dest, "rune")
     end
 
     local rune_pos = item_map_positions[rune]
@@ -171,8 +170,7 @@ function plan_move_towards_abyssal_rune()
 
     move, dest = best_move_towards_unreachable_map_position(rune_pos)
     if move then
-        move_towards_destination(move, dest, "rune")
-        return true
+        return move_towards_destination(move, dest, "rune")
     end
 
     return false
@@ -192,8 +190,7 @@ function plan_move_towards_runelight()
 
     local move, dest = best_move_towards_map_positions(runelights)
     if move then
-        move_towards_destination(move, dest, "runelight")
-        return true
+        return move_towards_destination(move, dest, "runelight")
     end
 
     return false

@@ -37,10 +37,19 @@ end
 -- Should only be called for adjacent squares.
 function monster_in_way(pos, ignore_hostiles)
     local mons = get_monster_at(pos)
+    if not mons then
+        return false
+    end
+
     local feat = view.feature_at(0, 0)
-    return mons and (mons:name() == "orb of destruction"
-        or not ignore_hostiles and mons:attitude() <= enum_att_neutral
-        or mons:attitude() > enum_att_neutral
+    local attitude = mons:attitude()
+    return mons:name() == "orb of destruction"
+        or not ignore_hostiles and attitude == 0
+        -- Attacking neutrals causes penance under the good gods.
+        or attitude == enum_att_neutral and mons:attacking_causes_penance()
+        -- Strict neutral and up will swap with us, but we have to check that
+        -- they can. We assume we never want to attack these.
+        or attitude > enum_att_neutral
             and (mons:is_constricted()
                 or mons:is_caught()
                 or mons:status("petrified")
@@ -48,7 +57,7 @@ function monster_in_way(pos, ignore_hostiles)
                 or mons:status("constricted by roots")
                 or mons:is("sleeping")
                 or not mons:can_traverse(origin)
-                or feat  == "trap_zot"))
+                or feat  == "trap_zot")
 end
 
 function assess_square_enemies(a, pos)

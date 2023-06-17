@@ -17,8 +17,7 @@ function plan_move_towards_safety()
             dsay("Moving to safe position at "
                 .. cell_string_from_map_position(dest))
         end
-        move_towards_destination(move, dest, "safety")
-        return true
+        return move_towards_destination(move, dest, "safety")
     end
 
     return false
@@ -171,14 +170,12 @@ function plan_move_towards_goal()
 
     local move, dest = best_move_towards_features(feats)
     if move then
-        move_towards_destination(move, dest, "goal")
-        return true
+        return move_towards_destination(move, dest, "goal")
     end
 
     local move, dest = best_move_towards_features(feats, true)
     if move then
-        move_towards_destination(move, dest, "goal")
-        return true
+        return move_towards_destination(move, dest, "goal")
     end
 
     local god = goal_god(goal_status)
@@ -205,14 +202,12 @@ function plan_move_towards_destination()
 
     local move = best_move_towards_map_position(move_destination)
     if move then
-        move_to(move)
-        return true
+        return move_to(move)
     end
 
     local move = best_move_towards_map_position(move_destination, true)
     if move then
-        move_to(move)
-        return true
+        return move_to(move)
     end
 
     return false
@@ -247,8 +242,7 @@ function plan_move_towards_monster()
             dsay("Moving to enemy at "
                 .. cell_string_from_map_position(dest))
         end
-        move_towards_destination(move, dest, "monster")
-        return true
+        return move_towards_destination(move, dest, "monster")
     end
 
     return false
@@ -265,8 +259,7 @@ function plan_move_towards_unexplored()
             dsay("Moving to explore near "
                 .. cell_string_from_map_position(dest))
         end
-        move_towards_destination(move, dest, "unexplored")
-        return true
+        return move_towards_destination(move, dest, "unexplored")
     end
 
     return false

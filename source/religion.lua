@@ -148,7 +148,7 @@ end
 
 function current_god_hates_item(it)
     -- We don't want to be wearing hated items when we convert to a new god,
-    -- since we might incur pennance while taking them off.
+    -- since we might incur penance while taking them off.
     local new_god
     if goal_status then
         new_god = goal_god(goal_status)

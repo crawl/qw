@@ -12,13 +12,22 @@ function plan_quit()
 end
 
 function move_to(pos)
+    if weapon_is_ranged() and get_weapon() and get_monster_at(pos) then
+        return shoot_launcher(pos)
+    end
+
     magic(delta_to_vi(pos) .. "YY")
+    return true
 end
 
 function move_towards_destination(pos, dest, reason)
-    move_destination = dest
-    move_reason = reason
-    move_to(pos)
+    if move_to(pos) then
+        move_destination = dest
+        move_reason = reason
+        return true
+    end
+
+    return false
 end
 
 function random_step(reason)
@@ -40,8 +49,7 @@ function random_step(reason)
     end
     if count > 0 then
         say("Stepping randomly (" .. reason .. ").")
-        move_to(new_pos)
-        return true
+        return move_to(new_pos)
     else
         say("Standing still (" .. reason .. ").")
         wait_one_turn()

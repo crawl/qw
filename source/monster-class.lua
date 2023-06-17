@@ -134,6 +134,18 @@ function Monster:is_friendly()
         end)
 end
 
+function Monster:attacking_causes_penance()
+    return self:get_property("attacking_causes_penance",
+        function()
+            return self:attitude() > 0 and is_good_god()
+                or self:attitude() == 3 and you.god() == "Jiyva"
+                or self:is_friendly()
+                    and you.god() == "Beogh"
+                    -- XXX: hack
+                    and self:name():find("orc")
+        end)
+end
+
 function Monster:is_orc_priest_wizard()
     return self:get_property("is_orc_priest_wizard",
         function()

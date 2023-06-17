@@ -904,8 +904,7 @@ function plan_continue_flee()
             local dist = map[global_pos.x + pos.x][global_pos.y + pos.y]
             if dist and dist < map[global_pos.x][global_pos.y] then
                 dsay("STILL FLEEEEING.")
-                move_to(pos)
-                return true
+                return move_to(pos)
             end
         end
     end
@@ -981,8 +980,7 @@ function plan_non_melee_berserk()
 
     local move = best_move_towards_map_position(best_pos)
     if move then
-        move_to(move)
-        return true
+        return move_to(move)
     end
 
     wait_one_turn()

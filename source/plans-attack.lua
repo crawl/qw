@@ -354,8 +354,6 @@ function weapon_range(weapon)
     end
 end
 
-
-
 function ranged_weapon_attack(weapon)
     local attack = {}
     attack.range = weapon_range(weapon)
@@ -661,9 +659,10 @@ function plan_flight_move_towards_enemy()
             and not is_traversable_at(move) then
         return drink_by_name("enlightenment")
     else
-        move_to(move)
-        return true
+        return move_to(move)
     end
+
+    return false
 end
 
 function plan_move_towards_enemy()
@@ -689,8 +688,7 @@ function plan_move_towards_enemy()
     enemy_memory = position_difference(mons:pos(), move)
     enemy_map_memory = position_sum(global_pos, mons:pos())
     turns_left_moving_towards_enemy = 2
-    move_to(move)
-    return true
+    return move_to(move)
 end
 
 function plan_continue_move_towards_enemy()
@@ -716,8 +714,7 @@ function plan_continue_move_towards_enemy()
             return false
         end
 
-        move_to(move)
-        return true
+        return move_to(move)
     end
 
     enemy_memory = nil
@@ -734,8 +731,7 @@ function plan_continue_move_towards_enemy()
 
         local move = best_move_towards_map_position(dest)
         if move then
-            move_towards_destination(move, dest, "monster")
-            return true
+            return move_towards_destination(move, dest, "monster")
         end
     end
 

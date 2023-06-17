@@ -279,8 +279,7 @@ function plan_move_towards_escape_hatch()
 
     local move, dest = best_move_towards_map_position(flee_pos, true)
     if move then
-        move_to(move)
-        return true
+        return move_to(move)
     end
 
     return false
