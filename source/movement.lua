@@ -314,6 +314,12 @@ function step_improvement(best_reason, reason, a1, a2)
     elseif reason == "water" and best_reason == "water"
          and a2.enemy_distance > a1.enemy_distance then
         return false
+    elseif reason == "wall" and best_reason == "wall"
+         and a2.enemy_distance < a1.enemy_distance then
+        return true
+    elseif reason == "wall" and best_reason == "wall"
+         and a2.enemy_distance > a1.enemy_distance then
+        return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true
     elseif a2.adjacent + a2.ranged > a1.adjacent + a1.ranged then
@@ -352,31 +358,23 @@ function choose_tactical_step()
             or you.berserk()
             or you.constricted()
             or unable_to_move()
-            or in_branch("Slime")
             or you.status("spiked") then
         return
     end
+
     local a0 = assess_square(origin)
     if a0.cloud_safe
             and not (a0.fumble and sense_danger(3))
+            and not (a0.bad_wall and sense_danger(3))
             and (not have_reaching() or a0.slow_adjacent == 0)
             and (a0.adjacent <= 1 or cleaving())
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end
+
     local best_pos, best_reason, besta
     local count = 1
     for pos in adjacent_iter(origin) do
-        if coroutine_throttle and #enemy_list >= 20 then
-            if debug_channel("throttle") then
-                dsay("Assessing tactical step of adjacent square #"
-                    .. tostring(count))
-            end
-
-            throttle = true
-            coroutine.yield()
-        end
-
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
         if reason then
