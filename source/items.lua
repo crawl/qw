@@ -689,22 +689,29 @@ function weapon_value(it, cur, it2, sit)
         return -1, -1
     end
 
-    local undead_demon = undead_or_demon_branch_soon()
+    if sit == "explosion" and weapon_is_exploding(it) then
+        return -1, -1
+    end
+
     local name = it.name()
     local value = 1000
     local val1, val2 = 0, 0
+
     if sit == "bless" then
         if it.artefact then
             return -1, -1
-        elseif name:find("runed") or name:find("glowing")
-                     or name:find("enchanted")
-                     or it.ego() and not it.fully_identified then
+        elseif name:find("runed")
+                or name:find("glowing")
+                or name:find("enchanted")
+                or it.ego() and not it.fully_identified then
             val1 = val1 + (cur and 150 or -150)
             val2 = val2 + 150
         end
+
         if it.plus then
             value = value + 30 * it.plus
         end
+
         value = value + 1200 * it.damage / weapon_min_delay(it)
         return value + val1, value + val2
     end
@@ -733,6 +740,8 @@ function weapon_value(it, cur, it2, sit)
         end
     elseif name:find("storm bow") then
         value = value + 50
+    elseif name:find("{damnation}") then
+        value = value + 1000
     end
 
     local res_val1, res_val2 = total_resist_value(it, cur, it2)
@@ -755,6 +764,7 @@ function weapon_value(it, cur, it2, sit)
         end
     end
 
+    local undead_demon = undead_or_demon_branch_soon()
     local ego = it.ego()
     if ego then -- names are mostly in weapon_brands_verbose[]
         if ego == "distortion" then
@@ -988,16 +998,19 @@ function item_is_sit_dominated(it, sit)
     if maxv <= 0 then
         return true
     end
+
     for it2 in inventory() do
         if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
             local minv2, maxv2 = weapon_value(it2, nil, nil, sit)
-            if minv2 >= maxv and not
-                 (slotname == "Weapon" and you.base_skill("Shields") > 0
-                    and it.hands == 1 and it2.hands == 2) then
+            if minv2 >= maxv
+                    and not (slotname == "Weapon"
+                        and you.base_skill("Shields") > 0
+                        and it.hands == 1 and it2.hands == 2) then
                 return true
             end
         end
     end
+
     return false
 end
 
@@ -1011,6 +1024,10 @@ function item_is_dominated(it)
                         and not you.one_time_ability_used()
                     or future_tso)
                 and not item_is_sit_dominated(it, "bless") then
+        return false
+    elseif slotname == "Weapon"
+            and weapon_is_exploding(get_weapon())
+            and not item_is_sit_dominated(it, "explosion") then
         return false
     end
 
@@ -1444,4 +1461,18 @@ end
 
 function is_weapon(it)
     return it and it.class(true) == "weapon"
+end
+
+function weapon_is_penetrating(weapon)
+    return weapon:subtype() == "javelin"
+        or weapon:ego() == "penetration"
+        or weapon:name():find("storm bow")
+end
+
+function weapon_is_exploding(weapon)
+    return weapon:name():find("{damnation}")
+end
+
+function weapon_can_target_empty(weapon)
+    return not weapon:name():find("{damnation}")
 end

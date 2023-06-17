@@ -218,15 +218,13 @@ end
 function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
-        -- Never hit ourselves.
-        if position_is_origin(pos) then
-            return
+        local mons
+        if supdist(pos) <= los_radius then
+            mons = get_monster_at(pos)
         end
-
-        local mons = get_monster_at(pos)
         if mons then
-            if mons:is_friendly()
-                and not mons:ignores_player_projectiles() then
+            if mons:attitude() > 0
+                    and not mons:ignores_player_projectiles() then
                 return
             end
 
@@ -240,14 +238,12 @@ end
 
 function assess_ranged_target(attack, target)
     if debug_channel("ranged") then
-        dsay("Targeting " .. pos_string(target))
+        dsay("Targeting " .. cell_string_from_position(target))
     end
+
     local positions = spells.path(attack.test_spell, target.x, target.y, false)
     local result = { pos = target }
     local past_target, at_target_result
-    if debug_channel("ranged") then
-        dsay("Targeting " .. pos_string(target))
-    end
     for i, coords in ipairs(positions) do
         pos = { x = coords[1], y = coords[2] }
         local hit_target = positions_equal(pos, target)
@@ -260,7 +256,8 @@ function assess_ranged_target(attack, target)
                 and mons
                 and not mons:ignores_player_projectiles() then
             if debug_channel("ranged") then
-                dsay("Aborted target: blocking monster at " .. pos_string(pos))
+                dsay("Aborted target: blocking monster at "
+                    .. cell_string_from_position(pos))
             end
             return
         end
@@ -271,7 +268,8 @@ function assess_ranged_target(attack, target)
         if mons and mons:attitude() > 0
                 and not mons:ignores_player_projectiles() then
             if debug_channel("ranged") then
-                dsay("Aborted target: blocking monster at " .. pos_string(pos))
+                dsay("Aborted target: non-hostile monster at "
+                    .. cell_string_from_position(pos))
             end
             return at_target_result
         end
@@ -327,20 +325,22 @@ end
 
 function assess_explosion_targets(attack, target)
     local best_result
-    for _, pos in adjacent_iter(target, true) do
-        if not attack.seen_pos[target.x][target.y] then
+    for pos in adjacent_iter(target, true) do
+        if supdist(pos) <= los_radius
+                and not attack.seen_pos[pos.x][pos.y] then
             local result = assess_ranged_target(attack, pos)
             if result_improves_attack(attack, result, best_result) then
                 best_result = result
             end
+
             attack.seen_pos[pos.x][pos.y] = true
         end
     end
     return best_result
 end
 
-function weapon_test_spell(weapon)
-    if is_penetrating_weapon(weapon) then
+function attack_test_spell(attack)
+    if attack.is_penetrating then
         return "Quicksilver Bolt"
     else
         return "Magic Dart"
@@ -354,22 +354,15 @@ function weapon_range(weapon)
     end
 end
 
-function is_exploding_weapon(weapon)
-    return false
-end
 
-function is_penetrating_weapon(weapon)
-    return weapon:subtype() == "javelin"
-        or weapon:ego() == "penetration"
-        or weapon:name():find("storm bow")
-end
 
 function ranged_weapon_attack(weapon)
     local attack = {}
     attack.range = weapon_range(weapon)
-    attack.is_penetrating = is_penetrating_weapon(weapon)
-    attack.is_explosion = is_exploding_weapon(weapon)
-    attack.test_spell = weapon_test_spell(weapon)
+    attack.is_penetrating = weapon_is_penetrating(weapon)
+    attack.is_explosion = weapon_is_exploding(weapon)
+    attack.can_target_empty = weapon_can_target_empty(weapon)
+    attack.test_spell = attack_test_spell(weapon)
     attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
         "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
@@ -388,7 +381,7 @@ function get_ranged_target(attack, prefer_melee)
         end
     end
 
-    if explosion then
+    if attack.is_explosion then
         attack.seen_pos = {}
         for i = -los_radius, los_radius do
             attack.seen_pos[i] = {}
@@ -414,7 +407,7 @@ function get_ranged_target(attack, prefer_melee)
         if enemy:distance() <= attack.range
                 and you.see_cell_solid_see(pos.x, pos.y) then
             local result
-            if explosion then
+            if attack.is_explosion and attack.can_target_empty then
                 result = assess_explosion_targets(attack, pos)
             else
                 result = assess_ranged_target(attack, pos)

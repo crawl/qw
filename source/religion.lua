@@ -139,7 +139,7 @@ function item_is_evil(it)
 
     local name = it:name()
     return name:find("Vitality") and subtype:find("^amulet")
-        or name:find("Damnation") and subtype == "arbalest"
+        or name:find("{damnation}")
         or name:find("Cerebov") and subtype == "great sword"
         or name:find("Asmodeus") and subtype == "eveningstar"
         or name:find("Cigotuvi's embrace")

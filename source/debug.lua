@@ -260,9 +260,12 @@ function cell_string(cell)
     return str .. cell.feat .. ")"
 end
 
+function cell_string_from_position(pos)
+    return cell_string(cell_from_position(pos))
+end
+
 function cell_string_from_map_position(pos)
-    local cell = cell_from_position(position_difference(pos, global_pos))
-    return cell_string(cell)
+    return cell_string_from_position(position_difference(pos, global_pos))
 end
 
 function toggle_throttle()

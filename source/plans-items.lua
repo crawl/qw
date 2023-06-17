@@ -89,28 +89,35 @@ function plan_wield_weapon()
 end
 
 function plan_swap_weapon()
+    local weapon = get_weapon()
     if you.race() == "Troll"
             or you.berserk()
             or transformed()
-            or not items.equipped_at("Weapon") then
+            or not weapon then
         return false
     end
+
+    local exploding_weapon = weapon_is_exploding(weapon)
+    local need_hydra_weapon = hydra_weapon_value(weapon) < 0
 
     local sit
-    -- If our current weapon doesn't cut hydra heads, we're fine, and we stop
-    -- caring at all at xl 18.
-    if hydra_weapon_value(get_weapon()) < 0 and you.xl() < 18 then
-        for _, enemy in ipairs(enemy_list) do
-            if enemy:distance() <= 3
-                    and string.find(enemy:desc(), "hydra")
-                    and enemy:player_can_melee() then
-                sit = "hydra"
-            end
+    local enemy_dist = los_radius
+    for _, enemy in ipairs(enemy_list) do
+        if need_hydra_weapon
+                and enemy:distance() <= 2
+                and string.find(enemy:desc(), "hydra") then
+            sit = "hydra"
+            break
         end
-    end
 
-    if not sit then
-        return false
+        if exploding_weapon and enemy:distance() <= 2 then
+            sit = "explosion"
+            break
+        end
+
+        if enemy:distance() < enemy_dist then
+            enemy_dist = enemy:distance()
+        end
     end
 
     local twohands = true
@@ -130,7 +137,11 @@ function plan_swap_weapon()
         if it and it.class(true) == "weapon" and not it.equipped then
             if twohands or it.hands < 2 then
                 local val2 = weapon_value(it, true, it_old, sit)
-                if val2 > max_val then
+                if val2 > max_val
+                        -- Don't swap back to an exploding weapon unless
+                        -- monsters are reasonably far away.
+                        and (enemy_dist >= 4
+                            or not weapon_is_exploding(it)) then
                     max_val = val2
                     max_it = it
                 end
