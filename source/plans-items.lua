@@ -98,18 +98,18 @@ function plan_swap_weapon()
     end
 
     local exploding_weapon = weapon_is_exploding(weapon)
-    local need_hydra_weapon = hydra_weapon_value(weapon) < 0
-
     local sit
     local enemy_dist = los_radius
     for _, enemy in ipairs(enemy_list) do
-        if need_hydra_weapon
-                and enemy:distance() <= 2
-                and string.find(enemy:desc(), "hydra") then
+        if enemy:distance() <= 2 and string.find(enemy:desc(), "hydra") then
             sit = "hydra"
             break
         end
 
+        -- We don't have to evaluate this situation if our weapon is not
+        -- exploding, e.g. if we're currently using the non-exploding weapon we
+        -- swapped to. This is because we check that we only swap to an
+        -- exploding weapon if monsters are sufficiently far away.
         if exploding_weapon and enemy:distance() <= 2 then
             sit = "explosion"
             break
