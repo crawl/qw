@@ -105,19 +105,6 @@ function plan_swap_weapon()
             sit = "hydra"
             break
         end
-
-        -- We don't have to evaluate this situation if our weapon is not
-        -- exploding, e.g. if we're currently using the non-exploding weapon we
-        -- swapped to. This is because we check that we only swap to an
-        -- exploding weapon if monsters are sufficiently far away.
-        if exploding_weapon and enemy:distance() <= 2 then
-            sit = "explosion"
-            break
-        end
-
-        if enemy:distance() < enemy_dist then
-            enemy_dist = enemy:distance()
-        end
     end
 
     local twohands = true
@@ -137,11 +124,7 @@ function plan_swap_weapon()
         if it and it.class(true) == "weapon" and not it.equipped then
             if twohands or it.hands < 2 then
                 local val2 = weapon_value(it, true, it_old, sit)
-                if val2 > max_val
-                        -- Don't swap back to an exploding weapon unless
-                        -- monsters are reasonably far away.
-                        and (enemy_dist >= 4
-                            or not weapon_is_exploding(it)) then
+                if val2 > max_val then
                     max_val = val2
                     max_it = it
                 end

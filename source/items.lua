@@ -689,10 +689,6 @@ function weapon_value(it, cur, it2, sit)
         return -1, -1
     end
 
-    if sit == "explosion" and weapon_is_exploding(it) then
-        return -1, -1
-    end
-
     local name = it.name()
     local value = 1000
     local val1, val2 = 0, 0
@@ -1024,10 +1020,6 @@ function item_is_dominated(it)
                         and not you.one_time_ability_used()
                     or future_tso)
                 and not item_is_sit_dominated(it, "bless") then
-        return false
-    elseif slotname == "Weapon"
-            and weapon_is_exploding(get_weapon())
-            and not item_is_sit_dominated(it, "explosion") then
         return false
     end
 
