@@ -398,7 +398,7 @@ end
 function have_ranged_target()
     return turn_memo("have_ranged_target",
         function()
-            if weapon_is_ranged() then
+            if use_ranged_weapon() then
                 return get_launcher_target()
             else
                 return get_throwing_target()

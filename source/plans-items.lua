@@ -482,7 +482,7 @@ function brand_is_great(brand)
             or brand == "holy wrath" then
         return true
     -- The best that brand weapon can give us for ranged weapons.
-    elseif brand == "heavy" and weapon_is_ranged() then
+    elseif brand == "heavy" and use_ranged_weapon() then
         return true
     -- The best that brand weapon can give us for melee weapons. No longer as
     -- good once we have the ORB. XXX: Nor if we're only doing undead or demon

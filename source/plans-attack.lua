@@ -3,7 +3,7 @@
 --
 
 function plan_flail_at_invis()
-    if not invis_monster or weapon_is_ranged() or dangerous_to_melee() then
+    if not invis_monster or use_ranged_weapon() or dangerous_to_melee() then
         return false
     end
 
@@ -47,7 +47,7 @@ end
 
 function plan_shoot_at_invis()
     if not invis_monster
-            or not weapon_is_ranged()
+            or not use_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_shoot() then
         return false
@@ -440,7 +440,7 @@ end
 
 function plan_launcher()
     if not danger
-            or not weapon_is_ranged()
+            or not use_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_attack() then
         return false
@@ -493,7 +493,7 @@ function wait_combat()
 end
 
 function plan_melee_wait_for_enemy()
-    if not danger or weapon_is_ranged() then
+    if not danger or use_ranged_weapon() then
         return false
     end
 
@@ -555,7 +555,7 @@ function plan_melee_wait_for_enemy()
 end
 
 function plan_launcher_wait_for_enemy()
-    if not danger or not weapon_is_ranged() then
+    if not danger or not use_ranged_weapon() then
         return false
     end
 
@@ -625,7 +625,7 @@ function plan_poison_spit()
     end
 
     local target = get_ranged_target(poison_spit_attack(),
-        not weapon_is_ranged())
+        not use_ranged_weapon())
     if target and use_ability(ability, "r" .. vector_move(target) .. "\r") then
         return true
     end
@@ -635,7 +635,7 @@ end
 
 function plan_flight_move_towards_enemy()
     if not danger
-            or weapon_is_ranged()
+            or use_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -667,7 +667,7 @@ end
 
 function plan_move_towards_enemy()
     if not danger
-            or weapon_is_ranged()
+            or use_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then

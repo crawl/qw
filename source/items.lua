@@ -1083,7 +1083,7 @@ function should_remove(it)
 end
 
 function want_missile(it)
-    if weapon_is_ranged() then
+    if use_ranged_weapon() then
         return false
     end
 
@@ -1313,8 +1313,8 @@ function get_weapon()
     return items.equipped_at("Weapon")
 end
 
-function weapon_is_ranged()
-    return turn_memo("weapon_is_ranged",
+function use_ranged_weapon()
+    return turn_memo("use_ranged_weapon",
         function()
             return weapon_skill() == "Ranged Weapons"
         end)
@@ -1323,7 +1323,7 @@ end
 function have_ranged_attack()
     return turn_memo("have_ranged_attack",
         function()
-            return weapon_is_ranged() or best_missile()
+            return use_ranged_weapon() or best_missile()
         end)
 end
 

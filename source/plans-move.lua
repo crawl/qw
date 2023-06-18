@@ -12,7 +12,10 @@ function plan_quit()
 end
 
 function move_to(pos)
-    if weapon_is_ranged() and get_weapon() and get_monster_at(pos) then
+    if use_ranged_weapon()
+            and get_weapon()
+            and not unable_to_shoot()
+            and get_monster_at(pos) then
         return shoot_launcher(pos)
     end
 

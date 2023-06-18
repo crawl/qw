@@ -474,7 +474,7 @@ function plan_haste()
 end
 
 function plan_might()
-    if not weapon_is_ranged() and want_to_serious_buff() then
+    if not use_ranged_weapon() and want_to_serious_buff() then
         return might()
     end
     return false
@@ -963,7 +963,7 @@ function plan_wait_confusion()
 end
 
 function plan_non_melee_berserk()
-    if not you.berserk() or not weapon_is_ranged() then
+    if not you.berserk() or not use_ranged_weapon() then
         return false
     end
 
