@@ -55,11 +55,15 @@ function c_answer_prompt(prompt)
     if prompt:find("next level anyway") then
         return true
     end
-    if prompt:find("fire in the non-hostile") then
+    if prompt:find("fire in the non-hostile")
+            or prompt:find("fire at your") then
         return true
     end
     if prompt:find("Really.*into that.*trap")
             or prompt:find("into the Zot trap") then
+        return true
+    end
+    if prompt:find("Really explore while Zot is near") then
         return true
     end
 end
