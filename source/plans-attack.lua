@@ -2,6 +2,10 @@
 -- Attack plans
 --
 
+function can_attack_invis_at(pos)
+    return not is_solid_at(pos) and not get_monster_at(pos)
+end
+
 function plan_flail_at_invis()
     if not invis_monster or use_ranged_weapon() or dangerous_to_melee() then
         return false
@@ -10,14 +14,14 @@ function plan_flail_at_invis()
     local can_ctrl = not you.confused()
     if invis_monster_pos then
         if is_adjacent(invis_monster_pos)
-                and not is_solid_at(invis_monster_pos) then
+                and can_attack_invis_at(invis_monster_pos) then
             attack_melee(invis_monster_pos, can_ctrl)
             return true
         end
 
         if invis_monster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_monster_pos.y) }
-            if not is_solid_at(apos) then
+            if can_attack_invis_at(apos) then
                 attack_melee(apos, can_ctrl)
                 return true
             end
@@ -25,7 +29,7 @@ function plan_flail_at_invis()
 
         if invis_monster_pos.y == 0 then
             local apos = { x = sign(invis_monster_pos.x), y = 0 }
-            if not is_solid_at(apos) then
+            if can_attack_invis_at(apos) then
                 attack_melee(apos, can_ctrl)
                 return true
             end
@@ -36,7 +40,7 @@ function plan_flail_at_invis()
     while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0 and not is_solid_at(pos) then
+        if supdist(pos) > 0 and can_attack_invis_at(pos) then
             attack_melee(pos, can_ctrl)
             return true
         end
@@ -55,7 +59,7 @@ function plan_shoot_at_invis()
 
     local can_ctrl = not you.confused()
     if invis_monster_pos then
-        if not is_solid_at(invis_monster_pos)
+        if can_attack_invis_at(invis_monster_pos)
                 and have_line_of_fire(invis_monster_pos)then
             shoot_launcher(invis_monster_pos)
             return true
@@ -63,7 +67,7 @@ function plan_shoot_at_invis()
 
         if invis_monster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_monster_pos.y) }
-            if not is_solid_at(apos) and have_line_of_fire(apos)then
+            if can_attack_invis_at(apos) and have_line_of_fire(apos)then
                 shoot_launcher(apos)
                 return true
             end
@@ -71,7 +75,7 @@ function plan_shoot_at_invis()
 
         if invis_monster_pos.y == 0 then
             local apos = { x = sign(invis_monster_pos.x), y = 0 }
-            if not is_solid_at(apos) and have_line_of_fire(apos)then
+            if can_attack_invis_at(apos) and have_line_of_fire(apos)then
                 shoot_launcher(apos)
                 return true
             end
@@ -82,9 +86,7 @@ function plan_shoot_at_invis()
     while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0
-                and not is_solid_at(pos)
-                and have_line_of_fire(pos) then
+        if supdist(pos) > 0 and can_attack_invis_at(pos) then
             shoot_launcher(pos)
             return true
         end
