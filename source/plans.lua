@@ -1,5 +1,5 @@
 ------------------
--- Cascading plans common functions.
+-- The common plan functions and the overall move plan.
 
 function magic(command)
     crawl.process_keys(command .. string.char(27) .. string.char(27)
@@ -34,6 +34,27 @@ function use_ability(name, extra, mute)
     end
 end
 
+function move_to(pos)
+    if use_ranged_weapon()
+            and get_weapon()
+            and not unable_to_shoot()
+            and get_monster_at(pos) then
+        return shoot_launcher(pos)
+    end
+
+    magic(delta_to_vi(pos) .. "YY")
+    return true
+end
+
+function move_towards_destination(pos, dest, reason)
+    if move_to(pos) then
+        move_destination = dest
+        move_reason = reason
+        return true
+    end
+
+    return false
+end
 -- these few functions are called directly from ready()
 function plan_message()
     if read_message then
@@ -47,6 +68,15 @@ function plan_message()
         have_message = false
         crawl.delay(2500)
     end
+end
+
+function plan_quit()
+    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
+        magic(control('q') .. "yes\r")
+        return true
+    end
+
+    return false
 end
 
 -----------------------------------------
@@ -111,14 +141,36 @@ function cascade(plans)
 end
 
 function initialize_plans()
+    set_plan_abyss()
     set_plan_emergency()
     set_plan_attack()
     set_plan_rest()
-    set_plan_handle_acquirement_result()
+    set_plan_acquirement()
     set_plan_pre_explore()
     set_plan_pre_explore2()
     set_plan_explore()
     set_plan_explore2()
     set_plan_stuck()
     set_plan_move()
+end
+
+-- This is the main move planning cascade.
+function set_plan_move()
+    plans.move = cascade {
+        {plan_quit, "quit"},
+        {plan_ancestor_identity, "try_ancestor_identity"},
+        {plan_join_beogh, "join_beogh"},
+        {plan_shop, "shop"},
+        {plans.abyss, "abyss"},
+        {plans.emergency, "emergency"},
+        {plans.attack, "attack"},
+        {plans.rest, "rest"},
+        {plans.pre_explore, "pre_explore"},
+        {plans.explore, "explore"},
+        {plans.pre_explore2, "pre_explore2"},
+        {plans.explore2, "explore2"},
+        {plans.swamp, "swamp"},
+        {plans.tomb, "tomb"},
+        {plans.stuck, "stuck"},
+    }
 end

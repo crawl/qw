@@ -742,8 +742,42 @@ function plan_continue_move_towards_enemy()
     return false
 end
 
+function random_step(reason)
+    if you.mesmerised() then
+        say("Waiting to end mesmerise (" .. reason .. ").")
+        wait_one_turn()
+        return true
+    end
+
+    local new_pos
+    local count = 0
+    for pos in adjacent_iter(origin) do
+        if can_move_to(pos) then
+            count = count + 1
+            if crawl.one_chance_in(count) then
+                new_pos = pos
+            end
+        end
+    end
+    if count > 0 then
+        say("Stepping randomly (" .. reason .. ").")
+        return move_to(new_pos)
+    else
+        say("Standing still (" .. reason .. ").")
+        wait_one_turn()
+        return true
+    end
+end
+
+function plan_disturbance_random_step()
+    if crawl.messages(5):find("There is a strange disturbance nearby!") then
+        return random_step("disturbance")
+    end
+    return false
+end
+
 function set_plan_attack()
-    plan_attack = cascade {
+    plans.attack = cascade {
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
         {plan_launcher, "launcher"},

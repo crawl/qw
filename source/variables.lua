@@ -28,17 +28,7 @@ local DIR
 local MAP_SELECT
 
 -- Plan functions. These must later be initialized as cascades.
-local plan_emergency
-local plan_exclusion
-local plan_attack
-local plan_rest
-local plan_handle_acquirement_result
-local plan_pre_explore
-local plan_pre_explore2
-local plan_explore
-local plan_explore2
-local plan_stuck
-local plan_move
+local plans = {}
 
 -- All variables past this point are qw state.
 local initialized = false

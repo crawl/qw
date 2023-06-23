@@ -1,5 +1,5 @@
 ------------------
--- Plans specifically for the Abyss.
+-- Plans specific to the Abyss.
 
 function plan_go_to_abyss_portal()
     if unable_to_travel()
@@ -194,4 +194,12 @@ function plan_move_towards_runelight()
     end
 
     return false
+end
+
+function set_plan_abyss()
+    plans.abyss = cascade {
+        {plan_pick_up_abyssal_rune, "pick_up_abyssal_rune"},
+        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
+        {plan_exit_abyss, "exit_abyss"},
+    }
 end

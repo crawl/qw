@@ -137,7 +137,7 @@ function plan_stuck_teleport()
 end
 
 function set_plan_stuck()
-    plan_stuck = cascade {
+    plans.stuck = cascade {
         {plan_abyss_wait_one_turn, "abyss_wait_one_turn"},
         {plan_move_towards_unsafe_unexplored, "move_towards_unsafe_unexplored"},
         {plan_stuck_take_escape_hatch, "stuck_take_escape_hatch"},

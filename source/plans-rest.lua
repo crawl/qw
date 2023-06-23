@@ -128,7 +128,7 @@ function plan_rest_one_turn()
 end
 
 function set_plan_rest()
-    plan_rest = cascade {
+    plans.rest = cascade {
         {plan_cure_poison, "cure_poison"},
         {plan_long_rest, "try_long_rest"},
         {plan_rest_one_turn, "rest_one_turn"},

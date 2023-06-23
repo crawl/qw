@@ -814,8 +814,8 @@ function clear_out_shopping_list()
 end
 
 -- These plans will only execute after a successful acquirement.
-function set_plan_handle_acquirement_result()
-    plan_handle_acquirement_result = cascade {
+function set_plan_acquirement()
+    plans.acquirement = cascade {
         {plan_maybe_pickup_acquirement, "try_pickup_acquirement"},
         {plan_maybe_upgrade_armour, "maybe_upgrade_armour"},
         {plan_maybe_upgrade_amulet, "maybe_upgrade_amulet"},

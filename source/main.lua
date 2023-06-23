@@ -79,7 +79,7 @@ function qw_main()
         if have_message then
             plan_message()
         else
-            plan_move()
+            plans.move()
         end
     end
     -- restart_cascade must remain true for the entire move cascade while we're

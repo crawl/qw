@@ -1049,7 +1049,8 @@ function plan_dig_grate()
 end
 
 function set_plan_emergency()
-    plan_emergency = cascade {
+    plans.emergency = cascade {
+        {plan_stairdance_up, "stairdance_up"},
         {plan_non_melee_berserk, "non_melee_berserk"},
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},

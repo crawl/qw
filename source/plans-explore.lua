@@ -265,11 +265,198 @@ function plan_move_towards_unexplored()
     return false
 end
 
+function plan_swamp_clear_exclusions()
+    if not at_branch_end("Swamp") then
+        return false
+    end
+
+    magic("X" .. control('e'))
+    return true
+end
+
+function plan_swamp_go_to_rune()
+    if not at_branch_end("Swamp") or have_branch_runes("Swamp") then
+        return false
+    end
+
+    if last_swamp_fail_count
+            == c_persist.plan_fail_count.try_swamp_go_to_rune then
+        swamp_rune_reachable = true
+    end
+
+    last_swamp_fail_count = c_persist.plan_fail_count.try_swamp_go_to_rune
+    magicfind("@" .. branch_runes("Swamp")[1] .. " rune")
+    return true
+end
+
+function is_swamp_end_cloud(pos)
+    return (view.cloud_at(pos.x, pos.y) == "freezing vapour"
+            or view.cloud_at(pos.x, pos.y) == "foul pestilence")
+        and you.see_cell_no_trans(pos.x, pos.y)
+        and not is_safe_at(pos)
+end
+
+function plan_swamp_clouds_hack()
+    if not at_branch_end("Swamp") then
+        return false
+    end
+
+    if have_branch_runes("Swamp") and can_teleport() then
+        return teleport()
+    end
+
+    if swamp_rune_reachable then
+        say("Waiting for clouds to move.")
+        wait_one_turn()
+        return true
+    end
+
+    local best_pos
+    local best_dist = 11
+    for pos in adjacent_iter(const.origin) do
+        if can_move_to(pos) and is_safe_at(pos) then
+            for dpos in radius_iter(pos) do
+                local dist = supdist(position_difference(dpos, pos))
+                if is_swamp_end_cloud(dpos) and dist < best_dist then
+                    best_pos = pos
+                    best_dist = dist
+                end
+            end
+        end
+    end
+
+    if best_pos then
+        magic(delta_to_vi(best_pos) .. "Y")
+        return true
+    end
+
+    for pos in square_iter(const.origin) do
+        if (view.cloud_at(pos.x, pos.y) == "freezing vapour"
+                    or view.cloud_at(pos.x, pos.y) == "foul pestilence")
+                and you.see_cell_no_trans(pos.x, pos.y) then
+            return random_step(where)
+        end
+    end
+
+    return plan_stuck_teleport()
+end
+
+function plan_tomb_use_hatch()
+    if (where == "Tomb:2" and not have_branch_runes("Tomb")
+                or where == "Tomb:1")
+            and view.feature_at(0, 0) == "escape_hatch_down" then
+        prev_hatch_dist = 1000
+        go_downstairs()
+        return true
+    end
+
+    if (where == "Tomb:3" and have_branch_runes("Tomb")
+                or where == "Tomb:2")
+            and view.feature_at(0, 0) == "escape_hatch_up" then
+        prev_hatch_dist = 1000
+        go_upstairs()
+        return true
+    end
+
+    return false
+end
+
+function plan_tomb_go_to_final_hatch()
+    if where == "Tomb:2"
+            and not have_branch_runes("Tomb")
+            and view.feature_at(0, 0) ~= "escape_hatch_down" then
+        magic("X>\r")
+        return true
+    end
+    return false
+end
+
+function plan_tomb_go_to_hatch()
+    if where == "Tomb:3"
+            and have_branch_runes("Tomb")
+            and view.feature_at(0, 0) ~= "escape_hatch_up" then
+        magic("X<\r")
+        return true
+    elseif where == "Tomb:2" then
+        if not have_branch_runes("Tomb")
+                and view.feature_at(0, 0) == "escape_hatch_down" then
+            return false
+        end
+
+        if view.feature_at(0, 0) == "escape_hatch_up" then
+            local new_hatch_dist = supdist(global_pos)
+            if new_hatch_dist >= prev_hatch_dist
+                    and not positions_equal(global_pos, prev_hatch) then
+                return false
+            end
+
+            prev_hatch_dist = new_hatch_dist
+            prev_hatch = util.copy_table(global_pos)
+        end
+
+        magic("X<\r")
+        return true
+    elseif where == "Tomb:1" then
+        if view.feature_at(0, 0) == "escape_hatch_down" then
+            local new_hatch_dist = supdist(global_pos)
+            if new_hatch_dist >= prev_hatch_dist
+                    and not positions_equal(global_pos, prev_hatch) then
+                return false
+            end
+
+            prev_hatch_dist = new_hatch_dist
+            prev_hatch = util.copy_table(global_pos)
+        end
+
+        magic("X>\r")
+        return true
+    end
+
+    return false
+end
+
+function plan_tomb2_arrival()
+    if not tomb2_entry_turn
+            or you.turns() >= tomb2_entry_turn + 5
+            or c_persist.did_tomb2_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if attraction() then
+            c_persist.did_tomb2_buff = true
+            return true
+        end
+        return false
+    end
+end
+
+function plan_tomb3_arrival()
+    if not tomb3_entry_turn
+            or you.turns() >= tomb3_entry_turn + 5
+            or c_persist.did_tomb3_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if attraction() then
+            c_persist.did_tomb3_buff = true
+            return true
+        end
+        return false
+    end
+end
+
+
 function set_plan_pre_explore()
-    plan_pre_explore = cascade {
+    plans.pre_explore = cascade {
         {plan_ancestor_life, "ancestor_life"},
         {plan_sacrifice, "sacrifice"},
-        {plan_handle_acquirement_result, "handle_acquirement_result"},
+        {plans.acquirement, "acquirement"},
         {plan_bless_weapon, "bless_weapon"},
         {plan_upgrade_weapon, "upgrade_weapon"},
         {plan_use_good_consumables, "use_good_consumables"},
@@ -278,7 +465,7 @@ function set_plan_pre_explore()
 end
 
 function set_plan_pre_explore2()
-    plan_pre_explore2 = cascade {
+    plans.pre_explore2 = cascade {
         {plan_upgrade_armour, "upgrade_armour"},
         {plan_upgrade_amulet, "upgrade_amulet"},
         {plan_upgrade_rings, "upgrade_rings"},
@@ -291,7 +478,7 @@ function set_plan_pre_explore2()
 end
 
 function set_plan_explore()
-    plan_explore = cascade {
+    plans.explore = cascade {
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_take_escape_hatch, "take_escape_hatch"},
@@ -305,7 +492,7 @@ function set_plan_explore()
 end
 
 function set_plan_explore2()
-    plan_explore2 = cascade {
+    plans.explore2 = cascade {
         {plan_abandon_god, "abandon_god"},
         {plan_use_altar, "use_altar"},
         {plan_go_to_altar, "try_go_to_altar"},
@@ -332,6 +519,12 @@ function set_plan_explore2()
         {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
         {plan_enter_abyss, "enter_abyss"},
         {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
+        {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
+        {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
+        {plan_swamp_clouds_hack, "swamp_clouds_hack"},
+        {plan_tomb_go_to_final_hatch, "try_tomb_go_to_final_hatch"},
+        {plan_tomb_go_to_hatch, "try_tomb_go_to_hatch"},
+        {plan_tomb_use_hatch, "tomb_use_hatch"},
         {plan_take_unexplored_stairs, "take_unexplored_stairs"},
         {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
         {plan_shopping_spree, "try_shopping_spree"},

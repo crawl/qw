@@ -1,5 +1,5 @@
 ------------------
--- Plans for the Pandemonium branch.
+-- Plans specific to Pandemonium.
 
 function want_to_be_in_pan()
     return goal_branch == "Pan" and not have_branch_runes("Pan")
