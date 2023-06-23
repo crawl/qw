@@ -248,7 +248,7 @@ function get_portal_goal()
         branch_data[chosen_portal].parent_max_depth = depth
     end
 
-    return chosen_portal, chosen_turns == INF_TURNS
+    return chosen_portal, chosen_turns == const.inf_turns
 end
 
 function want_god()
@@ -570,7 +570,7 @@ end
 
 function autoexplored_level(branch, depth)
     local state = c_persist.autoexplore[make_level(branch, depth)]
-    return state and state > AUTOEXP.NEEDED
+    return state and state > const.autoexplore.needed
 end
 
 function explored_level(branch, depth)
@@ -579,8 +579,10 @@ function explored_level(branch, depth)
     end
 
     return autoexplored_level(branch, depth)
-        and have_all_stairs(branch, depth, DIR.DOWN, FEAT_LOS.REACHABLE)
-        and have_all_stairs(branch, depth, DIR.UP, FEAT_LOS.REACHABLE)
+        and have_all_stairs(branch, depth, const.dir.down,
+            const.feat_state.reachable)
+        and have_all_stairs(branch, depth, const.dir.up,
+            const.feat_state.reachable)
         and (have_branch_runes(branch) or depth < branch_rune_depth(branch))
 end
 
@@ -825,9 +827,10 @@ function next_exploration_depth(branch, min_depth, max_depth)
     for d = min_depth, max_depth do
         if not autoexplored_level(branch, d) then
             return d
-        elseif not have_all_stairs(branch, d, DIR.UP, FEAT_LOS.REACHABLE)
-                or not have_all_stairs(branch, d, DIR.DOWN,
-                    FEAT_LOS.REACHABLE) then
+        elseif not have_all_stairs(branch, d, const.dir.up,
+                    const.feat_state.reachable)
+                or not have_all_stairs(branch, d, const.dir.down,
+                    const.feat_state.reachable) then
             return d
         end
     end
@@ -859,7 +862,7 @@ function set_goal(status, goal)
             goal_depth = branch_depth("Zot")
             if where == zot_end then
                 ignore_traps = true
-                c_persist.autoexplore[zot_end] = AUTOEXP.NEEDED
+                c_persist.autoexplore[zot_end] = const.autoexplore.needed
             end
         end
     end
@@ -874,7 +877,7 @@ function set_goal(status, goal)
 end
 
 function reset_autoexplore(level)
-    if c_persist.autoexplore[level] == AUTOEXP.NEEDED then
+    if c_persist.autoexplore[level] == const.autoexplore.needed then
         return
     end
 
@@ -882,7 +885,7 @@ function reset_autoexplore(level)
         dsay("Resetting autoexplore of " .. level)
     end
 
-    c_persist.autoexplore[level] = AUTOEXP.NEEDED
+    c_persist.autoexplore[level] = const.autoexplore.needed
     want_goal_update = true
 end
 

@@ -1,6 +1,14 @@
 -----------------------------------------
 -- monster functions and data
 
+const.pan_lord_type = 344
+const.attitude = {
+    "hostile",
+    "neutral",
+    "strict_neutral",
+    "peaceful",
+    "friendly"
+}
 
 -- functions for use in the monster lists below
 function in_desc(lev, str)
@@ -11,7 +19,7 @@ end
 
 function pan_lord(lev)
     return function (mons)
-        return you.xl() < lev and mons:type() == enum_mons_pan_lord
+        return you.xl() < lev and mons:type() == const.pan_lord_type
     end
 end
 
@@ -664,7 +672,7 @@ function update_monsters()
     enemy_list = {}
     local closest_invis_pos
     local sinv = you.see_invisible()
-    for pos in radius_iter(origin) do
+    for pos in radius_iter(const.origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
             local mon_info = monster.get_monster_at(pos.x, pos.y)
             if mon_info then
@@ -770,7 +778,7 @@ end
 
 function count_pan_lords(radius)
     return count_enemies(radius,
-        function(mons) return mons:type() == enum_mons_pan_lord end)
+        function(mons) return mons:type() == const.pan_lord_type end)
 end
 
 function should_dig_unreachable_monster(mons)

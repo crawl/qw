@@ -57,8 +57,8 @@ function test_radius_iter()
         dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 
-    dsay("Testing origin with radius 3")
-    for pos in radius_iter(origin, 3) do
+    dsay("Testing const.origin with radius 3")
+    for pos in radius_iter(const.origin, 3) do
         dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
     end
 end
@@ -93,7 +93,7 @@ end
 
 function print_traversal_map(center)
     if not center then
-        center = origin
+        center = const.origin
     end
 
     crawl.setopt("msg_condense_repeats = false")
@@ -133,7 +133,7 @@ end
 
 function print_unexcluded_map(center)
     if not center then
-        center = origin
+        center = const.origin
     end
 
     crawl.setopt("msg_condense_repeats = false")
@@ -173,7 +173,7 @@ end
 
 function print_distance_map(dist_map, center, excluded)
     if not center then
-        center = origin
+        center = const.origin
     end
 
     crawl.setopt("msg_condense_repeats = false")
@@ -220,7 +220,7 @@ end
 
 function print_distance_maps(center, excluded)
     if not center then
-        center = origin
+        center = const.origin
     end
 
     for _, dist_map in pairs(distance_maps) do

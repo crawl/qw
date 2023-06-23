@@ -523,7 +523,7 @@ function plan_use_good_consumables()
     for it in inventory() do
         if it.class(true) == "scroll" and can_read() then
             if it.name():find("acquirement")
-                    and not destroys_items_at(origin) then
+                    and not destroys_items_at(const.origin) then
                 if read(it) then
                     return true
                 end

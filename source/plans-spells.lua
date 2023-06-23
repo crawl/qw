@@ -32,17 +32,13 @@ function spell_castable(sp)
         end
     elseif sp == "Summon Small Mammal" then
         local count = 0
-        for pos in square_iter(origin) do
+        for pos in square_iter(const.origin) do
             local mons = get_monster_at(pos)
-            if mons and mons:attitude() == enum_att_friendly then
+            if mons and mons:is_friendly() then
                 count = count + 1
             end
         end
         if count >= 4 then
-            return false
-        end
-    elseif sp == "Sandblast" then
-        if not have_item("missile", "stone") then
             return false
         end
     end

@@ -20,9 +20,10 @@ function initialize_c_persist()
 end
 
 function initialize_enums()
-    AUTOEXP = enum(AUTOEXP)
-    FEAT_LOS = enum(FEAT_LOS)
-    MAP_SELECT = enum(MAP_SELECT)
+    const.autoexplore = enum(const.autoexplore)
+    const.feat_state = enum(const.feat_state)
+    const.map_select = enum(const.map_select)
+    const.attitude = enum(const.attitude)
 end
 
 function initialize()
@@ -86,19 +87,19 @@ end
 function note_qw_data()
     note("qw: Version: " .. qw_version)
     note("qw: Game counter: " .. c_persist.record.counter)
-    note("qw: Always use a shield: " .. bool_string(SHIELD_CRAZY))
+    note("qw: Melee chars always use a shield: " .. bool_string(SHIELD_CRAZY))
     if not util.contains(god_options(), you.god()) then
         note("qw: God list: " .. table.concat(god_options(), ", "))
         note("qw: Allow faded altars: " .. bool_string(FADED_ALTAR))
     end
-    note("qw: Do Orc after D:" .. branch_depth("D") .. " "
+    note("qw: Do Orc after clearing Dungeon:" .. branch_depth("D") .. " "
         .. bool_string(LATE_ORC))
     note("qw: Do second Lair branch before Depths: " ..
         bool_string(EARLY_SECOND_RUNE))
     note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
 
     local plans = goal_options()
-    note("qw: Plans: " .. plans)
+    note("qw: Goals: " .. plans)
 end
 
 function first_turn_initialize()

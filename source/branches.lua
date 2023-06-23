@@ -113,7 +113,7 @@ function initialize_branch_data()
     early_zot = make_level_range("Zot", 1, -1)
     zot_end = branch_end("Zot")
 
-    abyssal_rune = branch_runes("Abyss")[1] .. RUNE_SUFFIX
+    abyssal_rune = branch_runes("Abyss")[1] .. const.rune_suffix
 end
 
 function branch_travel(branch)
@@ -206,13 +206,13 @@ function branch_exists(branch)
         or not branch_data[branch])
 end
 
-function branch_found(branch, min_los)
+function branch_found(branch, min_state)
     if branch == "D" then
         return {"D:0"}
     end
 
-    if not min_los then
-        min_los = FEAT_LOS.SEEN
+    if not min_state then
+        min_state = const.feat_state.seen
     end
 
     if not c_persist.branch_entries[branch] then
@@ -220,7 +220,7 @@ function branch_found(branch, min_los)
     end
 
     for level, state in pairs(c_persist.branch_entries[branch]) do
-        if state.los >= min_los then
+        if state.feat >= min_state then
             return level
         end
     end
@@ -301,7 +301,7 @@ function record_portal(level, portal, permanent)
     local len = #c_persist.portals[level][portal]
     if not permanent
             and len > 0
-            and c_persist.portals[level][portal][len] ~= INF_TURNS then
+            and c_persist.portals[level][portal][len] ~= const.inf_turns then
         return
     end
 
@@ -315,7 +315,7 @@ function record_portal(level, portal, permanent)
     -- record the turns to allow prioritizing among timed portals across
     -- levels.
     if permanent then
-        table.insert(c_persist.portals[level][portal], 1, INF_TURNS)
+        table.insert(c_persist.portals[level][portal], 1, const.inf_turns)
     else
         table.insert(c_persist.portals[level][portal], you.turns())
     end
@@ -359,7 +359,7 @@ function update_expired_portals()
             local timeout = portal_timeout(portal)
             for _, turns in ipairs(turns_list) do
                 if where_branch ~= portal
-                        and turns ~= INF_TURNS
+                        and turns ~= const.inf_turns
                         and (explored
                             or timeout and you.turns() - turns > timeout) then
                     remove_portal(level, portal)

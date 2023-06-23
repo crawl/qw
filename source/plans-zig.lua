@@ -24,7 +24,7 @@ function plan_move_to_zigfig_location()
         return false
     end
 
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
                 and not monster_in_way(pos)

@@ -225,7 +225,7 @@ function assess_explosion(attack, target)
             mons = get_monster_at(pos)
         end
         if mons then
-            if mons:attitude() > 0
+            if mons:attitude() > const.attitude.hostile
                     and not mons:ignores_player_projectiles() then
                 return
             end
@@ -267,7 +267,7 @@ function assess_ranged_target(attack, target)
         -- Never potentially hit non-hostiles. If at_target_result is defined,
         -- we'll be using '.', otherwise we haven't yet reached our target and
         -- the attack is unusable.
-        if mons and mons:attitude() > 0
+        if mons and mons:attitude() > const.attitude.hostile
                 and not mons:ignores_player_projectiles() then
             if debug_channel("ranged") then
                 dsay("Aborted target: non-hostile monster at "
@@ -710,8 +710,8 @@ function plan_continue_move_towards_enemy()
     end
 
     if turns_left_moving_towards_enemy > 0 then
-        local move = get_move_towards(origin, enemy_memory, tab_function(),
-            reach_range())
+        local move = get_move_towards(const.origin, enemy_memory,
+            tab_function(), reach_range())
         if not move then
             return false
         end
@@ -751,7 +751,7 @@ function random_step(reason)
 
     local new_pos
     local count = 0
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         if can_move_to(pos) then
             count = count + 1
             if crawl.one_chance_in(count) then

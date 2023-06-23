@@ -43,7 +43,7 @@ function get_reachable_runelights()
     local runelights = {}
     for _, pos in pairs(feature_map_positions["runelight"]) do
         local state = get_map_runelight(pos)
-        if state and state.los == FEAT_LOS.REACHABLE then
+        if state and state.feat == const.feat_state.reachable then
             table.insert(runelights, pos)
         end
     end
@@ -66,8 +66,8 @@ function want_to_move_to_abyss_exit()
     end
 
     local state = get_branch_stairs(where_branch, where_depth, where_branch,
-            DIR.UP)
-    return state and state.los >= FEAT_LOS.REACHABLE
+            const.dir.up)
+    return state and state.feat >= const.feat_state.reachable
 end
 
 function want_to_move_to_abyssal_stairs()
@@ -79,7 +79,7 @@ function want_to_move_to_abyssal_stairs()
     end
 
     for _, state in pairs(c_persist.abyssal_stairs) do
-        if state.los >= FEAT_LOS.REACHABLE then
+        if state.feat >= const.feat_state.reachable then
             return true
         end
     end

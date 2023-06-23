@@ -2,7 +2,7 @@
 -- Per-turn update and other turn-related aspects.
 
 -- A value for sorting last when comparing turns.
-INF_TURNS = 200000000
+const.inf_turns = 200000000
 
 function turn_memo(name, func)
     if memos[name] == nil then
@@ -42,7 +42,7 @@ function turn_update()
     if hp_is_full() then
         full_hp_turn = turn_count
     end
-    position_is_safe = is_safe_at(origin)
+    position_is_safe = is_safe_at(const.origin)
     position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
 
     if you.god() ~= previous_god then
@@ -96,7 +96,8 @@ function turn_update()
         ignore_traps = false
     end
 
-    base_corrosion = base_corrosion + count_adjacent_slimy_walls_at(origin)
+    base_corrosion = base_corrosion
+        + count_adjacent_slimy_walls_at(const.origin)
 
     if you.flying() then
         gained_permanent_flight = permanent_flight == false

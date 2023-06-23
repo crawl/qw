@@ -42,7 +42,7 @@ function plan_stuck_take_escape_hatch()
         return false
     end
 
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         go_upstairs()
     else
         go_downstairs()
@@ -52,7 +52,7 @@ function plan_stuck_take_escape_hatch()
 end
 
 function plan_stuck_move_towards_escape_hatch()
-    if want_to_use_escape_hatches(DIR.UP) then
+    if want_to_use_escape_hatches(const.dir.up) then
         return false
     end
 
@@ -60,16 +60,16 @@ function plan_stuck_move_towards_escape_hatch()
     if goal_travel.first_dir then
         hatch_dir = goal_travel.first_dir
     else
-        hatch_dir = DIR.UP
+        hatch_dir = const.dir.up
     end
-    local feat = escape_hatch_features[hatch_dir]
+    local feat = const.escape_hatches[hatch_dir]
 
     local move, dest = best_move_towards_features({ feat }, true)
     if move then
         return move_towards_destination(move, dest, "hatch")
     end
 
-    feat = escape_hatch_features[-hatch_dir]
+    feat = const.escape_hatches[-hatch_dir]
     move, dest = best_move_towards_features({ feat }, true)
     if move then
         return move_towards_destination(move, dest, "hatch")
@@ -98,7 +98,7 @@ function plan_stuck_dig_grate()
 
     local grate_offset = 20
     local grate_pos
-    for pos in square_iter(origin) do
+    for pos in square_iter(const.origin) do
         if view.feature_at(pos.x, pos.y) == "iron_grate" then
             if abs(pos.x) + abs(pos.y) < grate_offset
                     and you.see_cell_solid_see(pos.x, pos.y) then

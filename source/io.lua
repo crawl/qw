@@ -123,17 +123,17 @@ function c_message(text, channel)
     elseif text:find("Your pager goes off") then
         have_message = true
     elseif text:find("Done exploring") then
-        c_persist.autoexplore[you.where()] = AUTOEXP.FULL
+        c_persist.autoexplore[you.where()] = const.autoexplore.full
         want_goal_update = true
     elseif text:find("Partly explored") then
         if text:find("transporter") then
-            c_persist.autoexplore[you.where()] = AUTOEXP.TRANSPORTER
+            c_persist.autoexplore[you.where()] = const.autoexplore.transporter
         else
-            c_persist.autoexplore[you.where()] = AUTOEXP.PARTIAL
+            c_persist.autoexplore[you.where()] = const.autoexplore.partial
         end
         want_goal_update = true
     elseif text:find("Could not explore") then
-        c_persist.autoexplore[you.where()] = AUTOEXP.RUNED_DOOR
+        c_persist.autoexplore[you.where()] = const.autoexplore.runed_door
         want_goal_update = true
     -- Track which stairs we've fully explored by watching pairs of messages
     -- corresponding to standing on stairs and then taking them. The climbing
@@ -154,9 +154,9 @@ function c_message(text, channel)
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
                 update_stone_stairs(branch, depth, dir, num,
-                    { los = FEAT_LOS.EXPLORED })
+                    { feat = const.feat_state.explored })
                 update_stone_stairs(branch, depth + dir, travel_dir,
-                    travel_num, { los = FEAT_LOS.EXPLORED })
+                    travel_num, { feat = const.feat_state.explored })
             end
         end
         stairs_travel = nil
@@ -189,7 +189,7 @@ function c_message(text, channel)
             local expired_portal
             for portal, turns_list in pairs(c_persist.portals[where]) do
                 for _, turns in ipairs(turns_list) do
-                    if turns ~= INF_TURNS then
+                    if turns ~= const.inf_turns then
                         count = count + 1
                         if count > 1 then
                             expired_portal = nil

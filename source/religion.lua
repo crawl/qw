@@ -216,9 +216,9 @@ function god_uses_invocations(god)
     return god_data[god].uses_invocations
 end
 
-function altar_found(god, los_state)
-    if not los_state then
-        los_state = FEAT_LOS.REACHABLE
+function altar_found(god, feat_state)
+    if not feat_state then
+        feat_state = const.feat_state.reachable
     end
 
     if not c_persist.altars[god] then
@@ -227,7 +227,7 @@ function altar_found(god, los_state)
 
     for level, entries in pairs(c_persist.altars[god]) do
         for _, state in pairs(entries) do
-            if state.los >= los_state then
+            if state.feat >= feat_state then
                 return level
             end
         end
@@ -382,7 +382,7 @@ function count_brothers_in_arms(radius)
     end
 
     local i = 0
-    for pos in square_iter(origin, radius) do
+    for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
         if mons and mons:is_safe()
                 and mons:is("berserk")
@@ -400,7 +400,7 @@ function count_elliptic(radius)
     end
 
     local i = 0
-    for pos in square_iter(origin, radius) do
+    for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"elliptic"}) then
@@ -421,7 +421,7 @@ function count_greater_servants(radius)
     end
 
     local i = 0
-    for pos in square_iter(origin, radius) do
+    for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
         if mons and mons:is_safe()
                 and mons:is("summoned")
@@ -438,7 +438,7 @@ function count_divine_warriors(radius)
     end
 
     local i = 0
-    for pos in square_iter(origin, radius) do
+    for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"angel", "daeva"}) then
@@ -454,7 +454,7 @@ function count_beogh_allies(radius)
     end
 
     local i = 0
-    for pos in square_iter(origin, radius) do
+    for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
         if mons and mons:is_safe()
                 and contains_string_in(mons:name(), {"orc "}) then
@@ -465,7 +465,7 @@ function count_beogh_allies(radius)
 end
 
 function update_altar(god, level, hash, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined altar state.")
     end
 
@@ -485,21 +485,21 @@ function update_altar(god, level, hash, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating " .. god .. " altar on " .. level .. " at "
@@ -509,8 +509,8 @@ function update_altar(god, level, hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
             want_goal_update = true
         end
         return true
@@ -551,9 +551,10 @@ function update_permanent_flight()
     for god, levels in pairs(c_persist.altars) do
         for level, altars in pairs(levels) do
             for hash, state in pairs(altars) do
-                if state.los >= FEAT_LOS.SEEN
-                        and state.los < FEAT_LOS.REACHABLE then
-                    update_altar(god, level, hash, { los = FEAT_LOS.REACHABLE })
+                if state.feat >= const.feat_state.seen
+                        and state.feat < const.feat_state.reachable then
+                    update_altar(god, level, hash,
+                        { feat = const.feat_state.reachable })
                 end
             end
         end

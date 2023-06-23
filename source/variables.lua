@@ -7,25 +7,8 @@
 -- commit, or change it here to a custom version string.
 local qw_version = "%VERSION%"
 
--- Crawl enum values :/
-local enum_mons_pan_lord = 344
-local enum_att_friendly = 4
-local enum_att_neutral = 1
-
--- Constants
-local INF_TURNS
-local INF_DIST
-local GXM
-local origin
-local RUNE_SUFFIX
-local ORB_NAME
-local MAX_TEMP_DISTANCE_MAPS
-
--- Enum tables
-local AUTOEXP
-local FEAT_LOS
-local DIR
-local MAP_SELECT
+-- All constants go in this table.
+local const = {}
 
 -- Plan functions. These must later be initialized as cascades.
 local plans = {}

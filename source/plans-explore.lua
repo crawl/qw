@@ -100,7 +100,7 @@ function plan_open_runed_doors()
         return false
     end
 
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         if view.feature_at(pos.x, pos.y) == "runed_clear_door" then
             magic(delta_to_vi(pos) .. "Y")
             return true
@@ -186,7 +186,7 @@ function plan_move_towards_goal()
     if c_persist.altars[god] and c_persist.altars[god][where] then
         for hash, _ in pairs(c_persist.altars[god][where]) do
             if update_altar(god, where, hash,
-                    { los = FEAT_LOS.SEEN }, true) then
+                    { feat = const.feat_state.seen }, true) then
                 restart_cascade = true
             end
         end
@@ -224,7 +224,7 @@ function plan_move_towards_monster()
     end
 
     if #mons_targets == 0 then
-        for pos in square_iter(origin) do
+        for pos in square_iter(const.origin) do
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons and Monster:new(mons):is_enemy() then
                 table.insert(mons_targets, position_sum(global_pos, pos))

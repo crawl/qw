@@ -1,3 +1,15 @@
+------------------
+-- Terrain data and functions.
+
+-- Feature state enum
+const.feat_state = {
+    "none",
+    "seen",
+    "diggable",
+    "reachable",
+    "explored",
+}
+
 function get_feature_name(where_name)
     for _, value in ipairs(portal_data) do
         if where_name == value[1] then
@@ -90,11 +102,11 @@ function feature_uses_map_key(key, feat)
     end
 
     if key == ">" then
-        return dir and dir == DIR.DOWN
+        return dir and dir == const.dir.down
             or feat == "transporter"
             or feat == "escape_hatch_down"
     elseif key == "<" then
-        return dir and dir == DIR.UP
+        return dir and dir == const.dir.up
             or feat == "escape_hatch_up"
     else
         return false
@@ -114,24 +126,24 @@ end
 function stone_stairs_type(feat)
     local dir
     if feat:find("^stone_stairs_down") then
-        dir = DIR.DOWN
+        dir = const.dir.down
     elseif feat:find("^stone_stairs_up") then
-        dir = DIR.UP
+        dir = const.dir.up
     else
         return
     end
 
     local num = feat:gsub("stone_stairs_"
-        .. (dir == DIR.DOWN and "down_" or "up_"), "", 1)
+        .. (dir == const.dir.down and "down_" or "up_"), "", 1)
     return dir, num
 end
 
 function branch_stairs_type(feat)
     local dir
     if feat:find("^enter_") then
-        dir = DIR.DOWN
+        dir = const.dir.down
     elseif feat:find("^exit_") then
-        dir = DIR.UP
+        dir = const.dir.up
     else
         return
     end
@@ -150,9 +162,9 @@ end
 
 function escape_hatch_type(feat)
     if feat == "escape_hatch_up" then
-        return DIR.UP
+        return const.dir.up
     elseif feat == "escape_hatch_down" then
-        return DIR.DOWN
+        return const.dir.down
     end
 end
 
@@ -176,7 +188,7 @@ function cloud_is_dangerous(cloud)
 end
 
 function update_runelight(hash, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined runelight state.")
     end
 
@@ -188,21 +200,21 @@ function update_runelight(hash, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating Abyss runelight at " .. pos_string(pos) .. " from "
@@ -212,8 +224,8 @@ function update_runelight(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
         end
     end
 end

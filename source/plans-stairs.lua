@@ -118,7 +118,7 @@ function plan_take_unexplored_stairs()
 
     local state = get_stone_stairs(where_branch, where_depth, dir, num)
     assert(state, "Stone stairs at current position with undefined state")
-    if state.los >= FEAT_LOS.EXPLORED then
+    if state.feat >= const.feat_state.explored then
         return false
     end
 
@@ -126,9 +126,9 @@ function plan_take_unexplored_stairs()
     -- have completed autoexplore at least once, we may immediately leave once
     -- we see we've found the last missing staircase.
     c_persist.autoexplore[make_level(where_branch, where_depth + dir)]
-        = AUTOEXP.NEEDED
+        = const.autoexplore.needed
 
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         go_upstairs()
     else
         go_downstairs()
@@ -237,7 +237,7 @@ end
 -- to simply taking an explored route through stone stairs. So we only
 -- take a hatch up in Zot if the destination level is fully explored.
 function want_to_use_escape_hatches(dir)
-    return dir == DIR.UP
+    return dir == const.dir.up
         and goal_status == "Escape"
         and not level_is_temporary()
         and not in_branch("Tomb")
@@ -254,7 +254,7 @@ function plan_take_escape_hatch()
         return false
     end
 
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         go_upstairs()
     else
         go_downstairs()
@@ -264,11 +264,11 @@ function plan_take_escape_hatch()
 end
 
 function plan_move_towards_escape_hatch()
-    if want_to_use_escape_hatches(DIR.UP) then
+    if want_to_use_escape_hatches(const.dir.up) then
         return false
     end
 
-    local flee_pos = best_flee_destination_at(origin)
+    local flee_pos = best_flee_destination_at(const.origin)
     if not flee_pos then
         return false
     end

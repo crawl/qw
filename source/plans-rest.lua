@@ -90,7 +90,7 @@ function should_ally_rest()
         return false
     end
 
-    for pos in square_iter(origin, 3) do
+    for pos in square_iter(const.origin, 3) do
         local mons = get_monster_at(pos)
         if mons and mons:is_friendly() and mons:damage_level() > 0 then
             return true

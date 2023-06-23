@@ -44,19 +44,20 @@ function monster_in_way(pos, ignore_hostiles)
     local feat = view.feature_at(0, 0)
     local attitude = mons:attitude()
     return mons:name() == "orb of destruction"
-        or not ignore_hostiles and attitude == 0
+        or not ignore_hostiles and attitude == const.attitude.hostile
         -- Attacking neutrals causes penance under the good gods.
-        or attitude == enum_att_neutral and mons:attacking_causes_penance()
+        or attitude == const.attitude.neutral
+            and mons:attacking_causes_penance()
         -- Strict neutral and up will swap with us, but we have to check that
         -- they can. We assume we never want to attack these.
-        or attitude > enum_att_neutral
+        or attitude > const.attitude.neutral
             and (mons:is_constricted()
                 or mons:is_caught()
                 or mons:status("petrified")
                 or mons:status("paralysed")
                 or mons:status("constricted by roots")
                 or mons:is("sleeping")
-                or not mons:can_traverse(origin)
+                or not mons:can_traverse(const.origin)
                 or feat  == "trap_zot")
 end
 
@@ -205,8 +206,8 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to INF_DIST if the move is not closer to any flee position in
-    -- flee_positions, otherwise equal to the (min) dist to such a position.
+    -- Equal to const.inf_dist if the move is not closer to any flee position
+    -- in flee_positions, otherwise equal to the (min) dist to such a position.
     a.flee_distance = flee_improvement(pos)
 
     return a
@@ -228,7 +229,7 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.flee_distance < INF_DIST
+            and a2.flee_distance < const.inf_dist
             and a1.flee_distance > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
@@ -243,7 +244,7 @@ function step_reason(a1, a2)
                 -- killed.
                 or you.xl() <= 8
                     and disable_autoexplore
-                    and goal_travel.first_dir == DIR.UP)
+                    and goal_travel.first_dir == const.dir.up)
             and not buffed()
             and (no_spells or starting_spell() ~= "Summon Small Mammal") then
         return "fleeing"
@@ -362,7 +363,7 @@ function choose_tactical_step()
         return
     end
 
-    local a0 = assess_square(origin)
+    local a0 = assess_square(const.origin)
     if a0.cloud_safe
             and not (a0.fumble and sense_danger(3))
             and not (a0.bad_wall and sense_danger(3))
@@ -374,7 +375,7 @@ function choose_tactical_step()
 
     local best_pos, best_reason, besta
     local count = 1
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
         if reason then
@@ -423,7 +424,7 @@ function update_flee_positions()
     flee_positions = {}
 
     local stairs_feats = level_stairs_features(where_branch, where_depth,
-        DIR.UP)
+        const.dir.up)
     local search_feats = {}
     -- Only retreat to stairs marked as safe.
     for _, feat in ipairs(stairs_feats) do
@@ -489,12 +490,12 @@ function flee_improvement(pos)
         return flee_dist
     end
 
-    return INF_DIST
+    return const.inf_dist
 end
 
 function get_move_closer(positions)
     local best_dist, best_move, best_dest
-    for apos in adjacent_iter(origin) do
+    for apos in adjacent_iter(const.origin) do
         local traversable = is_traversable_at(apos)
         for _, pos in ipairs(positions) do
             local dist = supdist(position_difference(pos, apos))
@@ -673,7 +674,8 @@ function monster_can_move_to_player_melee(mons)
     local tab_func = function(pos)
         return mons:can_traverse(pos)
     end
-    return get_move_towards(mons:pos(), origin, tab_func, mons:reach_range())
+    return get_move_towards(mons:pos(), const.origin, tab_func,
+            mons:reach_range())
         -- If the monster can reach attack and we can't, be sure we can
         -- close the final 1-square gap.
         and (mons:reach_range() < 2
@@ -761,7 +763,7 @@ function update_reachable_features()
     for i, pos in ipairs(positions) do
         if map_is_reachable_at(pos, true) then
             update_feature(where_branch, where_depth, feats[i],
-                hash_position(pos), { los = FEAT_LOS.REACHABLE })
+                hash_position(pos), { feat = const.feat_state.reachable })
         end
     end
 
@@ -776,7 +778,7 @@ end
 
 function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
     local i = 1
-    for near_pos in radius_iter(pos, GXM) do
+    for near_pos in radius_iter(pos, const.gxm) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored near unreachable in block "
@@ -787,7 +789,7 @@ function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
             coroutine.yield()
         end
 
-        if supdist(near_pos) <= GXM
+        if supdist(near_pos) <= const.gxm
                 and map_is_reachable_at(near_pos, ignore_exclusions)
                 and map_has_adjacent_unseen_at(near_pos) then
             return best_move_towards_map_position(near_pos, ignore_exclusions)
@@ -830,7 +832,7 @@ end
 
 function best_move_towards_unexplored(unsafe)
     local i = 1
-    for pos in radius_iter(global_pos, GXM) do
+    for pos in radius_iter(global_pos, const.gxm) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored in block " .. tostring(i / 1000)
@@ -841,7 +843,7 @@ function best_move_towards_unexplored(unsafe)
             coroutine.yield()
         end
 
-        if supdist(pos) <= GXM
+        if supdist(pos) <= const.gxm
                 and (unsafe or map_is_unexcluded_at(pos))
                 and map_is_reachable_at(pos, true)
                 and (open_runed_doors and map_has_adjacent_runed_doors_at(pos)
@@ -855,7 +857,7 @@ end
 
 function best_move_towards_safety()
     local i = 1
-    for pos in radius_iter(global_pos, GXM) do
+    for pos in radius_iter(global_pos, const.gxm) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for safety in block " .. tostring(i / 1000)
@@ -867,7 +869,7 @@ function best_move_towards_safety()
         end
 
         local los_pos = position_difference(pos, global_pos)
-        if supdist(pos) <= GXM
+        if supdist(pos) <= const.gxm
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
                 and can_move_to(los_pos, true) then

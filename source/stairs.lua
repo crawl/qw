@@ -2,26 +2,31 @@
 -- Stair-related functions
 
 -- Stair direction enum
-DIR = { UP = -1, DOWN = 1 }
+const.dir = { up = -1, down = 1 }
 
-INF_DIST = 10000
+const.inf_dist = 10000
 
-upstairs_features = {
+const.upstairs = {
     "stone_stairs_up_i",
     "stone_stairs_up_ii",
     "stone_stairs_up_iii",
 }
 
-downstairs_features = {
+const.downstairs = {
     "stone_stairs_down_i",
     "stone_stairs_down_ii",
     "stone_stairs_down_iii",
 }
 
-escape_hatch_features = {
-    [DIR.UP] = "escape_hatch_up",
-    [DIR.DOWN] = "escape_hatch_down",
+const.escape_hatches = {
+    [const.dir.up] = "escape_hatch_up",
+    [const.dir.down] = "escape_hatch_down",
 }
+
+function dir_key(dir)
+    return dir == const.dir.down and ">"
+        or (dir == const.dir.up and "<" or nil)
+end
 
 --[[
 Return a list of stair features we're allowed to take on the given level and in
@@ -33,45 +38,45 @@ and Pan that lead to the next level in the branch.
 --]]
 function level_stairs_features(branch, depth, dir)
     local feats
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         if is_portal_branch(branch)
                 or branch == "Abyss"
                 or is_hell_branch(branch)
                 or depth == 1 then
             feats = { branch_exit(branch) }
         else
-            feats = util.copy_table(upstairs_features)
+            feats = util.copy_table(const.upstairs)
         end
 
-        if want_to_use_escape_hatches(DIR.UP) then
+        if want_to_use_escape_hatches(const.dir.up) then
             table.insert(feats, "escape_hatch_up")
         end
-    elseif dir == DIR.DOWN then
+    elseif dir == const.dir.down then
         if branch == "Abyss" then
             feats = { "abyssal_stair" }
         elseif branch == "Pan" then
             feats = { "transit_pandemonium" }
         elseif is_hell_branch(branch) and depth < branch_depth(branch) then
-            feats = { downstairs_features[1] }
+            feats = { const.downstairs[1] }
         elseif depth < branch_depth(branch) then
-            feats = util.copy_table(downstairs_features)
+            feats = util.copy_table(const.downstairs)
         end
     end
     return feats
 end
 
 function stairs_state_string(state)
-    return enum_string(state.los, FEAT_LOS) .. "/"
+    return enum_string(state.feat, const.feat_state) .. "/"
         .. (state.safe and "safe" or "unsafe")
 end
 
 function update_stone_stairs(branch, depth, dir, num, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined stone stairs state.")
     end
 
     local data
-    if dir == DIR.DOWN then
+    if dir == const.dir.down then
         data = c_persist.downstairs
     else
         data = c_persist.upstairs
@@ -90,23 +95,23 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            dsay("Updating stone " .. (dir == DIR.UP and "up" or "down")
+            dsay("Updating stone " .. (dir == const.dir.up and "up" or "down")
                 .. "stairs " .. num .. " on " .. level
                 .. " from " .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
@@ -114,26 +119,27 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
             want_goal_update = true
         end
     end
 end
 
-function update_all_stone_stairs(branch, depth, dir, state, max_los)
+function update_all_stone_stairs(branch, depth, dir, state, max_feat_state)
     for i = 1, num_required_stairs(branch, depth, dir) do
         local num = ("i"):rep(i)
         local cur_state = get_stone_stairs(branch, depth, dir, num)
-        if cur_state and (not max_los or cur_state.los >= state.los) then
+        if cur_state and (not max_feat_state
+                or cur_state.feat >= state.feat) then
             update_stone_stairs(branch, depth, dir, num, state, true)
         end
     end
 end
 
 function reset_stone_stairs(branch, depth, dir)
-    update_all_stone_stairs(branch, depth, dir, { los = FEAT_LOS.REACHABLE },
-        true)
+    update_all_stone_stairs(branch, depth, dir,
+        { feat = const.feat_state.reachable }, true)
 
     local level = make_level(branch, depth)
     if level == where then
@@ -149,14 +155,14 @@ end
 
 function get_stone_stairs(branch, depth, dir, num)
     local level = make_level(branch, depth)
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         if not c_persist.upstairs[level]
                 or not c_persist.upstairs[level][num] then
             return
         end
 
         return c_persist.upstairs[level][num]
-    elseif dir == DIR.DOWN then
+    elseif dir == const.dir.down then
         if not c_persist.downstairs[level]
                 or not c_persist.downstairs[level][num] then
             return
@@ -167,7 +173,7 @@ function get_stone_stairs(branch, depth, dir, num)
 end
 
 function num_required_stairs(branch, depth, dir)
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         if depth == 1
                 or is_portal_branch(branch)
                 or branch == "Tomb"
@@ -178,7 +184,7 @@ function num_required_stairs(branch, depth, dir)
         else
             return 3
         end
-    elseif dir == DIR.DOWN then
+    elseif dir == const.dir.down then
         if depth == branch_depth(branch)
                     or is_portal_branch(branch)
                     or branch == "Tomb"
@@ -193,7 +199,7 @@ function num_required_stairs(branch, depth, dir)
     end
 end
 
-function count_stairs(branch, depth, dir, los)
+function count_stairs(branch, depth, dir, feat_state)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required == 0 then
         return 0
@@ -203,20 +209,20 @@ function count_stairs(branch, depth, dir, los)
     for i = 1, num_required do
         local num = ("i"):rep(i)
         local state = get_stone_stairs(branch, depth, dir, num)
-        if state and state.los >= los then
+        if state and state.feat >= feat_state then
             count = count + 1
         end
     end
     return count
 end
 
-function have_all_stairs(branch, depth, dir, los)
+function have_all_stairs(branch, depth, dir, feat_state)
     local num_required = num_required_stairs(branch, depth, dir)
     if num_required > 0 then
         for i = 1, num_required do
             local num = ("i"):rep(i)
             local state = get_stone_stairs(branch, depth, dir, num)
-            if not state or state.los < los then
+            if not state or state.feat < feat_state then
                 return false
             end
         end
@@ -226,11 +232,11 @@ function have_all_stairs(branch, depth, dir, los)
 end
 
 function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined branch stairs state.")
     end
 
-    local data = dir == DIR.DOWN and c_persist.branch_entries
+    local data = dir == const.dir.down and c_persist.branch_entries
         or c_persist.branch_exits
     if not data[dest_branch] then
         data[dest_branch] = {}
@@ -245,39 +251,39 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-        or force and current.los ~= state.los
-    if state.safe == current.safe and not los_changed then
+    local feat_state_changed = current.feat < state.feat
+        or force and current.feat ~= state.feat
+    if state.safe == current.safe and not feat_state_changed then
         return
     end
 
     if debug_channel("explore") then
         dsay("Updating " .. dest_branch .. " branch "
-            .. (dir == DIR.UP and "exit" or "entrance") .. " stairs " .. " on "
-            .. level .. " from " .. stairs_state_string(current) .. " to "
-            .. stairs_state_string(state))
+            .. (dir == const.dir.up and "exit" or "entrance") .. " stairs "
+            .. " on " .. level .. " from " .. stairs_state_string(current)
+            .. " to " .. stairs_state_string(state))
     end
 
     current.safe = state.safe
 
-    if not los_changed then
+    if not feat_state_changed then
         return
     end
 
-    current.los = state.los
+    current.feat = state.feat
 
-    if dir == DIR.DOWN then
+    if dir == const.dir.down then
         -- Update the entry depth in the branch data with the depth where
         -- we found this entry if the entry depth is currently unconfirmed
         -- or if the found depth is higher.
@@ -293,12 +299,12 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
 end
 
 function update_escape_hatch(branch, depth, dir, hash, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined escape hatch state.")
     end
 
     local data
-    if dir == DIR.DOWN then
+    if dir == const.dir.down then
         data = c_persist.down_hatches
     else
         data = c_persist.up_hatches
@@ -317,24 +323,25 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating escape hatch " .. (dir == DIR.UP and "up" or "down")
+            dsay("Updating escape hatch "
+                .. (dir == const.dir.up and "up" or "down")
                 .. " on " .. level .. " at " .. pos_string(pos)
                 .. " from " .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
@@ -342,8 +349,8 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
         end
     end
 end
@@ -360,7 +367,7 @@ function get_map_escape_hatch(branch, depth, pos)
 end
 
 function update_pan_transit(hash, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined Pan transit state.")
     end
 
@@ -372,21 +379,21 @@ function update_pan_transit(hash, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating Pan transit at " .. pos_string(pos) .. " from "
@@ -396,8 +403,8 @@ function update_pan_transit(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
         end
     end
 end
@@ -407,7 +414,7 @@ function get_map_pan_transit(pos)
 end
 
 function update_abyssal_stairs(hash, state, force)
-    if state.safe == nil and not state.los then
+    if state.safe == nil and not state.feat then
         error("Undefined Abyssal stairs state.")
     end
 
@@ -419,21 +426,21 @@ function update_abyssal_stairs(hash, state, force)
     if current.safe == nil then
         current.safe = true
     end
-    if current.los == nil then
-        current.los = FEAT_LOS.NONE
+    if current.feat == nil then
+        current.feat = const.feat_state.none
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
 
-    if state.los == nil then
-        state.los = current.los
+    if state.feat == nil then
+        state.feat = current.feat
     end
 
-    local los_changed = current.los < state.los
-            or force and current.los ~= state.los
-    if state.safe ~= current.safe or los_changed then
+    local feat_state_changed = current.feat < state.feat
+            or force and current.feat ~= state.feat
+    if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
             local pos = position_difference(unhash_position(hash), global_pos)
             dsay("Updating Abyssal stairs at " .. pos_string(pos) .. " from "
@@ -443,8 +450,8 @@ function update_abyssal_stairs(hash, state, force)
 
         current.safe = state.safe
 
-        if los_changed then
-            current.los = state.los
+        if feat_state_changed then
+            current.feat = state.feat
         end
     end
 end
@@ -455,14 +462,14 @@ end
 
 function get_branch_stairs(branch, depth, stairs_branch, dir)
     local level = make_level(branch, depth)
-    if dir == DIR.UP then
+    if dir == const.dir.up then
         if not c_persist.branch_exits[stairs_branch]
                 or not c_persist.branch_exits[stairs_branch][level] then
             return
         end
 
         return c_persist.branch_exits[stairs_branch][level]
-    elseif dir == DIR.DOWN then
+    elseif dir == const.dir.down then
         if not c_persist.branch_entries[stairs_branch]
                 or not c_persist.branch_entries[stairs_branch][level] then
             return
@@ -481,7 +488,7 @@ function get_destination_stairs(branch, depth, feat)
 
     local branch, dir = branch_stairs_type(feat)
     if branch then
-        if dir == DIR.UP then
+        if dir == const.dir.up then
             local parent, min_depth, max_depth = parent_branch(branch)
             if min_depth == max_depth then
                 return get_branch_stairs(parent, min_depth, branch, -dir)

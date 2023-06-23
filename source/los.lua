@@ -1,15 +1,6 @@
 -- Coordinates and LOS
 
-origin = { x = 0, y = 0 }
-
--- Feature LOS state enum
-FEAT_LOS = {
-    "NONE",
-    "SEEN",
-    "DIGGABLE",
-    "REACHABLE",
-    "EXPLORED",
-}
+const.origin = { x = 0, y = 0 }
 
 function supdist(pos)
     return max(abs(pos.x), abs(pos.y))
@@ -19,13 +10,13 @@ function is_adjacent(pos)
     return abs(pos.x) <= 1 and abs(pos.y) <= 1
 end
 
-function los_state(pos)
+function feature_state(pos)
     if you.see_cell_solid_see(pos.x, pos.y) then
-        return FEAT_LOS.REACHABLE
+        return const.feat_state.reachable
     elseif you.see_cell_no_trans(pos.x, pos.y) then
-        return FEAT_LOS.DIGGABLE
+        return const.feat_state.diggable
     end
-    return FEAT_LOS.SEEN
+    return const.feat_state.seen
 end
 
 function have_line_of_fire(pos)
@@ -126,21 +117,20 @@ function radius_iter(pos, radius, include_center)
 end
 
 function hash_position(pos)
-    return 2 * GXM * pos.x + pos.y
+    return 2 * const.gxm * pos.x + pos.y
 end
 
 function unhash_position(hash)
-    local x = math.floor(hash / (2 * GXM) + 0.5)
-    return { x = x, y = hash - 2 * GXM * x }
+    local x = math.floor(hash / (2 * const.gxm) + 0.5)
+    return { x = x, y = hash - 2 * const.gxm * x }
 end
 
 function is_adjacent(pos, center)
     if not center then
-        center = origin
+        center = const.origin
     end
 
-    local diff = { x = pos.x - center.x, y = pos.y - center.y }
-    return supdist(diff) > 0 and abs(diff.x) <= 1 and abs(diff.y) <= 1
+    return max(abs(pos.x - center.x), abs(pos.y - center.y)) == 1
 end
 
 function position_difference(a, b)

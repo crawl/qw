@@ -376,7 +376,7 @@ function plan_blinking()
     end
 
     local cur_count = 0
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         local mons = get_monster_at(pos)
         if mons and mons:name() == "floating eye" then
             cur_count = cur_count + 3
@@ -390,7 +390,7 @@ function plan_blinking()
 
     local best_count = 0
     local best_pos
-    for pos in square_iter(origin) do
+    for pos in square_iter(const.origin) do
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
                 and not get_monster_at(pos)
@@ -898,7 +898,7 @@ function plan_continue_flee()
         return false
     end
 
-    for pos in adjacent_iter(origin) do
+    for pos in adjacent_iter(const.origin) do
         if can_move_to(pos) and not is_solid_at(pos) and is_safe_at(pos) then
             local map = get_distance_map(target_flee_position).excluded_map
             local dist = map[global_pos.x + pos.x][global_pos.y + pos.y]
@@ -972,7 +972,7 @@ function plan_non_melee_berserk()
         return true
     end
 
-    local best_pos = best_flee_destination_at(origin)
+    local best_pos = best_flee_destination_at(const.origin)
     if not best_pos then
         wait_one_turn()
         return true

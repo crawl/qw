@@ -1,8 +1,8 @@
 -------------------------------------
 -- Equipment valuation and autopickup
 
-RUNE_SUFFIX = " rune of Zot"
-ORB_NAME = "Orb of Zot"
+const.rune_suffix = " rune of Zot"
+const.orb_name = "Orb of Zot"
 
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
@@ -1117,8 +1117,9 @@ function record_seen_item(level, name)
 end
 
 function have_progression_item(name)
-    return name:find(RUNE_SUFFIX) and you.have_rune(name:gsub(RUNE_SUFFIX, ""))
-        or name == ORB_NAME and have_orb
+    return name:find(const.rune_suffix)
+            and you.have_rune(name:gsub(const.rune_suffix, ""))
+        or name == const.orb_name and have_orb
 end
 
 function autopickup(it, name)
@@ -1127,10 +1128,10 @@ function autopickup(it, name)
     end
 
     local item_name = it:name()
-    if item_name:find(RUNE_SUFFIX) then
+    if item_name:find(const.rune_suffix) then
         record_seen_item(you.where(), item_name)
         return true
-    elseif item_name == ORB_NAME then
+    elseif item_name == const.orb_name then
         record_seen_item(you.where(), item_name)
         c_persist.found_orb = true
         return true

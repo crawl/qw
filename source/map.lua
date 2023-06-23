@@ -3,39 +3,32 @@
 
 -- Maximum map width. We use this as a general map radius that's guaranteed to
 -- reach the entire map, since qw is never given absolute coordinates by crawl.
-GXM = 80
-GYM = 70
-
-MAX_TEMP_DISTANCE_MAPS = 6
+const.gxm = 80
 
 -- Autoexplore state enum.
-AUTOEXP = {
-    "NEEDED",
-    "PARTIAL",
-    "TRANSPORTER",
-    "RUNED_DOOR",
-    "FULL",
+const.autoexplore = {
+    "needed",
+    "partial",
+    "transporter",
+    "runed_door",
+    "full",
 }
 
-MAP_SELECT = {
-    "NONE",
-    "EXCLUDED",
-    "MAIN",
-    "BOTH",
+const.map_select = {
+    "none",
+    "excluded",
+    "main",
+    "both",
 }
 
 function main_map_selected(map_select)
-    return map_select == MAP_SELECT.MAIN
-        or map_select == MAP_SELECT.BOTH
+    return map_select == const.map_select.main
+        or map_select == const.map_select.both
 end
 
 function excluded_map_selected(map_select)
-    return map_select == MAP_SELECT.EXCLUDED
-        or map_select == MAP_SELECT.BOTH
-end
-
-function dir_key(dir)
-    return dir == DIR.DOWN and ">" or (dir == DIR.UP and "<" or nil)
+    return map_select == const.map_select.excluded
+        or map_select == const.map_select.both
 end
 
 function update_waypoint(new_level)
@@ -105,19 +98,19 @@ function clear_map_cache(parity, full_clear)
     distance_maps_cache[parity] = {}
 
     traversal_maps_cache[parity] = {}
-    for x = -GXM, GXM do
+    for x = -const.gxm, const.gxm do
         traversal_maps_cache[parity][x] = {}
     end
 
     exclusion_maps_cache[parity] = {}
-    for x = -GXM, GXM do
+    for x = -const.gxm, const.gxm do
         exclusion_maps_cache[parity][x] = {}
     end
 end
 
 function find_features(feats, radius)
     if not radius then
-        radius = GXM
+        radius = const.gxm
     end
 
     local searches = {}
@@ -128,7 +121,7 @@ function find_features(feats, radius)
     local positions = {}
     local found_feats = {}
     local i = 1
-    for pos in square_iter(origin, radius, true) do
+    for pos in square_iter(const.origin, radius, true) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched features in block " .. tostring(i / 1000)
@@ -162,7 +155,7 @@ end
 
 function find_map_items(item_names, radius)
     if not radius then
-        radius = GXM
+        radius = const.gxm
     end
 
     local searches = {}
@@ -173,7 +166,7 @@ function find_map_items(item_names, radius)
     local positions = {}
     local found_items = {}
     local i = 1
-    for pos in square_iter(origin, radius, true) do
+    for pos in square_iter(const.origin, radius, true) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched items in block " .. tostring(i / 1000)
@@ -223,14 +216,14 @@ end
 function distance_map_initialize_maps(dist_map, excluded_only)
     if not excluded_only then
         dist_map.map = {}
-        for x = -GXM, GXM do
+        for x = -const.gxm, const.gxm do
             dist_map.map[x] = {}
         end
         dist_map.map[dist_map.pos.x][dist_map.pos.y] = 0
     end
 
     dist_map.excluded_map = {}
-    for x = -GXM, GXM do
+    for x = -const.gxm, const.gxm do
         dist_map.excluded_map[x] = {}
     end
     dist_map.excluded_map[dist_map.pos.x][dist_map.pos.y] =
@@ -456,7 +449,7 @@ function distance_map_update_position(pos, dist_map, map_select)
             and not dist_map.excluded_map[pos.x][pos.y] then
         if not have_adjacent then
             excluded_dist = distance_map_adjacent_dist(pos, dist_map,
-                MAP_SELECT.EXCLUDED)
+                const.map_select.excluded)
         end
 
         if excluded_dist then
@@ -550,11 +543,11 @@ function update_cell_feature(cell)
         return false
     end
 
-    local los = los_state(cell.los_pos)
+    local feat_state = feature_state(cell.los_pos)
     update_feature(where_branch, where_depth, cell.feat, cell.hash,
-        { safe = exclusion_map[cell.pos.x][cell.pos.y], los = los })
+        { safe = exclusion_map[cell.pos.x][cell.pos.y], feat = feat_state })
 
-    if los < FEAT_LOS.REACHABLE then
+    if feat_state < const.feat_state.reachable then
         check_reachable_features[cell.feat] = true
     end
 
@@ -567,7 +560,7 @@ function update_cell_feature(cell)
 end
 
 function update_map_at_cell(cell, queue, seen)
-    local map_reset = MAP_SELECT.NONE
+    local map_reset = const.map_select.none
 
     if seen[cell.hash] then
         return map_reset
@@ -578,7 +571,7 @@ function update_map_at_cell(cell, queue, seen)
     if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
         traversal_map[cell.pos.x][cell.pos.y] = traversable
         if not traversable then
-            map_reset = MAP_SELECT.BOTH
+            map_reset = const.map_select.both
         end
         map_updated = true
     end
@@ -588,8 +581,8 @@ function update_map_at_cell(cell, queue, seen)
             and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
     if traversable and exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
         exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
-        if not unexcluded and map_reset < MAP_SELECT.BOTH then
-            map_reset = MAP_SELECT.EXCLUDED
+        if not unexcluded and map_reset < const.map_select.both then
+            map_reset = const.map_select.excluded
         end
         map_updated = true
     end
@@ -613,7 +606,7 @@ end
 
 function update_map_cells()
     local queue = {}
-    for pos in square_iter(origin, los_radius, true) do
+    for pos in square_iter(const.origin, los_radius, true) do
         local cell = cell_from_position(pos, true)
         if cell then
             table.insert(queue, cell)
@@ -623,7 +616,7 @@ function update_map_cells()
     local seen = {}
     local ind = 1
     local count = 1
-    local map_reset = MAP_SELECT.NONE
+    local map_reset = const.map_select.none
     while ind <= #queue do
         if coroutine_throttle and count % 1000 == 0 then
             if debug_channel("throttle") then
@@ -649,7 +642,7 @@ function update_map_cells()
 
     if get_map_runelight(global_pos) then
         update_runelight(hash_position(global_pos),
-            { los = FEAT_LOS.EXPLORED })
+            { feat = const.feat_state.explored })
     end
 
     return queue, map_reset
@@ -689,7 +682,7 @@ function reset_c_persist(new_waypoint, new_level)
     end
 
     if new_waypoint and level_is_temporary() then
-        c_persist.autoexplore[where_branch] = AUTOEXP.NEEDED
+        c_persist.autoexplore[where_branch] = const.autoexplore.needed
         c_persist.branch_exits[where_branch] = {}
     end
 
@@ -767,8 +760,8 @@ function update_distance_maps(queue, reset)
         distance_map_remove(dist_map)
     end
 
-    local excluded_only = reset == MAP_SELECT.EXCLUDED
-    if reset > MAP_SELECT.NONE then
+    local excluded_only = reset == const.map_select.excluded
+    if reset > const.map_select.none then
         if debug_channel("map") then
             dsay("Resetting "
                 .. (excluded_only and "excluded map" or "both maps")
@@ -783,9 +776,10 @@ function update_distance_maps(queue, reset)
         end
     end
 
-    if reset < MAP_SELECT.BOTH then
+    if reset < const.map_select.both then
         update_distance_maps_at_cells(queue,
-            reset == MAP_SELECT.NONE and MAP_SELECT.BOTH or MAP_SELECT.MAIN)
+            reset == const.map_select.none and const.map_select.both
+                or const.map_select.main)
     end
 
     for _, dist_map in pairs(distance_maps) do
@@ -1019,7 +1013,7 @@ function update_exclusions(new_waypoint)
 end
 
 function want_to_use_transporters()
-    return c_persist.autoexplore[where] == AUTOEXP.TRANSPORTER
+    return c_persist.autoexplore[where] == const.autoexplore.transporter
         and (in_branch("Temple") or in_portal())
 end
 

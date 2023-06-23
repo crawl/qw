@@ -130,15 +130,16 @@ end
 function Monster:is_friendly()
     return self:get_property("is_friendly",
         function()
-            return self:attitude() == enum_att_friendly
+            return self:attitude() == const.attitude.friendly
         end)
 end
 
 function Monster:attacking_causes_penance()
     return self:get_property("attacking_causes_penance",
         function()
-            return self:attitude() > 0 and is_good_god()
-                or self:attitude() == 3 and you.god() == "Jiyva"
+            return self:attitude() > const.attitude.hostile and is_good_god()
+                or self:attitude() == const.attitude.strict_neutral
+                    and you.god() == "Jiyva"
                 or self:is_friendly()
                     and you.god() == "Beogh"
                     -- XXX: hack
@@ -252,7 +253,7 @@ end
 function Monster:is_enemy()
     return self:get_property("is_enemy",
         function()
-            return self:attitude() < enum_att_neutral
+            return self:attitude() < const.attitude.neutral
                 and not self:is_firewood()
                 and self:name() ~= "butterfly"
                 and self:name() ~= "orb of destruction"
@@ -337,7 +338,7 @@ function Monster:player_has_path_to()
         function()
             local have_flight = find_item("potion", "enlightenment")
             local square_func = traversal_function(assume_flight)
-            return get_move_towards(origin, self:pos(), square_func,
+            return get_move_towards(const.origin, self:pos(), square_func,
                 reach_range())
         end)
 end
@@ -350,8 +351,8 @@ function Monster:get_player_move_towards(assume_flight)
     local ind = assume_flight and 2 or 1
     if self.props.player_move[ind] == nil then
         local square_func = tab_function(assume_flight)
-        self.props.player_move[ind] = get_move_towards(origin, self:pos(),
-            square_func, reach_range())
+        self.props.player_move[ind] = get_move_towards(const.origin,
+            self:pos(), square_func, reach_range())
     end
 
     return self.props.player_move[ind]
