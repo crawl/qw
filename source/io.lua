@@ -160,6 +160,8 @@ function c_message(text, channel)
             end
         end
         stairs_travel = nil
+    elseif text:find("You pick up the.*rune and feel its power") then
+        want_goal_update = true
     elseif text:find("abyssal rune vanishes from your memory and reappears")
             or text:find("detect the abyssal rune") then
         c_persist.sensed_abyssal_rune = true

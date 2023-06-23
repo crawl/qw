@@ -136,7 +136,7 @@ function plan_exit_portal()
     return true
 end
 
-function plan_use_goal_feature()
+function plan_use_travel_stairs()
     if unable_to_use_stairs() or dangerous_to_move() then
         return false
     end
@@ -158,7 +158,7 @@ function plan_use_goal_feature()
     return false
 end
 
-function plan_move_towards_goal_feature()
+function plan_move_towards_travel_feature()
     if unable_to_move() or dangerous_to_move() then
         return false
     end
@@ -484,8 +484,6 @@ function set_plan_explore()
         {plan_take_escape_hatch, "take_escape_hatch"},
         {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
         {plan_move_towards_destination, "move_towards_destination"},
-        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
-        {plan_move_towards_runelight, "move_towards_runelight"},
         {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
     }
@@ -519,7 +517,6 @@ function set_plan_explore2()
         {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
         {plan_enter_abyss, "enter_abyss"},
         {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
-        {plan_go_down_abyss, "go_down_abyss"},
         {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
         {plan_use_zigfig, "use_zigfig"},
         {plan_zig_dig, "zig_dig"},
@@ -530,8 +527,8 @@ function set_plan_explore2()
         {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
-        {plan_use_goal_feature, "use_goal_feature"},
-        {plan_move_towards_goal_feature, "move_towards_goal_feature"},
+        {plan_use_travel_stairs, "use_travel_stairs"},
+        {plan_move_towards_travel_feature, "move_towards_travel_feature"},
         {plan_autoexplore, "try_autoexplore2"},
         {plan_move_towards_monster, "move_towards_monster"},
         {plan_move_towards_unexplored, "move_towards_unexplored"},

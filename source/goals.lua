@@ -887,9 +887,3 @@ function reset_autoexplore(level)
     c_persist.autoexplore[level] = const.autoexplore.needed
     want_goal_update = true
 end
-
-function want_to_stay_in_abyss()
-    return goal_branch == "Abyss"
-        and not have_branch_runes("Abyss")
-        and not hp_is_low(50)
-end

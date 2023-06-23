@@ -52,7 +52,7 @@ function level_stairs_features(branch, depth, dir)
             table.insert(feats, "escape_hatch_up")
         end
     elseif dir == const.dir.down then
-        if branch == "Abyss" then
+        if branch == "Abyss" and depth < branch_depth("Abyss") then
             feats = { "abyssal_stair" }
         elseif branch == "Pan" then
             feats = { "transit_pandemonium" }

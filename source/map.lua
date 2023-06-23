@@ -723,9 +723,8 @@ end
 function reset_item_tracking()
     if in_branch("Abyss")
             and not (c_persist.seen_items[where]
-                and c_persist.seen_items[where][abyssal_rune]) then
--- XXX: Re-enable this when abyssal rune sensing works.
---              and not c_persist.sensed_abyssal_rune then
+                and c_persist.seen_items[where][abyssal_rune])
+                and not c_persist.sensed_abyssal_rune then
         item_map_positions[abyssal_rune] = nil
     end
 
@@ -888,14 +887,13 @@ function get_item_map_positions(item_names, radius)
 
     positions, found_items = find_map_items(item_names, radius)
 
--- XXX: Re-enable this when abyssal rune sensing works.
---  -- If we've searched the map for the abyssal rune and not found it, unset
---  -- our sensing of the rune.
---  if in_branch("Abyss")
---          and util.contains(item_names, abyssal_rune)
---          and not util.contains(found_items, rune) then
---      c_persist.sensed_abyssal_rune = false
---  end
+    -- If we've searched the map for the abyssal rune and not found it, unset
+    -- our sensing of the rune.
+    if in_branch("Abyss")
+            and util.contains(item_names, abyssal_rune)
+            and not util.contains(found_items, abyssal_rune) then
+        c_persist.sensed_abyssal_rune = false
+    end
 
     return positions, found_items
 end

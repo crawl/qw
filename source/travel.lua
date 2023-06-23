@@ -413,11 +413,10 @@ function update_goal_travel()
 
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.
-    disable_autoexplore = (want_to_move_to_abyss_objective()
-            or (goal_travel.stairs_dir
-                    or goal_travel.want_go
-                    or goal_travel.want_stash)
-                and goal_reachable)
+    disable_autoexplore = (goal_travel.stairs_dir
+            or goal_travel.want_go
+            or goal_travel.want_stash)
+        and goal_reachable
         -- We do allow autoexplore even when we want to travel if the current
         -- is fully explored, since then it's safe to pick up any surrounding
         -- items like thrown projectiles or loot from e.g. stairdancing.
