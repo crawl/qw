@@ -142,8 +142,9 @@ function Monster:attacking_causes_penance()
                     and you.god() == "Jiyva"
                 or self:is_friendly()
                     and you.god() == "Beogh"
-                    -- XXX: hack
-                    and self:name():find("orc")
+                    -- XXX: For simplicity, just assume any non-summoned
+                    -- friendly is a follower orc.
+                    and not self:is_summoned()
         end)
 end
 
