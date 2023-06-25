@@ -737,8 +737,9 @@ function plan_shop()
                 say("BUYING " .. it.name() .. " (" .. price .. " gold).")
                 magic("<//" .. letter(n - 1) .. "\ry")
                 return
-            -- Should in theory also work in Bazaar, but doesn't make much sense
-            -- (since we won't really return or acquire money and travel back here)
+            -- Should in theory also work in Bazaar, but doesn't make much
+            -- sense (since we won't really return or acquire money and travel
+            -- back here)
             elseif not on_list
                  and not in_branch("Bazaar") and not branch_soon("Zot") then
                 say("SHOPLISTING " .. it.name() .. " (" .. price .. " gold"

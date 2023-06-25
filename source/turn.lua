@@ -136,7 +136,6 @@ function turn_update()
     if turns_left_moving_towards_enemy > 0 then
         turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
     end
-    melee_target = nil
     choose_tactical_step()
 
     map_mode_search_attempts = 0
