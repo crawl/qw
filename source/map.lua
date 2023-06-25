@@ -964,15 +964,20 @@ function update_exclusions(new_waypoint)
     local have_ranged = have_ranged_attack()
     for _, enemy in ipairs(enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
+                -- No need to exclude if crawl tells us we're currently safe
+                -- from this monster. Safe monsters don't prevent resting,
+                -- autoexplore or travel.
+                and not enemy:is_safe()
+                -- No excluding temporary monsters.
                 and not enemy:is_summoned()
                 -- We need to at least see all cells adjacent to them to be
                 -- so our movement evaluation is reasonably correct.
                 and enemy:adjacent_cells_known()
-                -- They won't move into our melee range...
+                -- They can't move into our melee range...
                 and not enemy:can_move_to_player_melee()
                 -- ...we can't move into melee range...
                 and not enemy:player_has_path_to()
-                -- ... and we can't target them with a ranged attack.
+                -- ... and we can't target them with a ranged attack
                 and not (have_ranged and enemy:have_line_of_fire())
                 -- ... and we know that we don't want to dig them out.
                 and not enemy:should_dig_unreachable() then
