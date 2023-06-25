@@ -717,7 +717,7 @@ function goal_zig_depth(plan)
     return tonumber(plan:sub(5))
 end
 
-function make_initial_goals()
+function initialize_goals()
     local goals = split(goal_options(), ",")
     goal_list = {}
     for _, pl in ipairs(goals) do

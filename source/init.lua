@@ -62,7 +62,7 @@ function initialize()
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)
 
-    make_initial_goals()
+    initialize_goals()
 
     if not cache_parity then
         traversal_maps_cache = {}
