@@ -247,7 +247,7 @@ function step_reason(a1, a2)
                     and disable_autoexplore
                     and goal_travel.first_dir == const.dir.up)
             and not buffed()
-            and (no_spells or starting_spell() ~= "Summon Small Mammal") then
+            and starting_spell ~= "Summon Small Mammal" then
         return "fleeing"
     elseif not have_ranged_weapon()
             and not a1.near_ally

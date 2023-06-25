@@ -81,6 +81,7 @@ function initialize()
 
     set_options()
     initialize_plans()
+    starting_spell = get_starting_spell()
     initialized = true
 end
 

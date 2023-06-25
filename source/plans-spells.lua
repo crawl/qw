@@ -1,16 +1,15 @@
-function starting_spell()
-    if you.god() == "Trog" or you.xl() > 9 then
-        no_spells = true
+function get_starting_spell()
+    if you.xl() > 4 or you.god() == "Trog" then
         return
     end
-    local spell_list = {"Shock", "Magic Dart", "Sandblast", "Foxfire",
-        "Freeze", "Pain", "Summon Small Mammal", "Beastly Appendage", "Sting"}
+
+    local spell_list = { "Beastly Appendage", "Foxfire", "Freeze", "Magic Dart",
+        "Necrotise", "Sandblast", "Shock", "Sting", "Summon Small Mammal" }
     for _, sp in ipairs(spell_list) do
         if spells.memorised(sp) and spells.fail(sp) <= 25 then
             return sp
         end
     end
-    no_spells = true
 end
 
 function spell_range(sp)
@@ -19,17 +18,23 @@ function spell_range(sp)
     elseif sp == "Beastly Appendage" then
         return 4
     elseif sp == "Sandblast" then
-        return 3
+        return 4
     else
         return spells.range(sp)
     end
 end
 
 function spell_castable(sp)
+    if you.silenced()
+            or you.confused()
+            or you.berserk()
+            or in_bad_form()
+            or you.mp() < spells.mana_cost(sp) then
+        return false
+    end
+
     if sp == "Beastly Appendage" then
-        if transformed() then
-            return false
-        end
+        return transformed()
     elseif sp == "Summon Small Mammal" then
         local count = 0
         for pos in square_iter(const.origin) do
@@ -38,48 +43,35 @@ function spell_castable(sp)
                 count = count + 1
             end
         end
-        if count >= 4 then
+        if count >= 2 then
             return false
         end
     end
+
     return true
 end
 
 function plan_starting_spell()
-    if no_spells then
+    if not starting_spell or not spell_castable(starting_spell) then
         return false
     end
-    if you.silenced() or you.confused() or you.berserk() then
-        return false
-    end
-    local sp = starting_spell()
-    if not sp then
-        return false
-    end
-    if you.mp() < spells.mana_cost(sp) then
-        return false
-    end
-    if you.xl() > 4 then
-        return false
-    end
-    local dist = distance_to_tabbable_enemy(0, 0)
+
+    local dist = distance_to_tabbable_enemy()
     if dist < 2 and weapon_skill() ~= "Unarmed Combat" then
-        local weap = items.equipped_at("Weapon")
+        local weap = get_weapon()
         if weap and weap.weap_skill == weapon_skill() then
             return false
         end
     end
-    if dist > spell_range(sp) then
+    if dist > spell_range(starting_spell) then
         return false
     end
-    if not spell_castable(sp) then
-        return false
-    end
-    say("CASTING " .. sp)
-    if spells.range(sp) > 0 then
-        magic("z" .. spells.letter(sp) .. "f")
+
+    say("CASTING " .. starting_spell)
+    if spells.range(starting_spell) > 0 then
+        magic("z" .. spells.letter(starting_spell) .. "f")
     else
-        magic("z" .. spells.letter(sp))
+        magic("z" .. spells.letter(starting_spell))
     end
     return true
 end

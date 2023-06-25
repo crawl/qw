@@ -191,4 +191,4 @@ local last_min_delay_skill = 18
 
 local only_linear_resists = false
 
-local no_spells = false
+local starting_spell
