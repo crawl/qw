@@ -7,7 +7,7 @@ function can_attack_invis_at(pos)
 end
 
 function plan_flail_at_invis()
-    if not invis_monster or use_ranged_weapon() or dangerous_to_melee() then
+    if not invis_monster or have_ranged_weapon() or dangerous_to_melee() then
         return false
     end
 
@@ -51,7 +51,7 @@ end
 
 function plan_shoot_at_invis()
     if not invis_monster
-            or not use_ranged_weapon()
+            or not have_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_shoot() then
         return false
@@ -356,7 +356,7 @@ function weapon_range(weapon)
     end
 end
 
-function ranged_weapon_attack(weapon)
+function ranged_attack(weapon)
     local attack = {}
     attack.range = weapon_range(weapon)
     attack.is_penetrating = weapon_is_penetrating(weapon)
@@ -428,7 +428,7 @@ function get_throwing_target()
         function()
             local missile = best_missile()
             if missile then
-                return get_ranged_target(ranged_weapon_attack(missile), true)
+                return get_ranged_target(ranged_attack(missile), true)
             end
         end)
 end
@@ -436,13 +436,13 @@ end
 function get_launcher_target()
     return turn_memo("get_launcher_target",
         function()
-            return get_ranged_target(ranged_weapon_attack(get_weapon()))
+            return get_ranged_target(ranged_attack(get_weapon()))
         end)
 end
 
 function plan_launcher()
     if not danger
-            or not use_ranged_weapon()
+            or not have_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_attack() then
         return false
@@ -495,7 +495,7 @@ function wait_combat()
 end
 
 function plan_melee_wait_for_enemy()
-    if not danger or use_ranged_weapon() then
+    if not danger or have_ranged_weapon() then
         return false
     end
 
@@ -557,7 +557,7 @@ function plan_melee_wait_for_enemy()
 end
 
 function plan_launcher_wait_for_enemy()
-    if not danger or not use_ranged_weapon() then
+    if not danger or not have_ranged_weapon() then
         return false
     end
 
@@ -627,7 +627,7 @@ function plan_poison_spit()
     end
 
     local target = get_ranged_target(poison_spit_attack(),
-        not use_ranged_weapon())
+        not have_ranged_weapon())
     if target and use_ability(ability, "r" .. vector_move(target) .. "\r") then
         return true
     end
@@ -637,7 +637,7 @@ end
 
 function plan_flight_move_towards_enemy()
     if not danger
-            or use_ranged_weapon()
+            or have_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -669,7 +669,7 @@ end
 
 function plan_move_towards_enemy()
     if not danger
-            or use_ranged_weapon()
+            or have_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then

@@ -1321,10 +1321,18 @@ function use_ranged_weapon()
         end)
 end
 
+function have_ranged_weapon()
+    return turn_memo("have_ranged_weapon",
+        function()
+            local weapon = get_weapon()
+            return weapon and weapon.is_ranged
+        end)
+end
+
 function have_ranged_attack()
     return turn_memo("have_ranged_attack",
         function()
-            return use_ranged_weapon() or best_missile()
+            return have_ranged_weapon() or best_missile()
         end)
 end
 

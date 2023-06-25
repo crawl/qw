@@ -35,8 +35,7 @@ function use_ability(name, extra, mute)
 end
 
 function move_to(pos)
-    if use_ranged_weapon()
-            and get_weapon()
+    if have_ranged_weapon()
             and not unable_to_shoot()
             and get_monster_at(pos) then
         return shoot_launcher(pos)

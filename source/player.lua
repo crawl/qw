@@ -327,15 +327,18 @@ function dangerous_to_move()
 end
 
 function unable_to_shoot()
-    if you.berserk() or you.caught() then
-        return true
-    end
+    return turn_memo("unable_to_shoot",
+        function()
+            if you.berserk() or you.caught() then
+                return true
+            end
 
-    local form = you.transform()
-    return not (form == ""
-        or form == "tree"
-        or form == "statue"
-        or form == "lich")
+            local form = you.transform()
+            return not (form == ""
+                or form == "tree"
+                or form == "statue"
+                or form == "lich")
+        end)
 end
 
 function unable_to_throw()
@@ -398,7 +401,7 @@ end
 function have_ranged_target()
     return turn_memo("have_ranged_target",
         function()
-            if use_ranged_weapon() then
+            if have_ranged_weapon() then
                 return get_launcher_target()
             else
                 return get_throwing_target()
