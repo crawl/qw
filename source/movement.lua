@@ -224,6 +224,7 @@ end
 --                 (when not cleaving)
 --   fleeing     - moving towards stairs
 function step_reason(a1, a2)
+    local bad_form = in_bad_form()
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
         return false
     elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
@@ -233,9 +234,9 @@ function step_reason(a1, a2)
             and a1.flee_distance > 0
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
-            -- attacked.
-            and a1.adjacent == 0
-            and a2.adjacent == 0
+            -- attacked. Unless we're stuck in a bad form, in which case
+            -- running is still our best bet.
+            and (a1.adjacent == 0 and a2.adjacent == 0 or bad_form)
             and (reason_to_rest(90)
                 -- When we're at low XL and trying to go up, we want to flee to
                 -- known stairs when autoexplore is disabled, instead of
@@ -408,7 +409,9 @@ function distance_map_minimum_enemy_distance(dist_map, pspeed)
                 dist = dist / 1.5
             end
 
-            if enemy:is_ranged() then
+            -- In bad forms we need to try to run even if we take ranged
+            -- damage.
+            if not in_bad_form() and enemy:is_ranged() then
                 dist = dist - 4
             end
 
@@ -422,6 +425,10 @@ end
 
 function update_flee_positions()
     flee_positions = {}
+
+    if unable_to_move() then
+        return
+    end
 
     local stairs_feats = level_stairs_features(where_branch, where_depth,
         const.dir.up)

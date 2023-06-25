@@ -187,6 +187,15 @@ function miasma_immune()
         or you.race() == "Mummy"
 end
 
+function in_bad_form(include_tree)
+    local form = you.transform()
+    return form == "bat"
+        or form == "pig"
+        or form == "wisp"
+        or form == "fungus"
+        or include_tree and form == "tree"
+end
+
 function transformed()
     return you.transform() ~= ""
 end
@@ -251,8 +260,15 @@ end
 
 function player_speed()
     local num = 3
+    local form = you.transform()
     if you.god() == "Cheibriados" then
         num = 1
+    elseif form ~= "" then
+        if form == "bat" or form == "pig" then
+            num = 4
+        elseif form == "statue" then
+            num = 2
+        end
     elseif you.race() == "Spriggan" then
         num = 4
     elseif you.race() == "Naga" then
@@ -312,7 +328,11 @@ function calc_los_radius()
 end
 
 function unable_to_move()
-    return you.transform() == "tree" or you.transform() == "fungus" and danger
+    return turn_memo("unable_to_move",
+        function()
+            local form = you.transform()
+            return form == "tree" or form == "fungus" and danger
+        end)
 end
 
 function dangerous_to_move()

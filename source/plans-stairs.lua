@@ -172,6 +172,10 @@ function want_to_stairdance_up()
         return false
     end
 
+    if in_bad_form() then
+        return true
+    end
+
     local state = get_destination_stairs(where_branch, where_depth, feat)
     if state and not state.safe then
         return false

@@ -5,6 +5,7 @@ function plan_teleport()
     if can_teleport() and want_to_teleport() then
         return teleport()
     end
+
     return false
 end
 
@@ -710,6 +711,12 @@ function want_to_teleport()
     end
 
     if want_to_orbrun_teleport() then
+        return true
+    end
+
+    if danger and in_bad_form()
+            and not find_item("potion", "cancellation")
+            and tactical_reason ~= "fleeing" then
         return true
     end
 
