@@ -123,10 +123,17 @@ end
 
 -- used for backgrounds who don't get to choose a weapon
 function weapon_choice()
-    sp = you.race()
+    local sp = you.race()
     if sp == "Felid" or sp == "Troll" then
         return "Unarmed Combat"
-    elseif sp == "Kobold" then
+    end
+
+    local class = you.class()
+    if class == "Hunter" or class == "Hexslinger" then
+        return "Ranged Weapons"
+    end
+
+    if sp == "Kobold" then
         return "Maces & Flails"
     elseif sp == "Merfolk" then
         return "Polearms"

@@ -807,8 +807,7 @@ function goal_options()
         return override_goals
     end
 
-    local plan = c_persist.current_goals or DEFAULT_GOAL
-    return GOALS[plan]
+    return GOALS[c_persist.current_goals]
 end
 
 function next_exploration_depth(branch, min_depth, max_depth)

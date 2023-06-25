@@ -43,26 +43,8 @@ function initialize()
 
     initialize_enums()
     initialize_debug()
-    coroutine_throttle = COROUTINE_THROTTLE
-
-    if you.turns() == 0 then
-        initialize_c_persist()
-        initialize_branch_data()
-        initialize_god_data()
-        first_turn_initialize()
-    end
-
+    initialize_plan_cascades()
     initialize_c_persist()
-    initialize_branch_data()
-    initialize_god_data()
-
-    calc_los_radius()
-    initialize_monster_map()
-
-    clear_autopickup_funcs()
-    add_autopickup_func(autopickup)
-
-    initialize_goals()
 
     if not cache_parity then
         traversal_maps_cache = {}
@@ -79,9 +61,32 @@ function initialize()
         cache_parity = 1
     end
 
-    set_options()
-    initialize_plans()
+    if you.turns() == 0 then
+        initialize_branch_data()
+        initialize_god_data()
+    end
+
+    initialize_branch_data()
+    initialize_god_data()
+    first_turn_initialize()
+    initialize_c_persist()
+
+    calc_los_radius()
+    initialize_monster_map()
+
+    initialize_goals()
     starting_spell = get_starting_spell()
+
+    set_options()
+
+    clear_autopickup_funcs()
+    add_autopickup_func(autopickup)
+
+    coroutine_throttle = COROUTINE_THROTTLE
+    if AUTO_START then
+        automatic = true
+    end
+
     initialized = true
 end
 
@@ -98,14 +103,12 @@ function note_qw_data()
     note("qw: Do second Lair branch before Depths: " ..
         bool_string(EARLY_SECOND_RUNE))
     note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
-
-    local plans = goal_options()
-    note("qw: Goals: " .. plans)
+    note("qw: Goals: " .. goal_options())
 end
 
 function first_turn_initialize()
-    if AUTO_START then
-        automatic = true
+    if you.turns() > 0 and c_persist.record then
+        return
     end
 
     if not c_persist.record then
@@ -121,7 +124,7 @@ function first_turn_initialize()
     c_persist.record.counter = counter
 
     local god_list = c_persist.next_god_list
-    local plans = c_persist.next_goals
+    local goals = c_persist.next_goals
     for key, _ in pairs(c_persist) do
         if key ~= "record" then
             c_persist[key] = nil
@@ -153,7 +156,14 @@ function first_turn_initialize()
     end
     c_persist.current_god_list = god_list
 
-    c_persist.current_goals = plans
+    if not goals then
+        goals = DEFAULT_GOAL
+        if not goals then
+            error("No default goal defined in DEFAULT_GOAL.")
+        end
+    end
+    c_persist.current_goals = goals
+
     note_qw_data()
 
     if COMBO_CYCLE then
@@ -164,17 +174,17 @@ function first_turn_initialize()
         local combo_parts = split(combo_string, "^")
         c_persist.options = "combo = " .. combo_parts[1]
         if #combo_parts > 1 then
-            local plan_parts = split(combo_parts[2], "!")
+            local goal_parts = split(combo_parts[2], "!")
             c_persist.next_god_list = {}
-            for g in plan_parts[1]:gmatch(".") do
+            for g in goal_parts[1]:gmatch(".") do
                 table.insert(c_persist.next_god_list, god_full_name(g))
             end
-            if #plan_parts > 1 then
-                if not GOALS[plan_parts[2]] then
-                    error("Unknown plan name '" .. plan_parts[2] .. "'" ..
-                    " given in combo spec '" .. combo_string .. "'")
+            if #goal_parts > 1 then
+                if not GOALS[goal_parts[2]] then
+                    error("Unknown goal name '" .. goal_parts[2] .. "'"
+                        ..  " given in combo spec '" .. combo_string .. "'")
                 end
-                c_persist.next_goals = plan_parts[2]
+                c_persist.next_goals = goal_parts[2]
             end
         end
     end

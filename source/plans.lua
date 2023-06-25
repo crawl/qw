@@ -139,7 +139,7 @@ function cascade(plans)
     end
 end
 
-function initialize_plans()
+function initialize_plan_cascades()
     set_plan_abyss()
     set_plan_emergency()
     set_plan_attack()
