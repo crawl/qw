@@ -158,7 +158,7 @@ function plan_use_goal_feature()
     return false
 end
 
-function plan_move_towards_goal()
+function plan_move_towards_goal_feature()
     if unable_to_move() or dangerous_to_move() then
         return false
     end
@@ -173,7 +173,7 @@ function plan_move_towards_goal()
         return move_towards_destination(move, dest, "goal")
     end
 
-    local move, dest = best_move_towards_features(feats, true)
+    move, dest = best_move_towards_features(feats, true)
     if move then
         return move_towards_destination(move, dest, "goal")
     end
@@ -531,7 +531,7 @@ function set_plan_explore2()
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
         {plan_use_goal_feature, "use_goal_feature"},
-        {plan_move_towards_goal, "move_towards_goal"},
+        {plan_move_towards_goal_feature, "move_towards_goal_feature"},
         {plan_autoexplore, "try_autoexplore2"},
         {plan_move_towards_monster, "move_towards_monster"},
         {plan_move_towards_unexplored, "move_towards_unexplored"},

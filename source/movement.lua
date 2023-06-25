@@ -894,7 +894,9 @@ function update_move_destination()
     end
 
     local clear = false
-    if move_reason == "monster" and danger then
+    if move_reason == "goal" and want_goal_update then
+        clear = true
+    elseif move_reason == "monster" and danger then
         clear = true
     elseif positions_equal(global_pos, move_destination) then
         if move_reason == "unexplored"
