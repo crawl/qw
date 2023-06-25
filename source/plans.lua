@@ -168,8 +168,6 @@ function set_plan_move()
         {plans.explore, "explore"},
         {plans.pre_explore2, "pre_explore2"},
         {plans.explore2, "explore2"},
-        {plans.swamp, "swamp"},
-        {plans.tomb, "tomb"},
         {plans.stuck, "stuck"},
     }
 end
