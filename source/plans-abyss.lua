@@ -168,9 +168,14 @@ function plan_move_towards_abyssal_rune()
         return false
     end
 
-    move, dest = best_move_towards_unreachable_map_position(rune_pos)
+    local move, dest = best_move_towards(rune_pos, true)
     if move then
-        return move_towards_destination(move, dest, "rune")
+        return move_towards_destination(move, dest, "goal")
+    end
+
+    move, dest = best_move_towards_unreachable_near(rune_pos, true)
+    if move then
+        return move_towards_destination(move, dest, "goal")
     end
 
     return false
@@ -188,7 +193,7 @@ function plan_move_towards_runelight()
         return false
     end
 
-    local move, dest = best_move_towards_map_positions(runelights)
+    local move, dest = best_move_towards_positions(runelights)
     if move then
         return move_towards_destination(move, dest, "runelight")
     end

@@ -726,14 +726,15 @@ function plan_continue_move_towards_enemy()
             and positions_equal(last_enemy_map_memory, enemy_map_memory) then
         enemy_map_memory = nil
 
-        local dest = best_map_position_near(last_enemy_map_memory)
+        local dest = best_position_near(last_enemy_map_memory)
         if not dest then
             return false
         end
 
-        local move = best_move_towards_map_position(dest)
-        if move then
-            return move_towards_destination(move, dest, "monster")
+        local result = best_move_towards(dest)
+        if result then
+            return move_towards_destination(result.move, result.dest,
+                "monster")
         end
     end
 

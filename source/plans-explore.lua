@@ -11,13 +11,13 @@ function plan_move_towards_safety()
         return false
     end
 
-    local move, dest = best_move_towards_safety()
-    if move then
+    local result = best_move_towards_safety()
+    if result then
         if debug_channel("explore") then
             dsay("Moving to safe position at "
-                .. cell_string_from_map_position(dest))
+                .. cell_string_from_map_position(result.dest))
         end
-        return move_towards_destination(move, dest, "safety")
+        return move_towards_destination(result.move, result.dest, "safety")
     end
 
     return false
@@ -168,14 +168,14 @@ function plan_move_towards_goal_feature()
         return false
     end
 
-    local move, dest = best_move_towards_features(feats)
-    if move then
-        return move_towards_destination(move, dest, "goal")
+    local result = best_move_towards_features(feats)
+    if result then
+        return move_towards_destination(result.move, result.dest, "goal")
     end
 
-    move, dest = best_move_towards_features(feats, true)
-    if move then
-        return move_towards_destination(move, dest, "goal")
+    result = best_move_towards_features(feats, true)
+    if result then
+        return move_towards_destination(result.move, result.dest, "goal")
     end
 
     local god = goal_god(goal_status)
@@ -200,14 +200,14 @@ function plan_move_towards_destination()
         return false
     end
 
-    local move = best_move_towards_map_position(move_destination)
-    if move then
-        return move_to(move)
+    local result = best_move_towards(move_destination)
+    if result then
+        return move_to(result.move)
     end
 
-    local move = best_move_towards_map_position(move_destination, true)
-    if move then
-        return move_to(move)
+    result = best_move_towards(move_destination, true)
+    if result then
+        return move_to(result.move)
     end
 
     return false
@@ -236,13 +236,13 @@ function plan_move_towards_monster()
         return false
     end
 
-    local move, dest = best_move_towards_map_positions(mons_targets)
-    if move then
+    local result = best_move_towards_positions(mons_targets)
+    if result then
         if debug_channel("explore") then
             dsay("Moving to enemy at "
-                .. cell_string_from_map_position(dest))
+                .. cell_string_from_map_position(result.dest))
         end
-        return move_towards_destination(move, dest, "monster")
+        return move_towards_destination(result.move, result.dest, "monster")
     end
 
     return false
@@ -253,13 +253,13 @@ function plan_move_towards_unexplored()
         return false
     end
 
-    local move, dest = best_move_towards_unexplored()
-    if move then
+    local result = best_move_towards_unexplored()
+    if result then
         if debug_channel("explore") then
             dsay("Moving to explore near "
-                .. cell_string_from_map_position(dest))
+                .. cell_string_from_map_position(result.dest))
         end
-        return move_towards_destination(move, dest, "unexplored")
+        return move_towards_destination(result.move, result.dest, "unexplored")
     end
 
     return false

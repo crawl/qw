@@ -514,7 +514,7 @@ function get_move_closer(positions)
         end
     end
 
-    return best_move, best_dest
+    return best_move, best_dest, best_dist
 end
 
 function move_search(search, current)
@@ -690,52 +690,51 @@ function monster_can_move_to_player_melee(mons)
             or get_move_closer({ mons:pos() }))
 end
 
-function best_move_towards_map_positions(positions, ignore_exclusions)
-    local best_safe_dist, best_safe_move, best_safe_dest
-    local best_dist, best_move, best_dest
-    for _, pos in ipairs(positions) do
-        local dist_map = get_distance_map(pos)
-        local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-        local current_dist = map[global_pos.x][global_pos.y]
+function best_move_towards(map_pos, ignore_exclusions)
+    local dist_map = get_distance_map(map_pos)
+    local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
+    local current_dist = map[global_pos.x][global_pos.y]
+    if current_dist == 0 then
+        return
+    end
 
-        if current_dist == 0 then
-            return
+    local result
+    local safe_result
+    for pos in adjacent_iter(global_pos) do
+        local los_pos = position_difference(pos, global_pos)
+        local dist = map[pos.x][pos.y]
+        local better_dist = dist and (not current_dist or dist < current_dist)
+        if better_dist
+                and can_move_to(los_pos)
+                and is_safe_at(pos)
+                and (not safe_result or dist < safe_result.dist) then
+            safe_result = { move = los_pos, dest = map_pos, dist = dist }
         end
 
-        for apos in adjacent_iter(global_pos) do
-            local los_apos = position_difference(apos, global_pos)
-            local dist = map[apos.x][apos.y]
-            local better_dist = dist
-                and (not current_dist or dist < current_dist)
-            if better_dist
-                    and can_move_to(los_apos)
-                    and is_safe_at(apos)
-                    and (not best_safe_dist or dist < best_safe_dist) then
-                best_safe_dist = dist
-                best_safe_move = los_apos
-                best_safe_dest = pos
-            end
-
-            if better_dist
-                    and not best_safe_dist
-                    and can_move_to(los_apos, true)
-                    and (not best_dist or dist < best_dist) then
-                best_dist = dist
-                best_move = los_apos
-                best_dest = pos
-            end
+        if better_dist
+                and not safe_result
+                and can_move_to(los_pos, true)
+                and (not result or dist < result.dist) then
+            result = { move = los_pos, dest = map_pos, dist = dist }
         end
     end
 
-    if best_safe_dist then
-        return best_safe_move, best_safe_dest
-    elseif best_dist then
-        return best_move, best_dest
+    if safe_result then
+        return safe_result
+    else
+        return result
     end
 end
 
-function best_move_towards_map_position(pos, ignore_exclusions)
-    return best_move_towards_map_positions({ pos }, ignore_exclusions)
+function best_move_towards_positions(map_positions, ignore_exclusions)
+    local best_result
+    for _, pos in ipairs(map_positions) do
+        local result = best_move_towards(pos)
+        if result and (not best_result or result.dist < best_result.dist) then
+            best_result = result
+        end
+    end
+    return best_result
 end
 
 function update_reachable_position()
@@ -783,37 +782,14 @@ function map_is_reachable_at(pos, ignore_exclusions)
     return map[pos.x][pos.y]
 end
 
-function best_move_towards_unreachable_map_position(pos, ignore_exclusions)
-    local i = 1
-    for near_pos in radius_iter(pos, const.gxm) do
-        if coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
-                dsay("Searched for unexplored near unreachable in block "
-                    .. tostring(i / 1000) .. " of map positions")
-            end
-
-            throttle = true
-            coroutine.yield()
-        end
-
-        if supdist(near_pos) <= const.gxm
-                and map_is_reachable_at(near_pos, ignore_exclusions)
-                and map_has_adjacent_unseen_at(near_pos) then
-            return best_move_towards_map_position(near_pos, ignore_exclusions)
-        end
-
-        i = i + 1
-    end
-end
-
 function best_move_towards_features(feats, ignore_exclusions)
     local positions = get_feature_map_positions(feats)
-    return best_move_towards_map_positions(positions, ignore_exclusions)
+    return best_move_towards_positions(positions, ignore_exclusions)
 end
 
 function best_move_towards_items(item_names, ignore_exclusions)
     local positions = get_item_map_positions(item_names)
-    return best_move_towards_map_positions(positions, ignore_exclusions)
+    return best_move_towards_positions(positions, ignore_exclusions)
 end
 
 function map_has_adjacent_unseen_at(pos)
@@ -837,13 +813,14 @@ function map_has_adjacent_runed_doors_at(pos)
     return false
 end
 
-function best_move_towards_unexplored(unsafe)
+function best_move_towards_unexplored_near(map_pos, allow_unsafe)
     local i = 1
-    for pos in radius_iter(global_pos, const.gxm) do
+    for pos in radius_iter(map_pos, const.gxm) do
         if coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored in block " .. tostring(i / 1000)
-                    .. " of map positions")
+                    .. " of map positions near "
+                    .. cell_string_from_map_position(map_pos))
             end
 
             throttle = true
@@ -851,15 +828,31 @@ function best_move_towards_unexplored(unsafe)
         end
 
         if supdist(pos) <= const.gxm
-                and (unsafe or map_is_unexcluded_at(pos))
+                and (allow_unsafe or map_is_unexcluded_at(pos))
                 and map_is_reachable_at(pos, true)
                 and (open_runed_doors and map_has_adjacent_runed_doors_at(pos)
                     or map_has_adjacent_unseen_at(pos)) then
-            return best_move_towards_map_position(pos, true)
+            return best_move_towards(pos, true)
         end
 
         i = i + 1
     end
+end
+
+function best_move_towards_unexplored(allow_unsafe)
+    return best_move_towards_unexplored_near(global_pos, allow_unsafe)
+end
+
+function best_move_towards_unexplored_near_positions(map_positions,
+        allow_unsafe)
+    local best_result
+    for _, pos in ipairs(map_positions) do
+        local result = best_move_towards_unexplored_near(pos, allow_unsafe)
+        if result and (not best_result or result.dist < best_result.dist) then
+            best_result = result
+        end
+    end
+    return best_result
 end
 
 function best_move_towards_safety()
@@ -880,7 +873,7 @@ function best_move_towards_safety()
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
                 and can_move_to(los_pos, true) then
-            return best_move_towards_map_position(pos, true)
+            return best_move_towards(pos, true)
         end
 
         i = i + 1
@@ -924,18 +917,18 @@ function update_move_destination()
     end
 end
 
-function best_map_position_near(pos)
-    if map_is_reachable_at(pos) then
+function best_position_near(map_pos)
+    if map_is_reachable_at(map_pos) then
         return pos
     end
 
     local best_dist, best_pos
-    for apos in adjacent_iter(pos) do
-        local dist = supdist(position_difference(apos, global_pos))
-        if map_is_reachable_at(apos)
+    for pos in adjacent_iter(map_pos) do
+        local dist = supdist(position_difference(pos, global_pos))
+        if map_is_reachable_at(pos)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
-            best_pos = apos
+            best_pos = pos
         end
     end
 

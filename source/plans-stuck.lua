@@ -7,13 +7,14 @@ function plan_move_towards_unsafe_unexplored()
         return false
     end
 
-    local move, dest = best_move_towards_unexplored(true)
-    if move then
+    local result = best_move_towards_unexplored(true)
+    if result then
         if debug_channel("explore") then
-            dsay("Moving to unsafely explore near "
-                .. cell_string_from_map_position(dest))
+            dsay("Moving to explore near unsafe position "
+                .. cell_string_from_map_position(result.dest))
         end
-        return move_towards_destination(move, dest, "unexplored")
+
+        return move_towards_destination(result.move, result.dest, "unexplored")
     end
 
     return false
@@ -64,15 +65,15 @@ function plan_stuck_move_towards_escape_hatch()
     end
     local feat = const.escape_hatches[hatch_dir]
 
-    local move, dest = best_move_towards_features({ feat }, true)
-    if move then
-        return move_towards_destination(move, dest, "hatch")
+    local result = best_move_towards_features({ feat }, true)
+    if result then
+        return move_towards_destination(result.move, result.dest, "hatch")
     end
 
     feat = const.escape_hatches[-hatch_dir]
-    move, dest = best_move_towards_features({ feat }, true)
-    if move then
-        return move_towards_destination(move, dest, "hatch")
+    result = best_move_towards_features({ feat }, true)
+    if result then
+        return move_towards_destination(result.move, result.dest, "hatch")
     end
 
     return false

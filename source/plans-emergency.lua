@@ -985,9 +985,9 @@ function plan_non_melee_berserk()
         return true
     end
 
-    local move = best_move_towards_map_position(best_pos)
-    if move then
-        return move_to(move)
+    local result = best_move_towards(best_pos)
+    if result then
+        return move_to(result.move)
     end
 
     wait_one_turn()
