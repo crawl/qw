@@ -230,11 +230,6 @@ function update_runelight(hash, state, force)
     end
 end
 
-function get_map_runelight(pos)
-    local hash = hash_position(pos)
-    return c_persist.runelights[hash]
-end
-
 -- Hook to determine which traps are safe to move over without requiring an
 -- answer to a yesno prompt. We currently mark only web traps as safe, since
 -- not doing so leads to a lot of "unreachable" monsters in Spider. This can be

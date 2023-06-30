@@ -1,20 +1,6 @@
 ------------------
 -- Debug functions
 
-function set_goals(str)
-    override_goals = str
-    initialized = false
-    update_coroutine = coroutine.create(turn_update)
-    run_update()
-end
-
-function restore_goals()
-    override_goals = nil
-    initialized = false
-    update_coroutine = coroutine.create(turn_update)
-    run_update()
-end
-
 function initialize_debug()
     debug_mode = DEBUG_MODE
     debug_channels = {}

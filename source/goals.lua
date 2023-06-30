@@ -794,11 +794,6 @@ function update_goal()
     update_expired_portals()
     update_permanent_flight()
 
-    if coroutine_throttle and #enemy_list >= 20 then
-        throttle = true
-        coroutine.yield()
-    end
-
     determine_goal()
     update_planning()
     update_goal_travel()

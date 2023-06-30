@@ -640,11 +640,6 @@ function update_map_cells()
         ind = ind + 1
     end
 
-    if get_map_runelight(global_pos) then
-        update_runelight(hash_position(global_pos),
-            { feat = const.feat_state.explored })
-    end
-
     return queue, map_reset
 end
 
