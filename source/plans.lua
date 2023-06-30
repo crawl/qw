@@ -70,7 +70,7 @@ function plan_message()
 end
 
 function plan_quit()
-    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
+    if goal_status == "Quit" then
         magic(control('q') .. "yes\r")
         return true
     end

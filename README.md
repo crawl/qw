@@ -252,6 +252,10 @@ branch.
 
   Do Hell and the 4 Hell branches in random order.
 
+* `Quit`
+
+  Quit the game immediately. This is useful as a final goal when testing qw.
+
 #### Some notes about exploration
 
 qw considers a level explored if it's been autoexplored to completion at least

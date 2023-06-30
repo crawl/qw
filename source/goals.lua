@@ -265,6 +265,15 @@ function determine_goal()
     local goal = status
     local desc
 
+    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
+        status = "Quit"
+    end
+
+    if status == "Quit" then
+        say("QUITTING!")
+        return
+    end
+
     if status == "Normal" then
         status = normal_goal
         goal = normal_goal
@@ -772,6 +781,7 @@ function initialize_goals()
                 or plan == "Orb"
                 or plan == "Escape"
                 or plan == "Win"
+                or plan == "Quit"
                 or plan == "Zig") then
             error("Invalid goal '" .. tostring(plan) .. "'.")
         end
