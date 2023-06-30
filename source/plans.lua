@@ -132,6 +132,10 @@ function cascade(plans)
                 end
                 fail_count = fail_count + 1
                 c_persist.plan_fail_count[plandata[2]] = fail_count
+
+                if want_goal_update then
+                    update_goal()
+                end
             end
         end
 
