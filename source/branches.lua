@@ -369,8 +369,8 @@ function update_expired_portals()
     end
 end
 
-function level_is_temporary()
-    return in_portal() or in_branch("Pan") or in_branch("Abyss")
+function branch_is_temporary(branch)
+    return is_portal_branch(branch) or branch == "Pan" or branch == "Abyss"
 end
 
 function easy_runes()

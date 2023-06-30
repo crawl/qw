@@ -18,7 +18,7 @@ end
 function plan_move_to_zigfig_location()
     if unable_to_travel()
             or goal_branch ~= "Zig"
-            or level_is_temporary()
+            or branch_is_temporary(where_branch)
             or not find_item("misc", "figurine of a ziggurat")
             or not feature_is_critical(view.feature_at(0, 0)) then
         return false
@@ -39,7 +39,7 @@ end
 
 function plan_use_zigfig()
     if goal_branch ~= "Zig"
-            or level_is_temporary()
+            or branch_is_temporary(where_branch)
             or position_is_cloudy
             or danger
             or you.berserk()

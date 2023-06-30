@@ -662,23 +662,30 @@ function update_distance_maps_at_cells(queue, map_select)
 end
 
 function reset_c_persist(new_waypoint, new_level)
-    -- A new waypoint means a new instance of a portal, a new level in Pan, or
-    -- that that our Abyssal area has shifted, so we expire data for the
-    -- relevant features.
+    -- A new waypoint means certain features that need to be identified by
+    -- their global coordinates have to be erased.
     if new_waypoint then
         c_persist.up_hatches[where] = nil
         c_persist.down_hatches[where] = nil
 
         for god, _ in pairs(c_persist.altars) do
-            if c_persist.altars[god][where] then
-                c_persist.altars[god][where] = nil
-            end
+            c_persist.altars[god][where] = nil
         end
     end
 
-    if new_waypoint and level_is_temporary() then
+    if new_waypoint and branch_is_temporary(where_branch) then
         c_persist.autoexplore[where_branch] = const.autoexplore.needed
         c_persist.branch_exits[where_branch] = {}
+    end
+
+    -- Certain branches and portals like Bazaars can be entered multiple times,
+    -- so we need to clear their data immediately after leaving.
+    if new_level then
+        prev_branch = parse_level_range(previous_where)
+        if prev_branch and branch_is_temporary(prev_branch) then
+            c_persist.autoexplore[prev_branch] = const.autoexplore.needed
+            c_persist.branch_exits[prev_branch] = {}
+        end
     end
 
     if in_branch("Abyss") then
@@ -687,9 +694,7 @@ function reset_c_persist(new_waypoint, new_level)
             c_persist.runelights = {}
         end
 
-        -- If previous_where is nil, we're resuming from a save and were
-        -- already in the Abyss, hence we don't want to unset this.
-        if new_level and previous_where ~= nil then
+        if new_level then
             c_persist.sensed_abyssal_rune = false
         end
     end
@@ -697,7 +702,6 @@ function reset_c_persist(new_waypoint, new_level)
     if new_waypoint and in_branch("Pan") then
         c_persist.pan_transits = {}
     end
-
 end
 
 function reset_map_cache(new_level, full_clear, new_waypoint)
@@ -705,7 +709,7 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
         clear_map_cache(cache_parity, full_clear)
     end
 
-    if new_level or new_waypoint or full_clear then
+    if not previous_where or new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]

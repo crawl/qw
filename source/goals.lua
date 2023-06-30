@@ -798,7 +798,8 @@ function update_goal()
     update_planning()
     update_goal_travel()
 
-    open_runed_doors = level_is_temporary() or goal_travel.open_runed_doors
+    open_runed_doors = branch_is_temporary(where_branch)
+        or goal_travel.open_runed_doors
 
     want_goal_update = false
 end

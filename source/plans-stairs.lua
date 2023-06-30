@@ -243,7 +243,7 @@ end
 function want_to_use_escape_hatches(dir)
     return dir == const.dir.up
         and goal_status == "Escape"
-        and not level_is_temporary()
+        and not branch_is_temporary(where_branch)
         and not in_branch("Tomb")
         and where_depth > 1
             and (where_branch ~= "Zot"

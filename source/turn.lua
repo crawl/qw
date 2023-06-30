@@ -53,10 +53,10 @@ function turn_update()
     local new_level = false
     local full_map_clear = false
     if you.where() ~= where then
-        new_level = true
+        new_level = previous_where ~= nil
         cache_parity = 3 - cache_parity
 
-        if you.where() ~= previous_where then
+        if you.where() ~= previous_where and new_level then
             full_map_clear = true
         end
 
