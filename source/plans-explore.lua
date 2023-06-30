@@ -256,9 +256,19 @@ function plan_move_towards_unexplored()
     local result = best_move_towards_unexplored()
     if result then
         if debug_channel("explore") then
-            dsay("Moving to explore near "
+            dsay("Moving to explore near safe position at "
                 .. cell_string_from_map_position(result.dest))
         end
+        return move_towards_destination(result.move, result.dest, "unexplored")
+    end
+
+    local result = best_move_towards_unexplored(true)
+    if result then
+        if debug_channel("explore") then
+            dsay("Moving to explore near unsafe position at "
+                .. cell_string_from_map_position(result.dest))
+        end
+
         return move_towards_destination(result.move, result.dest, "unexplored")
     end
 
