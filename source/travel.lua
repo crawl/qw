@@ -91,6 +91,10 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
             next_depth = dest_depth
         end
 
+        if not result.first_dir and not result.first_branch then
+            result.first_branch = next_branch
+        end
+
         -- We stop if we haven't found the next branch or if we can't actually
         -- enter it with travel.
         if not branch_found(next_branch, const.feat_state.reachable)
@@ -101,9 +105,6 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
 
         result.branch = next_branch
         result.depth = 1
-        if not result.first_dir and not result.first_branch then
-            result.first_branch = result.branch
-        end
 
         travel_branch_levels(result, next_depth)
         if result.depth ~= next_depth then
