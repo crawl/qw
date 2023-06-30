@@ -1,6 +1,5 @@
 ------------------
--- The normal plan cascade: choosing a move for a normal turn (not in the Abyss
--- or on the Orb run).
+-- Plans to try when qw is stuck with no viable plan to execute.
 
 function plan_move_towards_unsafe_unexplored()
     if disable_autoexplore or unable_to_move() or dangerous_to_move() then
