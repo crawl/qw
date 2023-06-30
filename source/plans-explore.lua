@@ -292,17 +292,12 @@ end
 function is_swamp_end_cloud(pos)
     return (view.cloud_at(pos.x, pos.y) == "freezing vapour"
             or view.cloud_at(pos.x, pos.y) == "foul pestilence")
-        and you.see_cell_no_trans(pos.x, pos.y)
         and not is_safe_at(pos)
 end
 
-function plan_swamp_clouds_hack()
-    if not at_branch_end("Swamp") then
+function plan_swamp_move_towards_clouds()
+    if not at_branch_end("Swamp") or have_branch_runes("Swamp") then
         return false
-    end
-
-    if have_branch_runes("Swamp") and can_teleport() then
-        return teleport()
     end
 
     if swamp_rune_reachable then
@@ -326,19 +321,11 @@ function plan_swamp_clouds_hack()
     end
 
     if best_pos then
-        magic(delta_to_vi(best_pos) .. "Y")
+        move_to(best_pos)
         return true
     end
 
-    for pos in square_iter(const.origin) do
-        if (view.cloud_at(pos.x, pos.y) == "freezing vapour"
-                    or view.cloud_at(pos.x, pos.y) == "foul pestilence")
-                and you.see_cell_no_trans(pos.x, pos.y) then
-            return random_step(where)
-        end
-    end
-
-    return plan_stuck_teleport()
+    return false
 end
 
 function plan_tomb_use_hatch()
@@ -505,7 +492,7 @@ function set_plan_explore2()
         {plan_shopping_spree, "try_shopping_spree"},
         {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
         {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
-        {plan_swamp_clouds_hack, "swamp_clouds_hack"},
+        {plan_swamp_move_towards_clouds, "try_swamp_move_towards_clouds"},
         {plan_tomb_go_to_final_hatch, "try_tomb_go_to_final_hatch"},
         {plan_tomb_go_to_hatch, "try_tomb_go_to_hatch"},
         {plan_tomb_use_hatch, "tomb_use_hatch"},
