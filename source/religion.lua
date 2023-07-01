@@ -129,7 +129,8 @@ function item_is_evil(it)
             or ego == "vampirism"
             or ego == "draining"
             or ego == "chaos"
-            or ego == "reaping" then
+            or ego == "reaping"
+            or ego == "distortion" then
         return true
     end
 
