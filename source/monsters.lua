@@ -678,7 +678,7 @@ function update_monsters()
             if mon_info then
                 local mons = Monster:new(mon_info)
                 monster_map[pos.x][pos.y] = mons
-                if mons:is_enemy() then
+                if mons:is_enemy() and not mons:is_safe() then
                     table.insert(enemy_list, mons)
                 end
             else
