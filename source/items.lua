@@ -45,6 +45,7 @@ function item_resist(str, it)
     if not it then
         return 0
     end
+
     if it.artefact and it.artprops and it.artprops[str] then
         return it.artprops[str]
     else
@@ -332,11 +333,10 @@ function absolute_resist_value(str, n)
         return -500
     elseif str == "Ponderous" then
         return -300
-    elseif str == "Fragile" then
-        return -10000
     elseif str == "-Tele" then
         return you.race() == "Formicid" and 0 or -10000
     end
+
     return 0
 end
 
@@ -428,8 +428,6 @@ function min_resist_value(str, d)
             return -500
         elseif str == "Ponderous" then
             return -300
-        elseif str == "Fragile" then
-            return -10000
         elseif str == "-Tele" then
             return you.race() == "Formicid" and 0 or -10000
         end
@@ -439,10 +437,19 @@ function min_resist_value(str, d)
 end
 
 function resist_value(str, it, cur, it2)
+    if str == "Fragile" then
+        local bad_for_hydra = it
+            and it.class(true) == "weapon"
+            and you.xl() < 18
+            and hydra_weapon_value(it) < 0
+        return bad_for_hydra and -500 or 0, 0
+    end
+
     local d = item_resist(str, it)
     if d == 0 then
         return 0, 0
     end
+
     if cur then
         local c = player_resist(str, it2)
         local diff = absolute_resist_value(str, c + d)
@@ -734,6 +741,8 @@ function weapon_value(it, cur, it2, sit)
         else
             value = value + 200
         end
+    elseif name:find("consecrated labrys") then
+        value = value + 1000
     elseif name:find("storm bow") then
         value = value + 50
     elseif name:find("{damnation}") then
@@ -821,7 +830,7 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "antimagic" then
             local new_mmp = select(2, you.mp())
             -- Swapping to antimagic reduces our max MP by 2/3.
-            if weap:ego() ~= "antimagic" then
+            if weap.ego() ~= "antimagic" then
                 new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
             end
             if not enough_max_mp_for_god(new_mmp, you.god()) then
@@ -1127,7 +1136,7 @@ function autopickup(it, name)
         return
     end
 
-    local item_name = it:name()
+    local item_name = it.name()
     if item_name:find(const.rune_suffix) then
         record_seen_item(you.where(), item_name)
         return true
@@ -1284,8 +1293,8 @@ local missile_ratings = {
 }
 function missile_rating(missile)
     for name, rating in pairs(missile_ratings) do
-        if missile:name():find(name) then
-            if missile:ego() then
+        if missile.name():find(name) then
+            if missile.ego() then
                 rating = rating + 0.5
             end
 
@@ -1371,11 +1380,10 @@ end
 function weapon_min_delay(weapon)
     local delay = weapon.delay
 
-    if contains_string_in(weapon:subtype(),
-            { "crossbow", "arbalest" }) then
-        -- The maxes used in this function are used to cover cases like Dark
-        -- Maul and Sniper, which have high base delays that can't reach the
-        -- usual min delays.
+    -- The maxes used in this function are used to cover cases like Dark Maul
+    -- and Sniper, which have high base delays that can't reach the usual min
+    -- delays.
+    if contains_string_in(weapon.subtype(), { "crossbow", "arbalest" }) then
         return max(10, weapon.delay - 13.5)
     end
 
@@ -1383,11 +1391,11 @@ function weapon_min_delay(weapon)
         return 5
     end
 
-    if contains_string_in(weapon:subtype(), { "demon whip", "scourge" }) then
+    if contains_string_in(weapon.subtype(), { "demon whip", "scourge" }) then
         return 5
     end
 
-    if contains_string_in(weapon:subtype(),
+    if contains_string_in(weapon.subtype(),
             { "demon blade", "eudemon blade", "trishula", "dire flail" }) then
         return 6
     end
@@ -1444,8 +1452,11 @@ function armour_evp()
     end
 end
 
-function can_swap(it)
-    if it and it.name():find("obsidian axe") and you.status("mesmerised") then
+function can_swap(it, upgrade)
+    if not it
+            or it.name():find("obsidian axe") and you.status("mesmerised")
+            or not upgrade and it.artefact and it.artprops["Fragile"]
+            or it.ego() == "distortion" and you.god() ~= "Lugonu" then
         return false
     end
 
@@ -1465,15 +1476,15 @@ function is_weapon(it)
 end
 
 function weapon_is_penetrating(weapon)
-    return weapon:subtype() == "javelin"
-        or weapon:ego() == "penetration"
-        or weapon:name():find("storm bow")
+    return weapon.subtype() == "javelin"
+        or weapon.ego() == "penetration"
+        or weapon.name():find("storm bow")
 end
 
 function weapon_is_exploding(weapon)
-    return weapon:name():find("{damnation}")
+    return weapon.name():find("{damnation}")
 end
 
 function weapon_can_target_empty(weapon)
-    return not weapon:name():find("{damnation}")
+    return not weapon.name():find("{damnation}")
 end

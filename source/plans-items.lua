@@ -186,35 +186,26 @@ function plan_upgrade_weapon()
         return false
     end
 
-    local twohands = true
-    if items.equipped_at("Shield") and you.race() ~= "Formicid" then
-        twohands = false
-    end
-
+    local twohands = not items.equipped_at("Shield")
+        or you.race() == "Formicid"
     local it_old = get_weapon()
-    swappable = can_swap(it_old)
+    swappable = can_swap(it_old, true)
     for it in inventory() do
         if it and it.class(true) == "weapon" and not it.equipped then
-            local equip = false
-            local drop = false
-            if should_upgrade(it, it_old) then
-                equip = true
-            elseif should_drop(it) then
-                drop = true
-            end
-            if equip and swappable and (twohands or it.hands < 2) then
+            if should_upgrade(it, it_old)
+                    and swappable
+                    and (twohands or it.hands < 2) then
                 say("UPGRADING to " .. it.name() .. ".")
                 magic("w" .. items.index_to_letter(it.slot) .. "YY")
-                -- this might have a 0-turn fail because of unIDed holy
-                return nil
-            end
-            if drop then
+                return true
+            elseif should_drop(it) then
                 say("DROPPING " .. it.name() .. ".")
                 magic("d" .. items.index_to_letter(it.slot) .. "\r")
                 return true
             end
         end
     end
+
     return false
 end
 
@@ -245,7 +236,7 @@ end
 
 function plan_upgrade_amulet()
     local it_old = items.equipped_at("Amulet")
-    swappable = can_swap(it_old)
+    swappable = can_swap(it_old, true)
     for it in inventory() do
         if it and equip_slot(it) == "Amulet" and not it.equipped then
             local equip = false
@@ -360,7 +351,7 @@ function plan_upgrade_armour()
             local drop = false
             local swappable
             local it_old = items.equipped_at(good_slots[st])
-            local swappable = can_swap(it_old)
+            local swappable = can_swap(it_old, true)
             if should_upgrade(it, it_old) then
                 equip = true
             elseif should_drop(it) then
