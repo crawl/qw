@@ -368,6 +368,11 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
 end
 
 function update_goal_travel()
+    if goal_status == "Quit" then
+        goal_travel = {}
+        return
+    end
+
     -- We use a stash search to reach our destination, but will still do a
     -- travel search for any given goal branch/depth, so we can use a go
     -- command as a backup.

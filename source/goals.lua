@@ -270,6 +270,7 @@ function determine_goal()
     end
 
     if status == "Quit" then
+        goal_status = status
         say("QUITTING!")
         return
     end
@@ -476,6 +477,10 @@ function planning_convert_to_mp_using_gods()
 end
 
 function update_planning()
+    if goal_status == "Quit" then
+        return
+    end
+
     planning_zig = goals_visit_branch("Zig")
 
     planning_vaults = goals_visit_branch("Vaults")
