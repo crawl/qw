@@ -1453,10 +1453,14 @@ function armour_evp()
 end
 
 function can_swap(it, upgrade)
-    if not it
-            or it.name():find("obsidian axe") and you.status("mesmerised")
+    if not it then
+        return true
+    end
+
+    if it.name():find("obsidian axe") and you.status("mesmerised")
             or not upgrade and it.artefact and it.artprops["Fragile"]
-            or it.ego() == "distortion" and you.god() ~= "Lugonu" then
+            or not upgrade and it.ego() == "distortion"
+                and you.god() ~= "Lugonu" then
         return false
     end
 
