@@ -14,56 +14,41 @@ end
 function c_answer_prompt(prompt)
     if prompt == "Die?" then
         return WIZMODE_DEATH
-    end
-    if prompt:find("Have to go through") then
+    elseif prompt:find("Have to go through") then
         return true
-    end
-    if prompt:find("transient mutations") then
+    elseif prompt:find("transient mutations") then
         return true
-    end
-    if prompt:find("Keep disrobing") then
+    elseif prompt:find("Keep disrobing") then
         return false
-    end
-    if prompt:find("Really unwield") or prompt:find("Really take off")
+    elseif prompt:find("Really unwield") or prompt:find("Really take off")
          or prompt:find("Really remove") or prompt:find("Really wield")
          or prompt:find("Really wear") or prompt:find("Really put on")
          or prompt:find("Really quaff") then
         return true
-    end
-    if prompt:find("Keep reading") then
+    elseif prompt:find("Keep reading") then
         return true
-    end
-    if prompt:find("This attack would place you under penance") then
+    elseif prompt:find("This attack would place you under penance") then
         return false
-    end
-    if prompt:find("You cannot afford")
+    elseif prompt:find("You cannot afford")
             and prompt:find("travel there anyways") then
         return true
-    end
-    if prompt:find("Shopping list") then
+    elseif prompt:find("Shopping list") then
         return false
-    end
-    if prompt:find("Are you sure you want to drop") then
+    elseif prompt:find("Are you sure you want to drop") then
         return true
-    end
-    if prompt:find("Really rampage") then
+    elseif prompt:find("Really rampage") then
         return true
-    end
-    if prompt:find("Really drink that potion of mutation") then
+    elseif prompt:find("Really drink that potion of mutation") then
         return true
-    end
-    if prompt:find("next level anyway") then
+    elseif prompt:find("next level anyway") then
         return true
-    end
-    if prompt:find("fire in the non-hostile")
+    elseif prompt:find("fire in the non-hostile")
             or prompt:find("fire at your") then
         return true
-    end
-    if prompt:find("Really.*into that.*trap")
+    elseif prompt:find("Really.*into that.*trap")
             or prompt:find("into the Zot trap") then
         return true
-    end
-    if prompt:find("Really explore while Zot is near") then
+    elseif prompt:find("Really explore while Zot is near") then
         return true
     end
 end
