@@ -148,7 +148,7 @@ function branch_stairs_type(feat)
         return
     end
 
-    if feat == "exit_dungeon" then
+    if feat == branch_exit("D") then
         return "D", dir
     end
 

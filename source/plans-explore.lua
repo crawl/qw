@@ -76,7 +76,11 @@ function plan_go_command()
     if goal_status == "Escape"
             and goal_travel.branch == "D"
             and goal_travel.depth == 1 then
-        send_travel("D", 0)
+        if view.feature_at(0, 0) == branch_exit("D") then
+            go_upstairs(true)
+        else
+            send_travel("D", 0)
+        end
     else
         send_travel(goal_travel.branch, goal_travel.depth)
     end
