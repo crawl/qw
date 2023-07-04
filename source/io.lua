@@ -201,6 +201,8 @@ function c_message(text, channel)
         temporary_flight = true
     elseif text:find("You pick up the Orb of Zot") then
         want_goal_update = true
+    elseif text:find("Zot's power touches on you") then
+        want_goal_update = true
     elseif text:find("You die...") then
         crawl.sendkeys(string.char(27) .. string.char(27)
             .. string.char(27))
