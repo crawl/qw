@@ -490,7 +490,7 @@ function get_destination_stairs(branch, depth, feat)
     if branch then
         if dir == const.dir.up then
             local parent, min_depth, max_depth = parent_branch(branch)
-            if min_depth == max_depth then
+            if parent and min_depth == max_depth then
                 return get_branch_stairs(parent, min_depth, branch, -dir)
             end
         else

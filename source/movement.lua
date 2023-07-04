@@ -433,10 +433,13 @@ function update_flee_positions()
     local stairs_feats = level_stairs_features(where_branch, where_depth,
         const.dir.up)
     local search_feats = {}
-    -- Only retreat to stairs marked as safe.
+    -- Only retreat to safe stairs with a safe destination.
     for _, feat in ipairs(stairs_feats) do
         local state = get_stairs(where_branch, where_depth, feat)
-        if not state or state.safe then
+        local dest_state = get_destination_stairs(where_branch, where_depth,
+            feat)
+        if (not state or state.safe)
+                and (not dest_state or dest_state.safe) then
             table.insert(search_feats, feat)
         end
     end
