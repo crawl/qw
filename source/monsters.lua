@@ -558,9 +558,14 @@ end
 
 function sense_danger(radius, moveable)
     for _, enemy in ipairs(enemy_list) do
-        local pos = enemy:pos()
-        if (not moveable or you.see_cell_solid_see(pos.x, pos.y))
-                and supdist(pos) <= radius then
+        -- The enemy list is in order of increasing distance, so once we've
+        -- seen a monster with distance above our radius, we're done.
+        if enemy:distance() > radius then
+            return
+        end
+
+        if not moveable
+                or you.see_cell_solid_see(enemy:x_pos(), enemy:y_pos()) then
             return true
         end
     end
