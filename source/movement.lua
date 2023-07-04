@@ -213,6 +213,19 @@ function assess_square(pos)
     return a
 end
 
+function reason_to_flee()
+    return (in_branch("Abyss") and not want_to_stay_in_abyss()
+        or not in_branch("Abyss") and reason_to_rest(90)
+        -- When we're at low XL and trying to go up, we want to flee to
+        -- known stairs when autoexplore is disabled, instead of
+        -- engaging in combat. This rule helps Delvers in particular
+        -- avoid fights near their starting level that would get them
+        -- killed.
+        or you.xl() <= 8
+            and disable_autoexplore
+            and goal_travel.first_dir == const.dir.up)
+end
+
 -- returns a string explaining why moving a1->a2 is preferable to not moving
 -- possibilities are:
 --   cloud       - stepping out of harmful cloud
@@ -237,15 +250,7 @@ function step_reason(a1, a2)
             -- attacked. Unless we're stuck in a bad form, in which case
             -- running is still our best bet.
             and (a1.adjacent == 0 and a2.adjacent == 0 or bad_form)
-            and (reason_to_rest(90)
-                -- When we're at low XL and trying to go up, we want to flee to
-                -- known stairs when autoexplore is disabled, instead of
-                -- engaging in combat. This rule helps Delvers in particular
-                -- avoid fights near their starting level that would get them
-                -- killed.
-                or you.xl() <= 8
-                    and disable_autoexplore
-                    and goal_travel.first_dir == const.dir.up)
+            and reason_to_flee()
             and not buffed()
             and starting_spell ~= "Summon Small Mammal" then
         return "fleeing"
@@ -356,10 +361,10 @@ end
 function choose_tactical_step()
     tactical_step = nil
     tactical_reason = "none"
-    if you.confused()
+    if unable_to_move()
+            or you.confused()
             or you.berserk()
             or you.constricted()
-            or unable_to_move()
             or you.status("spiked") then
         return
     end

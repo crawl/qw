@@ -892,15 +892,14 @@ function plan_continue_flee()
         return false
     end
 
-    if danger
-            or not (reason_to_rest(90)
-                or you.xl() <= 8 and disable_autoexplore)
+    if danger or not reason_to_flee()
             or unable_to_move()
+            or you.confused()
+            or you.berserk()
+            or you.status("spiked")
             or count_brothers_in_arms(3) > 0
             or count_greater_servants(3) > 0
             or count_divine_warriors(3) > 0
-            or you.status("spiked")
-            or you.confused()
             or buffed() then
         return false
     end
