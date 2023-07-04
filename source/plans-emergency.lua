@@ -714,9 +714,9 @@ function want_to_teleport()
         return true
     end
 
-    if danger and in_bad_form()
+    if in_bad_form()
             and not find_item("potion", "cancellation")
-            and tactical_reason ~= "fleeing" then
+            and sense_danger(1) then
         return true
     end
 
@@ -1060,12 +1060,10 @@ function set_plan_emergency()
         {plan_non_melee_berserk, "non_melee_berserk"},
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
-        {plan_coward_step, "coward_step"},
-        {plan_flee_step, "flee_step"},
-        {plan_remove_terrible_jewellery, "remove_terrible_jewellery"},
         {plan_teleport, "teleport"},
-        {plan_cure_bad_poison, "cure_bad_poison"},
         {plan_cancellation, "cancellation"},
+        {plan_remove_terrible_jewellery, "remove_terrible_jewellery"},
+        {plan_cure_bad_poison, "cure_bad_poison"},
         {plan_drain_life, "drain_life"},
         {plan_heal_wounds, "heal_wounds"},
         {plan_tomb2_arrival, "tomb2_arrival"},
@@ -1075,7 +1073,15 @@ function set_plan_emergency()
         {plan_haste, "haste"},
         {plan_resistance, "resistance"},
         {plan_magic_points, "magic_points"},
-        {plan_heroism, "heroism"},
+        {plan_escape_net, "escape_net"},
+        {plan_wait_confusion, "wait_confusion"},
+        {plan_zig_fog, "zig_fog"},
+        {plan_wall_step, "wall_step"},
+        {plan_water_step, "water_step"},
+        {plan_continue_flee, "continue_flee"},
+        {plan_flee_step, "flee_step"},
+        {plan_coward_step, "coward_step"},
+        {plan_other_step, "other_step"},
         {plan_cleansing_flame, "try_cleansing_flame"},
         {plan_brothers_in_arms, "brothers_in_arms"},
         {plan_greater_servant, "greater_servant"},
@@ -1084,21 +1090,15 @@ function set_plan_emergency()
         {plan_slouch, "try_slouch"},
         {plan_hydra_destruction, "try_hydra_destruction"},
         {plan_grand_finale, "grand_finale"},
-        {plan_escape_net, "escape_net"},
-        {plan_wait_confusion, "wait_confusion"},
-        {plan_wield_weapon, "wield_weapon"},
-        {plan_swap_weapon, "swap_weapon"},
-        {plan_water_step, "water_step"},
-        {plan_wall_step, "wall_step"},
-        {plan_zig_fog, "zig_fog"},
-        {plan_finesse, "finesse"},
         {plan_fiery_armour, "fiery_armour"},
         {plan_dig_grate, "try_dig_grate"},
+        {plan_wield_weapon, "wield_weapon"},
+        {plan_swap_weapon, "swap_weapon"},
+        {plan_heroism, "heroism"},
+        {plan_finesse, "finesse"},
         {plan_might, "might"},
         {plan_blinking, "blinking"},
         {plan_berserk, "berserk"},
-        {plan_continue_flee, "continue_flee"},
-        {plan_other_step, "other_step"},
         {plan_recall, "recall"},
         {plan_recall_ancestor, "try_recall_ancestor"},
         {plan_recite, "try_recite"},

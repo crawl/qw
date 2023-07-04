@@ -402,6 +402,12 @@ function choose_tactical_step()
 end
 
 function distance_map_minimum_enemy_distance(dist_map, pspeed)
+    -- We ignore enemy distance in bad forms, since fleeing is always one of
+    -- our best options regardless of how close monsters are.
+    if in_bad_form() then
+        return
+    end
+
     local min_dist
     for _, enemy in ipairs(enemy_list) do
         local gpos = position_sum(global_pos, enemy:pos())
