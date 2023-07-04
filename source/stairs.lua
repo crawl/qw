@@ -480,7 +480,6 @@ function get_branch_stairs(branch, depth, stairs_branch, dir)
 end
 
 function get_destination_stairs(branch, depth, feat)
-    local state
     local dir, num = stone_stairs_type(feat)
     if dir then
         return get_stone_stairs(branch, depth + dir, -dir, num)

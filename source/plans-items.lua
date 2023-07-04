@@ -62,7 +62,7 @@ function teleport()
 end
 
 function plan_wield_weapon()
-    local weap = items.equipped_at("Weapon")
+    local weap = get_weapon()
     if is_weapon(weap)
             or weapon_skill() == "Unarmed Combat"
             or you.berserk()
