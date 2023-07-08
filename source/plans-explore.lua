@@ -191,7 +191,7 @@ function plan_move_towards_travel_feature()
         for hash, _ in pairs(c_persist.altars[god][where]) do
             if update_altar(god, where, hash,
                     { feat = const.feat_state.seen }, true) then
-                restart_cascade = true
+                qw.restart_cascade = true
             end
         end
     end

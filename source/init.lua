@@ -32,13 +32,13 @@ function initialize()
     -- Leave some memory left over so we can avoid deleting c_persist as well
     -- as reset the coroutine and attempt debugging.
     if MAX_MEMORY then
-        max_memory = MAX_MEMORY
+        qw.max_memory = MAX_MEMORY
     end
     if MAX_MEMORY_PERCENTAGE then
-        max_memory_percentage = MAX_MEMORY_PERCENTAGE
+        qw.max_memory_percentage = MAX_MEMORY_PERCENTAGE
     end
-    if max_memory and max_memory_percentage then
-        set_memory_limit(max_memory * max_memory_percentage / 100)
+    if qw.max_memory and qw.max_memory_percentage then
+        set_memory_limit(qw.max_memory * qw.max_memory_percentage / 100)
     end
 
     initialize_enums()
@@ -82,12 +82,15 @@ function initialize()
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)
 
-    coroutine_throttle = COROUTINE_THROTTLE
+    qw.coroutine_throttle = COROUTINE_THROTTLE
     if AUTO_START then
-        automatic = true
+        qw.automatic = true
     end
 
-    initialized = true
+    qw.dump_count = you.turns() + 100 - (you.turns() % 100)
+    qw.skill_count = you.turns() - (you.turns() % 5)
+    qw.read_message = true
+    qw.initialized = true
 end
 
 function note_qw_data()

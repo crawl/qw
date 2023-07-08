@@ -106,7 +106,7 @@ function c_message(text, channel)
     if text:find("Your surroundings suddenly seem different") then
         invis_monster = false
     elseif text:find("Your pager goes off") then
-        have_message = true
+        qw.have_message = true
     elseif text:find("Done exploring") then
         c_persist.autoexplore[you.where()] = const.autoexplore.full
         want_goal_update = true

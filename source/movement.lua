@@ -830,14 +830,14 @@ end
 function best_move_towards_unexplored_near(map_pos, allow_unsafe)
     local i = 1
     for pos in radius_iter(map_pos, const.gxm) do
-        if coroutine_throttle and i % 1000 == 0 then
+        if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for unexplored in block " .. tostring(i / 1000)
                     .. " of map positions near "
                     .. cell_string_from_map_position(map_pos))
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
@@ -872,13 +872,13 @@ end
 function best_move_towards_safety()
     local i = 1
     for pos in radius_iter(global_pos, const.gxm) do
-        if coroutine_throttle and i % 1000 == 0 then
+        if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for safety in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 

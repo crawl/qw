@@ -14,29 +14,7 @@ local const = {}
 local plans = {}
 
 -- All variables past this point are qw state.
-local initialized = false
-
-local debug_mode = false
-local debug_channels = {}
-
-local max_memory
-local max_memory_percentage
-local memory_limit
-local coroutine_throttle = true
-local throttle
-
-local abort_qw = false
-local automatic = false
-local update_coroutine
-local do_dummy_action
-
-local dump_count = you.turns() + 100 - (you.turns() % 100)
-local skill_count = you.turns() - (you.turns() % 5)
-
-local have_message = false
-local read_message = true
-
-local restart_cascade = false
+local qw = {}
 
 local branch_data = {}
 local hell_branches

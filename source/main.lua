@@ -4,22 +4,22 @@
 -- Max memory available to clua in megabytes. These defaults are overridden by
 -- the MAX_MEMORY and MAX_MEMORY_PERCENTAGE rc variables, when those are
 -- defined.
-max_memory = 32
-max_memory_percentage = 90
+qw.max_memory = 32
+qw.max_memory_percentage = 90
 
 function stop()
-    automatic = false
+    qw.automatic = false
     unset_options()
 end
 
 function start()
-    automatic = true
+    qw.automatic = true
     set_options()
     ready()
 end
 
 function startstop()
-    if automatic then
+    if qw.automatic then
         stop()
     else
         start()
@@ -72,11 +72,11 @@ function qw_main()
         stop()
     end
 
-    local did_restart = restart_cascade
-    if automatic then
+    local did_restart = qw.restart_cascade
+    if qw.automatic then
         crawl.flush_input()
         crawl.more_autoclear(true)
-        if have_message then
+        if qw.have_message then
             plan_message()
         else
             plans.move()
@@ -85,53 +85,53 @@ function qw_main()
     -- restart_cascade must remain true for the entire move cascade while we're
     -- restarting.
     if did_restart then
-        restart_cascade = false
+        qw.restart_cascade = false
     end
 end
 
 function run_qw()
-    if abort_qw then
+    if qw.abort then
         return
     end
 
-    if update_coroutine == nil then
-        update_coroutine = coroutine.create(qw_main)
+    if qw.update_coroutine == nil then
+        qw.update_coroutine = coroutine.create(qw_main)
     end
 
-    local okay, err = coroutine.resume(update_coroutine)
+    local okay, err = coroutine.resume(qw.update_coroutine)
     if not okay then
         error("Error in coroutine: " .. err)
-        abort_qw = true
+        qw.abort = true
     end
 
-    if coroutine.status(update_coroutine) == "dead" then
-        update_coroutine = nil
-        do_dummy_action = do_dummy_action == nil and restart_cascade
+    if coroutine.status(qw.update_coroutine) == "dead" then
+        qw.update_coroutine = nil
+        qw.do_dummy_action = qw.do_dummy_action == nil and qw.restart_cascade
     else
-        do_dummy_action = do_dummy_action == nil
+        qw.do_dummy_action = qw.do_dummy_action == nil
     end
 
     local memory_count = collectgarbage("count")
-    if debug_channel("throttle") and throttle then
+    if debug_channel("throttle") and qw.throttle then
         dsay("Memory count is " .. tostring(memory_count))
     end
 
-    if memory_limit and memory_count > memory_limit then
+    if qw.memory_limit and memory_count > qw.memory_limit then
         collectgarbage("collect")
 
-        if collectgarbage("count") > memory_limit then
-            abort_qw = true
-            dsay("Memory usage above " .. tostring(memory_limit))
+        if collectgarbage("count") > qw.memory_limit then
+            qw.abort = true
+            dsay("Memory usage above " .. tostring(qw.memory_limit))
             dsay("Aborting...")
             return
         end
     end
-    throttle = false
+    qw.throttle = false
 
-    if do_dummy_action then
+    if qw.do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))
     end
-    do_dummy_action = nil
+    qw.do_dummy_action = nil
 end
 
 function ready()
@@ -143,5 +143,5 @@ function hit_closest()
 end
 
 function set_memory_limit(limit_mb)
-    memory_limit = math.floor(limit_mb * 1024)
+    qw.memory_limit = math.floor(limit_mb * 1024)
 end

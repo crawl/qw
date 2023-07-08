@@ -2,26 +2,25 @@
 -- Debug functions
 
 function initialize_debug()
-    debug_mode = DEBUG_MODE
-    debug_channels = {}
+    qw.debug_mode = DEBUG_MODE
+    qw.debug_channels = {}
     for _, channel in ipairs(DEBUG_CHANNELS) do
-        debug_channels[channel] = true
+        qw.debug_channels[channel] = true
     end
 end
 
 function toggle_debug()
-    debug_mode = not debug_mode
-    dsay((debug_mode and "Enabling" or "Disabling")
-      .. " debug mode")
+    qw.debug_mode = not qw.debug_mode
+    dsay((qw.debug_mode and "Enabling" or "Disabling") .. " debug mode")
 end
 
 function debug_channel(channel)
-    return debug_mode and debug_channels[channel]
+    return qw.debug_mode and qw.debug_channels[channel]
 end
 
 function toggle_debug_channel(channel)
-    debug_channels[channel] = not debug_channels[channel]
-    dsay((debug_channels[channel] and "Enabling " or "Disabling ")
+    qw.debug_channels[channel] = not qw.debug_channels[channel]
+    dsay((qw.debug_channels[channel] and "Enabling " or "Disabling ")
       .. channel .. " debug channel")
 end
 
@@ -230,6 +229,10 @@ function get_global_pos()
     return global_pos
 end
 
+function get_qw()
+    return qw
+end
+
 function pos_string(pos)
     return tostring(pos.x) .. "," .. tostring(pos.y)
 end
@@ -255,16 +258,16 @@ function cell_string_from_map_position(pos)
 end
 
 function toggle_throttle()
-    coroutine_throttle = not coroutine_throttle
-    dsay((coroutine_throttle and "Enabling" or "Disabling")
+    qw.coroutine_throttle = not qw.coroutine_throttle
+    dsay((qw.coroutine_throttle and "Enabling" or "Disabling")
       .. " coroutine throttle")
 end
 
 function reset_coroutine()
-    update_coroutine = nil
+    qw.update_coroutine = nil
     collectgarbage("collect")
 end
 
 function resume_qw()
-    abort_qw = false
+    qw.abort = false
 end

@@ -69,7 +69,7 @@ function plan_clear_exclusions()
     clear_exclusion_count[where] = n + 1
     remove_exclusions(true)
     magic("X" .. control('e'))
-    do_dummy_action = false
+    qw.do_dummy_action = false
     return true
 end
 

@@ -1132,7 +1132,7 @@ function have_progression_item(name)
 end
 
 function autopickup(it, name)
-    if not initialized then
+    if not qw.initialized then
         return
     end
 

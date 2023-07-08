@@ -801,7 +801,7 @@ function clear_out_shopping_list()
         clear_shoplist_magic = clear_shoplist_magic .. "a"
     end
     magic(clear_shoplist_magic)
-    do_dummy_action = false
+    qw.do_dummy_action = false
     coroutine.yield()
 end
 

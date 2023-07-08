@@ -15,7 +15,7 @@ end
 
 -- We want to call this exactly once each turn.
 function turn_update()
-    if not initialized then
+    if not qw.initialized then
         initialize()
     end
 
@@ -29,13 +29,13 @@ function turn_update()
     time_passed = true
     turn_count = turns
     memos = {}
-    if you.turns() >= dump_count then
-        dump_count = dump_count + 100
+    if you.turns() >= qw.dump_count then
+        dump_count = qw.dump_count + 100
         crawl.dump_char()
     end
 
-    if turn_count >= skill_count then
-        skill_count = skill_count + 5
+    if turn_count >= qw.skill_count then
+        qw.skill_count = qw.skill_count + 5
         handle_skills()
     end
 

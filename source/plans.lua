@@ -56,15 +56,15 @@ function move_towards_destination(pos, dest, reason)
 end
 -- these few functions are called directly from ready()
 function plan_message()
-    if read_message then
+    if qw.read_message then
         crawl.setopt("clear_messages = false")
         magic("_")
-        read_message = false
+        qw.read_message = false
     else
         crawl.setopt("clear_messages = true")
         magic(":qwqwqw\r")
-        read_message = true
-        have_message = false
+        qw.read_message = true
+        qw.have_message = false
         crawl.delay(2500)
     end
 end
@@ -98,11 +98,11 @@ function cascade(plans)
                 error("No plan function for " .. plandata[2])
             end
 
-            if restart_cascade
+            if qw.restart_cascade
                     or you.turns() ~= plan_turns[plan]
                     or plan_result[plan] == nil then
                 local result = plan()
-                if not automatic then
+                if not qw.automatic then
                     return true
                 end
 

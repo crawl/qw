@@ -122,13 +122,13 @@ function find_features(feats, radius)
     local found_feats = {}
     local i = 1
     for pos in square_iter(const.origin, radius, true) do
-        if coroutine_throttle and i % 1000 == 0 then
+        if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched features in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
@@ -167,13 +167,13 @@ function find_map_items(item_names, radius)
     local found_items = {}
     local i = 1
     for pos in square_iter(const.origin, radius, true) do
-        if coroutine_throttle and i % 1000 == 0 then
+        if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched items in block " .. tostring(i / 1000)
                     .. " of map positions")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
@@ -353,14 +353,14 @@ function distance_map_propagate(dist_map)
     local ind = 1
     local count = ind
     while ind <= #dist_map.queue do
-        if coroutine_throttle and count % 300 == 0 then
+        if qw.coroutine_throttle and count % 300 == 0 then
             if debug_channel("throttle") then
                 dsay("Propagated block " .. tostring(count / 300)
                     .. " with " .. tostring(#dist_map.queue - ind)
                     .. " positions remaining")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
@@ -618,13 +618,13 @@ function update_map_cells()
     local count = 1
     local map_reset = const.map_select.none
     while ind <= #queue do
-        if coroutine_throttle and count % 1000 == 0 then
+        if qw.coroutine_throttle and count % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Updated map in block " .. tostring(count / 1000)
                     .. " with " .. tostring(#queue - ind) .. " cells remaining")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
@@ -645,13 +645,13 @@ end
 
 function update_distance_maps_at_cells(queue, map_select)
     for i, cell in ipairs(queue) do
-        if coroutine_throttle and i % 1000 == 0 then
+        if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Updated distance maps in block " .. tostring(i / 1000)
                     .. " with " .. tostring(#queue - i) .. " cells remaining")
             end
 
-            throttle = true
+            qw.throttle = true
             coroutine.yield()
         end
 
