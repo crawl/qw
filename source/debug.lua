@@ -271,3 +271,9 @@ end
 function resume_qw()
     qw.abort = false
 end
+
+function toggle_single_step()
+    qw.single_step = not qw.single_step
+    dsay((qw.single_step and "Enabling" or "Disabling")
+      .. " single action steps.")
+end

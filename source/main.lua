@@ -68,7 +68,7 @@ end
 function qw_main()
     turn_update()
 
-    if time_passed and SINGLE_STEP then
+    if time_passed and qw.single_step then
         stop()
     end
 

@@ -90,6 +90,8 @@ function initialize()
     qw.dump_count = you.turns() + 100 - (you.turns() % 100)
     qw.skill_count = you.turns() - (you.turns() % 5)
     qw.read_message = true
+
+    qw.single_step = SINGLE_STEP
     qw.initialized = true
 end
 
