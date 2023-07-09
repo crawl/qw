@@ -125,8 +125,7 @@ function plan_take_unexplored_stairs()
     -- Ensure that we autoexplore any new area we arrive in, otherwise, if we
     -- have completed autoexplore at least once, we may immediately leave once
     -- we see we've found the last missing staircase.
-    c_persist.autoexplore[make_level(where_branch, where_depth + dir)]
-        = const.autoexplore.needed
+    reset_autoexplore(make_level(where_branch, where_depth + dir))
 
     if dir == const.dir.up then
         go_upstairs()

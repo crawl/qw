@@ -215,51 +215,50 @@ function finalize_depth_dir(result, dir)
     assert(type(dir) == "number" and abs(dir) == 1,
         "Invalid stair direction: " .. tostring(dir))
 
-    -- We can already reach all required stairs in this direction on our level.
+    -- We can already reach all required stairs in the given direction on the
+    -- target level, so there's nothing to do in that direction.
     if count_stairs(result.branch, result.depth, dir,
                 const.feat_state.reachable)
             == num_required_stairs(result.branch, depth, dir) then
         return false
     end
 
+    -- The level in the given direction isn't autoexplored, so we start there.
     local dir_depth = result.depth + dir
-    local dir_depth_stairs =
-        count_stairs(result.branch, dir_depth, -dir, const.feat_state.explored)
-            < count_stairs(result.branch, dir_depth, -dir, const.feat_state.reachable)
-    -- The adjacent level in this direction from our level is autoexplored and
-    -- we have no unexplored reachable stairs remaining on that level in the
-    -- opposite direction.
-    if autoexplored_level(result.branch, dir_depth)
-            and not dir_depth_stairs then
-        -- The reachable stairs in this direction on our level are also all
-        -- explored, hence we've done as much as we can with this direction
-        -- relative to our level.
-        if count_stairs(result.branch, result.depth, dir, const.feat_state.reachable)
-                == count_stairs(result.branch, result.depth, dir,
-                    const.feat_state.explored) then
-            return false
-        end
-
-        result.stairs_dir = dir
+    if not autoexplored_level(result.branch, dir_depth) then
+        result.depth = dir_depth
         if not result.first_dir and not result.first_branch then
             result.first_dir = dir
         end
         return true
     end
 
-    if not result.first_dir and not result.first_branch then
-        result.first_dir = dir
+    -- Both the target level and the level in the given direction are
+    -- autoexplored, so we try any unexplored stairs on the target level in
+    -- that direction.
+    if count_stairs(result.branch, result.depth, dir,
+                const.feat_state.explored)
+            < count_stairs(result.branch, result.depth, dir,
+                const.feat_state.reachable) then
+        result.stairs_dir = dir
+        return true
     end
-    result.depth = dir_depth
 
-    -- Only try a stair search on the adjacent level if we know there are
-    -- unexplored stairs we could take. Otherwise explore the adjacent level,
-    -- looking for relevant stairs.
-    if dir_depth_stairs then
+    -- No unexplored stairs in the given direction on our target level, but on
+    -- the level in that direction we have some stairs in the opposite
+    -- direction, so we try those.
+    if count_stairs(result.branch, dir_depth, -dir, const.feat_state.explored)
+            < count_stairs(result.branch, dir_depth, -dir,
+                const.feat_state.reachable) then
+        result.depth = dir_depth
         result.stairs_dir = -dir
+        if not result.first_dir and not result.first_branch then
+            result.first_dir = dir
+        end
+        return true
     end
 
-    return true
+    return false
 end
 
 function travel_opens_runed_doors(result)
@@ -293,45 +292,45 @@ function finalize_travel_depth(result)
             const.feat_state.reachable) > 0
     local finished
     if up_reachable then
-        finished = finalize_depth_dir(result, const.dir.up)
+        if finalize_depth_dir(result, const.dir.up) then
+            return
+        end
     end
 
     local down_reachable = result.depth < branch_depth(result.branch)
         and count_stairs(result.branch, result.depth, const.dir.down,
             const.feat_state.reachable) > 0
-    if not finished and down_reachable then
-        finished = finalize_depth_dir(result, const.dir.down)
+    if down_reachable and finalize_depth_dir(result, const.dir.down) then
+        return
     end
 
-    if not finished then
-        if up_reachable
-                -- Don't reset up stairs if we still need the branch rune,
-                -- since we have specific plans for branch ends we may need to
-                -- follow.
-                and (have_branch_runes(result.branch)
-                    or result.depth < branch_rune_depth(result.branch)) then
-            reset_stone_stairs(result.branch, result.depth, const.dir.up)
-            reset_stone_stairs(result.branch, result.depth - 1, const.dir.down)
-            if not result.first_dir and not result.first_branch then
-                result.first_dir = const.dir.up
-            end
-            result.depth = result.depth - 1
-            result.stairs_dir = const.dir.up
-            finished = true
+    local finished
+    if up_reachable
+            -- Don't reset up stairs if we still need the branch rune, since we
+            -- have specific plans for branch ends we may need to follow.
+            and (have_branch_runes(result.branch)
+                or result.depth < branch_rune_depth(result.branch)) then
+        reset_stone_stairs(result.branch, result.depth, const.dir.up)
+        reset_stone_stairs(result.branch, result.depth - 1, const.dir.down)
+        result.depth = result.depth - 1
+        if not result.first_dir and not result.first_branch then
+            result.first_dir = const.dir.up
         end
+        result.stairs_dir = const.dir.down
+        finished = true
+    end
 
-        if down_reachable then
-            reset_stone_stairs(result.branch, result.depth, const.dir.down)
-            reset_stone_stairs(result.branch, result.depth + 1, const.dir.up)
-            -- If we've just reset up stairs, that direction gets priority as
-            -- the first search destination.
-            if not finished then
-                result.depth = result.depth + 1
-                if not result.first_dir and not result.first_branch then
-                    result.first_dir = const.dir.down
-                end
-                result.stairs_dir = const.dir.up
+    if down_reachable then
+        reset_stone_stairs(result.branch, result.depth, const.dir.down)
+        reset_stone_stairs(result.branch, result.depth + 1, const.dir.up)
+        -- If we've just reset upstairs, that direction gets priority as the
+        -- first search destination.
+        if not finished then
+            result.depth = result.depth + 1
+            if not result.first_dir and not result.first_branch then
+                result.first_dir = const.dir.down
             end
+            result.stairs_dir = const.dir.up
         end
     end
 end
