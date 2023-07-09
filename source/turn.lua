@@ -74,11 +74,8 @@ function turn_update()
             or in_hell_branch(where_branch))
         base_corrosion = in_branch("Dis") and 2 or 0
 
-        local pan_parent, min_depth, max_depth = parent_branch("Pan")
-
         target_flee_position = nil
         transp_zone = 0
-
         stuck_turns = 0
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
