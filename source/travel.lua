@@ -225,11 +225,24 @@ function finalize_depth_dir(result, dir)
 
     -- The level in the given direction isn't autoexplored, so we start there.
     local dir_depth = result.depth + dir
+    local dir_depth_stairs = count_stairs(result.branch, dir_depth, -dir,
+            const.feat_state.explored)
+        < count_stairs(result.branch, dir_depth, -dir,
+            const.feat_state.reachable)
     if not autoexplored_level(result.branch, dir_depth) then
         result.depth = dir_depth
+
+        -- If we haven't fully explored explored this level but we already see
+        -- there are unexplored stairs, take those before finishing
+        -- autoexplore.
+        if dir_depth_stairs then
+            result.stairs_dir = -dir
+        end
+
         if not result.first_dir and not result.first_branch then
             result.first_dir = dir
         end
+
         return true
     end
 
@@ -247,14 +260,14 @@ function finalize_depth_dir(result, dir)
     -- No unexplored stairs in the given direction on our target level, but on
     -- the level in that direction we have some stairs in the opposite
     -- direction, so we try those.
-    if count_stairs(result.branch, dir_depth, -dir, const.feat_state.explored)
-            < count_stairs(result.branch, dir_depth, -dir,
-                const.feat_state.reachable) then
+    if dir_depth_stairs then
         result.depth = dir_depth
         result.stairs_dir = -dir
+
         if not result.first_dir and not result.first_branch then
             result.first_dir = dir
         end
+
         return true
     end
 
