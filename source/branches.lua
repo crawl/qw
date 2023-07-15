@@ -51,15 +51,24 @@ hell_branches = { "Coc", "Dis", "Geh", "Tar" }
 
 -- Portal branch, entry description, max timeout in turns, description.
 local portal_data_values = {
-    { "Ossuary", "sand-covered staircase", 800 },
-    { "Sewer", "glowing drain", 800 },
-    { "Bailey", "flagged portal", 800 },
-    { "Volcano", "dark tunnel", 800 },
-    { "IceCv", "frozen_archway", 800, "ice cave" },
-    { "Gauntlet", "gate leading to a gauntlet", 800 },
-    { "Bazaar", "gateway to a bazaar", 1300 },
-    { "WizLab", "magical portal", 800, "wizard's laboratory" },
-    { "Desolation", "crumbling gateway", 800 },
+    { "Ossuary", "sand-covered staircase",
+        "The hiss of flowing sand is almost imperceptible now", 800 },
+    { "Sewer", "glowing drain", "You hear the drain falling apart", 800 },
+    { "Bailey", "flagged portal", "has been lowered almost to the ground",
+        800 },
+    { "Volcano", "dark tunnel",
+        "The sound of falling rocks suddenly begins to subside", 800 },
+    { "IceCv", "frozen archway",
+        "The crackling of melting ice is subsiding rapidly", 800, "ice cave" },
+    { "Gauntlet", "gate leading to a gauntlet",
+        "After a thunderous strike, the drumbeats cease", 800 },
+    { "Bazaar", "gateway to a bazaar",
+        "You hear the last, dying notes of the bell", 1300 },
+    { "WizLab", "magical portal",
+        "The crackle of the magical portal is almost imperceptible now", 800,
+        "wizard's laboratory" },
+    { "Desolation", "crumbling gateway",
+        "The wind is rapidly growing quiet.", 800 },
     { "Zig", "one-way gateway to a ziggurat", },
 }
 
@@ -99,8 +108,9 @@ function initialize_branch_data()
         local br = entry[1]
         local data = {}
         data["entrance_description"] = entry[2]
-        data["timeout"] = entry[3]
-        data["description"] = entry[4]
+        data["final_message"] = entry[3]
+        data["timeout"] = entry[4]
+        data["description"] = entry[5]
         if not data["description"] then
             data["description"] = br:lower()
         end
@@ -163,6 +173,49 @@ function portal_entrance_description(portal)
     return portal_data[portal].entrance_description
 end
 
+function remove_expired_portal(level)
+    if not c_persist.portals[level]
+            or not c_persist.expiring_portals[level]
+            or not c_persist.expiring_portals[level][1] then
+        return
+    end
+
+    local expiring = c_persist.expiring_portals[level][1]
+    for portal, turns_list in pairs(c_persist.portals[level]) do
+        if portal == expiring then
+            remove_portal(level, portal)
+            table.remove(c_persist.expiring_portals[level], 1)
+        end
+    end
+end
+
+function portal_final_message(portal)
+    if not portal_data[portal] then
+        error("Unknown portal: " .. tostring(portal))
+    end
+
+    return portal_data[portal].final_message
+end
+
+function record_portal_final_message(level, text)
+    if not c_persist.portals[level] then
+        return false
+    end
+
+    for portal, _ in pairs(c_persist.portals[level]) do
+        if text:find(portal_final_message(portal)) then
+            if not c_persist.expiring_portals[level] then
+                c_persist.expiring_portals[level] = {}
+            end
+
+            table.insert(c_persist.expiring_portals[level], portal)
+            return true
+        end
+    end
+
+    return false
+end
+
 function portal_timeout(portal)
     if not portal_data[portal] then
         error("Unknown portal: " .. tostring(portal))
@@ -187,7 +240,6 @@ function parent_branch(branch)
     return branch_data[branch].parent,
         branch_data[branch].parent_min_depth,
         branch_data[branch].parent_max_depth
-
 end
 
 function branch_runes(branch)
@@ -354,14 +406,13 @@ end
 -- older than their max timeout.
 function update_expired_portals()
     for level, portals in pairs(c_persist.portals) do
-        local explored = explored_level_range(level)
         for portal, turns_list in pairs(portals) do
             local timeout = portal_timeout(portal)
             for _, turns in ipairs(turns_list) do
                 if where_branch ~= portal
+                        and timeout
                         and turns ~= const.inf_turns
-                        and (explored
-                            or timeout and you.turns() - turns > timeout) then
+                        and you.turns() - turns > timeout then
                     remove_portal(level, portal)
                 end
             end

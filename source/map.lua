@@ -538,7 +538,25 @@ function feature_has_map_state(feat)
     return has_state
 end
 
+function expire_cell_portal(cell)
+    for feat, positions in pairs(feature_map_positions) do
+        local branch = branch_stairs_type(feat)
+        if branch and is_portal_branch(branch) then
+            for hash, _ in pairs(positions) do
+                if cell.hash == hash then
+                    remove_portal(where, branch)
+                    return
+                end
+            end
+        end
+    end
+end
+
 function update_cell_feature(cell)
+    if cell.feat == "expired_portal" then
+        expire_cell_portal(cell)
+    end
+
     if not feature_has_map_state(cell.feat) then
         return false
     end

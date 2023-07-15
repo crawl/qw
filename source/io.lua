@@ -167,30 +167,10 @@ function c_message(text, channel)
                 break
             end
         end
+    elseif record_portal_final_message(you.where(), text) then
+        return
     elseif text:find("The walls and floor vibrate strangely") then
-        local where = you.where()
-        -- If there was only one timed portal on the level, we can be sure it's
-        -- the one that expired.
-        if c_persist.portals[where] then
-            local count = 0
-            local expired_portal
-            for portal, turns_list in pairs(c_persist.portals[where]) do
-                for _, turns in ipairs(turns_list) do
-                    if turns ~= const.inf_turns then
-                        count = count + 1
-                        if count > 1 then
-                            expired_portal = nil
-                            break
-                        end
-
-                        expired_portal = portal
-                    end
-                end
-            end
-            if expired_portal then
-                remove_portal(where, expired_portal)
-            end
-        end
+        remove_expired_portal(you.where())
     elseif text:find("You enter the transporter") then
         transp_zone = transp_zone + 1
         transp_orient = true
