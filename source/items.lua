@@ -1490,5 +1490,5 @@ function weapon_is_exploding(weapon)
 end
 
 function weapon_can_target_empty(weapon)
-    return not weapon.name():find("{damnation}")
+    return false
 end
