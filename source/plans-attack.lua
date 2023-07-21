@@ -59,25 +59,21 @@ function plan_shoot_at_invis()
 
     local can_ctrl = not you.confused()
     if invis_monster_pos then
-        if can_attack_invis_at(invis_monster_pos)
-                and have_line_of_fire(invis_monster_pos)then
-            shoot_launcher(invis_monster_pos)
-            return true
+        if have_line_of_fire(invis_monster_pos) then
+            return shoot_launcher(invis_monster_pos)
         end
 
         if invis_monster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_monster_pos.y) }
-            if can_attack_invis_at(apos) and have_line_of_fire(apos)then
-                shoot_launcher(apos)
-                return true
+            if have_line_of_fire(apos) then
+                return shoot_launcher(apos)
             end
         end
 
         if invis_monster_pos.y == 0 then
             local apos = { x = sign(invis_monster_pos.x), y = 0 }
-            if can_attack_invis_at(apos) and have_line_of_fire(apos)then
-                shoot_launcher(apos)
-                return true
+            if have_line_of_fire(apos) then
+                return shoot_launcher(apos)
             end
         end
     end
@@ -86,9 +82,8 @@ function plan_shoot_at_invis()
     while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0 and can_attack_invis_at(pos) then
-            shoot_launcher(pos)
-            return true
+        if supdist(pos) > 0 and have_line_of_fire(pos) then
+            return shoot_launcher(pos)
         end
     end
 
@@ -238,16 +233,21 @@ function assess_explosion(attack, target)
     return result
 end
 
-function assess_ranged_target(attack, target)
+function projectile_hits_non_hostile(mons)
+    return mons and mons:attitude() > const.attitude.hostile
+        and not mons:ignores_player_projectiles()
+end
+
+function assess_ranged_target(attack, target, invis)
     if debug_channel("ranged") then
         dsay("Targeting " .. cell_string_from_position(target))
     end
 
-    local positions = spells.path(attack.test_spell, target.x, target.y, false)
+    local positions = spells.path(attack.test_spell, target.x, target.y)
     local result = { pos = target }
     local past_target, at_target_result
     for i, coords in ipairs(positions) do
-        pos = { x = coords[1], y = coords[2] }
+        local pos = { x = coords[1], y = coords[2] }
         local hit_target = positions_equal(pos, target)
         local mons = get_monster_at(pos)
         -- Non-penetrating attacks must reach the target before reaching any
@@ -255,8 +255,7 @@ function assess_ranged_target(attack, target)
         if not attack.is_penetrating
                 and not past_target
                 and not hit_target
-                and mons
-                and not mons:ignores_player_projectiles() then
+                and mons and not mons:ignores_player_projectiles() then
             if debug_channel("ranged") then
                 dsay("Aborted target: blocking monster at "
                     .. cell_string_from_position(pos))
@@ -267,8 +266,7 @@ function assess_ranged_target(attack, target)
         -- Never potentially hit non-hostiles. If at_target_result is defined,
         -- we'll be using '.', otherwise we haven't yet reached our target and
         -- the attack is unusable.
-        if mons and mons:attitude() > const.attitude.hostile
-                and not mons:ignores_player_projectiles() then
+        if projectile_hits_non_hostile(mons) then
             if debug_channel("ranged") then
                 dsay("Aborted target: non-hostile monster at "
                     .. cell_string_from_position(pos))

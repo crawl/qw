@@ -19,8 +19,30 @@ function feature_state(pos)
     return const.feat_state.seen
 end
 
-function have_line_of_fire(pos)
-    return you.see_cell_solid_see(pos.x, pos.y)
+function have_line_of_fire(target)
+    local attack = ranged_attack(get_weapon())
+    local positions = spells.path(attack.test_spell, target.x, target.y)
+    for i, coords in ipairs(positions) do
+        local pos = { x = coords[1], y = coords[2] }
+        local hit_target = positions_equal(pos, target)
+        local mons = get_monster_at(pos)
+        if not attack.is_penetrating
+                and not hit_target
+                and mons
+                and not mons:ignores_player_projectiles() then
+            return false
+        end
+
+        if projectile_hits_non_hostile(mons) then
+            return false
+        end
+
+        if hit_target then
+            return true
+        end
+    end
+
+    return false
 end
 
 function square_iter(pos, radius, include_center)

@@ -156,11 +156,18 @@ function Monster:is_orc_priest_wizard()
         end)
 end
 
+function Monster:ignores_player_damage()
+    return self:get_property("ignores_player_damage",
+        function()
+            return self:holiness() == "plant" and you.god() == "Fedhas"
+                or self:name():find("^elliptic") and you.god() == "Hepliaklqana"
+        end)
+end
+
 function Monster:ignores_player_projectiles()
     return self:get_property("ignores_player_projectiles",
         function()
-            return self:name() == "bush"
-                or self:holiness() == "plant" and you.god() == "Fedhas"
+            return self:name() == "bush" or self:ignores_player_damage()
         end)
 end
 
