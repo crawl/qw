@@ -243,7 +243,8 @@ function assess_ranged_target(attack, target, invis)
         dsay("Targeting " .. cell_string_from_position(target))
     end
 
-    local positions = spells.path(attack.test_spell, target.x, target.y)
+    local positions = spells.path(attack.test_spell, target.x, target.y, 0, 0,
+        false)
     local result = { pos = target }
     local past_target, at_target_result
     for i, coords in ipairs(positions) do
@@ -281,7 +282,7 @@ function assess_ranged_target(attack, target, invis)
                 and attack.uses_ammunition
                 and i == #positions
                 and destroys_items_at(pos)
-                and not destroys_items_at(attack.target) then
+                and not destroys_items_at(target) then
             if debug_channel("ranged") then
                 dsay("Using at-target key due to destructive terrain at "
                     .. pos_string(pos))
@@ -308,7 +309,7 @@ function assess_ranged_target(attack, target, invis)
         -- point in case we later decide to use '.'.
         if hit_target then
             at_target_result = util.copy_table(result)
-            at_target_result.stop_at_target = true
+            at_target_result.aim_at_target = true
             past_target = true
         end
     end
@@ -340,11 +341,7 @@ function assess_explosion_targets(attack, target)
 end
 
 function attack_test_spell(attack)
-    if attack.is_penetrating then
-        return "Quicksilver Bolt"
-    else
-        return "Magic Dart"
-    end
+    return "Quicksilver Bolt"
 end
 
 function weapon_range(weapon)
@@ -359,6 +356,7 @@ function ranged_attack(weapon)
     attack.range = weapon_range(weapon)
     attack.is_penetrating = weapon_is_penetrating(weapon)
     attack.is_explosion = weapon_is_exploding(weapon)
+    attack.uses_ammunition = weapon.class(true) == "missile"
     attack.can_target_empty = weapon_can_target_empty(weapon)
     attack.test_spell = attack_test_spell(weapon)
     attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
@@ -417,7 +415,7 @@ function get_ranged_target(attack, prefer_melee)
         end
     end
     if best_result then
-        return best_result.pos
+        return best_result
     end
 end
 
@@ -451,26 +449,26 @@ function plan_launcher()
         return false
     end
 
-    return shoot_launcher(target)
+    return shoot_launcher(target.pos, target.aim_at_target)
 end
 
-function throw_missile(missile, pos)
+function throw_missile(missile, pos, aim_at_target)
     local cur_missile = items.fired_item()
     if not cur_missile or missile.name() ~= cur_missile.name() then
         magic("Q*" .. letter(missile))
     end
 
-    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
+    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
 end
 
-function shoot_launcher(pos)
+function shoot_launcher(pos, aim_at_target)
     local weapon = get_weapon()
     local cur_missile = items.fired_item()
     if not cur_missile or weapon.name() ~= cur_missile.name() then
         magic("Q*" .. letter(weapon))
     end
 
-    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y)
+    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
 end
 
 function plan_throw()
@@ -483,7 +481,7 @@ function plan_throw()
         return false
     end
 
-    return throw_missile(best_missile(), target)
+    return throw_missile(best_missile(), target.pos, target.aim_at_target)
 end
 
 function wait_combat()
@@ -597,7 +595,7 @@ function poison_spit_attack(weapon)
     attack.range = poison_gas and 6 or 5
     attack.is_penetrating = poison_gas
     attack.is_explosion = false
-    attack.test_spell = poison_gas and "Quicksilver Bolt" or "Magic Dart"
+    attack.test_spell = "Quicksilver Bolt"
     attack.props = { "hit", "distance", "is_constricting_you",
         "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
@@ -626,11 +624,12 @@ function plan_poison_spit()
 
     local target = get_ranged_target(poison_spit_attack(),
         not have_ranged_weapon())
-    if target and use_ability(ability, "r" .. vector_move(target) .. "\r") then
-        return true
+    if not target then
+        return false
     end
 
-    return false
+    return use_ability(ability, "r" .. vector_move(target.pos)
+        .. target.aim_at_target and "." or "\r")
 end
 
 function plan_flight_move_towards_enemy()

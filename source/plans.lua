@@ -32,6 +32,8 @@ function use_ability(name, extra, mute)
             return true
         end
     end
+
+    return false
 end
 
 function move_to(pos)

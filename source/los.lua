@@ -21,7 +21,8 @@ end
 
 function have_line_of_fire(target)
     local attack = ranged_attack(get_weapon())
-    local positions = spells.path(attack.test_spell, target.x, target.y)
+    local positions = spells.path(attack.test_spell, target.x, target.y, 0, 0,
+        false)
     for i, coords in ipairs(positions) do
         local pos = { x = coords[1], y = coords[2] }
         local hit_target = positions_equal(pos, target)
