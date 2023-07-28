@@ -400,7 +400,7 @@ function plan_blinking()
                 and you.see_cell_no_trans(pos.x, pos.y) then
             local count = 0
             for dpos in adjacent_iter(pos) do
-                if supdist(dpos) <= los_radius then
+                if supdist(dpos) <= qw.los_radius then
                     local mons = get_monster_at(dpos)
                     if mons and mons:is_enemy()
                             and mons:name() == "floating eye" then
@@ -577,13 +577,13 @@ function want_to_brothers_in_arms()
     end
 
     -- Always BiA this list of monsters.
-    if (check_enemies_in_list(los_radius, brothers_in_arms_necessary_monsters)
+    if (check_enemies_in_list(qw.los_radius, brothers_in_arms_necessary_monsters)
                 -- If piety as high, we can also use BiA as a fallback for when
                 -- we'd like to berserk, but can't, or if when we see nasty
                 -- monsters.
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
-                        or check_enemies_in_list(los_radius, nasty_monsters)))
+                        or check_enemies_in_list(qw.los_radius, nasty_monsters)))
             and count_brothers_in_arms(4) == 0 then
         return true
     end
@@ -598,12 +598,12 @@ function want_to_finesse()
 
     if in_branch("Zig")
             and hp_is_low(80)
-            and count_enemies(los_radius) >= 5 then
+            and count_enemies(qw.los_radius) >= 5 then
         return true
     end
 
     if not you.teleporting()
-            and check_enemies_in_list(los_radius, nasty_monsters) then
+            and check_enemies_in_list(qw.los_radius, nasty_monsters) then
         return true
     end
 
@@ -622,13 +622,13 @@ function want_to_drain_life()
     return danger
         and not dangerous_to_attack()
         and not you.teleporting()
-        and count_enemies(los_radius,
+        and count_enemies(qw.los_radius,
             function(mons) return mons:res_draining() == 0 end)
 end
 
 function want_to_greater_servant()
     if you.skill("Invocations") >= 12
-            and (check_enemies_in_list(los_radius, nasty_monsters)
+            and (check_enemies_in_list(qw.los_radius, nasty_monsters)
                 or hp_is_low(50) and immediate_danger) then
         if count_greater_servants(4) == 0 and not you.teleporting() then
             return true
@@ -668,7 +668,7 @@ function want_to_divine_warrior()
         and not dangerous_to_attack()
         and not you.teleporting()
         and you.skill("Invocations") >= 8
-        and (check_enemies_in_list(los_radius, nasty_monsters)
+        and (check_enemies_in_list(qw.los_radius, nasty_monsters)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warriors(4) == 0
 end
@@ -677,9 +677,9 @@ function want_to_fiery_armour()
     return danger
         and not dangerous_to_attack()
         and (hp_is_low(50)
-            or count_enemies_in_list(los_radius, scary_monsters) >= 2
-            or check_enemies_in_list(los_radius, nasty_monsters)
-            or count_enemies(los_radius) >= 6)
+            or count_enemies_in_list(qw.los_radius, scary_monsters) >= 2
+            or check_enemies_in_list(qw.los_radius, nasty_monsters)
+            or count_enemies(qw.los_radius) >= 6)
 end
 
 function want_to_apocalypse()
@@ -688,10 +688,10 @@ function want_to_apocalypse()
     end
 
     local dlevel = drain_level()
-    return dlevel == 0 and check_enemies_in_list(los_radius, scary_monsters)
+    return dlevel == 0 and check_enemies_in_list(qw.los_radius, scary_monsters)
         or dlevel <= 2
             and (danger and hp_is_low(50)
-                or check_enemies_in_list(los_radius, nasty_monsters))
+                or check_enemies_in_list(qw.los_radius, nasty_monsters))
 end
 
 function bad_corrosion()
@@ -720,27 +720,27 @@ function want_to_teleport()
         return true
     end
 
-    if count_hostile_summons(los_radius) > 0 and you.xl() < 21 then
+    if count_hostile_summons(qw.los_radius) > 0 and you.xl() < 21 then
         hostile_summons_timer = you.turns()
         return true
     end
 
     if in_branch("Pan")
-            and (count_enemies_by_name(los_radius, "hellion") >= 3
-                or count_enemies_by_name(los_radius, "daeva") >= 3) then
+            and (count_enemies_by_name(qw.los_radius, "hellion") >= 3
+                or count_enemies_by_name(qw.los_radius, "daeva") >= 3) then
         dislike_pan_level = true
         return true
     end
 
     if you.xl() <= 17
             and not can_berserk()
-            and count_big_slimes(los_radius) > 0 then
+            and count_big_slimes(qw.los_radius) > 0 then
         return true
     end
 
     return immediate_danger and bad_corrosion()
             or immediate_danger and hp_is_low(25)
-            or count_nasty_hell_monsters(los_radius) >= 9
+            or count_nasty_hell_monsters(qw.los_radius) >= 9
 end
 
 function want_to_heal_wounds()
@@ -785,7 +785,7 @@ function want_to_serious_buff()
 
     if in_branch("Zig")
             and hp_is_low(50)
-            and count_enemies(los_radius) >= 5 then
+            and count_enemies(qw.los_radius) >= 5 then
         return true
     end
 
@@ -804,11 +804,11 @@ function want_to_serious_buff()
         return false
     end
 
-    if check_enemies_in_list(los_radius, ridiculous_uniques) then
+    if check_enemies_in_list(qw.los_radius, ridiculous_uniques) then
         return true
     end
 
-    if count_nasty_hell_monsters(los_radius) >= 5 then
+    if count_nasty_hell_monsters(qw.los_radius) >= 5 then
         return true
     end
 
@@ -820,16 +820,16 @@ function want_resistance()
         and not dangerous_to_attack()
         and not you.teleporting()
         and not you.extra_resistant()
-        and (check_enemies_in_list(los_radius, fire_resistance_monsters)
+        and (check_enemies_in_list(qw.los_radius, fire_resistance_monsters)
                 and you.res_fire() < 3
-            or check_enemies_in_list(los_radius, cold_resistance_monsters)
+            or check_enemies_in_list(qw.los_radius, cold_resistance_monsters)
                 and you.res_cold() < 3
-            or check_enemies_in_list(los_radius, elec_resistance_monsters)
+            or check_enemies_in_list(qw.los_radius, elec_resistance_monsters)
                 and you.res_shock() < 1
-            or check_enemies_in_list(los_radius, pois_resistance_monsters)
+            or check_enemies_in_list(qw.los_radius, pois_resistance_monsters)
                 and you.res_poison() < 1
             or in_branch("Zig")
-                and check_enemies_in_list(los_radius, acid_resistance_monsters)
+                and check_enemies_in_list(qw.los_radius, acid_resistance_monsters)
                 and not you.res_corr())
 end
 
@@ -840,7 +840,7 @@ function want_magic_points()
         -- Don't bother restoring MP if our max MP is low.
         and mmp >= 20
         -- No point trying to restore MP with ghost moths around.
-        and count_enemies_by_name(los_radius, "ghost moth") == 0
+        and count_enemies_by_name(qw.los_radius, "ghost moth") == 0
         -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
@@ -854,7 +854,7 @@ function want_to_trogs_hand()
     local hp, mhp = you.hp()
     return in_branch("Abyss") and mhp - hp >= 30
         or not dangerous_to_attack()
-            and check_enemies_in_list(los_radius, hand_monsters)
+            and check_enemies_in_list(qw.los_radius, hand_monsters)
 end
 
 function want_to_berserk()
@@ -870,8 +870,8 @@ function want_to_heroism()
         and not dangerous_to_attack()
         and (have_orb and want_to_orbrun_buff()
             or hp_is_low(70)
-            or check_enemies_in_list(los_radius, scary_monsters)
-            or count_enemies(0, 0, los_radius) >= 4)
+            or check_enemies_in_list(qw.los_radius, scary_monsters)
+            or count_enemies(0, 0, qw.los_radius) >= 4)
 end
 
 function want_to_recall()
@@ -884,7 +884,7 @@ function want_to_recall()
 end
 
 function want_to_recall_ancestor()
-    return count_elliptic(los_radius) == 0
+    return count_elliptic(qw.los_radius) == 0
 end
 
 function plan_continue_flee()

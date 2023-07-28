@@ -131,7 +131,8 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    danger = sense_danger(los_radius) or not map_is_unexcluded_at(global_pos)
+    danger = sense_danger(qw.los_radius)
+        or not map_is_unexcluded_at(global_pos)
     immediate_danger = sense_immediate_danger()
 
     if turns_left_moving_towards_enemy > 0 then

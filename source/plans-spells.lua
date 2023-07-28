@@ -14,7 +14,7 @@ end
 
 function spell_range(sp)
     if sp == "Summon Small Mammal" then
-        return los_radius
+        return qw.los_radius
     elseif sp == "Beastly Appendage" then
         return 4
     elseif sp == "Sandblast" then

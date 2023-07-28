@@ -14,8 +14,8 @@ function want_to_orbrun_heal_wounds()
 end
 
 function want_to_orbrun_buff()
-    return count_pan_lords(los_radius) > 0
-        or check_enemies_in_list(los_radius, scary_monsters)
+    return count_pan_lords(qw.los_radius) > 0
+        or check_enemies_in_list(qw.los_radius, scary_monsters)
 end
 
 function plan_go_to_orb()

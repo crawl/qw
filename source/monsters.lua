@@ -668,7 +668,7 @@ end
 
 function initialize_monster_map()
     monster_map = {}
-    for x = -los_radius, los_radius do
+    for x = -qw.los_radius, qw.los_radius do
         monster_map[x] = {}
     end
 end

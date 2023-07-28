@@ -51,8 +51,8 @@ end
 --------------------------------
 -- a function to test various things conveniently
 function ttt()
-    for i = -los_radius, los_radius do
-        for j = -los_radius, los_radius do
+    for i = -qw.los_radius, qw.los_radius do
+        for j = -qw.los_radius, qw.los_radius do
             m = monster.get_monster_at(i, j)
             if m then
                 crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name()
@@ -239,7 +239,7 @@ end
 
 function cell_string(cell)
     local str = pos_string(cell.los_pos) .. " ("
-    if supdist(cell.los_pos) <= los_radius then
+    if supdist(cell.los_pos) <= qw.los_radius then
         local mons = monster.get_monster_at(cell.los_pos.x, cell.los_pos.y)
         if mons then
             str = str .. mons:name() .. "; "

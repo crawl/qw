@@ -4,7 +4,7 @@
 function can_move_to(pos, ignore_hostiles)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
-        and (supdist(pos) > los_radius
+        and (supdist(pos) > qw.los_radius
             or not monster_in_way(pos, ignore_hostiles))
 end
 
@@ -541,7 +541,7 @@ function move_search(search, current)
     local function search_from(pos)
         if search.attempted[pos.x] and search.attempted[pos.x][pos.y]
                 -- Our search should never leave LOS.
-                or supdist(pos) > los_radius then
+                or supdist(pos) > qw.los_radius then
             return false
         end
 

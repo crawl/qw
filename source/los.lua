@@ -48,7 +48,7 @@ end
 
 function square_iter(pos, radius, include_center)
     if not radius then
-        radius = los_radius
+        radius = qw.los_radius
     end
     if radius <= 0 then
         error("Radius must be a positive integer.")
@@ -90,11 +90,9 @@ local square_move = {
 
 function radius_iter(pos, radius, include_center)
     if not radius then
-        radius = los_radius
+        radius = qw.los_radius
     end
-    if radius <= 0 then
-        error("Radius must be a positive integer.")
-    end
+    assert(radius > 0, "Radius must be a positive integer.")
 
     local r = 0
     local i = 1

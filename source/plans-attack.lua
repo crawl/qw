@@ -216,7 +216,7 @@ function assess_explosion(attack, target)
     local result = { pos = target }
     for pos in adjacent_iter(target, true) do
         local mons
-        if supdist(pos) <= los_radius then
+        if supdist(pos) <= qw.los_radius then
             mons = get_monster_at(pos)
         end
         if mons then
@@ -327,7 +327,7 @@ end
 function assess_explosion_targets(attack, target)
     local best_result
     for pos in adjacent_iter(target, true) do
-        if supdist(pos) <= los_radius
+        if supdist(pos) <= qw.los_radius
                 and not attack.seen_pos[pos.x][pos.y] then
             local result = assess_ranged_target(attack, pos)
             if result_improves_attack(attack, result, best_result) then
@@ -347,7 +347,7 @@ end
 function weapon_range(weapon)
     local class = weapon.class(true)
     if class == "missile" or class == "weapon" and weapon.is_ranged then
-        return los_radius
+        return qw.los_radius
     end
 end
 
@@ -379,7 +379,7 @@ function get_ranged_target(attack, prefer_melee)
 
     if attack.is_explosion then
         attack.seen_pos = {}
-        for i = -los_radius, los_radius do
+        for i = -qw.los_radius, qw.los_radius do
             attack.seen_pos[i] = {}
         end
     end

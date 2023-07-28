@@ -99,7 +99,7 @@ function plan_swap_weapon()
 
     local exploding_weapon = weapon_is_exploding(weapon)
     local sit
-    local enemy_dist = los_radius
+    local enemy_dist = qw.los_radius
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() <= 2 and string.find(enemy:desc(), "hydra") then
             sit = "hydra"

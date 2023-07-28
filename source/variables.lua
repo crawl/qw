@@ -109,7 +109,6 @@ local turn_count = you.turns() - 1
 local time_passed
 local memos
 
-local los_radius
 local have_orb
 local disable_autoexplore
 local last_wait = 0

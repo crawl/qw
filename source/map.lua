@@ -624,7 +624,7 @@ end
 
 function update_map_cells()
     local queue = {}
-    for pos in square_iter(const.origin, los_radius, true) do
+    for pos in square_iter(const.origin, qw.los_radius, true) do
         local cell = cell_from_position(pos, true)
         if cell then
             table.insert(queue, cell)

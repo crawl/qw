@@ -326,11 +326,11 @@ end
 
 function calc_los_radius()
     if you.race() == "Barachi" then
-        los_radius = 8
+        qw.los_radius = 8
     elseif you.race() == "Kobold" then
-        los_radius = 4
+        qw.los_radius = 4
     else
-        los_radius = 7
+        qw.los_radius = 7
     end
 end
 
@@ -400,10 +400,10 @@ function dangerous_to_shoot()
             return dangerous_to_attack()
                 -- Don't attempt to shoot with summoned allies adjacent.
                 or you.confused()
-                    and (count_brothers_in_arms(los_radius) > 0
-                        or count_greater_servants(los_radius) > 0
-                        or count_divine_warriors(los_radius) > 0
-                        or count_beogh_allies(los_radius) > 0)
+                    and (count_brothers_in_arms(qw.los_radius) > 0
+                        or count_greater_servants(qw.los_radius) > 0
+                        or count_divine_warriors(qw.los_radius) > 0
+                        or count_beogh_allies(qw.los_radius) > 0)
         end)
 end
 

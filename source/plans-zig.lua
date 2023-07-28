@@ -8,7 +8,7 @@ function plan_zig_fog()
             or you.confused()
             or not danger
             or not hp_is_low(70)
-            or count_enemies(los_radius) - count_enemies(2) < 15
+            or count_enemies(qw.los_radius) - count_enemies(2) < 15
             or view.cloud_at(0, 0) ~= nil then
         return false
     end
