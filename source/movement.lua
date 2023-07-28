@@ -84,15 +84,12 @@ function assess_square_enemies(a, pos)
         if dist == 1 then
             a.adjacent = a.adjacent + 1
 
-            if not liquid_bound
-                    and not ranged
-                    and enemy:reach_range() < 2 then
+            if not liquid_bound and not ranged then
                 a.followers = true
             end
 
             if have_reaching()
                     and not ranged
-                    and enemy:reach_range() < 2
                     and enemy:speed() < player_speed() then
                 a.slow_adjacent = a.slow_adjacent + 1
             end
@@ -100,9 +97,7 @@ function assess_square_enemies(a, pos)
 
         if dist > 1
                 and see_cell
-                and (dist == 2
-                        and (enemy:is_fast() or enemy:reach_range() >= 2)
-                    or ranged) then
+                and (ranged or dist == 2 and enemy:is_fast()) then
             a.ranged = a.ranged + 1
         end
 
