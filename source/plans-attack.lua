@@ -192,7 +192,7 @@ function attack_reach(pos)
 end
 
 function plan_melee()
-    if not danger or dangerous_to_melee() then
+    if not danger or unable_to_melee() or dangerous_to_melee() then
         return false
     end
 

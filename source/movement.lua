@@ -161,11 +161,7 @@ function assess_square(pos)
     end
 
     -- Can we move there?
-    a.can_move = a.supdist == 0
-        or not view.withheld(pos.x, pos.y)
-            and not monster_in_way(pos)
-            and is_traversable_at(pos)
-            and not is_solid_at(pos)
+    a.can_move = a.supdist == 0 or can_move_to(pos)
     if not a.can_move then
         return a
     end
@@ -509,21 +505,18 @@ function flee_improvement(pos)
     return const.inf_dist
 end
 
-function get_move_closer(positions)
-    local best_dist, best_move, best_dest
+function get_move_closer(pos)
+    local best_move, best_dist
     for apos in adjacent_iter(const.origin) do
         local traversable = is_traversable_at(apos)
-        for _, pos in ipairs(positions) do
-            local dist = supdist(position_difference(pos, apos))
-            if traversable and (not best_dist or dist < best_dist) then
-                best_move = apos
-                best_dest = pos
-                best_dist = dist
-            end
+        local dist = supdist(position_difference(pos, apos))
+        if traversable and (not best_dist or dist < best_dist) then
+            best_move = apos
+            best_dist = dist
         end
     end
 
-    return best_move, best_dest, best_dist
+    return best_move, best_dist
 end
 
 function move_search(search, current)
@@ -670,10 +663,9 @@ function get_move_towards(center, target, square_func, min_dist)
 end
 
 function monster_can_move_to_player_melee(mons)
-    local player_range = reach_range()
     -- The monster is already in range.
-    if mons:distance() <= player_range then
-        return true
+    if mons:player_can_melee() then
+        return false
     end
 
     local name = mons:name()
@@ -695,8 +687,8 @@ function monster_can_move_to_player_melee(mons)
         -- If the monster can reach attack and we can't, be sure we can
         -- close the final 1-square gap.
         and (mons:reach_range() < 2
-            or player_range > 1
-            or get_move_closer({ mons:pos() }))
+            or reach_range() > 1
+            or get_move_closer(mons:pos()))
 end
 
 function best_move_towards(map_pos, ignore_exclusions)

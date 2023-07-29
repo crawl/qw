@@ -276,14 +276,20 @@ function Monster:player_can_melee()
         end)
 end
 
--- Whether this monster could move close enough for the player to melee it
--- given the terrain of current LOS. This is true if the monster is already in
--- the player's melee range, or if it could traverse terrain to get close for
--- the player to melee it. By the latter we mean that the monster could get
--- within its own required melee distance to the player's current position and
--- that the player could move up to one step closer to be able to melee the
--- monster, should that be necessary. This is based on the respective melee
--- attack ranges of the monster and the player.
+--[[
+Whether this monster from closer from its current position so the player could
+melee it given the terrain of current LOS. This function considers the
+respective melee attack ranges of both the monster and the player.
+
+@treturn boolean True if the monster could move closer from its current
+                 position to either be in melee range of the player. This also
+                 returns true if the monster could get within its own required
+                 distance to melee the player and if the player could then move
+                 up to one step closer to be able to melee the monster.
+                 Otherwise, if the monster could not make such a move return
+                 false, including when the monster is already in the player's
+                 melee range.
+]]--
 function Monster:can_move_to_player_melee()
     return self:get_property("can_move_to_player_melee",
         function()
@@ -344,8 +350,11 @@ end
 function Monster:player_has_path_to()
     return self:get_property("player_has_path_to",
         function()
-            local have_flight = find_item("potion", "enlightenment")
-            local square_func = traversal_function(assume_flight)
+            if self:player_can_melee() then
+                return true
+            end
+
+            local square_func = traversal_function()
             return get_move_towards(const.origin, self:pos(), square_func,
                 reach_range())
         end)

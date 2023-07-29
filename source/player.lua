@@ -353,6 +353,13 @@ function dangerous_to_move()
         end)
 end
 
+function unable_to_melee()
+    return turn_memo("unable_to_melee",
+        function()
+            return you.caught()
+        end)
+end
+
 function unable_to_shoot()
     return turn_memo("unable_to_shoot",
         function()
@@ -381,10 +388,6 @@ function unable_to_throw()
 end
 
 function player_can_melee_mons(mons)
-    if you.caught() or you.confused() then
-        return false
-    end
-
     local range = reach_range()
     local dist = mons:distance()
     if range == 2 then
