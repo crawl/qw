@@ -632,7 +632,7 @@ function plan_poison_spit()
     end
 
     return use_ability(ability, "r" .. vector_move(target.pos)
-        .. target.aim_at_target and "." or "\r")
+        .. (target.aim_at_target and "." or "\r"))
 end
 
 function plan_flight_move_towards_enemy()
