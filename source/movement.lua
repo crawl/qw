@@ -156,7 +156,8 @@ function assess_square(pos)
 
     -- Is current square near a BiA/SGD?
     if a.supdist == 0 then
-        a.near_ally = count_brothers_in_arms(3) + count_greater_servants(3)
+        a.near_ally = count_brothers_in_arms(3)
+            + count_greater_servants(3)
             + count_divine_warriors(3) > 0
     end
 
@@ -197,24 +198,22 @@ function assess_square(pos)
         or a.safe
         or danger and not cloud_is_dangerous(cloud)
 
-    -- Equal to const.inf_dist if the move is not closer to any flee position
-    -- in flee_positions, otherwise equal to the (min) dist to such a position.
-    a.flee_distance = flee_improvement(pos)
+    -- Equal to const.inf_dist if the position has no move to any flee,
+    -- otherwise equal to the minimum movement distance to a flee position.
+    a.flee_distance = flee_distance_at(pos)
 
     return a
 end
 
 function reason_to_flee()
-    return (in_branch("Abyss") and not want_to_stay_in_abyss()
-        or not in_branch("Abyss") and reason_to_rest(90)
-        -- When we're at low XL and trying to go up, we want to flee to
-        -- known stairs when autoexplore is disabled, instead of
-        -- engaging in combat. This rule helps Delvers in particular
-        -- avoid fights near their starting level that would get them
-        -- killed.
+    return can_retreat_upstairs and reason_to_rest(90)
+        -- When we're at low XL and trying to go up, we want to flee to known
+        -- stairs when autoexplore is disabled, instead of engaging in combat.
+        -- This rule helps Delvers in particular avoid fights that would get
+        -- them killed.
         or you.xl() <= 8
             and disable_autoexplore
-            and goal_travel.first_dir == const.dir.up)
+            and goal_travel.first_dir == const.dir.up
 end
 
 -- returns a string explaining why moving a1->a2 is preferable to not moving
@@ -234,8 +233,8 @@ function step_reason(a1, a2)
     elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
         return false
     elseif not a1.near_ally
-            and a2.flee_distance < const.inf_dist
-            and a1.flee_distance > 0
+            and (a1.ranged == 0 or a2.ranged == 0)
+            and a2.flee_distance < a1.flee_distance
             and a1.enemy_distance < 10
             -- Don't flee either from or to a place were we'll be opportunity
             -- attacked. Unless we're stuck in a bad form, in which case
@@ -371,7 +370,6 @@ function choose_tactical_step()
     end
 
     local best_pos, best_reason, besta
-    local count = 1
     for pos in adjacent_iter(const.origin) do
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
@@ -383,8 +381,6 @@ function choose_tactical_step()
                 best_reason = reason
             end
         end
-
-        count = count + 1
     end
     if besta then
         tactical_step = delta_to_vi(best_pos)
@@ -478,26 +474,22 @@ function update_flee_positions()
     end
 end
 
-function best_flee_destination_at(pos)
-    local best_dist, best_pos
-    local is_origin = position_is_origin(pos)
+function best_flee_position_at(pos)
+    local map_pos = position_sum(global_pos, pos)
+    local best_pos, best_dist
     for _, flee_pos in ipairs(flee_positions) do
         local dist_map = get_distance_map(flee_pos)
-        local map_pos = position_sum(global_pos, pos)
         local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
-        local current_dist = is_origin and dist
-            or dist_map.excluded_map[global_pos.x][global_pos.y]
-        if dist and (is_origin or not current_dist or dist < current_dist)
-                and (not best_dist or dist < best_dist) then
-            best_dist = dist
+        if dist and (not best_dist or dist < best_dist) then
             best_pos = flee_pos
+            best_dist = dist
         end
     end
     return best_pos, best_dist
 end
 
-function flee_improvement(pos)
-    local flee_pos, flee_dist = best_flee_destination_at(pos)
+function flee_distance_at(pos)
+    local flee_pos, flee_dist = best_flee_position_at(pos)
     if flee_pos then
         return flee_dist
     end

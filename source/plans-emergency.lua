@@ -899,8 +899,7 @@ function plan_continue_flee()
             or you.status("spiked")
             or count_brothers_in_arms(3) > 0
             or count_greater_servants(3) > 0
-            or count_divine_warriors(3) > 0
-            or buffed() then
+            or count_divine_warriors(3) > 0 then
         return false
     end
 
@@ -978,7 +977,7 @@ function plan_non_melee_berserk()
         return true
     end
 
-    local best_pos = best_flee_destination_at(const.origin)
+    local best_pos = best_flee_position_at(const.origin)
     if not best_pos then
         wait_one_turn()
         return true

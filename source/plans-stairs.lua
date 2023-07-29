@@ -210,15 +210,13 @@ function want_to_stairdance_up()
         return false
     end
 
-    if follow_count == 0
-                and (reason_to_rest(90)
-                    -- Makes Delver take upstairs immediately rather than stay
-                    -- and fight incoming monsters that .
-                    or you.xl() <= 8 and disable_autoexplore
-                    or you.status("spiked"))
-                and not buffed()
-            or other_count > 0
-                and follow_count > 0 then
+    -- We have no stair followers, so we're going up because we're either
+    -- fleeing or we want to rest safely.
+    if follow_count == 0 and reason_to_flee()
+            -- We have stair followers, but there are even more non-following
+            -- monsters around, so we go up to fight the following monsters in
+            -- probable safety.
+            or other_count > 0 and follow_count > 0 then
         stairdance_count[where] = n + 1
         return true
     end
@@ -271,7 +269,7 @@ function plan_move_towards_escape_hatch()
         return false
     end
 
-    local flee_pos = best_flee_destination_at(const.origin)
+    local flee_pos = best_flee_position_at(const.origin)
     if not flee_pos then
         return false
     end
