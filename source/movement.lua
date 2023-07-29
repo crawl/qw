@@ -183,7 +183,7 @@ function assess_square(pos)
         and not (you.god() == "Beogh" and you.piety_rank() >= 5)
 
     -- Is the wall next to us dangerous?
-    a.bad_wall = count_adjacent_slimy_walls_at(pos) > 0
+    a.bad_wall = qw.have_slimy_walls and count_adjacent_slimy_walls_at(pos) > 0
 
     -- Will we be slow if we move into this square?
     a.slow = not you.flying()

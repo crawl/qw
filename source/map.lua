@@ -555,6 +555,8 @@ end
 function update_cell_feature(cell)
     if cell.feat == "expired_portal" then
         expire_cell_portal(cell)
+    elseif cell.feat == "slimy_wall" then
+        qw.have_slimy_walls = true
     end
 
     if not feature_has_map_state(cell.feat) then
@@ -837,12 +839,16 @@ end
 
 function update_map(new_level, full_clear)
     local new_waypoint = update_waypoint(new_level)
+
     reset_c_persist(new_waypoint, new_level)
     reset_map_cache(new_level, full_clear, new_waypoint)
     reset_item_tracking()
 
     update_exclusions(new_waypoint)
 
+    if new_level then
+        qw.have_slimy_walls = false
+    end
     local cell_queue, map_reset = update_map_cells()
     update_seen_items()
 
