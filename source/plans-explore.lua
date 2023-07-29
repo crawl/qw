@@ -200,7 +200,7 @@ function plan_move_towards_travel_feature()
 end
 
 function plan_move_towards_destination()
-    if not move_destination or dangerous_to_move() then
+    if not move_destination or unable_to_move() or dangerous_to_move() then
         return false
     end
 
