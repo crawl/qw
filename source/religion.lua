@@ -385,7 +385,7 @@ function count_brothers_in_arms(radius)
     local i = 0
     for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
-        if mons and mons:is_safe()
+        if mons and mons:is_friendly()
                 and mons:is("berserk")
                 and contains_string_in(mons:name(),
                     { "ogre", "giant", "bear", "troll" }) then
@@ -403,7 +403,7 @@ function count_elliptic(radius)
     local i = 0
     for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
-        if mons and mons:is_safe()
+        if mons and mons:is_friendly()
                 and contains_string_in(mons:name(), {"elliptic"}) then
             i = i + 1
         end
@@ -424,7 +424,7 @@ function count_greater_servants(radius)
     local i = 0
     for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
-        if mons and mons:is_safe()
+        if mons and mons:is_friendly()
                 and mons:is("summoned")
                 and monster_is_greater_servant(m) then
             i = i + 1
@@ -441,7 +441,7 @@ function count_divine_warriors(radius)
     local i = 0
     for pos in square_iter(const.origin, radius) do
         local mons = get_monster_at(pos)
-        if mons and mons:is_safe()
+        if mons and mons:is_friendly()
                 and contains_string_in(mons:name(), {"angel", "daeva"}) then
             i = i + 1
         end
