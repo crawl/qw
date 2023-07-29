@@ -147,7 +147,7 @@ function assess_melee_target(attack, enemy)
 end
 
 function get_melee_target(assume_flight)
-    if memos["melee_target"] then
+    if memos["melee_target"] ~= nil then
         return memos["melee_target"]
     end
 
@@ -169,8 +169,11 @@ function get_melee_target(assume_flight)
     end
 
     if best_result then
-        memos["melee_target"] = best_result.pos
+        memos["melee_target"] = best_result
+    else
+        memos["melee_target"] = false
     end
+
     return memos["melee_target"]
 end
 
@@ -198,7 +201,7 @@ function plan_melee()
         return false
     end
 
-    local enemy = get_monster_at(target)
+    local enemy = get_monster_at(target.pos)
     if not enemy:player_can_melee() then
         return false
     end
@@ -372,7 +375,7 @@ function get_ranged_target(attack, prefer_melee)
 
         -- Use our preferred melee attack.
         if melee_target
-                and get_monster_at(melee_target):player_can_melee() then
+                and get_monster_at(melee_target.pos):player_can_melee() then
             return
         end
     end
@@ -651,7 +654,7 @@ function plan_flight_move_towards_enemy()
         return false
     end
 
-    local move = get_monster_at(target):get_player_move_towards(true)
+    local move = get_monster_at(target.pos):get_player_move_towards(true)
     local feat = view.feature_at(move.x, move.y)
     -- Only quaff flight when we finally reach an impassable square.
     if (feat == "deep_water" or feat == "lava")
@@ -678,7 +681,7 @@ function plan_move_towards_enemy()
         return false
     end
 
-    local mons = get_monster_at(target)
+    local mons = get_monster_at(target.pos)
     local move = mons:get_player_move_towards()
     if not move then
         return false
