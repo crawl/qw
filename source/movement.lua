@@ -66,7 +66,7 @@ function assess_square_enemies(a, pos)
     a.enemy_distance = 0
     a.followers = false
     a.adjacent = 0
-    a.slow_adjacent = 0
+    a.kite_adjacent = 0
     a.ranged = 0
     a.unalert = 0
     a.longranged = 0
@@ -88,10 +88,10 @@ function assess_square_enemies(a, pos)
                 a.followers = true
             end
 
-            if have_reaching()
+            if (have_reaching() or have_ranged_weapon())
                     and not ranged
                     and enemy:speed() < player_speed() then
-                a.slow_adjacent = a.slow_adjacent + 1
+                a.kite_adjacent = a.kite_adjacent + 1
             end
         end
 
@@ -220,7 +220,7 @@ end
 -- possibilities are:
 --   cloud       - stepping out of harmful cloud
 --   water       - stepping out of shallow water when it would cause fumbling
---   reaching    - kiting slower monsters with reaching
+--   kiting      - kiting slower monsters with reaching or a ranged weapon
 --   hiding      - moving out of sight of alert ranged enemies at distance >= 4
 --   stealth     - moving out of sight of sleeping or wandering monsters
 --   outnumbered - stepping away from a square adjacent to multiple monsters
@@ -279,9 +279,8 @@ function step_reason(a1, a2)
         else
             return false
         end
-    elseif have_reaching() and a1.slow_adjacent > 0 and a2.adjacent == 0
-                 and a2.ranged == 0 then
-        return "reaching"
+    elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
+        return "kiting"
     elseif cleaving() then
         return false
     elseif a1.adjacent == 1 then
@@ -363,7 +362,7 @@ function choose_tactical_step()
     if a0.cloud_safe
             and not (a0.fumble and sense_danger(3))
             and not (a0.bad_wall and sense_danger(3))
-            and (not have_reaching() or a0.slow_adjacent == 0)
+            and a0.kite_adjacent == 0
             and (a0.adjacent <= 1 or cleaving())
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
