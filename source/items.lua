@@ -1280,7 +1280,7 @@ function have_item(cls, name)
 end
 
 function get_dig_wand()
-    turn_memo("get_dig_wand",
+    return turn_memo("get_dig_wand",
         function()
             return find_item("wand", "digging")
         end)

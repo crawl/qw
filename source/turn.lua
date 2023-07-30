@@ -4,13 +4,39 @@
 -- A value for sorting last when comparing turns.
 const.inf_turns = 200000000
 
-function turn_memo(name, func)
-    if memos[name] == nil then
-        local val = func()
-        memos[name] = val == nil and false or val
+function turn_memo(name, func, ...)
+    local parent, key
+    if arg.n > 0 then
+        for j = 1, arg.n do
+            if j == 1 then
+                parent = memos
+                key = name
+            end
+
+            if parent[key] == nil then
+                parent[key] = {}
+            end
+            parent = parent[key]
+
+            key = arg[j]
+            if key == nil then
+                key = false
+            end
+        end
+    else
+        parent = memos
+        key = name
     end
 
-    return memos[name]
+    if parent[key] == nil then
+        local val = func(unpack(arg))
+        if val == nil then
+            val = false
+        end
+        parent[key] = val
+    end
+
+    return parent[key]
 end
 
 -- We want to call this exactly once each turn.
