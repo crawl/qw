@@ -216,8 +216,8 @@ function update_runelight(hash, state, force)
             or force and current.feat ~= state.feat
     if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating Abyss runelight at " .. pos_string(pos) .. " from "
+            dsay("Updating runelight at "
+                .. los_pos_string(unhash_position(hash)) .. " from "
                 .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end

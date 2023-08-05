@@ -906,8 +906,8 @@ function plan_continue_flee()
     for pos in adjacent_iter(const.origin) do
         if can_move_to(pos) and not is_solid_at(pos) and is_safe_at(pos) then
             local map = get_distance_map(target_flee_position).excluded_map
-            local dist = map[global_pos.x + pos.x][global_pos.y + pos.y]
-            if dist and dist < map[global_pos.x][global_pos.y] then
+            local dist = map[qw.map_pos.x + pos.x][qw.map_pos.y + pos.y]
+            if dist and dist < map[qw.map_pos.x][qw.map_pos.y] then
                 dsay("STILL FLEEEEING.")
                 return move_to(pos)
             end

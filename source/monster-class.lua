@@ -43,7 +43,7 @@ end
 function Monster:map_pos()
     return self:get_property("map_pos",
         function()
-            return position_sum(global_pos, self:pos())
+            return position_sum(qw.map_pos, self:pos())
         end)
 end
 

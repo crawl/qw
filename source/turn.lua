@@ -158,7 +158,7 @@ function turn_update()
     end
 
     danger = sense_danger(qw.los_radius)
-        or not map_is_unexcluded_at(global_pos)
+        or not map_is_unexcluded_at(qw.map_pos)
     immediate_danger = sense_immediate_danger()
 
     if turns_left_moving_towards_enemy > 0 then

@@ -224,14 +224,14 @@ function plan_move_towards_monster()
 
     local mons_targets = {}
     for _, enemy in ipairs(enemy_list) do
-        table.insert(mons_targets, position_sum(global_pos, enemy:pos()))
+        table.insert(mons_targets, position_sum(qw.map_pos, enemy:pos()))
     end
 
     if #mons_targets == 0 then
         for pos in square_iter(const.origin) do
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons and Monster:new(mons):is_enemy() then
-                table.insert(mons_targets, position_sum(global_pos, pos))
+                table.insert(mons_targets, position_sum(qw.map_pos, pos))
             end
         end
     end
@@ -385,28 +385,28 @@ function plan_tomb_go_to_hatch()
         end
 
         if view.feature_at(0, 0) == "escape_hatch_up" then
-            local new_hatch_dist = supdist(global_pos)
+            local new_hatch_dist = supdist(qw.map_pos)
             if new_hatch_dist >= prev_hatch_dist
-                    and not positions_equal(global_pos, prev_hatch) then
+                    and not positions_equal(qw.map_pos, prev_hatch) then
                 return false
             end
 
             prev_hatch_dist = new_hatch_dist
-            prev_hatch = util.copy_table(global_pos)
+            prev_hatch = util.copy_table(qw.map_pos)
         end
 
         magic("X<\r")
         return true
     elseif where == "Tomb:1" then
         if view.feature_at(0, 0) == "escape_hatch_down" then
-            local new_hatch_dist = supdist(global_pos)
+            local new_hatch_dist = supdist(qw.map_pos)
             if new_hatch_dist >= prev_hatch_dist
-                    and not positions_equal(global_pos, prev_hatch) then
+                    and not positions_equal(qw.map_pos, prev_hatch) then
                 return false
             end
 
             prev_hatch_dist = new_hatch_dist
-            prev_hatch = util.copy_table(global_pos)
+            prev_hatch = util.copy_table(qw.map_pos)
         end
 
         magic("X>\r")

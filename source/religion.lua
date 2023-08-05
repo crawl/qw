@@ -502,9 +502,9 @@ function update_altar(god, level, hash, state, force)
             or force and current.feat ~= state.feat
     if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating " .. god .. " altar on " .. level .. " at "
-                .. pos_string(pos) .. " from " .. stairs_state_string(current)
+            dsay("Updating altar on " .. level .. " at "
+                .. cell_string_from_map_position(unhash_position(hash))
+                .. " from " .. stairs_state_string(current)
                 .. " to " .. stairs_state_string(state))
         end
 

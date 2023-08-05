@@ -83,7 +83,7 @@ function print_traversal_map(center)
 
     crawl.setopt("msg_condense_repeats = false")
 
-    local map_center = position_sum(global_pos, center)
+    local map_center = position_sum(qw.map_pos, center)
     say("Traversal map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
@@ -92,7 +92,7 @@ function print_traversal_map(center)
             local pos = position_sum(map_center, { x = x, y = y })
             local traversable = map_is_traversable_at(pos)
             local char
-            if positions_equal(pos, global_pos) then
+            if positions_equal(pos, qw.map_pos) then
                 if traversable == nil then
                     str = str .. "✞"
                 else
@@ -123,7 +123,7 @@ function print_unexcluded_map(center)
 
     crawl.setopt("msg_condense_repeats = false")
 
-    local map_center = position_sum(global_pos, center)
+    local map_center = position_sum(qw.map_pos, center)
     say("Unexcluded map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
@@ -132,7 +132,7 @@ function print_unexcluded_map(center)
             local pos = position_sum(map_center, { x = x, y = y })
             local unexcluded = map_is_unexcluded_at(pos)
             local char
-            if positions_equal(pos, global_pos) then
+            if positions_equal(pos, qw.map_pos) then
                 if unexcluded == nil then
                     str = str .. "✞"
                 else
@@ -164,7 +164,7 @@ function print_distance_map(dist_map, center, excluded)
     crawl.setopt("msg_condense_repeats = false")
 
     local map = excluded and dist_map.excluded_map or dist_map.map
-    local map_center = position_sum(global_pos, center)
+    local map_center = position_sum(qw.map_pos, center)
     say("Distance map at " .. cell_string_from_map_position(dist_map.pos)
         .. " from position " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
@@ -173,7 +173,7 @@ function print_distance_map(dist_map, center, excluded)
         for x = -20, 20 do
             local pos = position_sum(map_center, { x = x, y = y })
             local dist = map[pos.x][pos.y]
-            if positions_equal(pos, global_pos) then
+            if positions_equal(pos, qw.map_pos) then
                 if dist == nil then
                     str = str .. "✞"
                 else
@@ -225,16 +225,16 @@ function override_goal(goal)
     update_goal()
 end
 
-function get_global_pos()
-    return global_pos
-end
-
 function get_qw()
     return qw
 end
 
 function pos_string(pos)
     return tostring(pos.x) .. "," .. tostring(pos.y)
+end
+
+function los_pos_string(map_pos)
+    return pos_string(position_difference(map_pos, qw.map_pos))
 end
 
 function cell_string(cell)
@@ -254,7 +254,7 @@ function cell_string_from_position(pos)
 end
 
 function cell_string_from_map_position(pos)
-    return cell_string_from_position(position_difference(pos, global_pos))
+    return cell_string_from_position(position_difference(pos, qw.map_pos))
 end
 
 function toggle_throttle()

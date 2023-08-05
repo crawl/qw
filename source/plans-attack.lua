@@ -688,7 +688,7 @@ function plan_move_towards_enemy()
     end
 
     enemy_memory = position_difference(mons:pos(), move)
-    enemy_map_memory = position_sum(global_pos, mons:pos())
+    enemy_map_memory = position_sum(qw.map_pos, mons:pos())
     turns_left_moving_towards_enemy = 2
     return move_to(move)
 end

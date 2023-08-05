@@ -99,7 +99,6 @@ local transp_zone
 local transp_orient
 local transp_search
 
-local global_pos = {}
 local flee_positions
 local reachable_position
 local target_flee_position

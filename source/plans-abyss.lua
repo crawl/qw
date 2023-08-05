@@ -28,7 +28,7 @@ end
 function plan_pick_up_abyssal_rune()
     if not have_branch_runes("Abyss")
             and item_map_positions[abyssal_rune]
-            and positions_equal(global_pos,
+            and positions_equal(qw.map_pos,
                 item_map_positions[abyssal_rune]) then
         magic(",")
         return true
@@ -117,7 +117,7 @@ function want_to_move_to_abyssal_rune()
     return want_to_move_to_abyss_objective()
         and goal_branch == "Abyss"
         and (item_map_positions[abyssal_rune]
-            and not positions_equal(global_pos,
+            and not positions_equal(qw.map_pos,
                 item_map_positions[abyssal_rune])
             or c_persist.sensed_abyssal_rune)
 end

@@ -23,7 +23,7 @@ function plan_go_to_unexplored_stairs()
     end
 
     local key = dir_key(goal_travel.stairs_dir)
-    local hash = hash_position(global_pos)
+    local hash = hash_position(qw.map_pos)
     local searches = map_mode_searches[key]
     local count = 1
     while searches and searches[hash] and searches[hash][count] do

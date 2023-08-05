@@ -339,10 +339,8 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
             or force and current.feat ~= state.feat
     if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating escape hatch "
-                .. (dir == const.dir.up and "up" or "down")
-                .. " on " .. level .. " at " .. pos_string(pos)
+            dsay("Updating escape hatch " .. " on " .. level .. " at "
+                .. cell_string_from_map_position(unhash_position(hash))
                 .. " from " .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end
@@ -395,8 +393,8 @@ function update_pan_transit(hash, state, force)
             or force and current.feat ~= state.feat
     if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating Pan transit at " .. pos_string(pos) .. " from "
+            dsay("Updating Pan transit at "
+                .. los_pos_string(unhash_position(hash)) .. " from "
                 .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end
@@ -442,8 +440,8 @@ function update_abyssal_stairs(hash, state, force)
             or force and current.feat ~= state.feat
     if state.safe ~= current.safe or feat_state_changed then
         if debug_channel("explore") then
-            local pos = position_difference(unhash_position(hash), global_pos)
-            dsay("Updating Abyssal stairs at " .. pos_string(pos) .. " from "
+            dsay("Updating Abyssal stairs at "
+                .. los_pos_string(unhash_position(hash)) .. " from "
                 .. stairs_state_string(current) .. " to "
                 .. stairs_state_string(state))
         end

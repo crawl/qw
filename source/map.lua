@@ -52,13 +52,16 @@ function update_waypoint(new_level)
         new_waypoint = true
     end
 
-    global_pos.x, global_pos.y = travel.waypoint_delta(waypoint_num)
+    if not qw.map_pos then
+        qw.map_pos = {}
+    end
+    qw.map_pos.x, qw.map_pos.y = travel.waypoint_delta(waypoint_num)
 
     -- The waypoint can become invalid due to entering a new Portal, a new Pan
     -- level, or due to an Abyss shift, etc.
-    if not global_pos.x then
+    if not qw.map_pos.x then
         travel.set_waypoint(waypoint_num, 0, 0)
-        global_pos.x, global_pos.y = travel.waypoint_delta(waypoint_num)
+        qw.map_pos.x, qw.map_pos.y = travel.waypoint_delta(waypoint_num)
         new_waypoint = true
     end
 
@@ -138,7 +141,7 @@ function find_features(feats, radius)
                 feature_map_positions[feat] = {}
             end
 
-            local gpos = position_sum(global_pos, pos)
+            local gpos = position_sum(qw.map_pos, pos)
             local hash = hash_position(gpos)
             if not feature_map_positions[feat][hash] then
                 feature_map_positions[feat][hash] = gpos
@@ -182,7 +185,7 @@ function find_map_items(item_names, radius)
             for _, it in ipairs(floor_items) do
                 local name = it:name()
                 if searches[name] then
-                    local map_pos = position_sum(global_pos, pos)
+                    local map_pos = position_sum(qw.map_pos, pos)
                     item_map_positions[name] = map_pos
                     table.insert(positions, map_pos)
                     table.insert(found_items, name)
@@ -255,7 +258,7 @@ function distance_map_initialize(pos, permanent, radius)
 end
 
 function is_traversable_at(pos)
-    local gpos = position_sum(global_pos, pos)
+    local gpos = position_sum(qw.map_pos, pos)
     return traversal_map[gpos.x][gpos.y]
 end
 
@@ -467,7 +470,7 @@ function distance_map_update_position(pos, dist_map, map_select)
 end
 
 function has_exclusion_center_at(pos)
-    local hash = hash_position(position_sum(global_pos, pos))
+    local hash = hash_position(position_sum(qw.map_pos, pos))
     return c_persist.exclusions[where] and c_persist.exclusions[where][hash]
 end
 
@@ -830,7 +833,7 @@ function update_map_mode_search()
     -- cycle because the feature at our position uses that key.
     if feature_uses_map_key(map_mode_search_key, feat) then
         record_map_mode_search(map_mode_search_key, map_mode_search_hash,
-            map_mode_search_count, hash_position(global_pos))
+            map_mode_search_count, hash_position(qw.map_pos))
     end
     map_mode_search_key = nil
     map_mode_search_hash = nil
@@ -867,7 +870,7 @@ function cell_from_position(pos, no_unseen)
     local cell = {}
     cell.los_pos = pos
     cell.feat = feat
-    cell.pos = position_sum(global_pos, pos)
+    cell.pos = position_sum(qw.map_pos, pos)
     cell.hash = hash_position(cell.pos)
     return cell
 end
@@ -928,7 +931,7 @@ function remove_exclusions(record_only)
     end
 
     for hash, _ in pairs(c_persist.exclusions[where]) do
-        local pos = position_difference(unhash_position(hash), global_pos)
+        local pos = position_difference(unhash_position(hash), qw.map_pos)
         if view.in_known_map_bounds(pos.x, pos.y) then
             if debug_channel("combat") then
                 dsay("Unexcluding position "
@@ -956,7 +959,7 @@ function exclude_position(pos)
         dsay("Excluding " .. desc .. " at " .. pos_string(pos))
     end
 
-    local hash = hash_position(position_sum(global_pos, pos))
+    local hash = hash_position(position_sum(qw.map_pos, pos))
     if not c_persist.exclusions[where] then
         c_persist.exclusions[where] = {}
     end

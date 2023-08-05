@@ -425,7 +425,7 @@ end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
 function dangerous_to_attack()
-    return not map_is_unexcluded_at(global_pos)
+    return not map_is_unexcluded_at(qw.map_pos)
 end
 
 function have_ranged_target()

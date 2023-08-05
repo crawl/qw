@@ -396,7 +396,7 @@ function distance_map_minimum_enemy_distance(dist_map, pspeed)
 
     local min_dist
     for _, enemy in ipairs(enemy_list) do
-        local gpos = position_sum(global_pos, enemy:pos())
+        local gpos = position_sum(qw.map_pos, enemy:pos())
         local dist = dist_map.excluded_map[gpos.x][gpos.y]
         if dist then
             local speed_diff = enemy:speed() - pspeed
@@ -460,7 +460,7 @@ function update_flee_positions()
     local pspeed = player_speed()
     for _, pos in ipairs(safe_positions) do
         local dist_map = get_distance_map(pos, true)
-        local pdist = dist_map.excluded_map[global_pos.x][global_pos.y]
+        local pdist = dist_map.excluded_map[qw.map_pos.x][qw.map_pos.y]
         local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
         if pdist and (not edist or pdist < edist) then
             if debug_channel("flee") then
@@ -474,7 +474,7 @@ function update_flee_positions()
 end
 
 function best_flee_position_at(pos)
-    local map_pos = position_sum(global_pos, pos)
+    local map_pos = position_sum(qw.global_pos, pos)
     local best_pos, best_dist
     for _, flee_pos in ipairs(flee_positions) do
         local dist_map = get_distance_map(flee_pos)
@@ -685,15 +685,15 @@ end
 function best_move_towards(map_pos, ignore_exclusions)
     local dist_map = get_distance_map(map_pos)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-    local current_dist = map[global_pos.x][global_pos.y]
+    local current_dist = map[qw.map_pos.x][qw.map_pos.y]
     if current_dist == 0 then
         return
     end
 
     local result
     local safe_result
-    for pos in adjacent_iter(global_pos) do
-        local los_pos = position_difference(pos, global_pos)
+    for pos in adjacent_iter(qw.map_pos) do
+        local los_pos = position_difference(pos, qw.map_pos)
         local dist = map[pos.x][pos.y]
         local better_dist = dist and (not current_dist or dist < current_dist)
         if better_dist
@@ -731,13 +731,13 @@ end
 
 function update_reachable_position()
     for _, dist_map in pairs(distance_maps) do
-        if dist_map.excluded_map[global_pos.x][global_pos.y] then
+        if dist_map.excluded_map[qw.map_pos.x][qw.map_pos.y] then
             reachable_position = dist_map.pos
             return
         end
     end
 
-    reachable_position = global_pos
+    reachable_position = qw.map_pos
 end
 
 --[[ Check any feature types flagged in check_reachable_features during the map
@@ -796,7 +796,7 @@ end
 
 function map_has_adjacent_runed_doors_at(pos)
     for apos in adjacent_iter(pos) do
-        local los_pos = position_difference(apos, global_pos)
+        local los_pos = position_difference(apos, qw.map_pos)
         if view.feature_at(los_pos.x, los_pos.y) == "runed_clear_door" then
             return true
         end
@@ -832,7 +832,7 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
 end
 
 function best_move_towards_unexplored(allow_unsafe)
-    return best_move_towards_unexplored_near(global_pos, allow_unsafe)
+    return best_move_towards_unexplored_near(qw.map_pos, allow_unsafe)
 end
 
 function best_move_towards_unexplored_near_positions(map_positions,
@@ -849,7 +849,7 @@ end
 
 function best_move_towards_safety()
     local i = 1
-    for pos in radius_iter(global_pos, const.gxm) do
+    for pos in radius_iter(qw.map_pos, const.gxm) do
         if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched for safety in block " .. tostring(i / 1000)
@@ -860,7 +860,7 @@ function best_move_towards_safety()
             coroutine.yield()
         end
 
-        local los_pos = position_difference(pos, global_pos)
+        local los_pos = position_difference(pos, qw.map_pos)
         if supdist(pos) <= const.gxm
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
@@ -883,7 +883,7 @@ function update_move_destination()
         clear = true
     elseif move_reason == "monster" and danger then
         clear = true
-    elseif positions_equal(global_pos, move_destination) then
+    elseif positions_equal(qw.map_pos, move_destination) then
         if move_reason == "unexplored"
                 and autoexplored_level(where_branch, where_depth)
                 and position_is_safe then
@@ -916,7 +916,7 @@ function best_position_near(map_pos)
 
     local best_dist, best_pos
     for pos in adjacent_iter(map_pos) do
-        local dist = supdist(position_difference(pos, global_pos))
+        local dist = supdist(position_difference(pos, qw.map_pos))
         if map_is_reachable_at(pos)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
