@@ -325,7 +325,7 @@ function plan_swamp_move_towards_clouds()
     for pos in adjacent_iter(const.origin) do
         if can_move_to(pos) and is_safe_at(pos) then
             for dpos in radius_iter(pos) do
-                local dist = supdist(position_difference(dpos, pos))
+                local dist = position_distance(dpos, pos)
                 if is_swamp_end_cloud(dpos) and dist < best_dist then
                     best_pos = pos
                     best_dist = dist

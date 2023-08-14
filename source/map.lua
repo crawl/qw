@@ -305,8 +305,7 @@ end
 function distance_map_update_adjacent_pos(pos, center, dist_map)
     if positions_equal(pos, dist_map.pos)
             or (dist_map.radius
-                and supdist(position_difference(pos, dist_map.pos))
-                    > dist_map.radius)
+                    and position_distance(pos, dist_map.pos) > dist_map.radius)
             -- Untraversable cells don't need distance map updates.
             or not map_is_traversable_at(pos) then
         return
@@ -423,8 +422,7 @@ end
 
 function distance_map_update_position(pos, dist_map, map_select)
     if dist_map.radius
-            and supdist(position_difference(dist_map.pos, pos))
-                > dist_map.radius then
+            and position_distance(dist_map.pos, pos) > dist_map.radius then
         return
     end
 

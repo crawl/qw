@@ -500,7 +500,7 @@ function get_move_closer(pos)
     local best_move, best_dist
     for apos in adjacent_iter(const.origin) do
         local traversable = is_traversable_at(apos)
-        local dist = supdist(position_difference(pos, apos))
+        local dist = position_distance(pos, apos)
         if traversable and (not best_dist or dist < best_dist) then
             best_move = apos
             best_dist = dist
@@ -638,7 +638,7 @@ function get_move_towards(center, target, square_func, min_dist)
         min_dist = 0
     end
 
-    if supdist(position_difference(center, target)) <= min_dist then
+    if position_distance(center, target) <= min_dist then
         return
     end
 
@@ -916,7 +916,7 @@ function best_position_near(map_pos)
 
     local best_dist, best_pos
     for pos in adjacent_iter(map_pos) do
-        local dist = supdist(position_difference(pos, qw.map_pos))
+        local dist = position_distance(pos, qw.map_pos)
         if map_is_reachable_at(pos)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
