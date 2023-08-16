@@ -193,7 +193,7 @@ end
 
 -- Adding some clua for this too would be better.
 function Monster:can_use_stairs()
-    return self:get_property("is_liquid_bound",
+    return self:get_property("can_use_upstairs",
         function()
             local name = self:name()
             return not (self:is_stationary()
