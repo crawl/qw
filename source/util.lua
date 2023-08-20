@@ -84,3 +84,30 @@ function table_is_empty(t)
     end
     return empty
 end
+
+--[[
+Compare the numeric values of tables for the given keys. The keys are compared
+in the order given in `keys`, with the comparison moving to the next key when
+there's a tie with the current key.
+@table a             A table to compare.
+@table b             A table to compare.
+@table keys          A list of keys to compare values in tables a and b.
+@table reversed_keys A table of keys where the values should be compared in
+                     reverse.
+@treturn boolean True if a has a key with a higher value (or lower value if the
+                 key is reversed) than b, false otherwise.
+
+--]]
+function compare_table_keys(a, b, keys, reversed_keys)
+    for _, key in ipairs(keys) do
+        local val1 = a[key]
+        local val2 = b[key]
+        local greater_val = not reversed_keys[key] and true or false
+        if val1 > val2 then
+            return greater_val
+        elseif val1 < val2 then
+            return not greater_val
+        end
+    end
+    return false
+end

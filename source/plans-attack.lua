@@ -101,18 +101,8 @@ function result_improves_attack(attack, result, best_result)
         return true
     end
 
-    for _, prop in ipairs(attack.props) do
-        local val1 = result[prop]
-        local val2 = best_result[prop]
-        local if_greater_val =
-            not attack.reversed_props[prop] and true or false
-        if val1 > val2 then
-            return if_greater_val
-        elseif val1 < val2 then
-            return not if_greater_val
-        end
-    end
-    return false
+    return compare_table_keys(result, best_result, attack.props,
+        attack.reversed_props)
 end
 
 function score_enemy_hit(result, enemy, attack)
