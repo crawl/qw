@@ -588,21 +588,29 @@ function update_map_at_cell(cell, queue, seen)
     end
 
     local map_updated = false
-    local traversable = feature_is_traversable(cell.feat)
-    if traversal_map[cell.pos.x][cell.pos.y] ~= traversable then
-        traversal_map[cell.pos.x][cell.pos.y] = traversable
-        if not traversable then
+    local old_traversable = traversal_map[cell.pos.x][cell.pos.y]
+    local cur_traversable = feature_is_traversable(cell.feat)
+    if old_traversable ~= cur_traversable then
+        traversal_map[cell.pos.x][cell.pos.y] = cur_traversable
+        -- A cell went from traversable to untraversable, so any distance maps
+        -- need a full reset.
+        if old_traversable and not cur_traversable then
             map_reset = const.map_select.both
         end
         map_updated = true
     end
 
-    local unexcluded =
+    local old_unexcluded = exclusion_map[cell.pos.x][cell.pos.y]
+    local cur_unexcluded =
         not (view.in_known_map_bounds(cell.los_pos.x, cell.los_pos.y)
             and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
-    if traversable and exclusion_map[cell.pos.x][cell.pos.y] ~= unexcluded then
-        exclusion_map[cell.pos.x][cell.pos.y] = unexcluded
-        if not unexcluded and map_reset < const.map_select.both then
+    if cur_traversable and old_unexcluded ~= cur_unexcluded then
+        exclusion_map[cell.pos.x][cell.pos.y] = cur_unexcluded
+        -- A traversable cell went from unexcluded to excluded, so the excluded
+        -- maps of all distance maps need a reset.
+        if old_unexcluded
+                and not unexcluded
+                and map_reset < const.map_select.both then
             map_reset = const.map_select.excluded
         end
         map_updated = true
