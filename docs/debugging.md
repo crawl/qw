@@ -47,7 +47,12 @@ These can be executed from the clua console.
 * `override_goal(goal)`
 
   Have qw attempt the goal given in `goal`. Here `goal` is a string giving a
-  single goal in the format describe in [README.md#goals].
+  single goal in the format describe in [README.md#goals]. One this goal is
+  completed, qw will resume its configured goal list.
+
+* `toggle_single_step()`
+
+  Toggle whether qw takes a single action with each use of the *Tab* key.
 
 * `toggle_debug()`
 
@@ -58,9 +63,9 @@ These can be executed from the clua console.
 
   Enable/disable output for the debug channel named `channel` (string).
 
-* `toggle_single_step()`
+* `disable_all_debug_channels()`
 
-  Toggle whether qw takes a single action with each use of the *Tab* key.
+  Disable all debug channels.
 
 * `toggle_throttle()`
 
@@ -76,13 +81,15 @@ These can be executed from the clua console.
 
 * `get_qw()`
 
-  Get the `qw` local table that contains qw's state information.
+  Get the `qw` local table that contains some of qw's state information.
+  Currently most state resides in inaccessible local variables, but in the
+  future these will all be moved into the `qw` table.
 
 * `dsay(x)`
 
   Say `x` the message log, converting `x` to a string. This conversion works
   on tables and prints a nested representation of the table contents. Functions
-  and userdata object can't be converted.
+  and userdata object can't be printed with `dsay()`.
 
 * `debug_channel(channel)`
 

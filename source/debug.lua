@@ -24,6 +24,11 @@ function toggle_debug_channel(channel)
       .. channel .. " debug channel")
 end
 
+function disable_all_debug_channels()
+    dsay("Disabling all debug channels")
+    qw.debug_channels = {}
+end
+
 function dsay(x)
     local str
     if type(x) == "table" then
