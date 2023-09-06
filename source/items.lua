@@ -744,7 +744,7 @@ function weapon_value(it, cur, it2, sit)
     elseif name:find("consecrated labrys") then
         value = value + 1000
     elseif name:find("storm bow") then
-        value = value + 50
+        value = value + 150
     elseif name:find("{damnation}") then
         value = value + 1000
     end
@@ -811,13 +811,15 @@ function weapon_value(it, cur, it2, sit)
                 val1 = val1 + (cur and 75 or 0)
                 val2 = val2 + 75
             end
+        elseif ego == "penetration" then
+            value = value + 150
         elseif ego == "heavy" then
             value = value + 100
         elseif ego == "flaming"
                 or ego == "freezing"
                 or ego == "electrocution" then
             value = value + 75
-        elseif ego == "protection" or ego == "penetration" then
+        elseif ego == "protection" then
             value = value + 50
         elseif ego == "venom" and not undead_demon then
             -- XXX: Same issue as for vampirism above.
