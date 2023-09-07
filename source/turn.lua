@@ -138,6 +138,11 @@ function turn_update()
     update_monsters()
 
     update_map(new_level, full_map_clear)
+
+    danger = sense_danger(qw.los_radius)
+        or not map_is_unexcluded_at(qw.map_pos)
+    immediate_danger = sense_immediate_danger()
+
     update_move_destination()
     update_flee_positions()
     update_reachable_position()
@@ -156,10 +161,6 @@ function turn_update()
             and where_depth == goal_zig_depth(goal_status) then
         c_persist.zig_completed = true
     end
-
-    danger = sense_danger(qw.los_radius)
-        or not map_is_unexcluded_at(qw.map_pos)
-    immediate_danger = sense_immediate_danger()
 
     if turns_left_moving_towards_enemy > 0 then
         turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
