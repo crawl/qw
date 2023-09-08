@@ -151,9 +151,6 @@ local upgrade_phase = false
 local acquirement_pickup = false
 local acquirement_class
 
-local tactical_step
-local tactical_reason
-
 local stairdance_count = {}
 local clear_exclusion_count = {}
 local vaults_end_entry_turn

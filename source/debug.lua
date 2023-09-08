@@ -161,6 +161,46 @@ function print_unexcluded_map(center)
     crawl.setopt("msg_condense_repeats = true")
 end
 
+function print_adjacent_floor_map(center)
+    if not center then
+        center = const.origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(qw.map_pos, center)
+    say("Adjacent floor map at " .. cell_string_from_map_position(map_center))
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            local pos = position_sum(map_center, { x = x, y = y })
+            local floor_count = adjacent_floor_map[pos.x][pos.y]
+            local char
+            if positions_equal(pos, qw.map_pos) then
+                if floor_count == nil then
+                    str = str .. "✞"
+                else
+                    str = str .. (floor_count <= 3 and "@" or "7")
+                end
+            elseif positions_equal(pos, map_center) then
+                if floor_count == nil then
+                    str = str .. "W"
+                else
+                    str = str .. (floor_count <= 3 and "&" or "8")
+                end
+            elseif floor_count == nil then
+                str = str .. " "
+            else
+                str = str .. floor_count
+            end
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
+end
+
 function print_distance_map(dist_map, center, excluded)
     if not center then
         center = const.origin

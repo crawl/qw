@@ -42,6 +42,50 @@ function player_has_line_of_fire(target)
     return false
 end
 
+function positions_can_reach(from_pos, to_pos)
+    local dist = position_distance(from_pos, to_pos)
+    if dist == 1 then
+        return true
+    end
+
+    if dist == 2 then
+        local x_diff = to_pos.x - from_pos.x
+        local abs_x_diff = abs(x_diff)
+        local y_diff = to_pos.y - from_pos.y
+        local abs_y_diff = abs(y_diff)
+        if abs_x_diff > abs_y_diff then
+            local sign_diff = sign(x_diff)
+            if abs_y_diff > 0 then
+                return not is_solid_at({ x = from_pos.x + sign_diff,
+                        y = from_pos.y }, true)
+                    -- We know that sign(y_diff) == y_diff.
+                    or not is_solid_at({ x = from_pos.x + sign_diff,
+                        y = from_pos.y - y_diff }, true)
+            else
+                return not is_solid_at({ x = from_pos.x + sign_diff,
+                    y = from_pos.y }, true)
+            end
+
+        elseif abs_x_diff < abs_y_diff then
+            local sign_diff = sign(y_diff)
+            if abs_x_diff > 0 then
+                return not is_solid_at({ x = from_pos.x,
+                        y = from_pos.y + sign_diff }, true)
+                    or not is_solid_at({ x = from_pos.x - x_diff,
+                        y = from_pos.y + sign_diff }, true)
+            else
+                return not is_solid_at({ x = from_pos.x,
+                    y = from_pos.y + sign_diff }, true)
+            end
+        else
+            return not is_solid_at({ x = from_pos.x + sign(x_diff),
+                y = from_pos.y + sign(y_diff) }, true)
+        end
+    elseif dist >= 3 then
+        return cell_see_cell(from_pos, to_pos)
+    end
+end
+
 function square_iter(pos, radius, include_center)
     if not radius then
         radius = qw.los_radius
@@ -168,4 +212,9 @@ end
 
 function position_is_origin(a)
     return a.x == 0 and a.y == 0
+end
+
+function cell_see_cell(a, b)
+    return position_distance(a, b) <= qw.los_radius
+        and view.cell_see_cell(a.x, a.y, b.x, b.y)
 end

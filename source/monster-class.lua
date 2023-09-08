@@ -62,8 +62,13 @@ function Monster:can_traverse(pos)
         self.props.traversal_map[pos.x] = {}
     end
     if self.props.traversal_map[pos.x][pos.y] == nil then
-        self.props.traversal_map[pos.x][pos.y] =
-            self.minfo:can_traverse(pos.x, pos.y)
+        local val = self.minfo:can_traverse(pos.x, pos.y)
+        if not val then
+            local feat = view.feature_at(pos.x, pos.y)
+            val = feat == "closed_door" or feat == "closed_clear_door"
+        end
+
+        self.props.traversal_map[pos.x][pos.y] = val
     end
 
     return self.props.traversal_map[pos.x][pos.y]

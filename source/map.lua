@@ -109,6 +109,11 @@ function clear_map_cache(parity, full_clear)
     for x = -const.gxm, const.gxm do
         exclusion_maps_cache[parity][x] = {}
     end
+
+    adjacent_floor_maps_cache[parity] = {}
+    for x = -const.gxm, const.gxm do
+        adjacent_floor_maps_cache[parity][x] = {}
+    end
 end
 
 function find_features(feats, radius)
@@ -741,6 +746,7 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
     if not previous_where or new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
+        adjacent_floor_map = adjacent_floor_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_map_positions = item_map_positions_cache[cache_parity]
@@ -846,6 +852,20 @@ function update_map_mode_search()
     map_mode_search_count = nil
 end
 
+function update_adjacent_floor(queue)
+    for _, cell in ipairs(queue) do
+        if map_is_traversable_at(cell.pos) then
+            local floor_count = 0
+            for pos in adjacent_iter(cell.los_pos) do
+                if not is_solid_at(pos, true) then
+                    floor_count = floor_count + 1
+                end
+            end
+            adjacent_floor_map[cell.pos.x][cell.pos.y] = floor_count
+        end
+    end
+end
+
 function update_map(new_level, full_clear)
     local new_waypoint = update_waypoint(new_level)
 
@@ -859,6 +879,8 @@ function update_map(new_level, full_clear)
         qw.have_slimy_walls = false
     end
     local cell_queue, map_reset = update_map_cells()
+    update_adjacent_floor(cell_queue)
+
     update_seen_items()
 
     update_distance_maps(cell_queue, map_reset)

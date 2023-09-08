@@ -445,3 +445,13 @@ function get_dig_wand()
             return find_item("wand", "digging")
         end)
 end
+
+function want_to_be_surrounded()
+    return turn_memo("want_to_be_surrounded",
+        function()
+            local weapon = get_weapon()
+            return weapon
+                and weapon.weap_skill == "Axes"
+                and weapon:ego() == "vampirism"
+        end)
+end

@@ -69,9 +69,11 @@ function count_adjacent_slimy_walls_at(pos)
     return count
 end
 
-function is_solid_at(pos)
+function is_solid_at(pos, exclude_doors)
     local feat = view.feature_at(pos.x, pos.y)
-    return feat == "unseen" or travel.feature_solid(feat)
+    return (feat == "unseen" or travel.feature_solid(feat))
+        and (not exclude_doors
+            or feat ~= "closed_door" and feat ~= "closed_clear_door")
 end
 
 function feature_destroys_items(feat)

@@ -25,6 +25,7 @@ This variables should be configured in the qw rc file.
   + "map": Updates to the map data cache and distance maps
   + "plans": Plan execution results. This generates a lot of output.
   + "ranged": Ranged targeting and combat.
+  + "retreat": Retreat position selection.
   + "skills": Skill selection.
   + "throttle": Throttling and memory usage.
 

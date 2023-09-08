@@ -143,52 +143,52 @@ function plan_recite()
 end
 
 function plan_cloud_step()
-    if tactical_reason == "cloud" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
+    if qw.tactical_reason == "cloud" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
         return true
     end
     return false
 end
 
 function plan_water_step()
-    if tactical_reason == "water" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
+    if qw.tactical_reason == "water" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
         return true
     end
     return false
 end
 
 function plan_wall_step()
-    if tactical_reason == "wall" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
+    if qw.tactical_reason == "wall" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
         return true
     end
     return false
 end
 
 function plan_coward_step()
-    if (tactical_reason == "hiding" or tactical_reason == "stealth")
+    if (qw.tactical_reason == "hiding" or qw.tactical_reason == "stealth")
             and (not want_to_move_to_abyss_objective()
                 or should_rest()) then
-        if tactical_reason == "hiding" then
+        if qw.tactical_reason == "hiding" then
             hiding_turn_count = you.turns()
         end
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
         return true
     end
     return false
 end
 
 function plan_flee_step()
-    if tactical_reason ~= "fleeing" then
+    if qw.tactical_reason ~= "fleeing" then
         return false
     end
 
-    local best_pos = best_flee_destination_at(vi_to_delta(tactical_step))
+    local best_pos = best_flee_position_at(vi_to_delta(qw.tactical_step))
     if not best_pos then
         return false
     end
@@ -196,14 +196,23 @@ function plan_flee_step()
     target_flee_position = best_pos
     last_flee_turn = you.turns()
     say("FLEEEEING.")
-    magic(tactical_step .. "Y")
+    magic(qw.tactical_step .. "Y")
     return true
 end
 
+function plan_retreat_step()
+    if qw.tactical_reason == "retreating" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
+        return true
+    end
+    return false
+end
+
 function plan_other_step()
-    if tactical_reason ~= "none" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. tactical_reason .. ").")
-        magic(tactical_step .. "Y")
+    if qw.tactical_reason ~= "none" then
+        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+        magic(qw.tactical_step .. "Y")
         return true
     end
     return false
@@ -1052,6 +1061,46 @@ function plan_dig_grate()
     return false
 end
 
+function plan_retreat()
+    if not danger
+            or unable_to_move()
+            or dangerous_to_move()
+            or not want_to_retreat() then
+        return false
+    end
+
+    local best_pos = best_retreat_position()
+    if not best_pos then
+        return false
+    end
+
+    local result = best_move_towards_positions({ best_pos })
+    if result then
+        say("RETREEAATING.")
+        return move_towards_destination(result.move, result.dest, "retreat")
+    end
+
+    return false
+end
+
+function plan_continue_retreat()
+    if not move_destination
+            or move_reason ~= "retreat"
+            or not want_to_retreat()
+            or unable_to_move()
+            or dangerous_to_move() then
+        return false
+    end
+
+    local result = best_move_towards(move_destination)
+    if result then
+        say("STILL RETREEAATING.")
+        return move_to(result.move)
+    end
+
+    return false
+end
+
 function set_plan_emergency()
     plans.emergency = cascade {
         {plan_stairdance_up, "stairdance_up"},
@@ -1076,7 +1125,10 @@ function set_plan_emergency()
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
         {plan_continue_flee, "continue_flee"},
+        {plan_continue_retreat, "continue_retreat"},
+        {plan_retreat, "retreat"},
         {plan_flee_step, "flee_step"},
+        {plan_retreat_step, "retreat_step"},
         {plan_wall_step, "wall_step"},
         {plan_water_step, "water_step"},
         {plan_coward_step, "coward_step"},

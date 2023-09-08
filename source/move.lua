@@ -424,6 +424,8 @@ function update_move_destination()
         clear = true
     elseif move_reason == "monster" and danger then
         clear = true
+    elseif move_reason == "retreat" and not danger then
+        clear = true
     elseif positions_equal(qw.map_pos, move_destination) then
         if move_reason == "unexplored"
                 and autoexplored_level(where_branch, where_depth)

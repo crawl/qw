@@ -1418,11 +1418,6 @@ function at_min_delay()
     return you.base_skill(weapon_skill()) >= min(27, min_delay_skill())
 end
 
-function cleaving()
-    local weapon = get_weapon()
-    return weapon and weapon.weap_skill == "Axes"
-end
-
 function armour_ac()
     arm = items.equipped_at("Body Armour")
     if arm then

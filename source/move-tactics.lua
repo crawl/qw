@@ -12,8 +12,7 @@ function assess_square_enemies(a, pos)
     a.longranged = 0
     for _, enemy in ipairs(enemy_list) do
         local dist = enemy:distance()
-        local see_cell = view.cell_see_cell(pos.x, pos.y, enemy:x_pos(),
-            enemy:y_pos())
+        local see_cell = cell_see_cell(pos, enemy:pos())
         local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
 
@@ -121,6 +120,8 @@ function assess_square(pos)
     -- otherwise equal to the minimum movement distance to a flee position.
     a.flee_distance = flee_distance_at(pos)
 
+    a.retreat_distance = retreat_distance_at(pos)
+
     return a
 end
 
@@ -163,6 +164,8 @@ function step_reason(a1, a2)
             and not buffed()
             and starting_spell ~= "Summon Small Mammal" then
         return "fleeing"
+    elseif a2.retreat_distance < a1.retreat_distance then
+        return "retreating"
     elseif not have_ranged_weapon()
             and not a1.near_ally
             and a2.ranged == 0
@@ -200,7 +203,7 @@ function step_reason(a1, a2)
         end
     elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
         return "kiting"
-    elseif cleaving() then
+    elseif want_to_be_surrounded() then
         return false
     elseif a1.adjacent == 1 then
         return false
@@ -223,6 +226,10 @@ function step_improvement(best_reason, reason, a1, a2)
         return true
     elseif best_reason == "fleeing" and reason ~= "fleeing" then
         return false
+    elseif reason == "retreating" and best_reason ~= "retreating" then
+        return true
+    elseif best_reason == "retreating" and reason ~= "retreating" then
+        return false
     elseif reason == "water" and best_reason == "water"
          and a2.enemy_distance < a1.enemy_distance then
         return true
@@ -239,9 +246,9 @@ function step_improvement(best_reason, reason, a1, a2)
         return true
     elseif a2.adjacent + a2.ranged > a1.adjacent + a1.ranged then
         return false
-    elseif cleaving() and a2.ranged < a1.ranged then
+    elseif want_to_be_surrounded() and a2.ranged < a1.ranged then
         return true
-    elseif cleaving() and a2.ranged > a1.ranged then
+    elseif want_to_be_surrounded() and a2.ranged > a1.ranged then
         return false
     elseif a2.adjacent + a2.ranged == 0 and a2.unalert < a1.unalert then
         return true
@@ -250,6 +257,12 @@ function step_improvement(best_reason, reason, a1, a2)
     elseif reason == "fleeing" and a2.flee_distance < a1.flee_distance then
         return true
     elseif reason == "fleeing" and a2.flee_distance > a1.flee_distance then
+        return false
+    elseif reason == "retreating"
+            and a2.retreat_distance < a1.retreat_distance then
+        return true
+    elseif reason == "retreating"
+            and a2.retreat_distance > a1.retreat_distance then
         return false
     elseif a2.enemy_distance < a1.enemy_distance then
         return true
@@ -267,8 +280,8 @@ function step_improvement(best_reason, reason, a1, a2)
 end
 
 function choose_tactical_step()
-    tactical_step = nil
-    tactical_reason = "none"
+    qw.tactical_step = nil
+    qw.tactical_reason = "none"
     if unable_to_move()
             or you.confused()
             or you.berserk()
@@ -282,7 +295,6 @@ function choose_tactical_step()
             and not (a0.fumble and sense_danger(3))
             and not (a0.bad_wall and sense_danger(3))
             and a0.kite_adjacent == 0
-            and (a0.adjacent <= 1 or cleaving())
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end
@@ -301,8 +313,8 @@ function choose_tactical_step()
         end
     end
     if besta then
-        tactical_step = delta_to_vi(best_pos)
-        tactical_reason = best_reason
+        qw.tactical_step = delta_to_vi(best_pos)
+        qw.tactical_reason = best_reason
     end
 end
 
