@@ -51,6 +51,18 @@ function spell_castable(sp)
     return true
 end
 
+function distance_to_tabbable_enemy()
+    local best_dist = 10
+    for _, enemy in ipairs(enemy_list) do
+        if enemy:distance() < best_dist
+                and (enemy:player_has_path_to_melee()
+                    or enemy:player_can_wait_for_melee()) then
+            best_dist = enemy:distance()
+        end
+    end
+    return best_dist
+end
+
 function plan_starting_spell()
     if not starting_spell or not spell_castable(starting_spell) then
         return false
