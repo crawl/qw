@@ -988,61 +988,57 @@ function update_exclusions(new_waypoint)
         return
     end
 
-    -- Unreachable monsters that we can't ranged attack get excluded
-    -- unconditionally.
+    -- Monsters we can't reach via melee or ranged attack that also can't move
+    -- to our melee range get excluded immediately.
     local auto_exclude = {}
     local have_ranged = have_ranged_attack()
     for _, enemy in ipairs(enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
-                -- No need to exclude if crawl tells us we're currently safe
-                -- from this monster. Safe monsters don't prevent resting,
-                -- autoexplore or travel.
-                and not enemy:is_safe()
                 -- No excluding temporary monsters.
                 and not enemy:is_summoned()
                 -- We need to at least see all cells adjacent to them to be
                 -- so our movement evaluation is reasonably correct.
                 and enemy:adjacent_cells_known()
                 -- We can't move into melee range...
-                and not enemy:player_has_path_to()
-                -- ... they can't move into our melee range...
-                and not enemy:can_move_to_player_melee()
+                and not enemy:player_has_path_to_melee()
+                -- ... they can't move to where we could melee them
+                and not enemy:player_can_wait_for_melee()
                 -- ... and we can't target them with a ranged attack
-                and not (have_ranged and enemy:have_line_of_fire())
+                and not (have_ranged and enemy:player_has_line_of_fire())
                 -- ... and we know that we don't want to dig them out.
                 and not enemy:should_dig_unreachable() then
             table.insert(auto_exclude, enemy:pos())
         end
     end
-    for _, pos in ipairs(auto_exclude) do
-        exclude_position(pos)
+    if #auto_exclude > 0 then
+        for _, pos in ipairs(auto_exclude) do
+            exclude_position(pos)
+        end
+        return
     end
 
-    -- We only exclude monsters when we have no incoming melee. Incoming melee
-    -- is satisfied by any non-summoned monster that can either melee us now or
-    -- is able to move into melee range given LOS terrain. We exclude summoned
-    -- monsters so we can successfully exclude unreachable summoning monsters
-    -- that can continuously make summons that are able to reach us.
+    -- We potentially exclude monsters that can't reach our position when we've
+    -- tried to fight them from full HP. To make this assessment, we track the
+    -- last turn a monster could reach us.
     for _, enemy in ipairs(enemy_list) do
-        if not enemy:is_summoned() and enemy:can_move_to_player_melee() then
-            incoming_melee_turn = you.turns()
+        if not enemy:is_summoned() and enemy:has_path_to_player() then
+            incoming_monsters_turn = you.turns()
             return
         end
     end
 
-    -- We want to exclude any unreachable monsters who get us to low HP while
-    -- we're trying to kill them with ranged attacks. We additionally require
-    -- that we've been at full HP since the last turn were we had reachable
-    -- monsters. This way if we fight a mix of reachable and unreachable
-    -- monsters and kill all the reachable ones but get to low HP, we'll
-    -- retreat and heal up once before attempting to kill the unreachable ones.
-    if full_hp_turn < incoming_melee_turn or not hp_is_low(50) then
-        return
-    end
-
-    for _, enemy in ipairs(enemy_list) do
-        if not enemy:is_summoned() then
-            exclude_position(enemy:pos())
+    -- If we've been trying to attack monsters that can't reach our position
+    -- and get to low HP, we wan't to exclude them and end the fight. We
+    -- additionally require that we've been at full HP since the last turn were
+    -- we had incoming monsters. This way if we fight a mix of some monsters
+    -- that can reach us and some that can't, we'll deal with the monsters that
+    -- can't only after finishing off the monsters that can and then resting to
+    -- full HP.
+    if full_hp_turn >= incoming_monsters_turn and hp_is_low(50) then
+        for _, enemy in ipairs(enemy_list) do
+            if not enemy:is_summoned() then
+                exclude_position(enemy:pos())
+            end
         end
     end
 end

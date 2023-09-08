@@ -1040,8 +1040,7 @@ function plan_dig_grate()
     end
 
     for _, enemy in ipairs(enemy_list) do
-        if not enemy:can_move_to_player_melee()
-                and not map_is_reachable_at(enemy:map_pos())
+        if not map_is_reachable_at(enemy:map_pos())
                 and enemy:should_dig_unreachable() then
             say("ZAPPING " .. item(wand_letter).name() .. ".")
             magic("V" .. wand_letter .. "r" .. vector_move(enemy:pos())

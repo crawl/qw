@@ -276,31 +276,103 @@ function Monster:player_can_melee()
         end)
 end
 
---[[
-Whether this monster from closer from its current position so the player could
-melee it given the terrain of current LOS. This function considers the
-respective melee attack ranges of both the monster and the player.
-
-@treturn boolean True if the monster could move closer from its current
-                 position to either be in melee range of the player. This also
-                 returns true if the monster could get within its own required
-                 distance to melee the player and if the player could then move
-                 up to one step closer to be able to melee the monster.
-                 Otherwise, if the monster could not make such a move return
-                 false, including when the monster is already in the player's
-                 melee range.
-]]--
-function Monster:can_move_to_player_melee()
-    return self:get_property("can_move_to_player_melee",
+function Monster:can_seek()
+    return self:get_property("can_seek",
         function()
-            return monster_can_move_to_player_melee(self)
+            local name = self:name()
+            return not (self:is_stationary()
+                or name == "wandering mushroom"
+                or name:find("vortex")
+                or self:is("fleeing")
+                or self:status("paralysed")
+                or self:status("confused")
+                or self:status("petrified"))
         end)
 end
 
-function Monster:have_line_of_fire()
-    return self:get_property("have_line_of_fire",
+function Monster:can_cause_retreat()
+    return self:get_property("can_cause_retreat",
         function()
-            return have_line_of_fire(self:pos())
+            local name = self:name()
+            return self:can_seek()
+                and not (name:find("centaur")
+                    or name:find("yaktaur")
+                    or name:find("satyr")
+                    or name:find("javelineer")
+                    or name:find("master archer"))
+        end)
+end
+
+function Monster:can_melee_player()
+    return self:get_property("can_melee_player",
+        function()
+            local melee_range = self:reach_range()
+            return self:distance() <= melee_range
+                    and (melee_range ~= 2
+                        or view.can_reach(self:x_pos(), self:y_pos()))
+        end)
+end
+
+--[[
+Whether this monster has a path it can take to melee the player. This includes
+the case where the monster is already in range to melee.
+
+@treturn boolean True if the monster has such a path, false otherwise.
+]]--
+function Monster:has_path_to_melee_player()
+    return self:get_property("has_path_to_melee_player",
+        function()
+            if self:can_melee_player() then
+                return true
+            end
+
+            if not self:can_seek() then
+                return false
+            end
+
+            local tab_func = function(pos)
+                return self:can_traverse(pos)
+            end
+            return move_search_result(self:pos(), const.origin, tab_func,
+                    self:reach_range())
+        end)
+end
+
+--[[
+Whether this monster has a path it can take to get adjacent to the player. This
+includes the case where the monster is already adjacent.
+
+@treturn boolean True if the monster has such a path, false otherwise.
+]]--
+function Monster:has_path_to_player()
+    return self:get_property("has_path_to_player",
+        function()
+            if not self:can_seek() then
+                return false
+            end
+
+            local tab_func = function(pos)
+                return self:can_traverse(pos)
+            end
+            return move_search_result(self:pos(), const.origin, tab_func, 0)
+        end)
+end
+
+function Monster:player_can_wait_for_melee()
+    return self:get_property("player_can_wait_for_melee",
+        function()
+            return not self:player_can_melee()
+                and self:has_path_to_melee_player()
+                and (self:reach_range() == 1
+                    or reach_range() > 1
+                    or get_move_closer(self:pos()))
+        end)
+end
+
+function Monster:player_has_line_of_fire()
+    return self:get_property("player_has_line_of_fire",
+        function()
+            return player_has_line_of_fire(self:pos())
         end)
 end
 
@@ -347,15 +419,15 @@ function Monster:status(status)
     return self.props.status[status]
 end
 
-function Monster:player_has_path_to()
-    return self:get_property("player_has_path_to",
+function Monster:player_has_path_to_melee()
+    return self:get_property("player_has_path_to_melee",
         function()
             if self:player_can_melee() then
                 return true
             end
 
             local square_func = traversal_function()
-            return get_move_towards(const.origin, self:pos(), square_func,
+            return move_search_result(const.origin, self:pos(), square_func,
                 reach_range())
         end)
 end
@@ -368,8 +440,10 @@ function Monster:get_player_move_towards(assume_flight)
     local ind = assume_flight and 2 or 1
     if self.props.player_move[ind] == nil then
         local square_func = tab_function(assume_flight)
-        self.props.player_move[ind] = get_move_towards(const.origin,
-            self:pos(), square_func, reach_range())
+        local result = move_search_result(const.origin, self:pos(),
+            square_func, reach_range())
+        local val = result and result.move or false
+        self.props.player_move[ind] = val
     end
 
     return self.props.player_move[ind]

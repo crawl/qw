@@ -34,6 +34,17 @@ function tab_function(assume_flight)
     end
 end
 
+function friendly_can_swap_to(mons, pos)
+    return not (mons:is_constricted()
+            or mons:is_caught()
+            or mons:status("petrified")
+            or mons:status("paralysed")
+            or mons:status("constricted by roots")
+            or mons:is("sleeping")
+            or not mons:can_traverse(pos)
+            or view.feature_at(pos.x, pos.y) == "trap_zot")
+end
+
 -- Should only be called for adjacent squares.
 function monster_in_way(pos, ignore_hostiles)
     local mons = get_monster_at(pos)
@@ -41,7 +52,6 @@ function monster_in_way(pos, ignore_hostiles)
         return false
     end
 
-    local feat = view.feature_at(0, 0)
     local attitude = mons:attitude()
     return mons:name() == "orb of destruction"
         or not ignore_hostiles and attitude == const.attitude.hostile
@@ -50,15 +60,8 @@ function monster_in_way(pos, ignore_hostiles)
             and mons:attacking_causes_penance()
         -- Strict neutral and up will swap with us, but we have to check that
         -- they can. We assume we never want to attack these.
-        or attitude > const.attitude.neutral
-            and (mons:is_constricted()
-                or mons:is_caught()
-                or mons:status("petrified")
-                or mons:status("paralysed")
-                or mons:status("constricted by roots")
-                or mons:is("sleeping")
-                or not mons:can_traverse(const.origin)
-                or feat  == "trap_zot")
+        or mons:attitude() > const.attitude.neutral
+            and not friendly_can_swap_to(mons, const.origin)
 end
 
 function get_move_closer(pos)
@@ -78,19 +81,20 @@ end
 function move_search(search, current)
     local diff = position_difference(search.target, current)
     if supdist(diff) <= search.min_dist then
-        search.result = position_difference(search.first_pos, search.center)
+        search.move = position_difference(search.first_pos, search.center)
         return true
     end
 
     local function search_from(pos)
         if search.attempted[pos.x] and search.attempted[pos.x][pos.y]
-                -- Our search should never leave LOS.
-                or supdist(pos) > qw.los_radius then
+                -- Our search should never leave LOS of the center.
+                or position_distance(search.center, pos) > qw.los_radius then
             return false
         end
 
         if positions_equal(current, search.center) then
             search.first_pos = nil
+            search.last_pos = nil
         end
 
         if search.square_func(pos) then
@@ -103,6 +107,7 @@ function move_search(search, current)
             end
             search.attempted[pos.x][pos.y] = true
 
+            search.last_pos = pos
             return move_search(search, pos)
         end
 
@@ -198,7 +203,7 @@ function move_search(search, current)
     return false
 end
 
-function get_move_towards(center, target, square_func, min_dist)
+function move_search_result(center, target, square_func, min_dist)
     if not min_dist then
         min_dist = 0
     end
@@ -214,37 +219,8 @@ function get_move_towards(center, target, square_func, min_dist)
     search.attempted = { [center.x] = { [center.y] = true } }
 
     if move_search(search, center) then
-        return search.result
+        return search
     end
-end
-
-function monster_can_move_to_player_melee(mons)
-    -- The monster is already in range.
-    if mons:player_can_melee() then
-        return false
-    end
-
-    local name = mons:name()
-    if mons:is_stationary()
-            or name == "wandering mushroom"
-            or name:find("vortex")
-            or mons:is("fleeing")
-            or mons:status("paralysed")
-            or mons:status("confused")
-            or mons:status("petrified") then
-        return false
-    end
-
-    local tab_func = function(pos)
-        return mons:can_traverse(pos)
-    end
-    return get_move_towards(mons:pos(), const.origin, tab_func,
-            mons:reach_range())
-        -- If the monster can reach attack and we can't, be sure we can
-        -- close the final 1-square gap.
-        and (mons:reach_range() < 2
-            or reach_range() > 1
-            or get_move_closer(mons:pos()))
 end
 
 function best_move_towards(map_pos, ignore_exclusions)
@@ -472,22 +448,4 @@ function update_move_destination()
         move_destination = nil
         move_reason = nil
     end
-end
-
-function best_position_near(map_pos)
-    if map_is_reachable_at(map_pos) then
-        return pos
-    end
-
-    local best_dist, best_pos
-    for pos in adjacent_iter(map_pos) do
-        local dist = position_distance(pos, qw.map_pos)
-        if map_is_reachable_at(pos)
-                and (not best_dist or dist < best_dist) then
-            best_dist = dist
-            best_pos = pos
-        end
-    end
-
-    return best_pos
 end

@@ -59,20 +59,20 @@ function plan_shoot_at_invis()
 
     local can_ctrl = not you.confused()
     if invis_monster_pos then
-        if have_line_of_fire(invis_monster_pos) then
+        if player_has_line_of_fire(invis_monster_pos) then
             return shoot_launcher(invis_monster_pos)
         end
 
         if invis_monster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_monster_pos.y) }
-            if have_line_of_fire(apos) then
+            if player_has_line_of_fire(apos) then
                 return shoot_launcher(apos)
             end
         end
 
         if invis_monster_pos.y == 0 then
             local apos = { x = sign(invis_monster_pos.x), y = 0 }
-            if have_line_of_fire(apos) then
+            if player_has_line_of_fire(apos) then
                 return shoot_launcher(apos)
             end
         end
@@ -82,7 +82,7 @@ function plan_shoot_at_invis()
     while tries < 100 do
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
-        if supdist(pos) > 0 and have_line_of_fire(pos) then
+        if supdist(pos) > 0 and player_has_line_of_fire(pos) then
             return shoot_launcher(pos)
         end
     end
@@ -527,7 +527,7 @@ function plan_melee_wait_for_enemy()
             return false
         end
 
-        if not want_wait and enemy:can_move_to_player_melee() then
+        if not want_wait and enemy:player_can_wait_for_melee() then
             want_wait = true
 
             -- If we don't have a target, we'll never abort from waiting due to
@@ -573,7 +573,7 @@ function plan_launcher_wait_for_enemy()
 
     local want_wait = false
     for _, enemy in ipairs(enemy_list) do
-        if enemy:can_move_to_player_melee() then
+        if enemy:player_can_wait_for_melee() then
             wait_combat()
             return true
         end
@@ -683,6 +683,24 @@ function plan_move_towards_enemy()
     return move_to(move)
 end
 
+function closest_adjacent_map_position(map_pos)
+    if map_is_reachable_at(map_pos) then
+        return pos
+    end
+
+    local best_dist, best_pos
+    for pos in adjacent_iter(map_pos) do
+        local dist = position_distance(pos, qw.map_pos)
+        if map_is_reachable_at(pos)
+                and (not best_dist or dist < best_dist) then
+            best_dist = dist
+            best_pos = pos
+        end
+    end
+
+    return best_pos
+end
+
 function plan_continue_move_towards_enemy()
     if not enemy_memory
             or not options.autopick_on
@@ -700,13 +718,13 @@ function plan_continue_move_towards_enemy()
     end
 
     if turns_left_moving_towards_enemy > 0 then
-        local move = get_move_towards(const.origin, enemy_memory,
+        local result = move_search_result(const.origin, enemy_memory,
             tab_function(), reach_range())
-        if not move then
+        if not result then
             return false
         end
 
-        return move_to(move)
+        return move_to(result.move)
     end
 
     enemy_memory = nil
@@ -716,7 +734,7 @@ function plan_continue_move_towards_enemy()
             and positions_equal(last_enemy_map_memory, enemy_map_memory) then
         enemy_map_memory = nil
 
-        local dest = best_position_near(last_enemy_map_memory)
+        local dest = closest_adjacent_map_position(last_enemy_map_memory)
         if not dest then
             return false
         end

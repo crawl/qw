@@ -15,7 +15,7 @@ function feature_state(pos)
     return const.feat_state.seen
 end
 
-function have_line_of_fire(target)
+function player_has_line_of_fire(target)
     local attack = ranged_attack(get_weapon())
     local positions = spells.path(attack.test_spell, target.x, target.y, 0, 0,
         false)
@@ -148,6 +148,10 @@ function is_adjacent(pos, center)
     end
 
     return max(abs(pos.x - center.x), abs(pos.y - center.y)) == 1
+end
+
+function position_distance(a, b)
+    return supdist(position_difference(a, b))
 end
 
 function position_difference(a, b)

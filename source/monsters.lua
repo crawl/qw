@@ -704,7 +704,9 @@ function update_monsters()
 end
 
 function get_monster_at(pos)
-    return monster_map[pos.x][pos.y]
+    if supdist(pos) <= qw.los_radius then
+        return monster_map[pos.x][pos.y]
+    end
 end
 
 function monster_in_list(mons, mons_list)

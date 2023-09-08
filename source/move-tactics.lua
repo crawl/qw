@@ -58,7 +58,7 @@ function assess_square_enemies(a, pos)
                     or enemy:is("dumb")
                     or liquid_bound
                     or enemy:is_stationary())
-                and enemy:can_move_to_player_melee() then
+                and enemy:has_path_to_player() then
             a.longranged = a.longranged + 1
         end
 

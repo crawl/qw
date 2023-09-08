@@ -126,7 +126,7 @@ local ignore_traps
 local stairs_travel
 local position_is_safe
 local position_is_cloudy
-local incoming_melee_turn = -1
+local incoming_monsters_turn = -1
 local full_hp_turn = 0
 
 local next_delay = 100
