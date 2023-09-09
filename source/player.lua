@@ -450,8 +450,15 @@ function want_to_be_surrounded()
     return turn_memo("want_to_be_surrounded",
         function()
             local weapon = get_weapon()
-            return weapon
-                and weapon.weap_skill == "Axes"
-                and weapon:ego() == "vampirism"
+            if not weapon
+                    or weapon.weap_skill ~= "Axes"
+                    or weapon:ego() ~= "vampirism" then
+                return false
+            end
+
+            local vamp_check = function(mons)
+                    return not mons:is_immune_vampirism()
+                end
+            return count_enemies(qw.los_radius, vamp_check) >= 4
         end)
 end

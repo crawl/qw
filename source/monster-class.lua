@@ -116,6 +116,17 @@ function Monster:res_draining()
     return self:get_property("res_draining")
 end
 
+function Monster:is_mmune_vampirism()
+    return self:get_property("is_immune_vampirism",
+        function()
+            local holiness = self:holiness()
+            return self:is_summoned()
+                or self:is_firewood()
+                or holiness ~= "natural" and holiness ~= "plant"
+                or res_draining() >= 3
+        end)
+end
+
 function Monster:is_holy_vulnerable()
     return self:get_property("is_holy_vulnerable",
         function()
