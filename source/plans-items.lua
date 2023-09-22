@@ -167,6 +167,40 @@ function plan_bless_weapon()
     return false
 end
 
+function plan_receive_weapon()
+    if c_persist.okawaru_weapon_gifted
+            or you.god() ~= "Okawaru"
+            or you.piety_rank() < 6
+            or not contains_string_in("Receive Weapon", you.abilities())
+            or not can_invoke() then
+        return false
+    end
+
+    if use_ability("Receive Weapon") then
+        c_persist.okawaru_weapon_gifted = true
+        return true
+    end
+
+    return false
+end
+
+function plan_receive_armour()
+    if c_persist.okawaru_armour_gifted
+            or you.god() ~= "Okawaru"
+            or you.piety_rank() < 6
+            or not contains_string_in("Receive Armour", you.abilities())
+            or not can_invoke() then
+        return false
+    end
+
+    if use_ability("Receive Armour") then
+        c_persist.okawaru_armour_gifted = true
+        return true
+    end
+
+    return false
+end
+
 function plan_maybe_pickup_acquirement()
     if acquirement_pickup then
         magic(",")
@@ -816,7 +850,7 @@ function set_plan_acquirement()
 end
 
 function c_choose_acquirement()
-    local acq_items = items.acquirement_items()
+    local acq_items = items.acquirement_items(const.acquire.scroll)
 
     -- These categories should be in order of preference.
     local wanted = {"weapon", "armour", "jewellery", "gold"}
@@ -848,4 +882,77 @@ function c_choose_acquirement()
     -- If somehow we didn't find anything, pick the first item and move on.
     say("GAVE UP ACQUIRING")
     return 1
+end
+
+function c_choose_okawaru_weapon()
+    local cur_weapon = get_weapon()
+    local acq_items = items.acquirement_items(const.acquire.okawaru_weapon)
+
+    local best_val = -1000
+    local best_ind, best_item
+    for i, item in ipairs(acq_items) do
+        local val = equip_value(item, true, cur_weapon)
+        if val > best_val then
+            best_val = val
+            best_ind = i
+            best_item = item
+        end
+    end
+
+    -- If somehow we didn't find anything, pick the first item and move on.
+    if not best_ind then
+        say("GAVE UP ACQUIRING OKAWARU WEAPON")
+        return 1
+    end
+
+    say("ACQUIRING " .. best_item.name())
+    acquirement_class = equip_slot(best_item)
+    acquirement_pickup = true
+    return best_ind
+end
+
+function equip_value_difference(item, cur_vals)
+    local subtype = item.subtype()
+    local cur_item = items.equipped_at(good_slots[subtype])
+    local val = equip_value(item, true, cur_item)
+    if val == -1000 then
+        return
+    end
+
+    if not cur_vals[subtype] then
+        local cur_val = 0
+        if cur_item then
+            cur_val = equip_value(cur_item, true, cur_item)
+        end
+        cur_vals[subtype] = cur_val
+    end
+
+    return val - cur_vals[subtype]
+end
+
+function c_choose_okawaru_armour()
+    local cur_weapon = get_weapon()
+    local acq_items = items.acquirement_items(const.acquire.okawaru_armour)
+
+    local cur_vals = {}
+    local best_diff, best_int, best_item
+    for i, item in ipairs(acq_items) do
+        local diff = equip_value_difference(item, cur_vals)
+        if diff and (not best_diff or diff > best_diff) then
+            best_diff = diff
+            best_ind = i
+            best_item = item
+        end
+    end
+
+    -- If somehow we didn't find anything, pick the first item and move on.
+    if not best_ind then
+        say("GAVE UP ACQUIRING OKAWARU ARMOUR")
+        return 1
+    end
+
+    say("ACQUIRING " .. best_item.name())
+    acquirement_class = equip_slot(best_item)
+    acquirement_pickup = true
+    return best_ind
 end

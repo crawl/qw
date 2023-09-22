@@ -4,6 +4,8 @@
 const.rune_suffix = " rune of Zot"
 const.orb_name = "Orb of Zot"
 
+const.acquire = { scroll = 1, okawaru_weapon = 2, okawaru_armour = 3 }
+
 -- We assign a numerical value to all armour/weapon/jewellery, which
 -- is used both for autopickup (so it has to work for unIDed items) and
 -- for equipment selection. A negative value means we prefer an empty slot.
