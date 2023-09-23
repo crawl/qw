@@ -270,8 +270,8 @@ function override_goal(goal)
     update_goal()
 end
 
-function get_qw()
-    return qw
+function get_vars()
+    return qw, const
 end
 
 function pos_string(pos)

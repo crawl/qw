@@ -80,11 +80,15 @@ These can be executed from the clua console.
 
 ### Diagnostic Functions
 
-* `get_qw()`
+* `get_vars()`
 
-  Get the `qw` local table that contains some of qw's state information.
-  Currently most state resides in inaccessible local variables, but in the
-  future these will all be moved into the `qw` table.
+  Get local tables that contain internal qw information. This returns the below
+  tables in order:
+
+  1. `qw`: qw state information. Currently most state resides in inaccessible
+     local variables, but in the future these will all be moved into the `qw`
+     table.
+  2. `const`: Various constants values and enums.
 
 * `dsay(x)`
 
