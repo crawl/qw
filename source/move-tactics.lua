@@ -181,11 +181,11 @@ function step_reason(a1, a2)
     elseif not a1.cloud_safe then
         return "cloud"
     elseif a1.fumble then
-        -- We require a ranged target or some close threats we want to melee
-        -- that try to stay adjacent to us before we'll try to move
-        -- out of water. We also require that we are no worse in at least one
-        -- of ranged threats or enemy distance at the new position.
-        if (have_ranged_target() or a1.followers)
+        -- We require that we have some close threats we want to melee that try
+        -- to stay adjacent to us before we'll try to move out of water. We
+        -- also require that we are no worse in at least one of ranged threats
+        -- or enemy distance at the new position.
+        if (not have_ranged_target() and a1.followers)
                 and (a2.ranged <= a1.ranged
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "water"

@@ -1044,7 +1044,7 @@ function update_exclusions(new_waypoint)
     -- last turn a monster could reach us.
     for _, enemy in ipairs(enemy_list) do
         if not enemy:is_summoned() and enemy:has_path_to_player() then
-            incoming_monsters_turn = you.turns()
+            qw.incoming_monsters_turn = you.turns()
             return
         end
     end
@@ -1056,7 +1056,7 @@ function update_exclusions(new_waypoint)
     -- that can reach us and some that can't, we'll deal with the monsters that
     -- can't only after finishing off the monsters that can and then resting to
     -- full HP.
-    if full_hp_turn >= incoming_monsters_turn and hp_is_low(50) then
+    if qw.full_hp_turn >= qw.incoming_monsters_turn and hp_is_low(50) then
         for _, enemy in ipairs(enemy_list) do
             if not enemy:is_summoned() then
                 exclude_position(enemy:pos())

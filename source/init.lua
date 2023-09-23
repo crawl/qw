@@ -94,6 +94,9 @@ function initialize()
 
     qw.single_step = SINGLE_STEP
     qw.initialized = true
+
+    qw.incoming_monsters_turn = -1
+    qw.full_hp_turn = -1
 end
 
 function note_qw_data()
