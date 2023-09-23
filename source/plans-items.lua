@@ -925,7 +925,7 @@ function equip_value_difference(item, cur_vals)
     local subtype = item.subtype()
     local cur_item = items.equipped_at(good_slots[subtype])
     local val = equip_value(item, true, cur_item)
-    if val == -1000 then
+    if val < 0 then
         return
     end
 
