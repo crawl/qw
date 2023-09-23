@@ -29,16 +29,22 @@ function disable_all_debug_channels()
     qw.debug_channels = {}
 end
 
-function dsay(x)
+function dsay(x, do_note)
+    -- Convert x to string to make debugging easier. We don't do this for say()
+    -- and note() so we can catch errors.
     local str
     if type(x) == "table" then
         str = stringify_table(x)
     else
         str = tostring(x)
     end
-    -- Convert x to string to make debugging easier. We don't do this for
-    -- say() and note() so we can catch errors.
-    crawl.mpr(you.turns() .. " ||| " .. str)
+
+    str = you.turns() .. " ||| " .. str
+    crawl.mpr(str)
+
+    if do_note then
+        note(str)
+    end
 end
 
 function test_radius_iter()

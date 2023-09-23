@@ -859,10 +859,14 @@ function c_choose_acquirement()
         item_ind[c] = 0
     end
 
-    for n, it in ipairs(acq_items) do
-        local class = it.class(true)
+    for i, item in ipairs(acq_items) do
+        if debug_channel("items") then
+            dsay("Offered " .. item:name(), true)
+        end
+
+        local class = item.class(true)
         if item_ind[class] ~= nil then
-            item_ind[class] = n
+            item_ind[class] = i
         end
     end
 
@@ -892,6 +896,12 @@ function c_choose_okawaru_weapon()
     local best_ind, best_item
     for i, item in ipairs(acq_items) do
         local val = equip_value(item, true, cur_weapon)
+
+        if debug_channel("items") then
+            dsay("Offered " .. item:name() .. " with value " .. tostring(val),
+                true)
+        end
+
         if val > best_val then
             best_val = val
             best_ind = i
@@ -938,6 +948,12 @@ function c_choose_okawaru_armour()
     local best_diff, best_int, best_item
     for i, item in ipairs(acq_items) do
         local diff = equip_value_difference(item, cur_vals)
+
+        if debug_channel("items") then
+            dsay("Offered " .. item:name() .. " with value difference "
+                .. tostring(diff), true)
+        end
+
         if diff and (not best_diff or diff > best_diff) then
             best_diff = diff
             best_ind = i

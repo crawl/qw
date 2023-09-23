@@ -22,7 +22,8 @@ This variables should be configured in the qw rc file.
   + "combat": Melee targeting and combat.
   + "explore": Map exploration and feature discovery.
   + "flee": Updates to the flee position.
-  + "map": Updates to the map data cache and distance maps
+  + "items": Item evaluation.
+  + "map": Updates to the map data cache and distance maps.
   + "plans": Plan execution results. This generates a lot of output.
   + "ranged": Ranged targeting and combat.
   + "retreat": Retreat position selection.
