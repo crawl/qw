@@ -153,7 +153,7 @@ end
 function Monster:can_attack()
     return self:get_property("can_attack",
         function()
-            return mons:name() ~= "orb of destruction"
+            return self:name() ~= "orb of destruction"
                 and not self:attacking_causes_penance()
         end)
 end
