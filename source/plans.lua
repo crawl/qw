@@ -37,9 +37,12 @@ function use_ability(name, extra, mute)
 end
 
 function move_to(pos)
-    if have_ranged_weapon()
-            and not unable_to_shoot()
-            and get_monster_at(pos) then
+    local mons_in_way = monster_in_way(pos)
+    if mons_in_way and not get_monster_at(pos):can_attack() then
+        return false
+    end
+
+    if mons_in_way and have_ranged_weapon() and not unable_to_shoot() then
         return shoot_launcher(pos)
     end
 

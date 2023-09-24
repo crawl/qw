@@ -150,6 +150,14 @@ function Monster:is_friendly()
         end)
 end
 
+function Monster:can_attack()
+    return self:get_property("can_attack",
+        function()
+            return mons:name() ~= "orb of destruction"
+                and not self:attacking_causes_penance()
+        end)
+end
+
 function Monster:attacking_causes_penance()
     return self:get_property("attacking_causes_penance",
         function()
