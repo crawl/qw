@@ -457,6 +457,7 @@ function set_plan_pre_explore()
     plans.pre_explore = cascade {
         {plan_ancestor_life, "ancestor_life"},
         {plan_sacrifice, "sacrifice"},
+        {plan_move_for_acquirement, "move_for_acquirement"},
         {plan_receive_weapon, "receive_weapon"},
         {plan_receive_armour, "receive_armour"},
         {plans.acquirement, "acquirement"},

@@ -167,6 +167,49 @@ function plan_bless_weapon()
     return false
 end
 
+function want_to_receive_weapon()
+    return not c_persist.okawaru_weapon_gifted
+        and you.god() == "Okawaru"
+        and you.piety_rank() >= 6
+        and contains_string_in("Receive Weapon", you.abilities())
+        and can_invoke()
+end
+
+function want_to_receive_armour()
+    return not c_persist.okawaru_armour_gifted
+        and you.god() == "Okawaru"
+        and you.piety_rank() >= 6
+        and contains_string_in("Receive Armour", you.abilities())
+        and can_invoke()
+end
+
+function want_to_read_acquirement()
+    return find_item("scroll", "acquirement") and can_read()
+end
+
+function plan_move_for_acquirement()
+    if not want_to_read_acquirement()
+                and not want_to_receive_weapon()
+                and not want_to_receive_armour()
+            or not destroys_items_at(const.origin)
+            or unable_to_move()
+            or dangerous_to_move() then
+        return false
+    end
+
+    for pos in radius_iter(const.origin, qw.los_radius) do
+        local map_pos = position_sum(qw.map_pos, pos)
+        if map_is_reachable_at(map_pos) and not destroys_items_at(pos) then
+            local result = best_move_towards(map_pos)
+            if result and move_to(result.move) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 function plan_receive_weapon()
     if c_persist.okawaru_weapon_gifted
             or you.god() ~= "Okawaru"
