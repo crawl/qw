@@ -1074,7 +1074,7 @@ function plan_retreat()
         return false
     end
 
-    local result = best_move_towards_positions({ best_pos })
+    local result = best_move_towards(best_pos)
     if result then
         say("RETREEAATING.")
         return move_towards_destination(result.move, result.dest, "retreat")
