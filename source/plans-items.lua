@@ -167,7 +167,7 @@ function plan_bless_weapon()
     return false
 end
 
-function want_to_receive_weapon()
+function can_receive_okawaru_weapon()
     return not c_persist.okawaru_weapon_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
@@ -175,7 +175,7 @@ function want_to_receive_weapon()
         and can_invoke()
 end
 
-function want_to_receive_armour()
+function can_receive_okawaru_armour()
     return not c_persist.okawaru_armour_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
@@ -183,14 +183,14 @@ function want_to_receive_armour()
         and can_invoke()
 end
 
-function want_to_read_acquirement()
+function can_read_acquirement()
     return find_item("scroll", "acquirement") and can_read()
 end
 
 function plan_move_for_acquirement()
-    if not want_to_read_acquirement()
-                and not want_to_receive_weapon()
-                and not want_to_receive_armour()
+    if not can_read_acquirement()
+                and not can_receive_okawaru_weapon()
+                and not can_receive_okawaru_armour()
             or not destroys_items_at(const.origin)
             or unable_to_move()
             or dangerous_to_move() then
@@ -210,7 +210,7 @@ function plan_move_for_acquirement()
     return false
 end
 
-function plan_receive_weapon()
+function plan_receive_okawaru_weapon()
     if c_persist.okawaru_weapon_gifted
             or you.god() ~= "Okawaru"
             or you.piety_rank() < 6
@@ -227,7 +227,7 @@ function plan_receive_weapon()
     return false
 end
 
-function plan_receive_armour()
+function plan_receive_okawaru_armour()
     if c_persist.okawaru_armour_gifted
             or you.god() ~= "Okawaru"
             or you.piety_rank() < 6
@@ -885,6 +885,9 @@ end
 -- These plans will only execute after a successful acquirement.
 function set_plan_acquirement()
     plans.acquirement = cascade {
+        {plan_move_for_acquirement, "move_for_acquirement"},
+        {plan_receive_okawaru_weapon, "receive_okawaru_weapon"},
+        {plan_receive_okawaru_armour, "receive_okawaru_armour"},
         {plan_maybe_pickup_acquirement, "try_pickup_acquirement"},
         {plan_maybe_upgrade_armour, "maybe_upgrade_armour"},
         {plan_maybe_upgrade_amulet, "maybe_upgrade_amulet"},
