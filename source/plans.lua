@@ -74,8 +74,19 @@ function plan_message()
     end
 end
 
+function plan_save()
+    if goal_status == "Save" then
+        c_persist.last_completed_goal = goal_status
+        magic(control("s"))
+        return true
+    end
+
+    return false
+end
+
 function plan_quit()
     if goal_status == "Quit" then
+        c_persist.last_completed_goal = goal_status
         magic(control('q') .. "yes\r")
         return true
     end
@@ -165,6 +176,7 @@ end
 -- This is the main move planning cascade.
 function set_plan_move()
     plans.move = cascade {
+        {plan_save, "save"},
         {plan_quit, "quit"},
         {plan_ancestor_identity, "try_ancestor_identity"},
         {plan_join_beogh, "join_beogh"},

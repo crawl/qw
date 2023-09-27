@@ -150,10 +150,11 @@ function goal_complete(plan, final)
         or plan == "Pan" and have_branch_runes("Pan")
         or plan == "Zig" and c_persist.zig_completed
         or plan == "Orb" and have_orb
+        or plan == "Save" and c_persist.last_completed_goal == "Save"
 end
 
 function choose_goal()
-    local next_goal, chosen_goal, normal_goal
+    local next_goal, chosen_goal, normal_goal, last_completed
 
     if debug_goal then
         if debug_goal == "Normal" then
@@ -161,9 +162,11 @@ function choose_goal()
             if normal_goal then
                 chosen_goal = debug_goal
             else
+                last_completed = debug_goal
                 debug_goal = nil
             end
         elseif goal_complete(debug_goal) then
+            last_completed = debug_goal
             debug_goal = nil
         else
             chosen_goal = debug_goal
@@ -179,23 +182,30 @@ function choose_goal()
         if chosen_goal == "Normal" then
             normal_goal = goal_normal_next(chosen_final)
             if not normal_goal then
+                last_completed = chosen_goal
                 chosen_goal = nil
             end
-        -- For God conversions, we don't perform them if we see that the next
-        -- plan is complete. This way if a goal list has god conversions,
-        -- past ones won't be re-attempted when we save and reload.
-        elseif chosen_goal:find("^God:")
-                and (goal_complete(chosen_goal, chosen_final)
-                    or next_goal
-                        and goal_complete(next_goal, next_final)) then
+        -- For God conversion and save goals, we don't perform them if we see
+        -- that the next plan is complete. This way if a goal list has god
+        -- conversions or saves, past ones won't be re-attempted when we save
+        -- and reload.
+        elseif (chosen_goal:find("^God:") or chosen_goal == "Save")
+                and next_goal
+                and goal_complete(next_goal, next_final) then
+            last_completed = chosen_goal
             chosen_goal = nil
         elseif goal_complete(chosen_goal, chosen_final) then
+            last_completed = chosen_goal
             chosen_goal = nil
         end
 
         if not chosen_goal then
             which_goal = which_goal + 1
         end
+    end
+
+    if last_completed then
+        c_persist.last_completed_goal = last_completed
     end
 
     -- We're out of goals, so we make our final task be winning.
@@ -264,6 +274,12 @@ function determine_goal()
     local status = chosen_goal
     local goal = status
     local desc
+
+    if status == "Save" then
+        goal_status = status
+        say("SAVING")
+        return
+    end
 
     if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
         status = "Quit"
@@ -477,7 +493,7 @@ function planning_convert_to_mp_using_gods()
 end
 
 function update_planning()
-    if goal_status == "Quit" then
+    if goal_status == "Save" or goal_status == "Quit" then
         return
     end
 
@@ -778,16 +794,17 @@ function initialize_goals()
 
         local branch, min_level, max_level = parse_level_range(plan)
         if not (branch
+                or plan == "Save"
+                or plan == "Quit"
+                or plan == "Escape"
                 or plan:find("^Rune:")
                 or plan:find("^God:")
-                or plan == "Hells"
                 or plan == "Normal"
                 or plan == "Shopping"
+                or plan == "Hells"
+                or plan == "Zig"
                 or plan == "Orb"
-                or plan == "Escape"
-                or plan == "Win"
-                or plan == "Quit"
-                or plan == "Zig") then
+                or plan == "Win") then
             error("Invalid goal '" .. tostring(plan) .. "'.")
         end
 

@@ -151,7 +151,7 @@ function turn_update()
     if want_goal_update then
         update_goal()
 
-        if goal_status == "Quit" then
+        if goal_status == "Save" or goal_status == "Quit" then
             return
         end
     end

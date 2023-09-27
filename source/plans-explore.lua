@@ -73,9 +73,12 @@ function plan_go_command()
         return false
     end
 
+    -- We can't set goal_travel data to an invalid level like D:0, so we set it
+    -- to D:1 and override it in this plan.
     if goal_status == "Escape"
             and goal_travel.branch == "D"
             and goal_travel.depth == 1 then
+        -- We're already on the stairs, so travel won't take us further.
         if view.feature_at(0, 0) == branch_exit("D") then
             go_upstairs(true)
         else

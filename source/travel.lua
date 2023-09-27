@@ -380,7 +380,7 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
 end
 
 function update_goal_travel()
-    if goal_status == "Quit" then
+    if goal_status == "Save" or goal_status == "Quit" then
         goal_travel = {}
         return
     end
