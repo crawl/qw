@@ -592,27 +592,8 @@ function want_to_brothers_in_arms()
                 -- monsters.
                 or you.piety_rank() > 4
                     and (want_to_berserk() and not can_berserk()
-                        or check_enemies_in_list(qw.los_radius, nasty_monsters)))
+                        or check_scary_monsters(qw.los_radius)))
             and count_brothers_in_arms(4) == 0 then
-        return true
-    end
-
-    return false
-end
-
-function want_to_finesse()
-    if not danger or dangerous_to_attack() then
-        return false
-    end
-
-    if in_branch("Zig")
-            and hp_is_low(80)
-            and count_enemies(qw.los_radius) >= 5 then
-        return true
-    end
-
-    if not you.teleporting()
-            and check_enemies_in_list(qw.los_radius, nasty_monsters) then
         return true
     end
 
@@ -637,7 +618,7 @@ end
 
 function want_to_greater_servant()
     if you.skill("Invocations") >= 12
-            and (check_enemies_in_list(qw.los_radius, nasty_monsters)
+            and (check_scary_monsters(qw.los_radius)
                 or hp_is_low(50) and immediate_danger) then
         if count_greater_servants(4) == 0 and not you.teleporting() then
             return true
@@ -654,8 +635,8 @@ function want_to_cleansing_flame()
     local holy_check = function(mons)
             return mons:is_holy_vulnerable()
         end
-    if not check_enemies_in_list(1, scary_monsters, holy_check)
-                and check_enemies_in_list(2, scary_monsters, holy_check)
+    if not check_scary_monsters(1, holy_check)
+                and check_scary_monsters(2, holy_check)
             or count_enemies(2, holy_check) > 8 then
         return true
     end
@@ -677,18 +658,16 @@ function want_to_divine_warrior()
         and not dangerous_to_attack()
         and not you.teleporting()
         and you.skill("Invocations") >= 8
-        and (check_enemies_in_list(qw.los_radius, nasty_monsters)
+        and (check_scary_monsters(qw.los_radius)
             or hp_is_low(50) and immediate_danger)
         and count_divine_warriors(4) == 0
 end
 
 function want_to_fiery_armour()
     return danger
+        and not you.status("fiery-armoured")
         and not dangerous_to_attack()
-        and (hp_is_low(50)
-            or count_enemies_in_list(qw.los_radius, scary_monsters) >= 2
-            or check_enemies_in_list(qw.los_radius, nasty_monsters)
-            or count_enemies(qw.los_radius) >= 6)
+        and (hp_is_low(50) or check_scary_monsters(qw.los_radius))
 end
 
 function want_to_apocalypse()
@@ -697,10 +676,8 @@ function want_to_apocalypse()
     end
 
     local dlevel = drain_level()
-    return dlevel == 0 and check_enemies_in_list(qw.los_radius, scary_monsters)
-        or dlevel <= 2
-            and (danger and hp_is_low(50)
-                or check_enemies_in_list(qw.los_radius, nasty_monsters))
+    return dlevel == 0 and check_scary_monsters(qw.los_radius)
+        or dlevel <= 2 and hp_is_low(50)
 end
 
 function bad_corrosion()
@@ -715,7 +692,7 @@ function bad_corrosion()
 end
 
 function want_to_teleport()
-    if in_branch("Zig") then
+    if you.teleporting() or in_branch("Zig") then
         return false
     end
 
@@ -749,24 +726,26 @@ function want_to_teleport()
 
     return immediate_danger and bad_corrosion()
             or immediate_danger and hp_is_low(25)
-            or count_nasty_hell_monsters(qw.los_radius) >= 9
+            or count_scary_hell_monsters(qw.los_radius) >= 9
 end
 
 function want_to_heal_wounds()
-    if have_orb then
-        return want_to_orbrun_heal_wounds()
-    end
-
-    if danger and can_ely_healing()
-            and hp_is_low(50)
-            and you.piety_rank() >= 5 then
+    if want_to_orbrun_heal_wounds() then
         return true
     end
 
-    return danger and hp_is_low(25)
+    if not danger then
+        return false
+    end
+
+    if can_ely_healing() and hp_is_low(50) and you.piety_rank() >= 5 then
+        return true
+    end
+
+    return hp_is_low(25)
 end
 
-function count_nasty_hell_monsters(radius)
+function count_scary_hell_monsters(radius)
     if not in_hell_branch() then
         return 0
     end
@@ -778,9 +757,10 @@ function count_nasty_hell_monsters(radius)
         or items.equipped_at("weapon")
             and items.equipped_at("weapon").ego() == "holy wrath"
     local filter = function(mons)
-        return not (have_holy_wrath and mons:is_holy_vulnerable())
+        return (enemy:threat() >= 3 or monster_in_list(mons, scary_monsters))
+            and not (have_holy_wrath and mons:is_holy_vulnerable())
     end
-    return count_enemies_in_list(radius, nasty_monsters, filter)
+    return count_enemies(radius, filter)
 end
 
 function want_to_serious_buff()
@@ -817,7 +797,7 @@ function want_to_serious_buff()
         return true
     end
 
-    if count_nasty_hell_monsters(qw.los_radius) >= 5 then
+    if count_scary_hell_monsters(qw.los_radius) >= 5 then
         return true
     end
 
@@ -860,6 +840,10 @@ function want_magic_points()
 end
 
 function want_to_trogs_hand()
+    if you.regenerating() then
+        return false
+    end
+
     local hp, mhp = you.hp()
     return in_branch("Abyss") and mhp - hp >= 30
         or not dangerous_to_attack()
@@ -869,18 +853,37 @@ end
 function want_to_berserk()
     return danger
         and not dangerous_to_melee()
+        and not you.berserk()
         and (hp_is_low(50) and sense_danger(2, true)
-            or check_enemies_in_list(2, scary_monsters)
+            or check_scary_monsters(2)
             or invis_monster and nasty_invis_caster)
+end
+
+function want_to_finesse()
+    if not danger or dangerous_to_attack() or you.status("finesse-ful") then
+        return false
+    end
+
+    if in_branch("Zig")
+            and hp_is_low(80)
+            and count_enemies(qw.los_radius) >= 5 then
+        return true
+    end
+
+    if not you.teleporting() and check_scary_monsters(qw.los_radius) then
+        return true
+    end
+
+    return false
 end
 
 function want_to_heroism()
     return danger
         and not dangerous_to_attack()
-        and (have_orb and want_to_orbrun_buff()
-            or hp_is_low(70)
-            or check_enemies_in_list(qw.los_radius, scary_monsters)
-            or count_enemies(0, 0, qw.los_radius) >= 4)
+        and not you.status("heroic")
+        and not you.teleporting()
+        and (want_to_finesse() and not can_finesse()
+            or total_monster_score(3) >= 15)
 end
 
 function want_to_recall()

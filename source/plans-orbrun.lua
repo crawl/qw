@@ -6,6 +6,10 @@ function want_to_orbrun_teleport()
 end
 
 function want_to_orbrun_heal_wounds()
+    if not have_orb then
+        return false
+    end
+
     if danger then
         return hp_is_low(25) or hp_is_low(50) and you.teleporting()
     else
@@ -14,8 +18,7 @@ function want_to_orbrun_heal_wounds()
 end
 
 function want_to_orbrun_buff()
-    return count_pan_lords(qw.los_radius) > 0
-        or check_enemies_in_list(qw.los_radius, scary_monsters)
+    return have_orb and check_scary_monsters(qw.los_radius)
 end
 
 function plan_go_to_orb()
@@ -33,6 +36,7 @@ function plan_orbrun_haste()
     if want_to_orbrun_buff() and not you.status("finesse-ful") then
         return haste()
     end
+
     return false
 end
 
@@ -45,7 +49,7 @@ function plan_orbrun_might()
 end
 
 function plan_orbrun_heroism()
-    if can_heroism() and want_to_orbrun_buff() then
+    if not can_finesse() and can_heroism() and want_to_orbrun_buff() then
         return heroism()
     end
 

@@ -344,6 +344,10 @@ function want_to_retreat_func(allow_attacking)
         if enemy:can_cause_retreat() and enemy:has_path_to_melee_player() then
             count = count + enemy:threat()
         end
+
+        if count >= 5 then
+            break
+        end
     end
 
     if count < 5 then

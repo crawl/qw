@@ -20,13 +20,6 @@ function choose_single_skill(sk)
 end
 
 function skill_value(sk)
-    if you.god() == "Okawaru"
-            and you.base_skill(sk) >= 22
-            and sk ~= "Fighting"
-            and sk ~= "Invocations" then
-        return 0
-    end
-
     if sk == "Dodging" then
         local str, _ = you.strength()
         if str < 1 then
