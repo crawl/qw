@@ -24,15 +24,6 @@ function drink(c)
     return true
 end
 
-function selfzap(c)
-    if not can_zap() then
-        return false
-    end
-    say("ZAPPING " .. item(c).name() .. ".")
-    magic("V" .. letter(c) .. ".")
-    return true
-end
-
 function read_by_name(name)
     local c = find_item("scroll", name)
     if (c and read(c)) then
@@ -44,14 +35,6 @@ end
 function drink_by_name(name)
     local c = find_item("potion", name)
     if (c and drink(c)) then
-        return true
-    end
-    return false
-end
-
-function selfzap_by_name(name)
-    local c = find_item("wand", name)
-    if (c and selfzap(c)) then
         return true
     end
     return false
@@ -684,10 +667,10 @@ end
 function plan_drop_other_items()
     upgrade_phase = false
     for it in inventory() do
-        if it.class(true) == "missile" and not want_missile(it) or
-             it.class(true) == "wand" and not want_wand(it) or
-             it.class(true) == "potion" and not want_potion(it) or
-             it.class(true) == "scroll" and not want_scroll(it) then
+        if it.class(true) == "missile" and not want_missile(it)
+                or it.class(true) == "wand" and not want_wand(it)
+                or it.class(true) == "potion" and not want_potion(it)
+                or it.class(true) == "scroll" and not want_scroll(it) then
             say("DROPPING " .. it.name() .. ".")
             magic("d" .. letter(it) .. "\r")
             return true
@@ -697,35 +680,42 @@ function plan_drop_other_items()
     return false
 end
 
-function plan_quaff_id()
+function quaff_unided_potion(min_quantity)
     for it in inventory() do
-        if it.class(true) == "potion" and it.quantity > 1 and
-             not it.fully_identified then
+        if it.class(true) == "potion"
+                and (not min_quantity or it.quantity >= min_quantity)
+                and not it.fully_identified then
             return drink(it)
         end
     end
     return false
 end
 
-function plan_read_id()
-    if not can_read() then
+function plan_quaff_unided_potions()
+    if not can_drink() then
         return false
     end
 
+    return quaff_unided_potion(2)
+end
+
+function read_unided_scroll()
     for it in inventory() do
         if it.class(true) == "scroll" and not it.fully_identified then
             items.swap_slots(it.slot, items.letter_to_index('Y'), false)
-            weap = items.equipped_at("Weapon")
-            scroll_letter = 'Y'
-            if weap and not weap.artefact
-                    and not brand_is_great(weap.ego()) then
-                scroll_letter = items.index_to_letter(weap.slot)
-                items.swap_slots(weap.slot, items.letter_to_index('Y'), false)
+
+            local weapon = get_weapon()
+            local scroll_letter = 'Y'
+            if weapon and not weapon.artefact
+                    and not brand_is_great(weapon.ego()) then
+                scroll_letter = items.index_to_letter(weapon.slot)
+                items.swap_slots(weapon.slot, items.letter_to_index('Y'), false)
             end
-            if you.race() ~= "Felid" then
-                return read(scroll_letter, ".Y" .. string.char(27) .. "YB")
-            else
+
+            if you.race() == "Felid" then
                 return read(scroll_letter, ".Y" .. string.char(27) .. "YC")
+            else
+                return read(scroll_letter, ".Y" .. string.char(27) .. "YB")
             end
         end
     end
@@ -733,31 +723,30 @@ function plan_read_id()
     return false
 end
 
-function plan_use_id_scrolls()
+function plan_read_unided_scrolls()
     if not can_read() then
         return false
     end
 
-    local id_scroll
-    for it in inventory() do
-        if it.class(true) == "scroll" and it.name():find("identify") then
-            id_scroll = it
-            break
-        end
+    return read_unided_scroll()
+end
+
+function plan_use_identify_scrolls()
+    if not can_read() then
+        return false
     end
+
+    local id_scroll = find_item("scroll", "identify")
     if not id_scroll then
         return false
     end
 
-    local count = 0
-    if id_scroll.quantity > 1 then
-        for it in inventory() do
-            if it.class(true) == "potion" and not it.fully_identified then
-                oldname = it.name()
-                if read(id_scroll, letter(it)) then
-                    say("IDENTIFYING " .. oldname)
-                    return true
-                end
+    for it in inventory() do
+        if it.class(true) == "potion" and not it.fully_identified then
+            oldname = it.name()
+            if read(id_scroll, letter(it)) then
+                say("IDENTIFYING " .. oldname)
+                return true
             end
         end
     end

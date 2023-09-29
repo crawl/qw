@@ -97,6 +97,10 @@ function ch_stash_search_annotate_item(it)
     return ""
 end
 
+function remove_message_tags(text)
+    return text:gsub("<[^>]+>(.-)</[^>]+>", "%1")
+end
+
 -- A hook for incoming game messages. Note that this is executed for every new
 -- message regardless of whether turn_update() this turn (e.g during
 -- autoexplore or travel)). Hence this function shouldn't depend on any state
@@ -157,6 +161,14 @@ function c_message(text, channel)
     -- message, we prevent counting timed bazaars twice.
     elseif text:find("abyssal rune vanishes from your memory") then
         c_persist.sensed_abyssal_rune = false
+    elseif text:find("potion of [%a ]+%.") then
+        text = remove_message_tags(text)
+        record_item_ident("potion",
+            text:gsub(".*potion of ([%a ]+)%..*", "%1"))
+    elseif text:find("scroll of [%a ]+%.") then
+        text = remove_message_tags(text)
+        record_item_ident("scroll",
+            text:gsub(".*scroll of ([%a ]+)%..*", "%1"))
     elseif text:find("Found a gateway to a bazaar") then
         record_portal(you.where(), "Bazaar", true)
     elseif text:find("Hurry and find it")

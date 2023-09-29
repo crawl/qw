@@ -1492,3 +1492,21 @@ end
 function weapon_can_target_empty(weapon)
     return false
 end
+
+function record_item_ident(item_type, item_subtype)
+    if item_type == "potion" then
+        c_persist.potion_ident[item_subtype] = true
+    elseif item_type == "scroll" then
+        c_persist.scroll_ident[item_subtype] = true
+    end
+end
+
+function item_type_is_ided(item_type, subtype)
+    if item_type == "potion" then
+        return c_persist.potion_ident[subtype]
+    elseif item_type == "scroll" then
+        return c_persist.scroll_ident[subtype]
+    end
+
+    return false
+end

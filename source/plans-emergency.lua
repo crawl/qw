@@ -451,8 +451,13 @@ function heal_general()
         return true
     end
 
-    if can_drink_heal_wounds() and drink_by_name("heal wounds") then
-        return true
+    if can_drink_heal_wounds() then
+        if drink_by_name("heal wounds") then
+            return true
+        elseif not item_type_is_ided("potion", "heal wounds")
+                and quaff_unided_potion() then
+            return true
+        end
     end
 
     if can_ru_healing() then
@@ -953,6 +958,10 @@ function plan_cure_confusion()
     if can_purification() then
         purification()
         return true
+    end
+
+    if not item_type_is_ided("potion", "curing") then
+        return quaff_unided_potion()
     end
 
     return false
