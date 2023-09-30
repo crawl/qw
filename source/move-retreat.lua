@@ -335,9 +335,12 @@ function want_to_retreat_func(allow_attacking)
 
     local count = 0
     for _, enemy in ipairs(enemy_list) do
-        -- If a monster is currently able to melee us, we leave retreating to a
-        -- tactical step.
-        if not allow_attacking and enemy:can_melee_player() then
+        -- If a monster is currently able to melee us or is a proper ranged
+        -- attacking monster (not just one with an out-of-range reach attack),
+        -- we don't want a long-range retreating. Any retreating will be done
+        -- to a position in LOS by a tactical step.
+        if not allow_attacking
+                and (enemy:can_melee_player() or enemy:is_ranged(true)) then
             return false
         end
 

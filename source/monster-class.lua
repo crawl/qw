@@ -310,15 +310,16 @@ function Monster:stabbability()
     return self:property_memo("stabbability")
 end
 
-function Monster:is_ranged()
-    return self:property_memo("is_ranged",
-        function()
+function Monster:is_ranged(ignore_reach)
+    return self:property_memo_args("is_ranged",
+        function(ignore_reach_arg)
             return self.minfo:has_known_ranged_attack()
-                and not (self:name():find("kraken")
-                    or self:name() == "lost soul")
+                    and not (ignore_reach_arg and self:reach_range() > 1
+                        or self:name():find("kraken")
+                        or self:name() == "lost soul")
                 -- We want to treat these as ranged.
                 or self:name() == "obsidian statue"
-        end)
+        end, ignore_reach)
 end
 
 -- Whether we'd ever want to attack this monster, and hence whether it'll be
