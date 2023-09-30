@@ -116,7 +116,7 @@ function Monster:res_draining()
     return self:get_property("res_draining")
 end
 
-function Monster:is_mmune_vampirism()
+function Monster:is_immune_vampirism()
     return self:get_property("is_immune_vampirism",
         function()
             local holiness = self:holiness()
