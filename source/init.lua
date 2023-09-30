@@ -89,6 +89,7 @@ function initialize()
         qw.automatic = true
     end
 
+    qw.turn_count = you.turns() - 1
     qw.dump_count = you.turns() + 100 - (you.turns() % 100)
     qw.skill_count = you.turns() - (you.turns() % 5)
     qw.read_message = true

@@ -9,7 +9,7 @@ function turn_memo(name, func, ...)
     if arg.n > 0 then
         for j = 1, arg.n do
             if j == 1 then
-                parent = memos
+                parent = qw.turn_memos
                 key = name
             end
 
@@ -46,27 +46,28 @@ function turn_update()
     end
 
     local turns = you.turns()
-    if turns == turn_count then
-        time_passed = false
+    if turns == qw.turn_count then
+        qw.time_passed = false
         return
     end
 
     have_orb = you.have_orb()
-    time_passed = true
-    turn_count = turns
-    memos = {}
+    qw.time_passed = true
+    qw.turn_count = turns
+    qw.turn_memos = {}
+
     if you.turns() >= qw.dump_count then
         dump_count = qw.dump_count + 100
         crawl.dump_char()
     end
 
-    if turn_count >= qw.skill_count then
+    if qw.turn_count >= qw.skill_count then
         qw.skill_count = qw.skill_count + 5
         handle_skills()
     end
 
     if hp_is_full() then
-        qw.full_hp_turn = turn_count
+        qw.full_hp_turn = qw.turn_count
     end
     position_is_safe = is_safe_at(const.origin)
     position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
@@ -105,11 +106,11 @@ function turn_update()
         stuck_turns = 0
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
-            vaults_end_entry_turn = turn_count
+            vaults_end_entry_turn = qw.turn_count
         elseif where == "Tomb:2" and not tomb2_entry_turn then
-            tomb2_entry_turn = turn_count
+            tomb2_entry_turn = qw.turn_count
         elseif where == "Tomb:3" and not tomb3_entry_turn then
-            tomb3_entry_turn = turn_count
+            tomb3_entry_turn = qw.turn_count
         end
     end
 

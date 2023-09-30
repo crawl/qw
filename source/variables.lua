@@ -104,10 +104,6 @@ local reachable_position
 local target_flee_position
 local last_flee_turn = -100
 
-local turn_count = you.turns() - 1
-local time_passed
-local memos
-
 local have_orb
 local disable_autoexplore
 local last_wait = 0
