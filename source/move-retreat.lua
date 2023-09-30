@@ -324,7 +324,7 @@ function best_retreat_position_func(los_only)
 end
 
 function best_retreat_position(los_only)
-    return turn_memo("best_retreat_position", best_retreat_position_func,
+    return turn_memo_args("best_retreat_position", best_retreat_position_func,
         los_only)
 end
 
@@ -359,7 +359,8 @@ function want_to_retreat_func(allow_attacking)
 end
 
 function want_to_retreat(allow_attacking)
-    return turn_memo("want_to_retreat", want_to_retreat_func, allow_attacking)
+    return turn_memo_args("want_to_retreat", want_to_retreat_func,
+        allow_attacking)
 end
 
 function retreat_distance_at(pos)

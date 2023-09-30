@@ -136,11 +136,7 @@ function assess_melee_target(attack, enemy)
     return result
 end
 
-function get_melee_target(assume_flight)
-    if memos["melee_target"] ~= nil then
-        return memos["melee_target"]
-    end
-
+function get_melee_target_func(assume_flight)
     local attack = {}
     attack.props = { "player_can_melee", "distance", "is_constricting_you",
         "stabbability", "damage_level", "threat", "is_orc_priest_wizard" }
@@ -158,13 +154,12 @@ function get_melee_target(assume_flight)
         end
     end
 
-    if best_result then
-        memos["melee_target"] = best_result
-    else
-        memos["melee_target"] = false
-    end
+    return best_result
+end
 
-    return memos["melee_target"]
+function get_melee_target(assume_flight)
+    return turn_memo_args("get_melee_target", get_melee_target_func,
+        assume_flight)
 end
 
 function attack_melee(pos, use_control)

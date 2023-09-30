@@ -38,7 +38,7 @@ end
 
 function move_to(pos)
     local mons_in_way = monster_in_way(pos)
-    if mons_in_way and not get_monster_at(pos):can_attack() then
+    if mons_in_way and not get_monster_at(pos):player_can_attack() then
         return false
     end
 

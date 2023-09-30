@@ -4,28 +4,42 @@
 -- A value for sorting last when comparing turns.
 const.inf_turns = 200000000
 
-function turn_memo(name, func, ...)
-    local parent, key
-    if arg.n > 0 then
-        for j = 1, arg.n do
-            if j == 1 then
-                parent = qw.turn_memos
-                key = name
-            end
-
-            if parent[key] == nil then
-                parent[key] = {}
-            end
-            parent = parent[key]
-
-            key = arg[j]
-            if key == nil then
-                key = false
-            end
+function turn_memo(name, func)
+    if qw.turn_memos[name] == nil then
+        local val = func()
+        if val == nil then
+            val = false
         end
-    else
-        parent = memos
-        key = name
+        qw.turn_memos[name] = val
+    end
+
+    return qw.turn_memos[name]
+end
+
+function turn_memo_args(name, func, ...)
+    assert(arg.n > 0)
+
+    local parent, key
+    for j = 1, arg.n do
+        if j == 1 then
+            parent = qw.turn_memos
+            key = name
+        end
+
+        if parent[key] == nil then
+            parent[key] = {}
+        end
+
+        parent = parent[key]
+
+        key = arg[j]
+        -- We turn any nil argument into false so we can pass on a valid set of
+        -- args to the function. This might cause unexpected behaviour for an
+        -- arbitrary function.
+        if key == nil then
+            key = false
+            arg[j] = false
+        end
     end
 
     if parent[key] == nil then
