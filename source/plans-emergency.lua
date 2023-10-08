@@ -889,7 +889,7 @@ function want_to_heroism()
         and not you.status("heroic")
         and not you.teleporting()
         and (want_to_finesse() and not can_finesse()
-            or total_monster_score(3) >= 15)
+            or total_monster_score(qw.los_radius) >= 10)
 end
 
 function want_to_recall()

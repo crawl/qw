@@ -405,7 +405,10 @@ end
 function check_scary_monsters(radius, filter)
     local score = 0
     for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius and (not filter or filter(enemy)) then
+        if enemy:distance() <= radius
+                and (not filter or filter(enemy))
+                and (enemy:is_ranged(true)
+                    or enemy:has_path_to_melee_player()) then
             if enemy:threat() >= 3
                     or monster_in_list(enemy, scary_monsters) then
                 return true
@@ -425,7 +428,10 @@ end
 function total_monster_score(radius, filter)
     local score = 0
     for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius and (not filter or filter(enemy)) then
+        if enemy:distance() <= radius
+                and (not filter or filter(enemy))
+                and (enemy:is_ranged(true)
+                    or enemy:has_path_to_melee_player(true)) then
             score = score + enemy:threat()
         end
     end

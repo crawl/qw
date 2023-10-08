@@ -237,7 +237,21 @@ function Monster:ignores_player_projectiles()
 end
 
 function Monster:threat()
-    return self:property_memo("threat")
+    return self:property_memo("threat",
+        function()
+            local mons_berserk = self:is("berserk")
+            local finesse = you.status("finesse-ful")
+            local ranged = have_ranged_weapon()
+            local berserk = you.berserk() and not ranged
+            return self.minfo:threat()
+                * (mons_berserk and 2 or 1)
+                * (not mons_berserk and self:is("strong") and 1.33 or 1)
+                * (not mons_berserk and self:is("hasted") and 1.5 or 1)
+                * (you.slowed() and 1.5 or 1)
+                * ((finesse or berserk) and 0.5 or 1)
+                * (not finesse and not berserk and you.hasted() and 0.67 or 1)
+                * (not berserk and not ranged and you.mighty() and 0.75 or 1)
+        end)
 end
 
 function Monster:is_stationary()
