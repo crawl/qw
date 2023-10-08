@@ -32,7 +32,7 @@ function should_rest()
     if have_orb then
         return you.confused()
             or transformed()
-            or you.slowed()
+            or you.slowed() and not qw.slow_aura
             or you.berserk()
             or you.teleporting()
             or you.status("spiked")
@@ -70,13 +70,13 @@ function reason_to_rest(percentage)
 
     return you.confused()
         or transformed()
-        or you.slowed()
+        or you.slowed() and not qw.slow_aura
         or you.exhausted()
         or you.teleporting()
         or you.status("on berserk cooldown")
         or you.status("marked")
         or you.status("spiked")
-        or you.status("weakened")
+        or you.status("weak-willed") and not in_branch("Tar")
         or you.silencing()
         or you.corrosion() > base_corrosion
         or hp_is_low(percentage)

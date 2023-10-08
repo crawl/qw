@@ -31,6 +31,7 @@ local res_func_table = {
     rN=you.res_draining,
     -- returns a boolean
     rCorr=(function() return you.res_corr() and 1 or 0 end),
+    rSlow=(function() return you.race() == "Formicid" and 1 or 0 end),
     Will=you.willpower,
 }
 
@@ -92,7 +93,7 @@ local scary_monsters = {
     ["ice beast"] = check_resist(7, "rC", 1),
 
     ["white ugly thing"] = check_resist(15, "rC", 1),
-    ["freezing wraith"] = check_resist(15, "rC", 1),
+    ["freezing wraith"] = check_resist(15, "rSlow", 1),
 
     ["shock serpent"] = check_resist(17, "rElec", 1),
     ["sun demon"] = check_resist(17, "rF", 1),
@@ -351,6 +352,8 @@ end
 
 function update_monsters()
     enemy_list = {}
+    qw.slow_aura = false
+
     local closest_invis_pos
     local sinv = you.see_invisible()
     for pos in radius_iter(const.origin) do
@@ -360,6 +363,10 @@ function update_monsters()
                 local mons = Monster:new(mon_info)
                 monster_map[pos.x][pos.y] = mons
                 if mons:is_enemy() and not mons:is_safe() then
+                    if mons:name() == "torpor snail" then
+                        qw.slow_aura = true
+                    end
+
                     table.insert(enemy_list, mons)
                 end
             else

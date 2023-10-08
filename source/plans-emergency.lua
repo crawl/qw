@@ -292,7 +292,7 @@ function fiery_armour()
 end
 
 function plan_resistance()
-    if want_resistance() then
+    if can_drink() and want_resistance() then
         return drink_by_name("resistance")
     end
 
@@ -300,7 +300,7 @@ function plan_resistance()
 end
 
 function plan_magic_points()
-    if not you.teleporting() and want_magic_points() then
+    if can_drink() and want_magic_points() then
         return drink_by_name("magic")
     end
 
@@ -308,7 +308,7 @@ function plan_magic_points()
 end
 
 function plan_trogs_hand()
-    if can_trogs_hand() and want_to_trogs_hand() and not you.teleporting() then
+    if can_trogs_hand() and want_to_trogs_hand() then
         trogs_hand()
         return true
     end
@@ -482,35 +482,32 @@ function plan_heal_wounds()
     return false
 end
 
+function can_drink_haste()
+    return can_drink()
+        and you.god() ~= "Cheibriados"
+        and you.race() ~= "Formicid"
+end
+
 function plan_haste()
-    if want_to_serious_buff() then
-        return haste()
+    if can_drink_haste() and want_to_haste() then
+        return drink_by_name("haste")
     end
+
     return false
+end
+
+function want_to_might()
+    return not you.mighty()
+        and want_to_serious_buff()
+        and not have_ranged_weapon()
 end
 
 function plan_might()
-    if not have_ranged_weapon() and want_to_serious_buff() then
-        return might()
+    if can_drink() and want_to_might() then
+        return drink_by_name("might")
     end
+
     return false
-end
-
-function haste()
-    if you.hasted() or you.race() == "Formicid"
-            or you.god() == "Cheibriados" then
-        return false
-    end
-
-    return drink_by_name("haste")
-end
-
-function might()
-    if you.mighty() then
-        return false
-    end
-
-    return drink_by_name("might")
 end
 
 function attraction()
@@ -811,27 +808,62 @@ function want_to_serious_buff()
 end
 
 function want_resistance()
-    return danger
-        and not dangerous_to_attack()
-        and not you.teleporting()
-        and not you.extra_resistant()
-        and (check_enemies_in_list(qw.los_radius, fire_resistance_monsters)
-                and you.res_fire() < 3
-            or check_enemies_in_list(qw.los_radius, cold_resistance_monsters)
-                and you.res_cold() < 3
-            or check_enemies_in_list(qw.los_radius, elec_resistance_monsters)
-                and you.res_shock() < 1
-            or check_enemies_in_list(qw.los_radius, pois_resistance_monsters)
-                and you.res_poison() < 1
-            or in_branch("Zig")
-                and check_enemies_in_list(qw.los_radius, acid_resistance_monsters)
-                and not you.res_corr())
+    if not danger
+            or dangerous_to_attack()
+            or you.teleporting()
+            or you.extra_resistant() then
+        return false
+    end
+
+    for _, enemy in ipairs(enemy_list) do
+        if (enemy:has_path_to_melee_player() or enemy:is_ranged(true))
+                and (monster_in_list(enemy, fire_resistance_monsters)
+                        and you.res_fire() < 3
+                    or monster_in_list(enemy, cold_resistance_monsters)
+                        and you.res_cold() < 3
+                    or monster_in_list(enemy, elec_resistance_monsters)
+                        and you.res_shock() < 1
+                    or monster_in_list(enemy, pois_resistance_monsters)
+                        and you.res_poison() < 1
+                    or in_branch("Zig")
+                        and monster_in_list(enemy, acid_resistance_monsters)
+                        and not you.res_corr()) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function want_to_haste()
+    if not danger
+            or dangerous_to_attack()
+            or you.hasted()
+            or you.teleporting() then
+        return false
+    end
+
+    if you.god() == "Okawaru"
+            and not you.status("finesse-ful")
+            and not can_finesse()
+            and want_to_finesse()
+            and not can_heroism()
+            and want_to_heroism() then
+        return true
+    end
+
+    if you.slowed() and total_monster_score(qw.los_radius) >= 10 then
+        return true
+    end
+
+    return false
 end
 
 function want_magic_points()
     local mp, mmp = you.mp()
     return danger
         and not dangerous_to_attack()
+        and not you.teleporting()
         -- Don't bother restoring MP if our max MP is low.
         and mmp >= 20
         -- No point trying to restore MP with ghost moths around.
@@ -846,7 +878,7 @@ function want_magic_points()
 end
 
 function want_to_trogs_hand()
-    if you.regenerating() then
+    if you.regenerating() or you.teleporting() then
         return false
     end
 
@@ -1020,7 +1052,7 @@ function plan_special_purification()
         return false
     end
 
-    if you.slowed() or you.petrifying() then
+    if you.slowed() and not qw.slow_aura or you.petrifying() then
         purification()
         return true
     end
@@ -1124,13 +1156,8 @@ function set_plan_emergency()
         {plan_blinking, "blinking"},
         {plan_drain_life, "drain_life"},
         {plan_heal_wounds, "heal_wounds"},
-        {plan_tomb2_arrival, "tomb2_arrival"},
-        {plan_tomb3_arrival, "tomb3_arrival"},
-        {plan_cloud_step, "cloud_step"},
         {plan_trogs_hand, "trogs_hand"},
-        {plan_haste, "haste"},
-        {plan_resistance, "resistance"},
-        {plan_magic_points, "magic_points"},
+        {plan_cloud_step, "cloud_step"},
         {plan_escape_net, "escape_net"},
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
@@ -1143,10 +1170,12 @@ function set_plan_emergency()
         {plan_water_step, "water_step"},
         {plan_coward_step, "coward_step"},
         {plan_other_step, "other_step"},
+        {plan_tomb2_arrival, "tomb2_arrival"},
+        {plan_tomb3_arrival, "tomb3_arrival"},
+        {plan_magic_points, "magic_points"},
         {plan_cleansing_flame, "try_cleansing_flame"},
         {plan_brothers_in_arms, "brothers_in_arms"},
         {plan_greater_servant, "greater_servant"},
-        {plan_divine_warrior, "divine_warrior"},
         {plan_apocalypse, "try_apocalypse"},
         {plan_slouch, "try_slouch"},
         {plan_hydra_destruction, "try_hydra_destruction"},
@@ -1155,12 +1184,15 @@ function set_plan_emergency()
         {plan_dig_grate, "try_dig_grate"},
         {plan_wield_weapon, "wield_weapon"},
         {plan_swap_weapon, "swap_weapon"},
-        {plan_heroism, "heroism"},
+        {plan_divine_warrior, "divine_warrior"},
+        {plan_resistance, "resistance"},
         {plan_finesse, "finesse"},
+        {plan_heroism, "heroism"},
+        {plan_haste, "haste"},
         {plan_might, "might"},
-        {plan_berserk, "berserk"},
         {plan_recall, "recall"},
         {plan_recall_ancestor, "try_recall_ancestor"},
         {plan_recite, "try_recite"},
+        {plan_berserk, "berserk"},
     }
 end
