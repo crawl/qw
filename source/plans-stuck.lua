@@ -74,8 +74,8 @@ function plan_clear_exclusions()
 end
 
 function plan_stuck_dig_grate()
-    local wand_letter = find_item("wand", "digging")
-    if not wand_letter or not can_zap() then
+    local wand = find_item("wand", "digging")
+    if not wand or not can_zap() then
         return false
     end
 
@@ -92,9 +92,7 @@ function plan_stuck_dig_grate()
     end
 
     if grate_offset < 20 then
-        say("ZAPPING " .. item(wand_letter).name() .. ".")
-        magic("V" .. wand_letter .. "r" .. vector_move(grate_pos) .. "\r")
-        return true
+        return zap_item(wand, grate_pos)
     end
 
     return false
@@ -116,6 +114,7 @@ function plan_stuck_teleport()
     if can_teleport() then
         return teleport()
     end
+
     return false
 end
 

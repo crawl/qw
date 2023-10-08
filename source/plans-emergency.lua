@@ -428,14 +428,15 @@ function plan_blinking()
         end
     end
     if best_count >= cur_count + 2 then
-        local c = find_item("scroll", "blinking")
-        return read(letter(c),  vector_move(best_x, best_y) .. ".")
+        local scroll = find_item("scroll", "blinking")
+        return read_scroll(scroll,  vector_move(best_x, best_y) .. ".")
     end
     return false
 end
 
 function can_drink_heal_wounds()
-    return you.mutation("no potion heal") < 2
+    return can_drink()
+        and you.mutation("no potion heal") < 2
         and not (items.equipped_at("Body Armour")
             and items.equipped_at("Body Armour"):name():find("NoPotionHeal"))
 end
@@ -1055,18 +1056,15 @@ function can_dig_to(pos)
 end
 
 function plan_dig_grate()
-    local wand_letter = find_item("wand", "digging")
-    if not wand_letter or not can_zap() then
+    local wand = find_item("wand", "digging")
+    if not wand or not can_zap() then
         return false
     end
 
     for _, enemy in ipairs(enemy_list) do
         if not map_is_reachable_at(enemy:map_pos())
                 and enemy:should_dig_unreachable() then
-            say("ZAPPING " .. item(wand_letter).name() .. ".")
-            magic("V" .. wand_letter .. "r" .. vector_move(enemy:pos())
-                .. "\r")
-            return true
+            return zap_item(wand, enemy:pos)
         end
     end
 

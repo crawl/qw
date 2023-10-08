@@ -217,7 +217,7 @@ function player_resist(str, it)
     end
     local other_res = intrinsic_resist(str)
     for it2 in inventory() do
-        if it2.equipped and slot(it2) ~= slot(it) then
+        if it2.equipped and it2.slot ~= it.slot then
             other_res = other_res + item_resist(str, it2)
         end
     end
@@ -942,7 +942,7 @@ function count_charges(wand_type, ignore_it)
     local count = 0
     for it in inventory() do
         if it.class(true) == "wand"
-                and (not ignore_it or slot(it) ~= slot(ignore_it))
+                and (not ignore_it or it.slot ~= ignore_it.slot)
                 and it.subtype() == wand_type then
             count = count + it.plus
         end
@@ -1009,7 +1009,7 @@ function item_is_sit_dominated(it, sit)
     end
 
     for it2 in inventory() do
-        if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
+        if equip_slot(it2) == slotname and it2.slot ~= it.slot then
             local minv2, maxv2 = weapon_value(it2, nil, nil, sit)
             if minv2 >= maxv
                     and not (slotname == "Weapon"
@@ -1046,7 +1046,7 @@ function item_is_dominated(it)
         num_slots = max_rings()
     end
     for it2 in inventory() do
-        if equip_slot(it2) == slotname and slot(it2) ~= slot(it) then
+        if equip_slot(it2) == slotname and it2.slot ~= it.slot then
             local minv2, maxv2 = equip_value(it2)
             if minv2 >= maxv
                     or minv2 >= minv
@@ -1192,34 +1192,16 @@ function free_inventory_slots()
     return slots
 end
 
-function slot(x)
-    if type(x) == "userdata" then
-        return x.slot
-    elseif type(x) == "string" then
-        return items.letter_to_index(x)
-    else
-        return x
-    end
+function letter_slot(letter)
+    return items.letter_to_index(letter)
 end
 
-function letter(x)
-    if type(x) == "userdata" then
-        return items.index_to_letter(x.slot)
-    elseif type(x) == "number" then
-        return items.index_to_letter(x)
-    else
-        return x
-    end
+function slot_letter(slot)
+    return items.index_to_letter(slot)
 end
 
-function item(x)
-    if type(x) == "number" then
-        return items.inslot(x)
-    elseif type(x) == "string" then
-        return items.inslot(items.letter_to_index(x))
-    else
-        return x
-    end
+function item_letter(item)
+    return slot_letter(item.slot)
 end
 
 function ring_list()
@@ -1268,26 +1250,14 @@ function count_item(cls, name)
 end
 
 function find_item(cls, name)
-    for it in inventory() do
-        if it.class(true) == cls and it.name():find(name) then
-            return items.index_to_letter(it.slot)
-        end
-    end
-end
-
-function have_item(cls, name)
-    for it in inventory() do
-        if it.class(true) == cls and it.name():find(name) then
-            return true
-        end
-    end
-end
-
-function get_dig_wand()
-    return turn_memo("get_dig_wand",
-        function()
-            return find_item("wand", "digging")
-        end)
+    turn_memo_args("find_item",
+        function(cls_arg, name_arg)
+            for it in inventory() do
+                if it.class(true) == cls_arg and it.name():find(name_arg) then
+                    return it
+                end
+            end
+        end, cls, name)
 end
 
 local missile_ratings = {

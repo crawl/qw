@@ -443,7 +443,7 @@ end
 function throw_missile(missile, pos, aim_at_target)
     local cur_missile = items.fired_item()
     if not cur_missile or missile.name() ~= cur_missile.name() then
-        magic("Q*" .. letter(missile))
+        magic("Q*" .. item_letter(missile))
     end
 
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
@@ -453,7 +453,7 @@ function shoot_launcher(pos, aim_at_target)
     local weapon = get_weapon()
     local cur_missile = items.fired_item()
     if not cur_missile or weapon.name() ~= cur_missile.name() then
-        magic("Q*" .. letter(weapon))
+        magic("Q*" .. item_letter(weapon))
     end
 
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
@@ -629,8 +629,8 @@ function plan_flight_move_towards_enemy()
         return false
     end
 
-    local slot = find_item("potion", "enlightenment")
-    if not slot then
+    local potion = find_item("potion", "enlightenment")
+    if not potion or not can_drink() then
         return false
     end
 
@@ -644,7 +644,7 @@ function plan_flight_move_towards_enemy()
     -- Only quaff flight when we finally reach an impassable square.
     if (feat == "deep_water" or feat == "lava")
             and not is_traversable_at(move) then
-        return drink_by_name("enlightenment")
+        return drink_potion(potion)
     else
         return move_to(move)
     end

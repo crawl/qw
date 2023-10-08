@@ -439,13 +439,6 @@ function have_ranged_target()
         end)
 end
 
-function get_dig_wand()
-    return turn_memo("get_dig_wand",
-        function()
-            return find_item("wand", "digging")
-        end)
-end
-
 function want_to_be_surrounded()
     return turn_memo("want_to_be_surrounded",
         function()

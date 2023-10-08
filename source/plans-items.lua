@@ -1,47 +1,53 @@
 ------------------
 -- Plans for using items, including the acquirement plan cascade.
 
-function read(c, etc)
-    if not can_read() then
-        return false
-    end
-
+function read_scroll(item, etc)
     if not etc then
         etc = ""
     end
-    say("READING " .. item(c).name() .. ".")
-    magic("r" .. letter(c) .. etc)
-    return true
+
+    say("READING " .. item.name() .. ".")
+    magic("r" .. item_letter(item) .. etc)
 end
 
-function drink(c)
-    if not can_drink() then
-        return false
-    end
-
-    say("DRINKING " .. item(c).name() .. ".")
-    magic("q" .. letter(c))
-    return true
-end
-
-function read_by_name(name)
-    local c = find_item("scroll", name)
-    if (c and read(c)) then
+function read_scroll_by_name(name, etc)
+    local item = find_item("scroll", name)
+    if item then
+        read_scroll(item, etc)
         return true
     end
+
     return false
 end
 
+function drink_potion(item)
+    say("DRINKING " .. item.name() .. ".")
+    magic("q" .. item_letter(item))
+end
+
 function drink_by_name(name)
-    local c = find_item("potion", name)
-    if (c and drink(c)) then
+    local potion = find_item("potion", name)
+    if potion then
+        drink_potion(potion)
         return true
     end
+
     return false
 end
 
 function teleport()
-    return read_by_name("teleportation")
+    return read_scroll_by_name("teleportation")
+end
+
+function zap_item(item, pos, aim_at_target)
+    local cur_quiver = items.fired_item()
+    local name = item.name()
+    if not cur_quiver or name ~= cur_quiver.name() then
+        magic("Q*" .. item_letter(item))
+    end
+
+    say("ZAPPING " .. name .. ".")
+    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
 end
 
 function plan_wield_weapon()
@@ -57,7 +63,7 @@ function plan_wield_weapon()
         if it and it.class(true) == "weapon" then
             if should_equip(it) then
                 say("Wielding weapon " .. it.name() .. ".")
-                magic("w" .. items.index_to_letter(it.slot) .. "YY")
+                magic("w" .. item_letter(it) .. "YY")
                 -- this might have a 0-turn fail because of unIDed holy
                 return nil
             end
@@ -116,7 +122,7 @@ function plan_swap_weapon()
     end
     if max_it then
         say("SWAPPING to " .. max_it.name() .. ".")
-        magic("w" .. items.index_to_letter(max_it.slot) .. "YY")
+        magic("w" .. item_letter(max_it) .. "YY")
         return true
     end
 
@@ -138,7 +144,7 @@ function plan_bless_weapon()
             minv, maxv = equip_value(it, true, nil, "bless")
             if minv > bestv then
                 bestv = minv
-                bestletter = letter(it)
+                bestletter = item_letter(it)
             end
         end
     end
@@ -256,11 +262,11 @@ function plan_upgrade_weapon()
                     and swappable
                     and (twohands or it.hands < 2) then
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("w" .. items.index_to_letter(it.slot) .. "YY")
+                magic("w" .. item_letter(it) .. "YY")
                 return true
             elseif should_drop(it) then
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. items.index_to_letter(it.slot) .. "\r")
+                magic("d" .. item_letter(it) .. "\r")
                 return true
             end
         end
@@ -278,7 +284,7 @@ function plan_remove_terrible_jewellery()
                     and not it.cursed
                     and should_remove(it) then
             say("REMOVING " .. it.name() .. ".")
-            magic("P" .. letter(it) .. "YY")
+            magic("P" .. item_letter(it) .. "YY")
             return true
         end
     end
@@ -308,12 +314,12 @@ function plan_upgrade_amulet()
             end
             if equip and swappable then
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("P" .. items.index_to_letter(it.slot) .. "YY")
+                magic("P" .. item_letter(it) .. "YY")
                 return true
             end
             if drop then
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. items.index_to_letter(it.slot) .. "\r")
+                magic("d" .. item_letter(it) .. "\r")
                 return true
             end
         end
@@ -337,7 +343,7 @@ function plan_upgrade_rings()
         if it and equip_slot(it) == "Ring" and not it.equipped then
             local equip = false
             local drop = false
-            local swap = nil
+            local swap
             if empty then
                 if should_equip(it) then
                     equip = true
@@ -348,7 +354,7 @@ function plan_upgrade_rings()
                             and not it_old.cursed
                             and should_upgrade(it, it_old) then
                         equip = true
-                        swap = it_old.slot
+                        swap = it_old
                     end
                 end
             end
@@ -356,20 +362,21 @@ function plan_upgrade_rings()
                 drop = true
             end
             if equip then
-                local l = items.index_to_letter(it.slot)
+                local letter = item_letter(it)
                 say("UPGRADING to " .. it.name() .. ".")
                 if swap then
-                    items.swap_slots(swap, items.letter_to_index('Y'), false)
-                    if l == 'Y' then
-                        l = items.index_to_letter(swap)
+                    items.swap_slots(swap.slot, letter_slot('Y'), false)
+
+                    if letter == 'Y' then
+                        letter = item_letter(swap)
                     end
                 end
-                magic("P" .. l .. "YY")
+                magic("P" .. letter .. "YY")
                 return true
             end
             if drop then
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. items.index_to_letter(it.slot) .. "\r")
+                magic("d" .. item_letter(it) .. "\r")
                 return true
             end
         end
@@ -456,14 +463,14 @@ function plan_upgrade_armour()
 
             if equip and swappable then
                 say("UPGRADING to " .. it.name() .. ".")
-                magic("W" .. items.index_to_letter(it.slot) .. "YN")
+                magic("W" .. item_letter(it) .. "YN")
                 upgrade_phase = true
                 return true
             end
 
             if drop then
                 say("DROPPING " .. it.name() .. ".")
-                magic("d" .. items.index_to_letter(it.slot) .. "\r")
+                magic("d" .. item_letter(it) .. "\r")
                 return true
             end
         end
@@ -474,7 +481,7 @@ function plan_upgrade_armour()
                 and not it.cursed
                 and should_remove(it) then
             say("REMOVING " .. it.name() .. ".")
-            magic("T" .. items.index_to_letter(it.slot) .. "YN")
+            magic("T" .. item_letter(it) .. "YN")
             return true
         end
     end
@@ -571,11 +578,13 @@ function want_cure_mutations()
 end
 
 function plan_use_good_consumables()
+    local read_ok = can_read()
+    local drink_ok = can_drink()
     for it in inventory() do
-        if it.class(true) == "scroll" and can_read() then
+        if read_ok and it.class(true) == "scroll" then
             if it.name():find("acquirement")
                     and not destroys_items_at(const.origin) then
-                if read(it) then
+                if read_scroll(item) then
                     return true
                 end
             elseif it.name():find("enchant weapon") then
@@ -583,7 +592,7 @@ function plan_use_good_consumables()
                 if weapon and weapon.class(true) == "weapon"
                         and not weapon.artefact and weapon.plus < 9 then
                     local oldname = weapon.name()
-                    if read(it, letter(weapon)) then
+                    if read_scroll(it, letter(weapon)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
@@ -594,7 +603,7 @@ function plan_use_good_consumables()
                         and not weapon.artefact
                         and not brand_is_great(weapon.ego()) then
                     local oldname = weapon.name()
-                    if read(it, letter(weapon)) then
+                    if read_scroll(it, letter(weapon)) then
                         say("BRANDING " .. oldname .. ".")
                         return true
                     end
@@ -607,7 +616,7 @@ function plan_use_good_consumables()
                         and body_armour_is_great(body)
                         and not body.name():find("quicksilver") then
                     local oldname = body.name()
-                    if read(it, letter(body)) then
+                    if read_scroll(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
@@ -620,7 +629,7 @@ function plan_use_good_consumables()
                                 and it2.plus >= 0
                                 and not it2.name():find("scarf") then
                             local oldname = it2.name()
-                            if read(it, letter(it2)) then
+                            if read_scroll(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
                             end
@@ -632,7 +641,7 @@ function plan_use_good_consumables()
                                 and it2.plus < 4
                                 and it2.plus >= 0 then
                             local oldname = it2.name()
-                            if read(it, letter(it2)) then
+                            if read_scroll(it, letter(it2)) then
                                 say("ENCHANTING " .. oldname .. ".")
                                 return true
                             end
@@ -644,19 +653,19 @@ function plan_use_good_consumables()
                         and body_armour_is_good(body)
                         and not body.name():find("quicksilver") then
                     local oldname = body.name()
-                    if read(it, letter(body)) then
+                    if read_scroll(it, letter(body)) then
                         say("ENCHANTING " .. oldname .. ".")
                         return true
                     end
                 end
             end
-        elseif it.class(true) == "potion" then
+        elseif drink_ok and it.class(true) == "potion" then
             if it.name():find("experience") then
-                return drink(it)
+                return drink_potion(it)
             end
 
             if it.name():find("mutation") and want_cure_mutations() then
-                return drink(it)
+                return drink_potion(it)
             end
         end
     end
@@ -672,7 +681,7 @@ function plan_drop_other_items()
                 or it.class(true) == "potion" and not want_potion(it)
                 or it.class(true) == "scroll" and not want_scroll(it) then
             say("DROPPING " .. it.name() .. ".")
-            magic("d" .. letter(it) .. "\r")
+            magic("d" .. item_letter(it) .. "\r")
             return true
         end
     end
@@ -685,7 +694,7 @@ function quaff_unided_potion(min_quantity)
         if it.class(true) == "potion"
                 and (not min_quantity or it.quantity >= min_quantity)
                 and not it.fully_identified then
-            return drink(it)
+            return drink_potion(it)
         end
     end
     return false
@@ -700,22 +709,21 @@ function plan_quaff_unided_potions()
 end
 
 function read_unided_scroll()
-    for it in inventory() do
-        if it.class(true) == "scroll" and not it.fully_identified then
-            items.swap_slots(it.slot, items.letter_to_index('Y'), false)
+    for item in inventory() do
+        if item.class(true) == "scroll" and not item.fully_identified then
+            items.swap_slots(item.slot, letter_slot('Y'), false)
+            local scroll_letter = 'Y'
 
             local weapon = get_weapon()
-            local scroll_letter = 'Y'
             if weapon and not weapon.artefact
                     and not brand_is_great(weapon.ego()) then
-                scroll_letter = items.index_to_letter(weapon.slot)
-                items.swap_slots(weapon.slot, items.letter_to_index('Y'), false)
+                items.swap_slots(weapon.slot, letter_slot('Y'), false)
             end
 
             if you.race() == "Felid" then
-                return read(scroll_letter, ".Y" .. string.char(27) .. "YC")
+                return read_scroll(item, ".Y" .. string.char(27) .. "YC")
             else
-                return read(scroll_letter, ".Y" .. string.char(27) .. "YB")
+                return read_scroll(item, ".Y" .. string.char(27) .. "YB")
             end
         end
     end
@@ -741,10 +749,10 @@ function plan_use_identify_scrolls()
         return false
     end
 
-    for it in inventory() do
-        if it.class(true) == "potion" and not it.fully_identified then
-            oldname = it.name()
-            if read(id_scroll, letter(it)) then
+    for item in inventory() do
+        if item.class(true) == "potion" and not item.fully_identified then
+            oldname = item.name()
+            if read_scroll(id_scroll, item_letter(item)) then
                 say("IDENTIFYING " .. oldname)
                 return true
             end
@@ -792,7 +800,7 @@ function plan_shop()
             local wealth = you.gold()
             if price <= wealth then
                 say("BUYING " .. it.name() .. " (" .. price .. " gold).")
-                magic("<//" .. letter(n - 1) .. "\ry")
+                magic("<//" .. slot_letter(n - 1) .. "\ry")
                 return
             -- Should in theory also work in Bazaar, but doesn't make much
             -- sense (since we won't really return or acquire money and travel
@@ -801,12 +809,12 @@ function plan_shop()
                  and not in_branch("Bazaar") and not branch_soon("Zot") then
                 say("SHOPLISTING " .. it.name() .. " (" .. price .. " gold"
                  .. ", have " .. wealth .. ").")
-                magic("<//" .. string.upper(letter(n - 1)))
+                magic("<//" .. string.upper(slot_letter(n - 1)))
                 return
             end
         elseif on_list then
             -- We no longer want the item. Remove it from shopping list.
-            magic("<//" .. string.upper(letter(n - 1)))
+            magic("<//" .. string.upper(slot_letter(n - 1)))
             return
         end
     end
@@ -828,7 +836,7 @@ function plan_shopping_spree()
         return false
     end
 
-    magic("$" .. letter(which_item - 1))
+    magic("$" .. slot_letter(which_item - 1))
     return true
 end
 

@@ -12,7 +12,7 @@ function plan_zig_fog()
             or view.cloud_at(0, 0) ~= nil then
         return false
     end
-    return read_by_name("fog")
+    return read_scroll_by_name("fog")
 end
 
 function plan_move_to_zigfig_location()
@@ -48,10 +48,10 @@ function plan_use_zigfig()
         return false
     end
 
-    local c = find_item("misc", "figurine of a ziggurat")
-    if c then
+    local figurine = find_item("misc", "figurine of a ziggurat")
+    if figurine then
         say("MAKING ZIG")
-        magic("V" .. letter(c))
+        magic("V" .. item_letter(figurine))
         return true
     end
 
@@ -73,20 +73,16 @@ function plan_go_to_zig_dig()
 end
 
 function plan_zig_dig()
+    local wand = find_item("wand", "digging")
     if not in_branch("Depths")
             or goal_branch ~= "Zig"
-            or view.feature_at(3, 1) ~= branch_entrance("Zig") then
+            or view.feature_at(3, 1) ~= branch_entrance("Zig")
+            or not wand
+            or not can_zap() then
         return false
-    else
-        local c = find_item("wand", "digging")
-        if c and can_zap() then
-            say("ZAPPING " .. item(c).name() .. ".")
-            magic("V" .. letter(c) .. "L")
-            return true
-        end
     end
 
-    return false
+    return zap_item(wand, { x = 1, y = 0 })
 end
 
 function plan_zig_go_to_stairs()

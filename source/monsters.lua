@@ -92,6 +92,7 @@ local scary_monsters = {
     ["ice beast"] = check_resist(7, "rC", 1),
 
     ["white ugly thing"] = check_resist(15, "rC", 1),
+    ["freezing wraith"] = check_resist(15, "rC", 1),
 
     ["shock serpent"] = check_resist(17, "rElec", 1),
     ["sun demon"] = check_resist(17, "rF", 1),
@@ -173,19 +174,25 @@ local hand_monsters = {
 local fire_resistance_monsters = {
     ["*"] = {},
 
-    ["Margery"] = check_resist(100, "rF", 2),
-    ["orb of fire"] = 100,
     ["hellephant"] = check_resist(100, "rF", 2),
-    ["Xtahua"] = check_resist(100, "rF", 2),
-    ["Cerebov"] = 100,
+    ["orb of fire"] = 100,
+
     ["Asmodeus"] = check_resist(100, "rF", 2),
-    ["Vv"] = 100,
+    ["Cerebov"] = 100,
+    ["Margery"] = check_resist(100, "rF", 2),
+    ["Xtahua"] = check_resist(100, "rF", 2),
+    ["Vv"] = check_resist(100, "rF", 2),
 }
 
 local cold_resistance_monsters = {
     ["*"] = {},
+
+    ["ice beast"] = check_resist(5, "rC", 1),
+
+    ["white ugly thing"] = check_resist(13, "rC", 1),
+    ["freezing wraith"] = check_resist(13, "rC", 1),
+
     ["Ice Fiend"] = 100,
-    ["Antaeus"] = 100,
     ["Vv"] = 100,
 }
 
@@ -489,7 +496,7 @@ function count_pan_lords(radius)
 end
 
 function should_dig_unreachable_monster(mons)
-    if not get_dig_wand() then
+    if not find_item("wand", "digging") then
         return false
     end
 
