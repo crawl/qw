@@ -932,11 +932,10 @@ function c_choose_acquirement()
 end
 
 function c_choose_okawaru_weapon()
-    local cur_weapon = get_weapon()
-    local acq_items = items.acquirement_items(const.acquire.okawaru_weapon)
-
     local best_val = -1000
     local best_ind, best_item
+    local cur_weapon = get_weapon()
+    local acq_items = items.acquirement_items(const.acquire.okawaru_weapon)
     for i, item in ipairs(acq_items) do
         local val = equip_value(item, true, cur_weapon)
 
@@ -984,11 +983,9 @@ function equip_value_difference(item, cur_vals)
 end
 
 function c_choose_okawaru_armour()
-    local cur_weapon = get_weapon()
-    local acq_items = items.acquirement_items(const.acquire.okawaru_armour)
-
     local cur_vals = {}
     local best_diff, best_int, best_item
+    local acq_items = items.acquirement_items(const.acquire.okawaru_armour)
     for i, item in ipairs(acq_items) do
         local diff = equip_value_difference(item, cur_vals)
 
