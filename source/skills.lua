@@ -19,6 +19,20 @@ function choose_single_skill(sk)
     end
 end
 
+function shield_skill_utility()
+    local shield = items.equipped_at("Shield")
+    if not shield then
+        return 0
+    end
+
+    local shield_factor = you.mutation("four strong arms") > 0 and -2
+        or 2 * body_size()
+    local shield_penalty = 2 * shield.encumbrance * shield.encumbrance
+        * (27 - you.base_skill("Shields"))
+        / (5 * (20 - 3 * shield_factor)) / 27
+    return 0.25 + 0.5 * shield_penalty
+end
+
 function skill_value(sk)
     if sk == "Dodging" then
         local str, _ = you.strength()

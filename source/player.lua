@@ -64,6 +64,35 @@ function intrinsic_undead()
     return you.race() == "Ghoul" or you.race() == "Mummy"
 end
 
+-- Returns the current level of "resistance" to an artprop string. If an
+-- item is provided, assume the item is equipped and try to pretend that
+-- it is unequipped. Does not include some temporary effects.
+function player_resist(str, it)
+    local it_res = it and it.equipped and item_resist(str, it) or 0
+    local stat
+    if str == "Str" then
+        stat, _ = you.strength()
+        return stat - it_res
+    elseif str == "Dex" then
+        stat, _ = you.dexterity()
+        return stat - it_res
+    elseif str == "Int" then
+        stat, _ = you.intelligence()
+        return stat - it_res
+    end
+    local other_res = intrinsic_resist(str)
+    for it2 in inventory() do
+        if it2.equipped and it2.slot ~= it.slot then
+            other_res = other_res + item_resist(str, it2)
+        end
+    end
+    if str == "rF" or str == "rC" or str == "rN" or str == "Will" then
+        return other_res
+    else
+        return other_res > 0 and 1 or 0
+    end
+end
+
 -- We group all species into four categories:
 -- heavy: species that can use arbitrary armour and aren't particularly great
 --        at dodging
