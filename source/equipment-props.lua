@@ -76,6 +76,8 @@ function item_property(str, it)
         elseif str == "Reflect" then
              return (ego == "reflection" or subtype == "amulet of reflection")
                  and 1 or 0
+        elseif str == "*Dream" then
+             return name:find("dreamshard necklace") and 1 or 0
         elseif str == "Repulsion" then
              return ego == "repulsion" and 1 or 0
         elseif str == "Ponderous" then
@@ -203,6 +205,8 @@ function absolute_property_value(str, n)
         return 20
     elseif str == "Repulsion" then
         return 200
+    elseif str == "*Dream" then
+        return 100
     -- Begin properties we always assign a nonpositive value.
     elseif str == "Harm" then
         return -500
@@ -277,6 +281,8 @@ function max_property_value(str, d)
         return 20
     elseif str == "Repulsion" then
         return 100
+    elseif str == "*Dream" then
+        return 200
     end
 
     return 0
@@ -297,9 +303,13 @@ function min_property_value(str, d)
         elseif str == "Will" then
             return -75 * d
         end
-    -- Begin properties that are always bad.
     elseif d > 0 then
-        if str == "Harm" then
+        -- This can only have its effect once, so we want to carry around our
+        -- best backup amulet.
+        if str == "*Dream" then
+            return -10000
+        -- Begin properties that are always bad.
+        elseif str == "Harm" then
             return -500
         elseif str == "Ponderous" then
             return -300
