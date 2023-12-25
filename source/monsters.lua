@@ -381,7 +381,8 @@ function update_monsters()
 
             if not sinv
                     and not closest_invis_pos
-                    and view.invisible_monster(pos.x, pos.y) then
+                    and view.invisible_monster(pos.x, pos.y)
+                    and you.see_cell_solid_see(pos.x, pos.y) then
                 closest_invis_pos = pos
             end
         else
