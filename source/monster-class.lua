@@ -433,19 +433,6 @@ function Monster:can_seek()
         end)
 end
 
-function Monster:can_cause_retreat()
-    return self:property_memo("can_cause_retreat",
-        function()
-            local name = self:name()
-            return self:can_seek()
-                and not (name:find("centaur")
-                    or name:find("yaktaur")
-                    or name:find("satyr")
-                    or name:find("javelineer")
-                    or name:find("master archer"))
-        end)
-end
-
 function Monster:can_melee_player()
     return self:property_memo("can_melee_player",
         function()

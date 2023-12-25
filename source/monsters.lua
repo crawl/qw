@@ -407,21 +407,26 @@ function assess_enemies_func(radius, duration_level, filter)
         radius = qw.los_radius
     end
 
-    local result = { threat = 0, count = 0 }
+    local result = { threat = 0, ranged_threat = 0, count = 0 }
     for _, enemy in ipairs(enemy_list) do
         if enemy:distance() > radius then
             break
         end
 
+        local ranged = enemy:is_ranged(true)
         if (not filter or filter(enemy))
-                and (enemy:is_ranged(true)
-                    or enemy:has_path_to_melee_player()) then
+                and (ranged or enemy:has_path_to_melee_player()) then
             local threat = enemy:threat(duration_level)
             if not result.scary_enemy and threat >= 3 then
                 result.scary_enemy = enemy
             end
 
             result.threat = result.threat + threat
+
+            if ranged then
+                result.ranged_threat = result.ranged_threat + threat
+            end
+
             result.count = result.count + 1
         end
     end
@@ -444,7 +449,7 @@ end
 
 function assess_hell_enemies(radius)
     if not in_hell_branch() then
-        return { threat = 0, count = 0 }
+        return { threat = 0, ranged_threat, count = 0 }
     end
 
     -- We're most concerned with hell monsters that aren't vulnerable to any
