@@ -1016,6 +1016,8 @@ function update_exclusions(new_waypoint)
     local have_ranged = have_ranged_attack()
     for _, enemy in ipairs(enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
+                -- No excluding safe monsters.
+                and not enemy:is_safe()
                 -- No excluding temporary monsters.
                 and not enemy:is_summoned()
                 -- We need to at least see all cells adjacent to them to be

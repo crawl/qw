@@ -353,16 +353,22 @@ end
 function update_monsters()
     enemy_list = {}
     qw.slow_aura = false
+    qw.all_enemies_safe = true
 
     local closest_invis_pos
     local sinv = you.see_invisible()
+
     for pos in radius_iter(const.origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
             local mon_info = monster.get_monster_at(pos.x, pos.y)
             if mon_info then
                 local mons = Monster:new(mon_info)
                 monster_map[pos.x][pos.y] = mons
-                if mons:is_enemy() and not mons:is_safe() then
+                if mons:is_enemy() then
+                    if not mons:is_safe() then
+                        qw.all_enemies_safe = false
+                    end
+
                     if mons:name() == "torpor snail" then
                         qw.slow_aura = true
                     end
