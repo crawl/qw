@@ -130,10 +130,10 @@ function cascade(plans)
                 end
 
                 if result == nil or result == true then
-                    if DELAYED and result == true then
+                    if qw.delayed and result == true then
                         crawl.delay(next_delay)
                     end
-                    next_delay = DELAY_TIME
+                    next_delay = qw.delay_time
 
                     return
                 end

@@ -2,11 +2,6 @@
 -- Global variables. This file declares shared variables as local to the scope
 -- of the final qw lua source file.
 
--- The version of qw for logging purposes. Run the make-qw.sh script to set
--- this variable automatically based on the latest annotated git tag and
--- commit, or change it here to a custom version string.
-local qw_version = "%VERSION%"
-
 -- All constants go in this table.
 local const = {}
 

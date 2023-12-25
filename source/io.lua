@@ -13,7 +13,7 @@ end
 
 function c_answer_prompt(prompt)
     if prompt == "Die?" then
-        return WIZMODE_DEATH
+        return qw.wizmode_death
     elseif prompt:find("Have to go through") then
         return true
     elseif prompt:find("transient mutations") then

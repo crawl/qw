@@ -28,6 +28,11 @@ function initialize_enums()
 end
 
 function initialize()
+    -- The version of qw for logging purposes. Run the make-qw.sh script to set
+    -- this variable automatically based on the latest annotated git tag and
+    -- commit, or change it here to a custom version string.
+    qw.version = "%VERSION%"
+
     -- We don't want to hit max_memory since that will delete the c_persist
     -- table. Generally qw only gets clua memory usage above 32MB due to bugs.
     -- Leave some memory left over so we can avoid deleting c_persist as well
@@ -70,8 +75,16 @@ function initialize()
 
     initialize_branch_data()
     initialize_god_data()
+
     first_turn_initialize()
     initialize_c_persist()
+
+    qw.shield_crazy = SHIELD_CRAZY
+    qw.faded_altar = FADED_ALTAR
+    qw.late_orc = LATE_ORC
+    qw.early_second_rune = EARLY_SECOND_RUNE
+    qw.rune_preference = RUNE_PREFERENCE
+    note_qw_data()
 
     calc_los_radius()
     initialize_monster_map()
@@ -89,31 +102,38 @@ function initialize()
         qw.automatic = true
     end
 
+    qw.delayed = DELAYED
+    qw.delay_time = DELAY_TIME
+
     qw.turn_count = you.turns() - 1
     qw.dump_count = you.turns() + 100 - (you.turns() % 100)
     qw.skill_count = you.turns() - (you.turns() % 5)
     qw.read_message = true
 
     qw.single_step = SINGLE_STEP
-    qw.initialized = true
+    qw.wizmode_death = WIZMODE_DEATH
 
     qw.incoming_monsters_turn = -1
     qw.full_hp_turn = -1
+
+    qw.initialized = true
 end
 
 function note_qw_data()
-    note("qw: Version: " .. qw_version)
+    note("qw: Version: " .. qw.version)
     note("qw: Game counter: " .. c_persist.record.counter)
-    note("qw: Melee chars always use a shield: " .. bool_string(SHIELD_CRAZY))
+    note("qw: Melee chars always use a shield: " .. bool_string(qw.shield_crazy))
+
     if not util.contains(god_options(), you.god()) then
         note("qw: God list: " .. table.concat(god_options(), ", "))
-        note("qw: Allow faded altars: " .. bool_string(FADED_ALTAR))
+        note("qw: Allow faded altars: " .. bool_string(qw.faded_altar))
     end
+
     note("qw: Do Orc after clearing Dungeon:" .. branch_depth("D") .. " "
-        .. bool_string(LATE_ORC))
+        .. bool_string(qw.late_orc))
     note("qw: Do second Lair branch before Depths: " ..
-        bool_string(EARLY_SECOND_RUNE))
-    note("qw: Lair rune preference: " .. RUNE_PREFERENCE)
+        bool_string(qw.early_second_rune))
+    note("qw: Lair rune preference: " .. qw.rune_preference)
     note("qw: Goals: " .. goal_options())
 end
 
@@ -174,8 +194,6 @@ function first_turn_initialize()
         end
     end
     c_persist.current_goals = goals
-
-    note_qw_data()
 
     if COMBO_CYCLE then
         local combo_string_list = split(COMBO_CYCLE_LIST, ",")

@@ -52,14 +52,14 @@ function goal_normal_next(final)
         goal = "Lair"
     -- D:1-11 and Lair explored, but not D:12.
     elseif not explored_level_range("D:12") then
-        if LATE_ORC then
+        if qw.late_orc then
             goal = "D"
         else
             goal = "D:12"
         end
     -- D:1-12 and Lair explored, but not all of D.
     elseif not explored_level_range("D") then
-        if not LATE_ORC
+        if not qw.late_orc
                 and branch_found("Orc")
                 and not explored_level_range("Orc") then
             goal = "Orc"
@@ -103,7 +103,7 @@ function goal_normal_next(final)
     -- second Lair branch not fully explored.
     elseif not explored_level_range(second_lair_branch_end) then
         if not explored_level_range("Depths")
-                and not EARLY_SECOND_RUNE then
+                and not qw.early_second_rune then
             goal = "Depths"
         else
             goal = second_lair_branch_end
@@ -689,19 +689,19 @@ function lair_branch_order()
     end
 
     local branch_options
-    if RUNE_PREFERENCE == "smart" then
+    if qw.rune_preference == "smart" then
         if crawl.random2(2) == 0 then
             branch_options = { "Spider", "Snake", "Swamp", "Shoals" }
         else
             branch_options = { "Spider", "Swamp", "Snake", "Shoals" }
         end
-    elseif RUNE_PREFERENCE == "dsmart" then
+    elseif qw.rune_preference == "dsmart" then
         if crawl.random2(2) == 0 then
             branch_options = { "Spider", "Swamp", "Snake", "Shoals" }
         else
             branch_options = { "Swamp", "Spider", "Snake", "Shoals" }
         end
-    elseif RUNE_PREFERENCE == "nowater" then
+    elseif qw.rune_preference == "nowater" then
         branch_options = { "Snake", "Spider", "Swamp", "Shoals" }
     -- "random"
     else

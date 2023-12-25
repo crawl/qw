@@ -138,7 +138,7 @@ function want_buckler()
     local skill = weapon_skill()
     return sp ~= "Felid"
         and (skill ~= "Ranged Weapons" or sp == "Formicid")
-        and (SHIELD_CRAZY
+        and (qw.shield_crazy
             or sp == "Formicid"
             or sp == "Kobold"
             or skill == "Short Blades"
@@ -147,7 +147,7 @@ end
 
 function want_shield()
     return want_buckler()
-        and (SHIELD_CRAZY or you.race() == "Troll" or you.race() == "Formicid")
+        and (qw.shield_crazy or you.race() == "Troll" or you.race() == "Formicid")
 end
 
 -- used for backgrounds who don't get to choose a weapon

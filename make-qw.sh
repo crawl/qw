@@ -40,9 +40,9 @@ shift $(($OPTIND - 1))
 set -e
 
 lua_text=$(cat $lua_dir/$first_lua_file)
-lua_text="${lua_text/\%VERSION\%/$version}"
 lua_text+=$'\n'
 lua_text+=$(find source -iname '*.lua' -not -name "$first_lua_file" | sort | xargs cat)
+lua_text="${lua_text/\%VERSION\%/$version}"
 
 if [ -n "$rc_file" ]; then
     if [ -z "$out_file" ]; then
