@@ -119,12 +119,12 @@ function future_gods_enough_max_mp(max_mp)
 end
 
 function item_is_evil(it)
-    local subtype = it:subtype()
+    local subtype = it.subtype()
     if subtype and subtype:find("^demon") then
         return true
     end
 
-    local ego = it:ego()
+    local ego = it.ego()
     if ego == "pain"
             or ego == "vampirism"
             or ego == "draining"
@@ -138,7 +138,7 @@ function item_is_evil(it)
         return false
     end
 
-    local name = it:name()
+    local name = it.name()
     return name:find("Vitality") and subtype:find("^amulet")
         or name:find("{damnation}")
         or name:find("Cerebov") and subtype == "great sword"
@@ -167,7 +167,7 @@ function god_hates_item(god, it)
         return true
     end
 
-    local ego = it:ego()
+    local ego = it.ego()
     if god == "Cheibriados" then
         return ego == "speed" or ego == "chaos"
     end

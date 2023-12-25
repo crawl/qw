@@ -267,7 +267,7 @@ function plan_hydra_destruction()
     if not can_destruction()
             or you.skill("Invocations") < 8
             or count_greater_servants(4) > 0
-            or hydra_weapon_status(items.equipped_at("Weapon")) > -1
+            or hydra_weapon_value(get_weapon()) > -1
             or you.xl() >= 20 then
         return false
     end
@@ -381,7 +381,7 @@ function plan_blinking()
         return false
     end
 
-    if count_item("scroll", "of blinking") == 0 then
+    if count_item("scroll", "blinking") == 0 then
         return false
     end
 
@@ -436,6 +436,7 @@ end
 
 function can_drink_heal_wounds()
     return can_drink()
+        and find_item("potion", "heal wounds")
         and you.mutation("no potion heal") < 2
         and not (items.equipped_at("Body Armour")
             and items.equipped_at("Body Armour"):name():find("NoPotionHeal"))
@@ -482,14 +483,15 @@ function plan_heal_wounds()
     return false
 end
 
-function can_drink_haste()
+function can_haste()
     return can_drink()
         and you.god() ~= "Cheibriados"
         and you.race() ~= "Formicid"
+        and find_item("potion", "haste")
 end
 
 function plan_haste()
-    if can_drink_haste() and want_to_haste() then
+    if can_haste() and want_to_haste() then
         return drink_by_name("haste")
     end
 
@@ -503,7 +505,7 @@ function want_to_might()
 end
 
 function plan_might()
-    if can_drink() and want_to_might() then
+    if can_drink() and find_item("potion", "might") and want_to_might() then
         return drink_by_name("might")
     end
 

@@ -174,7 +174,7 @@ function item_letter(item)
 end
 
 function find_item(cls, name)
-    turn_memo_args("find_item",
+    return turn_memo_args("find_item",
         function(cls_arg, name_arg)
             for it in inventory() do
                 if it.class(true) == cls_arg and it.name():find(name_arg) then

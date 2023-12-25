@@ -188,7 +188,7 @@ function find_map_items(item_names, radius)
         local floor_items = items.get_items_at(pos.x, pos.y)
         if floor_items then
             for _, it in ipairs(floor_items) do
-                local name = it:name()
+                local name = it.name()
                 if searches[name] then
                     local map_pos = position_sum(qw.map_pos, pos)
                     item_map_positions[name] = map_pos
@@ -383,14 +383,6 @@ function distance_map_propagate(dist_map)
     dist_map.queue = {}
 end
 
-function record_cell_item(name, cell)
-    if not item_map_positions[name] then
-        item_map_positions[name] = {}
-    end
-
-    item_map_positions[name][cell.hash] = cell.pos
-end
-
 function handle_item_searches(cell)
     -- Don't do an expensive iteration over all items if we don't have an
     -- active search.
@@ -404,7 +396,7 @@ function handle_item_searches(cell)
     end
 
     for _, it in ipairs(floor_items) do
-        local name = it:name()
+        local name = it.name()
         if item_searches[name] then
             item_map_positions[name] = cell.pos
             item_searches[name] = nil
