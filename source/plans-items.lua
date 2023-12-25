@@ -522,18 +522,19 @@ function body_armour_is_good(arm)
     local name = arm.name()
     local ap = armour_plan()
     if ap == "heavy" then
-        return (name:find("plate") or name:find("dragon scales"))
+        return name:find("plate") or name:find("dragon scales")
     elseif ap == "large" then
         return false
     elseif ap == "dodgy" then
-        return (name:find("ring mail") or name:find("robe of resistance"))
+        return name:find("ring mail") or name:find("robe of resistance")
     else
         return name:find("robe of resistance")
             or name:find("robe of fire resistance")
+            or name:find("troll leather armour")
     end
 end
 
--- do we want to keep this brand?
+-- Do we want to keep this brand?
 function brand_is_great(brand)
     if brand == "speed"
             or brand == "spectralizing"
@@ -577,6 +578,123 @@ function want_cure_mutations()
                 or you.res_cold() < 3 and branch_soon("Coc"))
 end
 
+function get_enchantable_weapon(unknown)
+    if unknown == nil then
+        unknown = true
+    end
+
+    local weapon = get_weapon()
+    -- Prefer enchanting our wielded weapon.
+    if weapon and weapon.is_enchantable then
+        return weapon
+    end
+
+    if not unknown then
+        return
+    end
+
+    for item in inventory() do
+        if item.class(true) == "weapon" and item.is_enchantable then
+            return item
+        end
+    end
+end
+
+function get_brandable_weapon(unknown)
+    if unknown == nil then
+        unknown = true
+    end
+
+    local weapon = get_weapon()
+    -- Prefer enchanting our wielded weapon.
+    if weapon
+            and not weapon.artefact
+            and not brand_is_great(weapon.ego()) then
+        return weapon
+    end
+
+    if not unknown then
+        return
+    end
+
+    for item in inventory() do
+        if item.class(true) == "weapon"
+                and not item.artefact
+                and not brand_is_great(item.ego()) then
+            return item
+        end
+    end
+end
+
+function get_enchantable_armour(unknown)
+    if unknown == nil then
+        unknown = true
+    end
+
+    -- Prefer enchanting body armour if it's of sufficient quality.
+    local body_armour = items.equipped_at("Body Armour")
+    if body_armour
+            and body_armour.is_enchantable
+            and body_armour_is_great(body_armour) then
+        return body_armour
+    end
+
+    -- This item will not be what we'd prefer to enchant, but we'll use this
+    -- target if we read-id the scroll.
+    for _, slotname in pairs(good_slots) do
+        local armour = items.equipped_at(slotname)
+
+        -- We prefer not to enchant shields, but will use one as a fallback if
+        -- we're using a shield.
+        if unknown
+                and not fallback_armour
+                and slotname == "Shield"
+                and armour
+                and armour.is_enchantable then
+            fallback_armour = armour
+        end
+
+        if armour and armour.is_enchantable
+                and slotname ~= "Body Armour"
+                and slotname ~= "Shield" then
+            -- Prefer not to enchant items with negative enchant.
+            if armour.plus >= 0 then
+                return armour
+            elseif unknown and not fallback_armour then
+                fallback_armour = armour
+            end
+
+            if slotname == "Boots" and armour.name():find("barding") then
+                if armour.plus >= 0 then
+                    return armour
+                elseif unknown and not fallback_armour then
+                    fallback_armour = armour
+                end
+            end
+        end
+    end
+
+    if body_armour
+            and body_armour.is_enchantable
+            and body_armour_is_good(body_armour) then
+        return body_armour
+    end
+
+    if not unknown then
+        return
+    end
+
+    if fallback_armour then
+        return fallback_armour
+    end
+
+    for item in inventory() do
+        if item.is_enchantable then
+            return item
+        end
+    end
+end
+
 function plan_use_good_consumables()
     local read_ok = can_read()
     local drink_ok = can_drink()
@@ -584,88 +702,30 @@ function plan_use_good_consumables()
         if read_ok and it.class(true) == "scroll" then
             if it.name():find("acquirement")
                     and not destroys_items_at(const.origin) then
-                if read_scroll(item) then
-                    return true
-                end
-            elseif it.name():find("enchant weapon") then
-                local weapon = items.equipped_at("weapon")
-                if weapon and weapon.class(true) == "weapon"
-                        and not weapon.artefact and weapon.plus < 9 then
-                    local oldname = weapon.name()
-                    if read_scroll(it, letter(weapon)) then
-                        say("ENCHANTING " .. oldname .. ".")
-                        return true
-                    end
-                end
-            elseif it.name():find("brand weapon") then
-                local weapon = items.equipped_at("weapon")
-                if weapon and weapon.class(true) == "weapon"
-                        and not weapon.artefact
-                        and not brand_is_great(weapon.ego()) then
-                    local oldname = weapon.name()
-                    if read_scroll(it, letter(weapon)) then
-                        say("BRANDING " .. oldname .. ".")
-                        return true
-                    end
-                end
-            elseif it.name():find("enchant armour") then
-                local body = items.equipped_at("Body Armour")
-                local ac = armour_ac()
-                if body and not body.artefact
-                        and body.plus < ac
-                        and body_armour_is_great(body)
-                        and not body.name():find("quicksilver") then
-                    local oldname = body.name()
-                    if read_scroll(it, letter(body)) then
-                        say("ENCHANTING " .. oldname .. ".")
-                        return true
-                    end
-                end
-                for _, slotname in pairs(good_slots) do
-                    if slotname ~= "Body Armour" and slotname ~= "Shield" then
-                        local it2 = items.equipped_at(slotname)
-                        if it2 and not it2.artefact
-                                and it2.plus < 2
-                                and it2.plus >= 0
-                                and not it2.name():find("scarf") then
-                            local oldname = it2.name()
-                            if read_scroll(it, letter(it2)) then
-                                say("ENCHANTING " .. oldname .. ".")
-                                return true
-                            end
-                        end
-                        if slotname == "Boots"
-                                and it2
-                                and it2.name():find("barding")
-                                and not it2.artefact
-                                and it2.plus < 4
-                                and it2.plus >= 0 then
-                            local oldname = it2.name()
-                            if read_scroll(it, letter(it2)) then
-                                say("ENCHANTING " .. oldname .. ".")
-                                return true
-                            end
-                        end
-                    end
-                end
-                if body and not body.artefact
-                        and body.plus < ac
-                        and body_armour_is_good(body)
-                        and not body.name():find("quicksilver") then
-                    local oldname = body.name()
-                    if read_scroll(it, letter(body)) then
-                        say("ENCHANTING " .. oldname .. ".")
-                        return true
-                    end
-                end
+                read_scroll(it)
+                return true
+            elseif it.name():find("enchant weapon")
+                    and get_enchantable_weapon(false) then
+                read_scroll(it)
+                return true
+            elseif it.name():find("brand weapon")
+                    and get_brandable_weapon(false) then
+                read_scroll(it)
+                return true
+            elseif it.name():find("enchant armour")
+                    and get_enchantable_armour(false) then
+                read_scroll(it)
+                return true
             end
         elseif drink_ok and it.class(true) == "potion" then
             if it.name():find("experience") then
-                return drink_potion(it)
+                drink_potion(it)
+                return true
             end
 
             if it.name():find("mutation") and want_cure_mutations() then
-                return drink_potion(it)
+                drink_potion(it)
+                return true
             end
         end
     end
@@ -694,7 +754,8 @@ function quaff_unided_potion(min_quantity)
         if it.class(true) == "potion"
                 and (not min_quantity or it.quantity >= min_quantity)
                 and not it.fully_identified then
-            return drink_potion(it)
+            drink_potion(it)
+            return true
         end
     end
     return false
@@ -711,20 +772,8 @@ end
 function read_unided_scroll()
     for item in inventory() do
         if item.class(true) == "scroll" and not item.fully_identified then
-            items.swap_slots(item.slot, letter_slot('Y'), false)
-            local scroll_letter = 'Y'
-
-            local weapon = get_weapon()
-            if weapon and not weapon.artefact
-                    and not brand_is_great(weapon.ego()) then
-                items.swap_slots(weapon.slot, letter_slot('Y'), false)
-            end
-
-            if you.race() == "Felid" then
-                return read_scroll(item, ".Y" .. string.char(27) .. "YC")
-            else
-                return read_scroll(item, ".Y" .. string.char(27) .. "YB")
-            end
+            read_scroll(item, ".Y")
+            return true
         end
     end
 
@@ -749,17 +798,12 @@ function plan_use_identify_scrolls()
         return false
     end
 
-    for item in inventory() do
-        if item.class(true) == "potion" and not item.fully_identified then
-            oldname = item.name()
-            if read_scroll(id_scroll, item_letter(item)) then
-                say("IDENTIFYING " .. oldname)
-                return true
-            end
-        end
+    if not get_unidentified_item() then
+        return false
     end
 
-    return false
+    read_scroll(id_scroll)
+    return true
 end
 
 function want_to_buy(it)
@@ -768,7 +812,7 @@ function want_to_buy(it)
         return false
     elseif class == "scroll" then
         local sub = it.subtype()
-        if sub == "identify" and count_item("scroll",sub) > 9 then
+        if sub == "identify" and count_item("scroll", sub) > 9 then
             return false
         end
     end
@@ -904,7 +948,7 @@ function c_choose_acquirement()
 
     for i, item in ipairs(acq_items) do
         if debug_channel("items") then
-            dsay("Offered " .. item:name(), true)
+            dsay("Offered " .. item.name(), true)
         end
 
         local class = item.class(true)
@@ -940,7 +984,7 @@ function c_choose_okawaru_weapon()
         local val = equip_value(item, true, cur_weapon)
 
         if debug_channel("items") then
-            dsay("Offered " .. item:name() .. " with value " .. tostring(val),
+            dsay("Offered " .. item.name() .. " with value " .. tostring(val),
                 true)
         end
 
@@ -990,7 +1034,7 @@ function c_choose_okawaru_armour()
         local diff = equip_value_difference(item, cur_vals)
 
         if debug_channel("items") then
-            dsay("Offered " .. item:name() .. " with value difference "
+            dsay("Offered " .. item.name() .. " with value difference "
                 .. tostring(diff), true)
         end
 
@@ -1011,4 +1055,61 @@ function c_choose_okawaru_armour()
     acquirement_class = equip_slot(best_item)
     acquirement_pickup = true
     return best_ind
+end
+
+function get_unidentified_item()
+    local id_item
+    for item in inventory() do
+        if item.class(true) == "potion"
+                and not item.fully_identified
+                -- Prefer identifying potions over scrolls and prefer
+                -- identifying smaller stacks.
+                and (not id_item
+                    or id_item.class(true) ~= "potion"
+                    or item.quantity < id_item.quantity) then
+            id_item = item
+        elseif item.class(true) == "scroll"
+                and not item.fully_identified
+                and (not id_item or id_item.class(true) ~= "potion")
+                and (not id_item or item.quantity < id_item.quantity) then
+            id_item = item
+        end
+    end
+
+    return id_item
+end
+
+function c_choose_identify()
+    local id_item = get_unidentified_item()
+    if id_item then
+        say("IDENTIFYING " .. id_item.name())
+        return item_letter(id_item)
+    end
+end
+
+function c_choose_brand_weapon()
+    local weapon = get_brandable_weapon()
+    if weapon then
+        say("BRANDING " .. weapon:name() .. ".")
+        return item_letter(weapon)
+    end
+end
+
+function c_choose_enchant_weapon()
+    local weapon = get_enchantable_weapon()
+    if weapon then
+        say("ENCHANTING " .. weapon:name() .. ".")
+        return item_letter(weapon)
+    end
+end
+
+function c_choose_enchant_armour()
+    local armour = get_enchantable_armour()
+    if armour then
+        say("ENCHANTING " .. armour:name() .. ".")
+        return item_letter(armour)
+    end
+end
+
+function c_choose_controlled_blink()
 end

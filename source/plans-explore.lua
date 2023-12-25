@@ -507,9 +507,9 @@ function set_plan_pre_explore2()
         {plan_upgrade_armour, "upgrade_armour"},
         {plan_upgrade_amulet, "upgrade_amulet"},
         {plan_upgrade_rings, "upgrade_rings"},
+        {plan_use_identify_scrolls, "use_identify_scrolls"},
         {plan_read_unided_scrolls, "try_read_unided_scrolls"},
         {plan_quaff_unided_potions, "quaff_unided_potions"},
-        {plan_use_identify_scrolls, "use_identify_scrolls"},
         {plan_drop_other_items, "drop_other_items"},
         {plan_full_inventory_panic, "full_inventory_panic"},
     }
