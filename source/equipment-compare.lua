@@ -9,7 +9,7 @@
 -- minimum and maximum potential value - or the current value. Here
 -- value should be viewed as utility relative to not wearing anything in
 -- that slot. For the current value calculation, we can specify an equipped
--- item and try to simulate not wearing it (for resist values).
+-- item and try to simulate not wearing it (for property values).
 
 -- We pick up an item if its max value is greater than our currently equipped
 -- item's min value. We swap to an item if it has a greater cur value.
@@ -38,15 +38,15 @@ function equip_value(it, cur, it2, sit)
 end
 
 function base_equip_value(it)
-    only_linear_resists = true
+    only_linear_properties = true
     local val1, val2 = equip_value(it)
-    only_linear_resists = false
+    only_linear_properties = false
     return val1, val2
 end
 
 -- Is the first item going to be worse than the second item no matter what
--- other resists we have?
-function resist_dominated(it, it2)
+-- other properties we have?
+function property_dominated(it, it2)
     local bmin, bmax = base_equip_value(it)
     local bmin2, bmax2 = base_equip_value(it2)
     local diff = bmin2 - bmax
@@ -54,8 +54,8 @@ function resist_dominated(it, it2)
         return false
     end
 
-    local vec = resist_vec(it)
-    local vec2 = resist_vec(it2)
+    local vec = property_vec(it)
+    local vec2 = property_vec(it2)
     for i = 1, #vec do
         if vec[i] > vec2[i] then
             diff = diff - (vec[i] - vec2[i])
@@ -78,7 +78,7 @@ function armour_value(it, cur, it2)
         val1 = -10000
     end
 
-    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    local res_val1, res_val2 = total_property_value(it, cur, it2)
     val1 = val1 + res_val1
     val2 = val2 + res_val2
 
@@ -254,7 +254,7 @@ function weapon_value(it, cur, it2, sit)
         value = value + 1000
     end
 
-    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    local res_val1, res_val2 = total_property_value(it, cur, it2)
     val1 = val1 + res_val1
     val2 = val2 + res_val2
 
@@ -422,7 +422,7 @@ function amulet_value(it, cur, it2)
         val2 = 1000
     end
 
-    local res_val1, res_val2 = total_resist_value(it, cur, it2)
+    local res_val1, res_val2 = total_property_value(it, cur, it2)
     val1 = val1 + res_val1
     val2 = val2 + res_val2
     return val1, val2
@@ -437,13 +437,13 @@ function ring_value(it, cur, it2)
         end
     end
 
-    local val1, val2 = total_resist_value(it, cur, it2)
+    local val1, val2 = total_property_value(it, cur, it2)
     return val1, val2
 end
 
 -- This doesn't handle rings correctly at the moment, but right now we are
 -- only using this for weapons anyway.
--- Also maybe this should check resist_dominated too?
+-- Also maybe this should check property_dominated too?
 function item_is_sit_dominated(it, sit)
     local slotname = equip_slot(it)
     local minv, maxv = equip_value(it, nil, nil, sit)
@@ -494,7 +494,7 @@ function item_is_dominated(it)
             if minv2 >= maxv
                     or minv2 >= minv
                         and maxv2 >= maxv
-                        and resist_dominated(it, it2) then
+                        and property_dominated(it, it2) then
                 num_slots = num_slots - 1
                 if num_slots == 0 then
                     return true
@@ -521,7 +521,7 @@ function should_upgrade(it, old_it, sit)
         end
 
         -- Don't like to swap Faith.
-        return item_resist("Faith", old_it) == 0
+        return item_property("Faith", old_it) == 0
     end
 
     return equip_value(it, true, old_it, sit)

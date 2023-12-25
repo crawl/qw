@@ -64,11 +64,53 @@ function intrinsic_undead()
     return you.race() == "Ghoul" or you.race() == "Mummy"
 end
 
--- Returns the current level of "resistance" to an artprop string. If an
--- item is provided, assume the item is equipped and try to pretend that
--- it is unequipped. Does not include some temporary effects.
-function player_resist(str, it)
-    local it_res = it and it.equipped and item_resist(str, it) or 0
+-- Returns the player's intrinsic level of an artprop string.
+function intrinsic_property(str)
+    if str == "rF" then
+        return you.mutation("fire resistance")
+    elseif str == "rC" then
+        return you.mutation("cold resistance")
+    elseif str == "rElec" then
+        return you.mutation("electricity resistance")
+    elseif str == "rPois" then
+        if intrinsic_rpois() or you.mutation("poison resistance") > 0 then
+            return 1
+        else
+            return 0
+        end
+    elseif str == "rN" then
+        local val = you.mutation("negative energy resistance")
+        if you.god() == "the Shining One" then
+            val = val + math.floor(you.piety_rank() / 3)
+        end
+        return val
+    elseif str == "Will" then
+        return you.mutation("strong-willed") + (you.god() == "Trog" and 1 or 0)
+    elseif str == "rCorr" then
+        return 0
+    elseif str == "SInv" then
+        if intrinsic_sinv() or you.mutation("see invisible") > 0 then
+            return 1
+        else
+            return 0
+        end
+    elseif str == "Fly" then
+        return intrinsic_flight() and 1 or 0
+    elseif str == "Spirit" then
+        return you.race() == "Vine Stalker" and 1 or 0
+    end
+
+    return 0
+end
+
+
+--[[
+Returns the current level of player property by artprop string. If an item is
+provided, assume the item is equipped and try to pretend that it is unequipped.
+Does not include some temporary effects.
+]]--
+function player_property(str, it)
+    local it_res = it and it.equipped and item_property(str, it) or 0
     local stat
     if str == "Str" then
         stat, _ = you.strength()
@@ -80,12 +122,14 @@ function player_resist(str, it)
         stat, _ = you.intelligence()
         return stat - it_res
     end
-    local other_res = intrinsic_resist(str)
+
+    local other_res = intrinsic_property(str)
     for it2 in inventory() do
-        if it2.equipped and it2.slot ~= it.slot then
-            other_res = other_res + item_resist(str, it2)
+        if it2.equipped and (not it or it2.slot ~= it.slot) then
+            other_res = other_res + item_property(str, it2)
         end
     end
+
     if str == "rF" or str == "rC" or str == "rN" or str == "Will" then
         return other_res
     else

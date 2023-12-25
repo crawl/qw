@@ -2,7 +2,7 @@
 -- Equipment property evaluation.
 
 -- Returns the amount of an artprop granted by an item.
-function item_resist(str, it)
+function item_property(str, it)
     if not it then
         return 0
     end
@@ -120,10 +120,10 @@ function item_resist(str, it)
 end
 
 -- The current utility of having a given amount of an artprop.
-function absolute_resist_value(str, n)
+function absolute_property_value(str, n)
     if str == "Str" or str == "Int" or str == "Dex" then
         if n > 4 then
-            return 0 -- handled by linear_resist_value()
+            return 0 -- handled by linear_property_value()
         elseif n > 2 then
             return -100
         elseif n > 0 then
@@ -215,13 +215,13 @@ function absolute_resist_value(str, n)
     return 0
 end
 
-function max_resist_value(str, d)
+function max_property_value(str, d)
     if d <= 0 then
         return 0
     end
 
     local val = 0
-    local ires = intrinsic_resist(str)
+    local ires = intrinsic_property(str)
     if str == "rF" or str == "rC" then
         if d == 1 then
             val = 125
@@ -282,7 +282,7 @@ function max_resist_value(str, d)
     return 0
 end
 
-function min_resist_value(str, d)
+function min_property_value(str, d)
     if d < 0 then
         if str == "rF" then
             return -450
@@ -311,7 +311,7 @@ function min_resist_value(str, d)
     return 0
 end
 
-function resist_value(str, it, cur, it2)
+function property_value(str, it, cur, it2)
     if str == "Fragile" then
         local bad_for_hydra = it
             and it.class(true) == "weapon"
@@ -320,22 +320,22 @@ function resist_value(str, it, cur, it2)
         return bad_for_hydra and -500 or 0, 0
     end
 
-    local d = item_resist(str, it)
+    local d = item_property(str, it)
     if d == 0 then
         return 0, 0
     end
 
     if cur then
-        local c = player_resist(str, it2)
-        local diff = absolute_resist_value(str, c + d)
-            - absolute_resist_value(str, c)
+        local c = player_property(str, it2)
+        local diff = absolute_property_value(str, c + d)
+            - absolute_property_value(str, c)
         return diff, diff
     else
-        return min_resist_value(str, d), max_resist_value(str, d)
+        return min_property_value(str, d), max_property_value(str, d)
     end
 end
 
-function linear_resist_value(str)
+function linear_property_value(str)
     local skill = weapon_skill()
     dex_weapon = skill == "Long Blades"
         or skill == "Short Blades"
@@ -365,27 +365,27 @@ function linear_resist_value(str)
     return 0
 end
 
--- Resistances and properties that don't have a linear progression of value at
--- different levels. The Str/Dex/Int in nonlinear_resists can only recieve
--- negative utility, which happens when they are reduced to dangerous levels.
-local nonlinear_resists = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois",
+-- Properties that don't have a linear progression of value at different
+-- levels. The Str/Dex/Int in nonlinear_property can only recieve negative
+-- utility, which happens when they are reduced to dangerous levels.
+local nonlinear_properties = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois",
     "rN", "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit", "Acrobat",
     "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm", "Fragile" }
 -- These properties always provide the same benefit (or detriment) with each
 -- point/pip/instance of the property.
-local linear_resists = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
+local linear_properties = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
     "*Slow", "*Corrode", "*Tele", "*Rage" }
 
-function total_resist_value(it, cur, it2)
+function total_property_value(it, cur, it2)
     local val = 0
-    for _, str in ipairs(linear_resists) do
-        val = val + item_resist(str, it) * linear_resist_value(str)
+    for _, str in ipairs(linear_properties) do
+        val = val + item_property(str, it) * linear_property_value(str)
     end
 
     local val1, val2 = val, val
-    if not only_linear_resists then
-        for _, str in ipairs(nonlinear_resists) do
-            local a, b = resist_value(str, it, cur, it2)
+    if not only_linear_properties then
+        for _, str in ipairs(nonlinear_properties) do
+            local a, b = property_value(str, it, cur, it2)
             val1 = val1 + a
             val2 = val2 + b
         end
@@ -393,10 +393,10 @@ function total_resist_value(it, cur, it2)
     return val1, val2
 end
 
-function resist_vec(it)
+function property_vec(it)
     local vec = {}
-    for _, str in ipairs(nonlinear_resists) do
-        local a, b = resist_value(str, it)
+    for _, str in ipairs(nonlinear_properties) do
+        local a, b = property_value(str, it)
         table.insert(vec, b > 0 and b or a)
     end
     return vec
