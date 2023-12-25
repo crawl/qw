@@ -312,7 +312,7 @@ function min_property_value(str, d)
 end
 
 function property_value(str, it, cur, it2)
-    if str == "Fragile" then
+    if str == "^Fragile" then
         local bad_for_hydra = it
             and it.class(true) == "weapon"
             and you.xl() < 18
@@ -370,7 +370,7 @@ end
 -- utility, which happens when they are reduced to dangerous levels.
 local nonlinear_properties = { "Str", "Dex", "Int", "rF", "rC", "rElec", "rPois",
     "rN", "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit", "Acrobat",
-    "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm", "Fragile" }
+    "Reflect", "Repulsion", "-Tele", "Ponderous", "Harm", "^Fragile" }
 -- These properties always provide the same benefit (or detriment) with each
 -- point/pip/instance of the property.
 local linear_properties = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",

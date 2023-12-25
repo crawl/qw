@@ -173,7 +173,7 @@ function can_swap(it, upgrade)
     end
 
     if it.name():find("obsidian axe") and you.status("mesmerised")
-            or not upgrade and it.artefact and it.artprops["Fragile"]
+            or not upgrade and it.artefact and it.artprops["^Fragile"]
             or not upgrade
                 and it.ego() == "distortion"
                 and you.god() ~= "Lugonu" then
