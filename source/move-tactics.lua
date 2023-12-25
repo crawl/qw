@@ -373,7 +373,7 @@ function update_flee_positions()
     end
 
     local positions, feats = get_feature_map_positions(search_feats)
-    if #positions == 0 then
+    if not positions then
         return
     end
 

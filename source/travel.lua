@@ -417,11 +417,15 @@ function update_goal_travel()
                     or where_depth ~= goal_travel.depth))
 
     local goal_reachable = true
-    local feats = goal_travel_features()
-    if #feats > 0 then
-        local positions = get_feature_map_positions(feats)
+    local goal_feats = goal_travel_features()
+    local goal_positions
+    if goal_feats then
+        goal_positions = get_feature_map_positions(goal_feats)
         goal_reachable = false
-        for _, pos in ipairs(positions) do
+    end
+
+    if goal_positions then
+        for _, pos in ipairs(goal_positions) do
             if map_is_reachable_at(pos) then
                 goal_reachable = true
                 break
@@ -481,7 +485,9 @@ function goal_travel_features()
                 table.insert(wanted_feats, feat)
             end
         end
-        return wanted_feats
+        if #wanted_feats > 0 then
+            return wanted_feats
+        end
     elseif goal_travel.first_dir then
         return level_stairs_features(where_branch, where_depth,
             goal_travel.first_dir)
@@ -493,5 +499,4 @@ function goal_travel_features()
             return { god_altar(god) }
         end
     end
-    return {}
 end

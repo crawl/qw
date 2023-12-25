@@ -80,9 +80,11 @@ function plan_move_towards_abyssal_feature()
     end
 
     local feats = goal_travel_features()
-    local result = best_move_towards_features(feats)
-    if result then
-        return move_towards_destination(result.move, result.dest, "goal")
+    if feats then
+        local result = best_move_towards_features(feats)
+        if result then
+            return move_towards_destination(result.move, result.dest, "goal")
+        end
     end
 
     result = best_move_towards_features(feats, true)
@@ -161,7 +163,7 @@ function plan_explore_near_runelights()
     end
 
     local runelights = get_feature_map_positions({ "runelight" })
-    if #runelights == 0 then
+    if not runelights then
         return false
     end
 

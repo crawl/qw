@@ -149,6 +149,10 @@ function plan_use_travel_stairs()
     end
 
     local feats = goal_travel_features()
+    if not feats then
+        return false
+    end
+
     local feat = view.feature_at(0, 0)
     if not util.contains(feats, feat) then
         return false
@@ -197,6 +201,10 @@ function plan_move_towards_travel_feature()
     end
 
     local feats = goal_travel_features()
+    if not feats then
+        return false
+    end
+
     if util.contains(feats, view.feature_at(0, 0)) then
         return false
     end

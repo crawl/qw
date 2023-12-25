@@ -317,12 +317,16 @@ end
 
 function best_move_towards_features(feats, ignore_exclusions)
     local positions = get_feature_map_positions(feats)
-    return best_move_towards_positions(positions, ignore_exclusions)
+    if positions then
+        return best_move_towards_positions(positions, ignore_exclusions)
+    end
 end
 
 function best_move_towards_items(item_names, ignore_exclusions)
     local positions = get_item_map_positions(item_names)
-    return best_move_towards_positions(positions, ignore_exclusions)
+    if positions then
+        return best_move_towards_positions(positions, ignore_exclusions)
+    end
 end
 
 function map_has_adjacent_unseen_at(pos)

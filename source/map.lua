@@ -925,7 +925,9 @@ function get_feature_map_positions(feats)
             end
         end
     end
-    return positions, features
+    if #positions > 0 then
+        return positions, features
+    end
 end
 
 function get_item_map_positions(item_names, radius)
@@ -953,7 +955,9 @@ function get_item_map_positions(item_names, radius)
         end
     end
 
-    return positions, found_items
+    if #positions > 0 then
+        return positions, found_items
+    end
 end
 
 function remove_exclusions(record_only)
