@@ -173,16 +173,6 @@ function item_letter(item)
     return slot_letter(item.slot)
 end
 
-function count_item(cls, name)
-    local count = 0
-    for it in inventory() do
-        if it.class(true) == cls and it.name():find(name) then
-            count = count + it.quantity
-        end
-    end
-    return count
-end
-
 function find_item(cls, name)
     turn_memo_args("find_item",
         function(cls_arg, name_arg)
@@ -230,8 +220,9 @@ end
 function count_item(cls, name)
     local it = find_item(cls, name)
     if it then
-        return item(it).quantity
+        return it.quantity
     end
+
     return 0
 end
 
