@@ -20,10 +20,15 @@ function c_answer_prompt(prompt)
         return true
     elseif prompt:find("Keep disrobing") then
         return false
-    elseif prompt:find("Really unwield") or prompt:find("Really take off")
-         or prompt:find("Really remove") or prompt:find("Really wield")
-         or prompt:find("Really wear") or prompt:find("Really put on")
-         or prompt:find("Really quaff") then
+    elseif prompt:find("Really unwield")
+            or prompt:find("Really take off")
+            or prompt:find("Really remove")
+            or prompt:find("Really wield")
+            or prompt:find("Really wear")
+            or prompt:find("Really put on")
+            or prompt:find("Really drink")
+            or prompt:find("Really quaff")
+            or prompt:find("Really abort") then
         return true
     elseif prompt:find("Keep reading") then
         return true
@@ -37,8 +42,6 @@ function c_answer_prompt(prompt)
     elseif prompt:find("Are you sure you want to drop") then
         return true
     elseif prompt:find("Really rampage") then
-        return true
-    elseif prompt:find("Really drink that potion of mutation") then
         return true
     elseif prompt:find("next level anyway") then
         return true
