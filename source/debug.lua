@@ -314,6 +314,11 @@ function toggle_throttle()
       .. " coroutine throttle")
 end
 
+function toggle_delay()
+    qw.delayed = not qw.delayed
+    dsay((qw.delayed and "Enabling" or "Disabling") .. " action delay")
+end
+
 function reset_coroutine()
     qw.update_coroutine = nil
     collectgarbage("collect")
