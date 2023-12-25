@@ -257,7 +257,7 @@ end
 
 function can_finesse()
     return you.god() == "Okawaru"
-        and you.piety_rank() >= 5
+        and you.piety_rank() >= 4
         and you.mp() >= 5
         and can_invoke()
 end
