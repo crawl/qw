@@ -295,7 +295,7 @@ function min_property_value(str, d)
 
             return -150
         elseif str == "Will" then
-            return 75 * d
+            return -75 * d
         end
     -- Begin properties that are always bad.
     elseif d > 0 then
