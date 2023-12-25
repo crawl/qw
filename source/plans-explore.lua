@@ -165,6 +165,32 @@ function plan_use_travel_stairs()
     return false
 end
 
+function plan_move_towards_rune()
+    if have_branch_runes(where_branch)
+            or unable_to_move()
+            or dangerous_to_move() then
+        return false
+    end
+
+    local runes = branch_runes(where_branch, true)
+    local rune_positions = get_item_map_positions(runes)
+    if not rune_positions then
+        return false
+    end
+
+    local result = best_move_towards_positions(rune_positions, true)
+    if result then
+        return move_towards_destination(result.move, result.rune_pos, "goal")
+    end
+
+    result = best_move_towards_unexplored_near_positions(rune_positions, true)
+    if result then
+        return move_towards_destination(result.move, result.dest, "goal")
+    end
+
+    return false
+end
+
 function plan_move_towards_travel_feature()
     if unable_to_move() or dangerous_to_move() then
         return false
@@ -531,6 +557,7 @@ function set_plan_explore2()
         {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
+        {plan_move_towards_rune, "move_towards_rune"},
         {plan_use_travel_stairs, "use_travel_stairs"},
         {plan_move_towards_travel_feature, "move_towards_travel_feature"},
         {plan_autoexplore, "try_autoexplore2"},

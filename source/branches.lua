@@ -82,7 +82,7 @@ function initialize_branch_data()
         data["parent"] = entry[5]
         data["parent_min_depth"] = entry[6]
         data["parent_max_depth"] = entry[7]
-        data["rune"] = entry[8]
+        data["runes"] = entry[8]
 
         -- Update the parent entry depth with that of an entry found in the
         -- parent either if the entry depth is unconfirmed our the found entry
@@ -122,8 +122,6 @@ function initialize_branch_data()
 
     early_zot = make_level_range("Zot", 1, -1)
     zot_end = branch_end("Zot")
-
-    abyssal_rune = branch_runes("Abyss")[1] .. const.rune_suffix
 end
 
 function branch_travel(branch)
@@ -242,12 +240,21 @@ function parent_branch(branch)
         branch_data[branch].parent_max_depth
 end
 
-function branch_runes(branch)
+function branch_runes(branch, item_names)
     if not branch_data[branch] then
         error("Unknown branch: " .. tostring(branch))
     end
 
-    return branch_data[branch].rune
+    local runes = branch_data[branch].runes
+    if runes and item_names then
+        local rune_items = {}
+        for _, rune in ipairs(runes) do
+            table.insert(rune_items, rune .. const.rune_suffix)
+        end
+        return rune_items
+    else
+        return runes
+    end
 end
 
 function branch_exists(branch)

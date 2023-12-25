@@ -26,10 +26,12 @@ function plan_enter_abyss()
 end
 
 function plan_pick_up_abyssal_rune()
-    if not have_branch_runes("Abyss")
-            and item_map_positions[abyssal_rune]
-            and positions_equal(qw.map_pos,
-                item_map_positions[abyssal_rune]) then
+    if not in_branch("Abyss") or have_branch_runes("Abyss") then
+        return false
+    end
+
+    local rune_pos = item_map_positions[branch_runes(where_branch, true)[1]]
+    if rune_pos and positions_equal(qw.map_pos, rune_pos) then
         magic(",")
         return true
     end
@@ -114,12 +116,13 @@ function plan_abyss_wait_one_turn()
 end
 
 function want_to_move_to_abyssal_rune()
-    return want_to_move_to_abyss_objective()
-        and goal_branch == "Abyss"
-        and (item_map_positions[abyssal_rune]
-            and not positions_equal(qw.map_pos,
-                item_map_positions[abyssal_rune])
-            or c_persist.sensed_abyssal_rune)
+    if not want_to_move_to_abyss_objective() or goal_branch ~= "Abyss" then
+        return false
+    end
+
+    local rune_pos = item_map_positions[branch_runes(where_branch, true)[1]]
+    return rune_pos and not positions_equal(qw.map_pos, rune_pos)
+        or c_persist.sensed_abyssal_rune
 end
 
 function plan_move_towards_abyssal_rune()
@@ -129,8 +132,11 @@ function plan_move_towards_abyssal_rune()
         return false
     end
 
-    local rune_pos = get_item_map_positions({ abyssal_rune })[1]
-    if not rune_pos then
+    local rune = branch_runes(where_branch, true)[1]
+    local rune_pos = get_item_map_positions({ rune })
+    if rune_pos then
+        rune_pos = rune_pos[1]
+    else
         return false
     end
 

@@ -755,11 +755,13 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
 end
 
 function reset_item_tracking()
-    if in_branch("Abyss")
-            and not (c_persist.seen_items[where]
-                and c_persist.seen_items[where][abyssal_rune])
+    if in_branch("Abyss") then
+        local rune = branch_runes(where_branch, true)[1]
+        if not (c_persist.seen_items[where]
+                    and c_persist.seen_items[where][rune])
                 and not c_persist.sensed_abyssal_rune then
-        item_map_positions[abyssal_rune] = nil
+            item_map_positions[rune] = nil
+        end
     end
 
     item_searches = {}
@@ -943,10 +945,12 @@ function get_item_map_positions(item_names, radius)
 
     -- If we've searched the map for the abyssal rune and not found it, unset
     -- our sensing of the rune.
-    if in_branch("Abyss")
-            and util.contains(item_names, abyssal_rune)
-            and not util.contains(found_items, abyssal_rune) then
-        c_persist.sensed_abyssal_rune = false
+    if in_branch("Abyss") then
+        local rune = branch_runes(where_branch, true)[1]
+        if util.contains(item_names, rune)
+                and not util.contains(found_items, rune) then
+            c_persist.sensed_abyssal_rune = false
+        end
     end
 
     return positions, found_items

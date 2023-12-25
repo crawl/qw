@@ -37,7 +37,6 @@ local early_vaults
 local vaults_end
 local early_zot
 local zot_end
-local abyssal_rune
 
 local future_gods = {}
 local future_gods_use_mp
