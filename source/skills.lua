@@ -2,12 +2,12 @@
 -- Skill selection
 
 local skill_list = {
-    "Fighting", "Short Blades", "Long Blades", "Axes", "Maces & Flails",
-    "Polearms", "Staves", "Unarmed Combat", "Ranged Weapons", "Throwing",
-    "Armour", "Dodging", "Shields", "Invocations", "Evocations", "Stealth",
-    "Spellcasting", "Conjurations", "Hexes", "Summonings",
-    "Necromancy", "Translocations", "Transmutations", "Fire Magic",
-    "Ice Magic", "Air Magic", "Earth Magic", "Poison Magic"
+    "Fighting", "Maces & Flails", "Axes", "Polearms", "Staves",
+    "Unarmed Combat", "Throwing", "Short Blades", "Long Blades",
+    "Ranged Weapons", "Armour", "Dodging", "Shields", "Stealth",
+    "Spellcasting", "Conjurations", "Hexes", "Summonings", "Necromancy",
+    "Translocations", "Alchemy", "Fire Magic", "Ice Magic", "Air Magic",
+    "Earth Magic", "Invocations", "Evocations", "Shapeshifting",
 }
 
 function choose_single_skill(sk)
