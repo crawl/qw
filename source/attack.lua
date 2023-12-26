@@ -81,8 +81,8 @@ function make_melee_attack(weapon)
         uses_berserk = true,
         uses_might = true
     }
-    attack.props = { "distance", "is_constricting_you", "stabbability",
-        "damage_level", "threat", "is_orc_priest_wizard" }
+    attack.props = { "los_danger", "distance", "is_constricting_you",
+        "stabbability", "damage_level", "threat", "is_orc_priest_wizard" }
     -- We favor closer monsters.
     attack.reversed_props = { distance = true }
     attack.min_props = { distance = true }
@@ -324,8 +324,8 @@ function make_launcher_attack(item)
         ignores_player = item_ignores_player(item),
         test_spell = attack_test_spell(item),
     }
-    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
+    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
+        "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
     attack.min_props = { distance = true }
     return attack
@@ -349,8 +349,8 @@ function make_throwing_attack()
         can_target_empty = true,
         test_spell = attack_test_spell(missile),
     }
-    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
+    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
+        "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
     attack.min_props = { distance = true }
     return attack
@@ -452,8 +452,8 @@ function poison_spit_attack()
     attack.range = poison_gas and 6 or 5
     attack.is_penetrating = poison_gas
     attack.test_spell = "Quicksilver Bolt"
-    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
+    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
+        "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
     attack.min_props = { distance = true }
     attack.check = function(mons) return mons:res_poison() < 1 end
@@ -475,8 +475,8 @@ function make_wand_attack(wand_type)
     attack.ignores_player = item_ignores_player(wand)
     attack.damage_is_hp = wand_type == "paralysis"
     attack.test_spell = "Quicksilver Bolt"
-    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
+    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
+        "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
     attack.min_props = { distance = true }
     return attack

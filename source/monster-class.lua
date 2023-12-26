@@ -260,6 +260,16 @@ function Monster:is_orc_priest_wizard()
         end)
 end
 
+function Monster:los_danger()
+    return self:property_memo("los_danger",
+        function()
+            local name = self:name()
+            return name == "moth of wrath"
+                or name == "glass eye"
+                or name == "doom hound" and self:is("ready_to_howl")
+        end)
+end
+
 function Monster:ignores_player_damage()
     return self:property_memo("ignores_player_damage",
         function()
