@@ -52,8 +52,8 @@ end
 
 function move_towards_destination(pos, dest, reason)
     if move_to(pos) then
-        move_destination = dest
-        move_reason = reason
+        qw.move_destination = dest
+        qw.move_reason = reason
         return true
     end
 

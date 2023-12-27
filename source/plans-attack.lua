@@ -399,9 +399,9 @@ function plan_move_towards_enemy()
         return false
     end
 
-    enemy_memory = position_difference(mons:pos(), move)
-    enemy_map_memory = position_sum(qw.map_pos, mons:pos())
-    turns_left_moving_towards_enemy = 2
+    qw.enemy_memory = position_difference(mons:pos(), move)
+    qw.enemy_map_memory = position_sum(qw.map_pos, mons:pos())
+    qw.enemy_memory_turns_left = 2
     return move_to(move)
 end
 
@@ -432,15 +432,15 @@ function plan_continue_move_towards_enemy()
         return false
     end
 
-    if enemy_memory and position_is_origin(enemy_memory) then
-        enemy_memory = nil
-        turns_left_moving_towards_enemy = 0
-        enemy_map_memory = nil
+    if qw.enemy_memory and position_is_origin(qw.enemy_memory) then
+        qw.enemy_memory = nil
+        qw.enemy_memory_turns_left = 0
+        qw.enemy_map_memory = nil
         return false
     end
 
-    if turns_left_moving_towards_enemy > 0 then
-        local result = move_search_result(const.origin, enemy_memory,
+    if qw.enemy_memory_turns_left > 0 then
+        local result = move_search_result(const.origin, qw.enemy_memory,
             tab_function(), reach_range())
         if not result then
             return false
@@ -449,14 +449,14 @@ function plan_continue_move_towards_enemy()
         return move_to(result.move)
     end
 
-    enemy_memory = nil
+    qw.enemy_memory = nil
 
-    if last_enemy_map_memory
-            and enemy_map_memory
-            and positions_equal(last_enemy_map_memory, enemy_map_memory) then
+    if qw.last_enemy_map_memory
+            and qw.enemy_map_memory
+            and positions_equal(qw.last_enemy_map_memory, qw.enemy_map_memory) then
         enemy_map_memory = nil
 
-        local dest = closest_adjacent_map_position(last_enemy_map_memory)
+        local dest = closest_adjacent_map_position(qw.last_enemy_map_memory)
         if not dest then
             return false
         end
@@ -468,8 +468,8 @@ function plan_continue_move_towards_enemy()
         end
     end
 
-    last_enemy_map_memory = enemy_map_memory
-    enemy_map_memory = nil
+    qw.last_enemy_map_memory = qw.enemy_map_memory
+    qw.enemy_map_memory = nil
     return false
 end
 

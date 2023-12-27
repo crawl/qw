@@ -178,8 +178,8 @@ function turn_update()
         c_persist.zig_completed = true
     end
 
-    if turns_left_moving_towards_enemy > 0 then
-        turns_left_moving_towards_enemy = turns_left_moving_towards_enemy - 1
+    if qw.enemy_memory and qw.enemy_memory_turns_left > 0 then
+        qw.enemy_memory_turns_left = qw.enemy_memory_turns_left - 1
     end
     choose_tactical_step()
 

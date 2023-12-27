@@ -418,20 +418,20 @@ function best_move_towards_safety()
 end
 
 function update_move_destination()
-    if not move_destination then
-        move_reason = nil
+    if not qw.move_destination then
+        qw.move_reason = nil
         return
     end
 
     local clear = false
-    if move_reason == "goal" and want_goal_update then
+    if qw.move_reason == "goal" and want_goal_update then
         clear = true
-    elseif move_reason == "monster" and danger then
+    elseif qw.move_reason == "monster" and danger then
         clear = true
-    elseif move_reason == "retreat" and not danger then
+    elseif qw.move_reason == "retreat" and not danger then
         clear = true
-    elseif positions_equal(qw.map_pos, move_destination) then
-        if move_reason == "unexplored"
+    elseif positions_equal(qw.map_pos, qw.move_destination) then
+        if qw.move_reason == "unexplored"
                 and autoexplored_level(where_branch, where_depth)
                 and position_is_safe then
             reset_autoexplore(where)
@@ -443,15 +443,15 @@ function update_move_destination()
     if clear then
         if debug_channel("explore") then
             dsay("Clearing move destination "
-                .. cell_string_from_map_position(move_destination))
+                .. cell_string_from_map_position(qw.move_destination))
         end
 
-        local dist_map = distance_maps[hash_position(move_destination)]
+        local dist_map = distance_maps[hash_position(qw.move_destination)]
         if dist_map and not dist_map.permanent then
             distance_map_remove(dist_map)
         end
 
-        move_destination = nil
-        move_reason = nil
+        qw.move_destination = nil
+        qw.move_reason = nil
     end
 end

@@ -237,16 +237,16 @@ function plan_move_towards_travel_feature()
 end
 
 function plan_move_towards_destination()
-    if not move_destination or unable_to_move() or dangerous_to_move() then
+    if not qw.move_destination or unable_to_move() or dangerous_to_move() then
         return false
     end
 
-    local result = best_move_towards(move_destination)
+    local result = best_move_towards(qw.move_destination)
     if result then
         return move_to(result.move)
     end
 
-    result = best_move_towards(move_destination, true)
+    result = best_move_towards(qw.move_destination, true)
     if result then
         return move_to(result.move)
     end

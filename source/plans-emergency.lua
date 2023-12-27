@@ -990,7 +990,7 @@ function plan_continue_flee()
 end
 
 function plan_full_inventory_panic()
-    if FULL_INVENTORY_PANIC and free_inventory_slots() == 0 then
+    if qw_full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
     else
         return false
@@ -1148,15 +1148,15 @@ function plan_retreat()
 end
 
 function plan_continue_retreat()
-    if not move_destination
-            or move_reason ~= "retreat"
+    if not qw.move_destination
+            or qw.move_reason ~= "retreat"
             or not want_to_retreat()
             or unable_to_move()
             or dangerous_to_move() then
         return false
     end
 
-    local result = best_move_towards(move_destination)
+    local result = best_move_towards(qw.move_destination)
     if result then
         say("STILL RETREEAATING.")
         return move_to(result.move)

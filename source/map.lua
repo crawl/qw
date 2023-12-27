@@ -66,9 +66,9 @@ function update_waypoint(new_level)
     end
 
     if new_level or new_waypoint then
-        move_destination = nil
-        enemy_map_memory = nil
-        last_enemy_map_memory = nil
+        qw.move_destination = nil
+        qw.enemy_map_memory = nil
+        qw.last_enemy_map_memory = nil
     end
 
     return new_waypoint

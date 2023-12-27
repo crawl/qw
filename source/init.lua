@@ -81,6 +81,7 @@ function initialize()
     initialize_c_persist()
 
     qw.shield_crazy = SHIELD_CRAZY
+    qw.full_inventory_panic = FULL_INVENTORY_PANIC
     qw.faded_altar = FADED_ALTAR
     qw.late_orc = LATE_ORC
     qw.early_second_rune = EARLY_SECOND_RUNE
