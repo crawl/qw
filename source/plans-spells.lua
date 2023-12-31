@@ -53,7 +53,7 @@ end
 
 function distance_to_tabbable_enemy()
     local best_dist = 10
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() < best_dist
                 and (enemy:player_has_path_to_melee()
                     or enemy:player_can_wait_for_melee()) then

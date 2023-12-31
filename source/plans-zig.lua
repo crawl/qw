@@ -6,7 +6,7 @@ function plan_zig_fog()
             or you.berserk()
             or you.teleporting()
             or you.confused()
-            or not danger
+            or not qw.danger_in_los
             or not hp_is_low(70)
             or count_enemies(qw.los_radius) - count_enemies(2) < 15
             or view.cloud_at(0, 0) ~= nil then
@@ -41,7 +41,7 @@ function plan_use_zigfig()
     if goal_branch ~= "Zig"
             or branch_is_temporary(where_branch)
             or position_is_cloudy
-            or danger
+            or qw.danger_in_los
             or you.berserk()
             or you.confused()
             or feature_is_critical(view.feature_at(0, 0)) then

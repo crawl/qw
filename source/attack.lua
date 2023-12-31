@@ -120,7 +120,7 @@ end
 function get_melee_target_func(assume_flight)
     local attack = get_melee_attack()
     local best_result
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:player_can_melee()
                 or enemy:get_player_move_towards(assume_flight) then
             local result = assess_melee_target(attack, enemy)
@@ -392,7 +392,7 @@ function get_ranged_target(attack, prefer_melee)
     end
 
     local best_result
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         -- If we have and prefer a melee target and there's a ranged monster,
         -- we'll abort whenever there's a monster we could move towards
         -- instead, since this is how the melee movement plan works.

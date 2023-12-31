@@ -978,7 +978,7 @@ end
 function exclude_position(pos)
     if debug_channel("map") then
         local desc
-        local mons = monster_map[pos.x][pos.y]
+        local mons = get_monster_at(pos)
         if mons then
             desc = mons:name()
         else
@@ -1014,7 +1014,7 @@ function update_exclusions(new_waypoint)
     -- to our melee range get excluded immediately.
     local auto_exclude = {}
     local have_ranged = have_ranged_attack()
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
                 -- No excluding safe monsters.
                 and not enemy:is_safe()
@@ -1044,7 +1044,7 @@ function update_exclusions(new_waypoint)
     -- We potentially exclude monsters that can't reach our position when we've
     -- tried to fight them from full HP. To make this assessment, we track the
     -- last turn a monster could reach us.
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if not enemy:is_summoned() and enemy:has_path_to_player() then
             qw.incoming_monsters_turn = you.turns()
             return
@@ -1059,7 +1059,7 @@ function update_exclusions(new_waypoint)
     -- can't only after finishing off the monsters that can and then resting to
     -- full HP.
     if qw.full_hp_turn >= qw.incoming_monsters_turn and hp_is_low(50) then
-        for _, enemy in ipairs(enemy_list) do
+        for _, enemy in ipairs(qw.enemy_list) do
             if not enemy:is_summoned() then
                 exclude_position(enemy:pos())
             end

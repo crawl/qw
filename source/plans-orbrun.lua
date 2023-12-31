@@ -10,7 +10,7 @@ function want_to_orbrun_heal_wounds()
         return false
     end
 
-    if danger then
+    if qw.danger_in_los then
         return hp_is_low(25) or hp_is_low(50) and you.teleporting()
     else
         return hp_is_low(50)

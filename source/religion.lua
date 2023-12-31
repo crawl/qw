@@ -373,92 +373,83 @@ function can_foxfire_swarm()
         and can_invoke()
 end
 
-function count_brothers_in_arms(radius)
+function check_allies_func(radius, filter)
+    for pos in square_iter(const.origin, radius) do
+        local mons = get_monster_at(pos)
+        if mons and mons:is_friendly()
+                and (not filter or filter(mons)) then
+            return true
+        end
+    end
+    return false
+end
+
+function check_allies(radius, filter)
+    return turn_memo_args("check_allies", check_allies_func, radius, filter)
+end
+
+function check_brothers_in_arms(radius)
     if you.god() ~= "Trog" then
-        return 0
+        return false
     end
 
-    local i = 0
-    for pos in square_iter(const.origin, radius) do
-        local mons = get_monster_at(pos)
-        if mons and mons:is_friendly()
-                and mons:is("berserk")
-                and contains_string_in(mons:name(),
-                    { "ogre", "giant", "bear", "troll" }) then
-            i = i + 1
-        end
+    local filter = function (mons)
+        return mons:is("summoned")
+            and mons:is("berserk")
+            and contains_string_in(mons:name(),
+                { "ogre", "giant", "bear", "troll" })
     end
-    return i
+    return check_allies(radius, filter)
 end
 
-function count_elliptic(radius)
+function check_elliptic(radius)
     if you.god() ~= "Hepliaklqana" then
-        return 0
+        return false
     end
 
-    local i = 0
-    for pos in square_iter(const.origin, radius) do
-        local mons = get_monster_at(pos)
-        if mons and mons:is_friendly()
-                and contains_string_in(mons:name(), {"elliptic"}) then
-            i = i + 1
-        end
+    local filter = function (mons)
+        return mons:is("summoned")
+            and contains_string_in(mons:name(), { "elliptic" })
     end
-    return i
+    return check_allies(radius, filter)
 end
 
-function monster_is_greater_servant(mons)
-    return contains_string_in(mons:name(), { "Executioner", "green death",
-        "blizzard demon", "balrug", "cacodemon" })
-end
-
-function count_greater_servants(radius)
+function check_greater_servants(radius)
     if you.god() ~= "Makhleb" then
-        return 0
+        return false
     end
 
-    local i = 0
-    for pos in square_iter(const.origin, radius) do
-        local mons = get_monster_at(pos)
-        if mons and mons:is_friendly()
-                and mons:is("summoned")
-                and monster_is_greater_servant(m) then
-            i = i + 1
-        end
+    local filter = function (mons)
+        return mons:is("summoned")
+            and contains_string_in(mons:name(), { "Executioner", "green death",
+                "blizzard demon", "balrug", "cacodemon" })
     end
-    return i
+    return check_allies(radius, filter)
 end
 
-function count_divine_warriors(radius)
+function check_divine_warriors(radius)
     if you.god() ~= "the Shining One" then
-        return 0
+        return false
     end
 
-    local i = 0
-    for pos in square_iter(const.origin, radius) do
-        local mons = get_monster_at(pos)
-        if mons and mons:is_friendly()
-                and contains_string_in(mons:name(), {"angel", "daeva"}) then
-            i = i + 1
-        end
+    local filter = function (mons)
+        return mons:is_summoned()
+            and contains_string_in(mons:name(), { "angel", "daeva" })
     end
-    return i
+    return check_allies(radius, filter)
 end
 
-function count_beogh_allies(radius)
+function check_beogh_allies(radius)
     if you.god() ~= "Beogh" then
-        return 0
+        return false
     end
 
-    local i = 0
-    for pos in square_iter(const.origin, radius) do
-        local mons = get_monster_at(pos)
-        if mons and mons:is_safe()
-                and contains_string_in(mons:name(), {"orc "}) then
-            i = i + 1
-        end
+    local filter = function (mons)
+        -- Beogh allies are permanent.
+        return not mons:is_summoned()
+            and contains_string_in(mons:name(), { "orc" })
     end
-    return i
+    return check_allies(radius, filter)
 end
 
 function update_altar(god, level, hash, state, force)
@@ -518,7 +509,7 @@ end
 
 function estimate_slouch_damage()
     local count = 0
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         local speed = enemy:speed()
         local val = 0
         if speed >= 6 then

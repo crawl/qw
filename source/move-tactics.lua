@@ -10,7 +10,7 @@ function assess_square_enemies(a, pos)
     a.ranged = 0
     a.unalert = 0
     a.longranged = 0
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         local dist = enemy:distance()
         local see_cell = cell_see_cell(pos, enemy:pos())
         local ranged = enemy:is_ranged()
@@ -60,7 +60,6 @@ function assess_square_enemies(a, pos)
                 and enemy:has_path_to_player() then
             a.longranged = a.longranged + 1
         end
-
     end
 
     a.enemy_distance = best_dist
@@ -72,11 +71,9 @@ function assess_square(pos)
     -- Distance to current square
     a.supdist = supdist(pos)
 
-    -- Is current square near a BiA/SGD?
+    -- Is current square near an ally?
     if a.supdist == 0 then
-        a.near_ally = count_brothers_in_arms(3)
-            + count_greater_servants(3)
-            + count_divine_warriors(3) > 0
+        a.near_ally = check_allies(3)
     end
 
     -- Can we move there?
@@ -114,7 +111,7 @@ function assess_square(pos)
     -- weak clouds if monsters are around.
     a.cloud_safe = (cloud == nil)
         or a.safe
-        or danger and not cloud_is_dangerous(cloud)
+        or qw.danger_in_los and not cloud_is_dangerous(cloud)
 
     -- Equal to const.inf_dist if the position has no move to any flee,
     -- otherwise equal to the minimum movement distance to a flee position.
@@ -291,9 +288,10 @@ function choose_tactical_step()
     end
 
     local a0 = assess_square(const.origin)
+    local danger = check_enemies(3)
     if a0.cloud_safe
-            and not (a0.fumble and sense_danger(3))
-            and not (a0.bad_wall and sense_danger(3))
+            and not (a0.fumble and danger)
+            and not (a0.bad_wall and danger)
             and a0.kite_adjacent == 0
             and (a0.near_ally or a0.enemy_distance == 10) then
         return

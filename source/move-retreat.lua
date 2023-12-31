@@ -115,7 +115,7 @@ end
 function destination_monster_count_at(pos)
     local occupied_positions = { size = 0 }
     local player_dest_pos
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         local dest_pos
         if cell_see_cell(enemy:pos(), pos) then
             dest_pos = monster_last_position_towards(enemy, pos)

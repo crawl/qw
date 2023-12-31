@@ -167,7 +167,7 @@ end
 
 function want_to_stairdance_up()
     local feat = view.feature_at(0, 0)
-    if not can_retreat_upstairs or not feature_is_upstairs(feat) then
+    if not qw.can_flee_upstairs or not feature_is_upstairs(feat) then
         return false
     end
 
@@ -187,16 +187,16 @@ function want_to_stairdance_up()
 
     if you.caught()
             or you.constricted()
-            or count_brothers_in_arms(3) > 0
-            or count_greater_servants(3) > 0
-            or count_divine_warriors(3) > 0 then
+            or check_brothers_in_arms(3)
+            or check_greater_servants(3)
+            or check_divine_warriors(3) then
         return false
     end
 
     local only_when_safe = you.berserk() or hp_is_low(33)
     local follow_count = 0
     local other_count = 0
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() == 1
                 and enemy:stabbability() == 0
                 and enemy:can_use_stairs() then

@@ -100,7 +100,7 @@ end
 
 function plan_forget_map()
     if not position_is_cloudy
-            and not danger
+            and not qw.danger_in_los
             and (at_branch_end("Slime") and not have_branch_runes("Slime")
                 or at_branch_end("Geh") and not have_branch_runes("Geh")) then
         magic("X" .. control('f'))

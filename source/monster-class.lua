@@ -400,7 +400,7 @@ function Monster:is_ranged(ignore_reach)
 end
 
 -- Whether we'd ever want to attack this monster, and hence whether it'll be
--- put in enemy_list.
+-- put in the enemy list.
 function Monster:is_enemy()
     return self:property_memo("is_enemy",
         function()

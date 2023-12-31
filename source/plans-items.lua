@@ -92,7 +92,7 @@ function plan_swap_weapon()
 
     local sit
     local enemy_dist = qw.los_radius
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() <= 2 and string.find(enemy:desc(), "hydra") then
             sit = "hydra"
             break

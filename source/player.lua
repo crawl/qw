@@ -485,7 +485,7 @@ function unable_to_move()
     return turn_memo("unable_to_move",
         function()
             local form = you.transform()
-            return form == "tree" or form == "fungus" and danger
+            return form == "tree" or form == "fungus" and qw.danger_in_los
         end)
 end
 
@@ -493,10 +493,10 @@ function dangerous_to_move()
     return turn_memo("dangerous_to_move",
         function()
             return you.confused()
-                and (count_brothers_in_arms(1) > 0
-                    or count_greater_servants(1) > 0
-                    or count_divine_warriors(1) > 0
-                    or count_beogh_allies(1) > 0)
+                and (check_brothers_in_arms(1)
+                    or check_greater_servants(1)
+                    or check_divine_warriors(1)
+                    or check_beogh_allies(1))
         end)
 end
 
@@ -550,10 +550,10 @@ function dangerous_to_shoot()
             return dangerous_to_attack()
                 -- Don't attempt to shoot with summoned allies adjacent.
                 or you.confused()
-                    and (count_brothers_in_arms(qw.los_radius) > 0
-                        or count_greater_servants(qw.los_radius) > 0
-                        or count_divine_warriors(qw.los_radius) > 0
-                        or count_beogh_allies(qw.los_radius) > 0)
+                    and (check_brothers_in_arms(qw.los_radius)
+                        or check_greater_servants(qw.los_radius)
+                        or check_divine_warriors(qw.los_radius)
+                        or check_beogh_allies(qw.los_radius))
         end)
 end
 
@@ -563,10 +563,10 @@ function dangerous_to_melee()
             return dangerous_to_attack()
                 -- Don't attempt melee with summoned allies adjacent.
                 or you.confused()
-                    and (count_brothers_in_arms(1) > 0
-                        or count_greater_servants(1) > 0
-                        or count_divine_warriors(1) > 0
-                        or count_beogh_allies(1) > 0)
+                    and (check_brothers_in_arms(1)
+                        or check_greater_servants(1)
+                        or check_divine_warriors(1)
+                        or check_beogh_allies(1))
         end)
 end
 

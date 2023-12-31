@@ -204,38 +204,6 @@ local acid_resistance_monsters = {
     ["acid blob"] = 100,
 }
 
-function sense_immediate_danger()
-    for _, enemy in ipairs(enemy_list) do
-        local dist = enemy:distance()
-        if dist <= 2 then
-            return true
-        elseif dist == 3 and enemy:reach_range() >= 2 then
-            return true
-        elseif enemy:is_ranged() then
-            return true
-        end
-    end
-
-    return false
-end
-
-function sense_danger(radius, moveable)
-    for _, enemy in ipairs(enemy_list) do
-        -- The enemy list is in order of increasing distance, so once we've
-        -- seen a monster with distance above our radius, we're done.
-        if enemy:distance() > radius then
-            return
-        end
-
-        if not moveable
-                or you.see_cell_solid_see(enemy:x_pos(), enemy:y_pos()) then
-            return true
-        end
-    end
-
-    return false
-end
-
 function update_invis_monsters(closest_invis_pos)
     if you.see_invisible() then
         invis_monster = false
@@ -248,7 +216,7 @@ function update_invis_monsters(closest_invis_pos)
     -- A visible nasty monster that can go invisible and whose position we
     -- prioritize tracking over any currently invisible monster.
     if you.xl() < 10 then
-        for _, enemy in ipairs(enemy_list) do
+        for _, enemy in ipairs(qw.enemy_list) do
             if enemy:name() == "Sigmund" then
                 invis_monster = false
                 nasty_invis_caster = true
@@ -330,14 +298,14 @@ function monster_speed_number(mons)
 end
 
 function initialize_monster_map()
-    monster_map = {}
+    qw.monster_map = {}
     for x = -qw.los_radius, qw.los_radius do
-        monster_map[x] = {}
+        qw.monster_map[x] = {}
     end
 end
 
 function update_monsters()
-    enemy_list = {}
+    qw.enemy_list = {}
     qw.slow_aura = false
     qw.all_enemies_safe = true
 
@@ -349,7 +317,7 @@ function update_monsters()
             local mon_info = monster.get_monster_at(pos.x, pos.y)
             if mon_info then
                 local mons = Monster:new(mon_info)
-                monster_map[pos.x][pos.y] = mons
+                qw.monster_map[pos.x][pos.y] = mons
                 if mons:is_enemy() then
                     if not mons:is_safe() then
                         qw.all_enemies_safe = false
@@ -359,10 +327,10 @@ function update_monsters()
                         qw.slow_aura = true
                     end
 
-                    table.insert(enemy_list, mons)
+                    table.insert(qw.enemy_list, mons)
                 end
             else
-                monster_map[pos.x][pos.y] = nil
+                qw.monster_map[pos.x][pos.y] = nil
             end
 
             if not sinv
@@ -372,7 +340,7 @@ function update_monsters()
                 closest_invis_pos = pos
             end
         else
-            monster_map[pos.x][pos.y] = nil
+            qw.monster_map[pos.x][pos.y] = nil
         end
     end
 
@@ -381,7 +349,7 @@ end
 
 function get_monster_at(pos)
     if supdist(pos) <= qw.los_radius then
-        return monster_map[pos.x][pos.y]
+        return qw.monster_map[pos.x][pos.y]
     end
 end
 
@@ -408,7 +376,7 @@ function assess_enemies_func(radius, duration_level, filter)
     end
 
     local result = { threat = 0, ranged_threat = 0, count = 0 }
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() > radius then
             break
         end
@@ -464,11 +432,10 @@ function assess_hell_enemies(radius)
     return assess_enemies(radius, filter)
 end
 
-function check_enemies_in_list(radius, mons_list, filter)
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius
-                and (not filter or filter(enemy))
-                and monster_in_list(enemy, mons_list) then
+function check_enemies_func(radius, filter)
+    local i = 0
+    for _, enemy in ipairs(qw.enemy_list) do
+        if enemy:distance() <= radius and (not filter or filter(enemy)) then
             return true
         end
     end
@@ -476,9 +443,36 @@ function check_enemies_in_list(radius, mons_list, filter)
     return false
 end
 
-function count_enemies(radius, filter)
+function check_enemies(radius, filter)
+    return turn_memo_args("check_enemies", check_enemies_func, radius, filter)
+end
+
+function check_enemies_in_list(radius, mons_list)
+    local filter = function(enemy)
+        return monster_in_list(enemy, mons_list)
+    end
+    return check_enemies(radius, filter)
+end
+
+function check_immediate_danger()
+    local filter = function(enemy)
+        local dist = enemy:distance()
+        if dist <= 2 then
+            return true
+        elseif dist == 3 and enemy:reach_range() >= 2 then
+            return true
+        elseif enemy:is_ranged(true) then
+            return true
+        end
+
+        return false
+    end
+    return check_enemies(qw.los_radius, filter)
+end
+
+function count_enemies_func(radius, filter)
     local i = 0
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() <= radius and (not filter or filter(enemy)) then
             i = i + 1
         end
@@ -486,16 +480,8 @@ function count_enemies(radius, filter)
     return i
 end
 
-function count_enemies_in_list(radius, mons_list, filter)
-    local i = 0
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius
-                and (not filter or filter(enemy))
-                and monster_in_list(enemy, mons_list) then
-            i = i + 1
-        end
-    end
-    return i
+function count_enemies(radius, filter)
+    return turn_memo_args("count_enemies", count_enemies_func, radius, filter)
 end
 
 function count_enemies_by_name(radius, name)

@@ -105,7 +105,7 @@ function do_reach_attack(pos)
 end
 
 function plan_melee()
-    if not danger
+    if not qw.danger_in_los
             or have_ranged_weapon()
             or unable_to_melee()
             or dangerous_to_melee() then
@@ -132,7 +132,7 @@ function plan_melee()
 end
 
 function plan_launcher()
-    if not danger
+    if not qw.danger_in_los
             or not have_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_attack() then
@@ -171,7 +171,7 @@ function shoot_launcher(pos, aim_at_target)
 end
 
 function plan_throw()
-    if not danger or unable_to_throw() or dangerous_to_attack() then
+    if not qw.danger_in_los or unable_to_throw() or dangerous_to_attack() then
         return false
     end
 
@@ -190,7 +190,7 @@ function wait_combat()
 end
 
 function plan_melee_wait_for_enemy()
-    if not danger or have_ranged_weapon() then
+    if not qw.danger_in_los or have_ranged_weapon() then
         return false
     end
 
@@ -223,7 +223,7 @@ function plan_melee_wait_for_enemy()
 
     local target = get_melee_target()
     local want_wait = false
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         -- We prefer to wait for a target monster to reach us over moving
         -- towards it. However if there exists monsters with ranged attacks, we
         -- prefer to move closer to our target over waiting. This way we are
@@ -252,7 +252,7 @@ function plan_melee_wait_for_enemy()
 end
 
 function plan_launcher_wait_for_enemy()
-    if not danger or not have_ranged_weapon() then
+    if not qw.danger_in_los or not have_ranged_weapon() then
         return false
     end
 
@@ -277,8 +277,7 @@ function plan_launcher_wait_for_enemy()
         wait_count = 0
     end
 
-    local want_wait = false
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:player_can_wait_for_melee() then
             wait_combat()
             return true
@@ -290,13 +289,13 @@ end
 
 function plan_poison_spit()
     local mut_level = you.mutation("spit poison")
-    if not danger
-        or dangerous_to_attack()
-        or you.xl() > 11
-        or mut_level < 1
-        or you.breath_timeout()
-        or you.berserk()
-        or you.confused() then
+    if not qw.danger_in_los
+            or dangerous_to_attack()
+            or you.xl() > 11
+            or mut_level < 1
+            or you.breath_timeout()
+            or you.berserk()
+            or you.confused() then
         return false
     end
 
@@ -318,7 +317,7 @@ function plan_poison_spit()
 end
 
 function plan_attack_wand()
-    if not danger or dangerous_to_attack() or not can_zap() then
+    if not qw.danger_in_los or dangerous_to_attack() or not can_zap() then
         return false
     end
 
@@ -348,7 +347,7 @@ function plan_attack_wand()
 end
 
 function plan_flight_move_towards_enemy()
-    if not danger
+    if not qw.danger_in_los
             or have_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
@@ -380,7 +379,7 @@ function plan_flight_move_towards_enemy()
 end
 
 function plan_move_towards_enemy()
-    if not danger
+    if not qw.danger_in_los
             or have_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
@@ -424,7 +423,7 @@ function closest_adjacent_map_position(map_pos)
 end
 
 function plan_continue_move_towards_enemy()
-    if not enemy_memory
+    if not qw.enemy_memory
             or not options.autopick_on
             or unable_to_move()
             or dangerous_to_attack()
@@ -454,7 +453,7 @@ function plan_continue_move_towards_enemy()
     if qw.last_enemy_map_memory
             and qw.enemy_map_memory
             and positions_equal(qw.last_enemy_map_memory, qw.enemy_map_memory) then
-        enemy_map_memory = nil
+        qw.enemy_map_memory = nil
 
         local dest = closest_adjacent_map_position(qw.last_enemy_map_memory)
         if not dest then

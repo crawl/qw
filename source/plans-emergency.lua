@@ -134,8 +134,9 @@ function plan_divine_warrior()
 end
 
 function plan_recite()
-    if can_recite() and danger
-            and not (immediate_danger and hp_is_low(33)) then
+    if can_recite()
+            and qw.danger_in_los
+            and not (qw.immediate_danger and hp_is_low(33)) then
         recite()
         return true
     end
@@ -200,27 +201,9 @@ function plan_flee_step()
     return true
 end
 
-function plan_retreat_step()
-    if qw.tactical_reason == "retreating" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
-function plan_other_step()
-    if qw.tactical_reason ~= "none" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
 -- XXX: This plan is broken due to changes to combat assessment.
 function plan_grand_finale()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting
             or not can_grand_finale() then
@@ -236,7 +219,7 @@ function plan_grand_finale()
     local flag_order = {"threat", "injury", "distance"}
     local flag_reversed = {false, true, true}
     local best_info, best_pos
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         local pos = enemy:pos()
         if is_traversable_at(pos)
                 and not cloud_is_dangerous(view.cloud_at(pos.x, pos.y)) then
@@ -266,13 +249,13 @@ end
 function plan_hydra_destruction()
     if not can_destruction()
             or you.skill("Invocations") < 8
-            or count_greater_servants(4) > 0
+            or check_greater_servants(4)
             or hydra_weapon_value(get_weapon()) > -1
             or you.xl() >= 20 then
         return false
     end
 
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() <= 5 and string.find(enemy:desc(), "hydra") then
             say("invoking major destruction")
             for letter, abil in pairs(you.ability_table()) do
@@ -328,7 +311,7 @@ function prefer_ely_healing()
 end
 
 function plan_cure_bad_poison()
-    if not danger then
+    if not qw.danger_in_los then
         return false
     end
 
@@ -347,7 +330,7 @@ function plan_cure_bad_poison()
 end
 
 function plan_cancellation()
-    if not danger or not can_drink() or you.teleporting() then
+    if not qw.danger_in_los or not can_drink() or you.teleporting() then
         return false
     end
 
@@ -366,12 +349,12 @@ function plan_cancellation()
 end
 
 function plan_blinking()
-    if not in_branch("Zig") or not danger or not can_read() then
+    if not in_branch("Zig") or not qw.danger_in_los or not can_read() then
         return false
     end
 
     local para_danger = false
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if enemy:name() == "floating eye"
                 or enemy:name() == "starcursed mass" then
             para_danger = true
@@ -603,10 +586,10 @@ function plan_fiery_armour()
 end
 
 function want_to_brothers_in_arms()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting()
-            or count_brothers_in_arms(4) > 0 then
+            or check_brothers_in_arms(4) then
         return false
     end
 
@@ -620,7 +603,7 @@ function want_to_brothers_in_arms()
 end
 
 function want_to_slouch()
-    return danger
+    return qw.danger_in_los
         and not dangerous_to_attack()
         and not you.teleporting()
         and you.piety_rank() == 6
@@ -628,7 +611,7 @@ function want_to_slouch()
 end
 
 function want_to_drain_life()
-    return danger
+    return qw.danger_in_los
         and not dangerous_to_attack()
         and not you.teleporting()
         and count_enemies(qw.los_radius,
@@ -636,15 +619,15 @@ function want_to_drain_life()
 end
 
 function want_to_greater_servant()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting()
             or you.skill("Invocations") < 12
-            or count_greater_servants(4) > 0 then
+            or check_greater_servants(4) then
         return false
     end
 
-    if hp_is_low(50) and immediate_danger then
+    if hp_is_low(50) and qw.immediate_danger then
         return true
     end
 
@@ -657,7 +640,7 @@ function want_to_greater_servant()
 end
 
 function want_to_cleansing_flame()
-    if not danger or dangerous_to_attack() then
+    if not qw.danger_in_los or dangerous_to_attack() then
         return false
     end
 
@@ -667,7 +650,7 @@ function want_to_cleansing_flame()
         return true
     end
 
-    if hp_is_low(50) and immediate_danger then
+    if hp_is_low(50) and qw.immediate_danger then
         local flame_restore_count = count_enemies(2, mons_tso_heal_check)
         return flame_restore_count > count_enemies(1, mons_tso_heal_check)
             and flame_restore_count >= 4
@@ -677,15 +660,15 @@ function want_to_cleansing_flame()
 end
 
 function want_to_divine_warrior()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting()
             or you.skill("Invocations") < 8
-            or count_divine_warriors(4) > 0 then
+            or check_divine_warriors(4) then
         return false
     end
 
-    if hp_is_low(50) and immediate_danger then
+    if hp_is_low(50) and qw.immediate_danger then
         return true
     end
 
@@ -696,11 +679,13 @@ function want_to_divine_warrior()
 end
 
 function want_to_fiery_armour()
-    if not danger or dangerous_to_attack() or you.status("fiery-armoured") then
+    if not qw.danger_in_los
+            or dangerous_to_attack()
+            or you.status("fiery-armoured") then
         return false
     end
 
-    if hp_is_low(50) and immediate_danger then
+    if hp_is_low(50) and qw.immediate_danger then
         return true
     end
 
@@ -713,7 +698,7 @@ function want_to_fiery_armour()
 end
 
 function want_to_apocalypse()
-    if not danger or dangerous_to_attack() or you.teleporting() then
+    if not qw.danger_in_los or dangerous_to_attack() or you.teleporting() then
         return false
     end
 
@@ -750,7 +735,7 @@ function want_to_teleport()
 
     if in_bad_form()
             and not find_item("potion", "cancellation")
-            and sense_danger(1) then
+            and check_enemies(1) then
         return true
     end
 
@@ -772,8 +757,8 @@ function want_to_teleport()
         return true
     end
 
-    if immediate_danger and bad_corrosion()
-            or immediate_danger and hp_is_low(25) then
+    if qw.immediate_danger and bad_corrosion()
+            or qw.immediate_danger and hp_is_low(25) then
             return true
     end
 
@@ -790,7 +775,7 @@ function want_to_heal_wounds()
         return true
     end
 
-    if not danger then
+    if not qw.danger_in_los then
         return false
     end
 
@@ -802,14 +787,14 @@ function want_to_heal_wounds()
 end
 
 function want_resistance()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting()
             or you.extra_resistant() then
         return false
     end
 
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if (enemy:has_path_to_melee_player() or enemy:is_ranged(true))
                 and (monster_in_list(enemy, fire_resistance_monsters)
                         and you.res_fire() < 3
@@ -830,7 +815,7 @@ function want_resistance()
 end
 
 function want_to_haste()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.hasted()
             or you.teleporting() then
@@ -856,7 +841,7 @@ end
 
 function want_magic_points()
     local mp, mmp = you.mp()
-    return danger
+    return qw.danger_in_los
         and not dangerous_to_attack()
         and not you.teleporting()
         -- Don't bother restoring MP if our max MP is low.
@@ -883,12 +868,19 @@ function want_to_trogs_hand()
             and check_enemies_in_list(qw.los_radius, hand_monsters)
 end
 
+function check_berserkable_enemies()
+    local filter = function(enemy, moveable)
+        return enemy:player_has_path_to_melee()
+    end
+    return check_enemies(2, filter)
+end
+
 function want_to_berserk()
-    if not danger or dangerous_to_melee() or you.berserk() then
+    if not qw.danger_in_los or dangerous_to_melee() or you.berserk() then
         return false
     end
 
-    if hp_is_low(50) and sense_danger(2, true)
+    if hp_is_low(50) and check_berserkable_enemies()
             or invis_monster and nasty_invis_caster then
         return true
     end
@@ -909,7 +901,7 @@ function want_to_berserk()
 end
 
 function want_to_finesse()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.teleporting()
             or duration_active("finesse") then
@@ -928,7 +920,7 @@ function want_to_finesse()
 end
 
 function want_to_heroism()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or duration_active("heroism")
             or you.teleporting() then
@@ -947,7 +939,7 @@ function want_to_heroism()
 end
 
 function want_to_recall()
-    if immediate_danger and hp_is_low(66) then
+    if qw.immediate_danger and hp_is_low(66) then
         return false
     end
 
@@ -956,7 +948,7 @@ function want_to_recall()
 end
 
 function want_to_recall_ancestor()
-    return count_elliptic(qw.los_radius) == 0
+    return check_elliptic(qw.los_radius)
 end
 
 function plan_continue_flee()
@@ -964,14 +956,12 @@ function plan_continue_flee()
         return false
     end
 
-    if danger or not reason_to_flee()
+    if qw.danger_in_los or not reason_to_flee()
             or unable_to_move()
             or you.confused()
             or you.berserk()
             or you.status("spiked")
-            or count_brothers_in_arms(3) > 0
-            or count_greater_servants(3) > 0
-            or count_divine_warriors(3) > 0 then
+            or count_allies(3) > 0 then
         return false
     end
 
@@ -999,7 +989,7 @@ end
 
 function plan_cure_confusion()
     if not you.confused()
-            or not (danger or options.autopick_on)
+            or not (qw.danger_in_los or options.autopick_on)
             or view.cloud_at(0, 0) == "noxious fumes"
                 and not meph_immune() then
         return false
@@ -1026,7 +1016,7 @@ end
 -- that it can resume attacking instead of trying post-attack plans. It should
 -- come after any emergency plans that we could still execute while caught.
 function plan_escape_net()
-    if not danger or not you.caught() then
+    if not qw.danger_in_los or not you.caught() then
         return false
     end
 
@@ -1035,7 +1025,7 @@ function plan_escape_net()
 end
 
 function plan_wait_confusion()
-    if not you.confused() or not (danger or options.autopick_on) then
+    if not you.confused() or not (qw.danger_in_los or options.autopick_on) then
         return false
     end
 
@@ -1115,7 +1105,7 @@ function plan_dig_grate()
         return false
     end
 
-    for _, enemy in ipairs(enemy_list) do
+    for _, enemy in ipairs(qw.enemy_list) do
         if not map_is_reachable_at(enemy:map_pos())
                 and enemy:should_dig_unreachable() then
             return zap_item(wand, enemy:pos())
@@ -1126,7 +1116,7 @@ function plan_dig_grate()
 end
 
 function plan_retreat()
-    if not danger
+    if not qw.danger_in_los
             or unable_to_move()
             or dangerous_to_move()
             or not want_to_retreat() then

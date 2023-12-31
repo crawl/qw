@@ -25,7 +25,7 @@ function plan_cure_poison()
 end
 
 function should_rest()
-    if danger and not qw.all_enemies_safe then
+    if qw.danger_in_los and not qw.all_enemies_safe then
         return false
     end
 
@@ -81,12 +81,13 @@ function reason_to_rest(percentage)
         or you.corrosion() > base_corrosion
         or hp_is_low(percentage)
             and not (you.god() == "the Shining One"
-                and count_divine_warriors(2) > 0
+                and check_divine_warriors(2)
                 and not hp_is_low(75))
 end
 
 function should_ally_rest()
-    if danger or (you.god() ~= "Yredelemnul" and you.god() ~= "Beogh") then
+    if qw.danger_in_los
+            or you.god() ~= "Yredelemnul" and you.god() ~= "Beogh" then
         return false
     end
 

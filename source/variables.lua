@@ -107,11 +107,6 @@ local hiding_turn_count = -100
 local prev_hatch_dist = 1000
 local prev_hatch
 
-local monster_map
-local enemy_list
-local danger
-local immediate_danger
-
 local ignore_traps
 local stairs_travel
 local position_is_safe

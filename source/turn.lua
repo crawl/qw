@@ -155,9 +155,9 @@ function turn_update()
 
     update_map(new_level, full_map_clear)
 
-    danger = sense_danger(qw.los_radius)
+    qw.danger_in_los = #qw.enemy_list > 0
         or not map_is_unexcluded_at(qw.map_pos)
-    immediate_danger = sense_immediate_danger()
+    qw.immediate_danger = check_immediate_danger()
 
     update_move_destination()
     update_flee_positions()
