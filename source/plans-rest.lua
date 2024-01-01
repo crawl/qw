@@ -76,6 +76,7 @@ function reason_to_rest(percentage)
         or you.status("marked")
         or you.status("spiked")
         or you.status("weak-willed") and not in_branch("Tar")
+        or you.status("fragile (+50% incoming damage)")
         or you.silencing()
         or you.corrosion() > base_corrosion
         or hp_is_low(percentage)
