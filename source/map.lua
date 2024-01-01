@@ -316,8 +316,7 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
         return
     end
 
-    local adjacent_dist, adjacent_excluded_dist, update_pos
-    local have_adjacent_excluded = false
+    local update_pos
     local center_dist = dist_map.map[center.x][center.y]
     local dist = dist_map.map[pos.x][pos.y]
     if not center.excluded_only
