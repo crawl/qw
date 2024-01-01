@@ -38,6 +38,19 @@ function is_safe_at(pos, assume_flight)
         and view.feature_at(pos.x, pos.y) ~= "trap_zot"
 end
 
+function is_cloud_safe_at(pos, is_safe, assume_flight)
+    if is_safe == nil then
+        is_safe = is_safe_at(pos, assume_flight)
+    end
+
+    if is_safe then
+        return true
+    end
+
+    local cloud = view.cloud_at(pos.x, pos.y)
+    return not cloud or qw.danger_in_los and not cloud_is_dangerous(cloud)
+end
+
 function is_cornerish_at(pos)
     if is_traversable_at({ x = pos.x + 1, y = pos.y + 1 })
             or is_traversable_at({ x = pos.x + 1, y = pos.y - 1 })
@@ -53,6 +66,11 @@ function is_cornerish_at(pos)
 end
 
 function count_adjacent_slimy_walls_at(pos)
+    -- No need to count if we've never spotted a wall on the level during a map update.
+    if not qw.have_slimy_walls then
+        return 0
+    end
+
     local count = 0
     for apos in adjacent_iter(pos) do
         if view.feature_at(apos.x, apos.y) == "slimy_wall" then
@@ -165,17 +183,17 @@ end
 
 function cloud_is_dangerous(cloud)
     if cloud == "flame" or cloud == "fire" then
-        return (you.res_fire() < 1)
+        return you.res_fire() < 1
     elseif cloud == "noxious fumes" then
-        return (not meph_immune())
+        return not meph_immune()
     elseif cloud == "freezing vapour" then
-        return (you.res_cold() < 1)
+        return you.res_cold() < 1
     elseif cloud == "poison gas" then
-        return (you.res_poison() < 1)
+        return you.res_poison() < 1
     elseif cloud == "calcifying dust" then
-        return (you.race() ~= "Gargoyle")
+        return you.race() ~= "Gargoyle"
     elseif cloud == "foul pestilence" then
-        return (not miasma_immune())
+        return not miasma_immune()
     elseif cloud == "seething chaos" or cloud == "mutagenic fog" then
         return true
     end

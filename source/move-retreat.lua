@@ -1,5 +1,5 @@
 ----------------------
--- Tactics for repositioning, retreating, and fleeing.
+-- Assessment of retreat positions
 
 function destination_component(positions, dest_pos)
     local components = {}
@@ -45,10 +45,6 @@ function destination_component(positions, dest_pos)
 end
 
 function register_destination_enemy(enemy, center, dest_pos, occupied_positions)
-    if not enemy:can_cause_retreat() then
-        return
-    end
-
     local dest_hash = hash_position(dest_pos)
     if not occupied_positions[dest_hash] and enemy:can_traverse(dest_pos) then
         occupied_positions[dest_hash] = true
@@ -134,7 +130,8 @@ function destination_monster_count_at(pos)
 end
 
 function can_move_from_position_to(from_pos, to_pos)
-    if view.withheld(from_pos.x, from_pos.y)
+    if not is_safe_at(to_pos)
+            or view.withheld(from_pos.x, from_pos.y)
             or view.withheld(to_pos.x, to_pos.y) then
         return false
     end
@@ -198,13 +195,21 @@ function reverse_retreat_move_to(to_pos, dist_map)
 end
 
 function assess_retreat_position(map_pos, max_distance)
-    local result = { pos = position_difference(map_pos, qw.map_pos),
-        map_pos = map_pos, blocking_count = 0 }
+    -- Any unsafe location is not a valid retreat position, unless its our
+    -- current position and the clouds there are safe enough.
+    local pos = position_difference(map_pos, qw.map_pos)
+    local is_origin = position_is_origin(pos)
+    if not is_safe_at(pos)
+            and (not is_origin or not is_cloud_safe_at(pos, false)) then
+        return
+    end
+
+    local result = { pos = pos, map_pos = map_pos, blocking_count = 0 }
     result.destination_count = destination_monster_count_at(result.pos)
 
     -- We want to return a result for our current position so we can compare
     -- destination counts to it.
-    if positions_equal(map_pos, qw.map_pos) then
+    if is_origin then
         result.distance = 0
         return result
     end
@@ -263,9 +268,11 @@ function best_retreat_position_func()
         return
     end
 
-    local flee_pos, flee_dist = best_flee_position_at(const.origin)
-    local radius = flee_dist
-    if not radius then
+    local radius
+    local flee_result = best_move_towards_positions(qw.flee_positions)
+    if flee_result then
+        radius = max(qw.los_radius, flee_result.dist)
+    else
         radius = const.gxm
     end
 
@@ -311,34 +318,35 @@ function best_retreat_position_func()
         end
 
         -- Don't try to travel too far if our position doesn't improve enough.
-        -- This formula assumes we're willing to travel two squares for each
-        -- point of total threat we see.
         local enemies = assess_enemies()
-        local cutoff = cur_result.destination_count
-            - best_result.destination_count
-        cutoff = cutoff * (enemies.threat - enemies.ranged_threat / 2)
-        if best_result.distance > cutoff then
-            return
-        end
+        local cutoff = (cur_result.destination_count
+                - best_result.destination_count)
+            * (enemies.threat - enemies.ranged_threat / 2)
+        if best_result.distance <= cutoff then
+            if debug_channel("retreat") then
+                dsay("Found retreat position at "
+                    .. cell_string_from_map_position(best_result.map_pos)
+                    .. " with " .. tostring(best_result.blocking_count)
+                    .. " blocking monsters"
+                    .. " and " .. tostring(best_result.destination_count)
+                    .. " monsters attacking at destination at distance "
+                    .. best_result.distance)
+            end
 
-        if debug_channel("retreat") then
-            dsay("Found retreat position at "
-                .. cell_string_from_map_position(best_result.map_pos)
-                .. " with " .. tostring(best_result.blocking_count)
-                .. " blocking monsters"
-                .. " and " .. tostring(best_result.destination_count)
-                .. " monsters attacking at destination at distance "
-                .. best_result.distance)
+            return best_result.map_pos
         end
-        return best_result.map_pos
     end
 
-    if flee_pos then
+    local enemies = assess_enemies()
+    local cutoff = cur_result.destination_count
+        * (enemies.threat - enemies.ranged_threat / 2)
+    if flee_result and flee_result.dist <= cutoff then
         if debug_channel("retreat") then
-            dsay("Retreating to best flee position at "
-                .. cell_string_from_map_position(flee_pos))
+            dsay("Found flee position as retreat position at "
+                .. cell_string_from_map_position(flee_result.dest))
         end
-        return flee_pos
+
+        return flee_result.dest
     end
 end
 
@@ -348,14 +356,17 @@ function best_retreat_position(los_only)
 end
 
 function want_to_retreat()
-    if you.berserk()
-            or want_to_be_surrounded()
-            or assess_retreat_position(qw.map_pos).destination_count <= 1 then
+    if you.berserk() or you.confused() or want_to_be_surrounded() then
         return false
     end
 
-    local result = assess_enemies()
-    if result.threat - result.ranged_threat / 2 >= 5 then
+    local cur_result = assess_retreat_position(qw.map_pos)
+    if cur_result and cur_result.destination_count <= 1 then
+        return false
+    end
+
+    local enemies = assess_enemies()
+    if enemies.threat - enemies.ranged_threat / 2 >= 5 then
         return true
     end
 

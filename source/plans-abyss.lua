@@ -69,7 +69,7 @@ function plan_lugonu_exit_abyss()
 end
 
 function want_to_move_to_abyss_objective()
-    return in_branch("Abyss") and not hp_is_low(75)
+    return in_branch("Abyss") and not you.confused() and not hp_is_low(75)
 end
 
 function plan_move_towards_abyssal_feature()

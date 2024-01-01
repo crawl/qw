@@ -38,8 +38,7 @@ function should_rest()
             or you.status("spiked")
     end
 
-    if want_to_move_to_abyss_objective()
-            and not (you.confused() or hp_is_low(50)) then
+    if want_to_move_to_abyss_objective() then
         return false
     end
 

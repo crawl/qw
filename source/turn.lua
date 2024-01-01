@@ -108,7 +108,7 @@ function turn_update()
         where_depth = you.depth()
         want_goal_update = true
 
-        can_retreat_upstairs = not (in_branch("D") and where_depth == 1
+        qw.can_flee_upstairs = not (in_branch("D") and where_depth == 1
             or in_portal()
             or in_branch("Abyss")
             or in_branch("Pan")
@@ -116,7 +116,6 @@ function turn_update()
             or in_hell_branch(where_branch))
         base_corrosion = in_branch("Dis") and 2 or 0
 
-        target_flee_position = nil
         transp_zone = 0
         stuck_turns = 0
 

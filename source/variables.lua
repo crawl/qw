@@ -59,7 +59,6 @@ local base_corrosion
 local permanent_flight
 local gained_permanent_flight
 local temporary_flight
-local can_retreat_upstairs
 local open_runed_doors
 local permanent_bazaar
 local dislike_pan_level = false
@@ -93,10 +92,7 @@ local transp_zone
 local transp_orient
 local transp_search
 
-local flee_positions
 local reachable_position
-local target_flee_position
-local last_flee_turn = -100
 
 local have_orb
 local disable_autoexplore

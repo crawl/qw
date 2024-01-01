@@ -143,62 +143,59 @@ function plan_recite()
     return false
 end
 
+function plan_tactical_step()
+    if not qw.tactical_step then
+        return false
+    end
+
+    say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+    return move_to(qw.tactical_step)
+end
+
+-- This needs higher priority than other step types to get us out of harm's
+-- way.
 function plan_cloud_step()
-    if qw.tactical_reason == "cloud" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
+    if qw.tactical_step == "cloud" then
+        return plan_tactical_step()
     end
+
     return false
 end
 
-function plan_water_step()
-    if qw.tactical_reason == "water" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
+function plan_flee()
+    if unable_to_move() or dangerous_to_move() or not want_to_flee() then
+        return false
     end
-    return false
-end
 
-function plan_wall_step()
-    if qw.tactical_reason == "wall" then
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
-    end
-    return false
-end
-
-function plan_coward_step()
-    if (qw.tactical_reason == "hiding" or qw.tactical_reason == "stealth")
-            and (not want_to_move_to_abyss_objective()
-                or should_rest()) then
-        if qw.tactical_reason == "hiding" then
-            hiding_turn_count = you.turns()
+    if not qw.danger_in_los and qw.last_flee_turn then
+        if you.turns() >= qw.last_flee_turn + 10 then
+            qw.last_flee_turn = nil
+            return false
         end
-        say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
-        magic(qw.tactical_step .. "Y")
-        return true
+
+        result = best_move_towards_positions(qw.flee_positions)
+        if result then
+            return move_to(result.move)
+        end
     end
+
+    local result = best_move_towards_positions(qw.flee_positions)
+    if not result and in_bad_form() then
+        result = best_move_towards_unexplored(true)
+        if result then
+            qw.last_flee_turn = you.turns()
+            say("FLEEEEING to unexplored (badform).")
+            return move_to(result.move)
+        end
+    end
+
+    if result then
+        qw.last_flee_turn = you.turns()
+        say("FLEEEEING.")
+        return move_to(result.move)
+    end
+
     return false
-end
-
-function plan_flee_step()
-    if qw.tactical_reason ~= "fleeing" then
-        return false
-    end
-
-    local best_pos = best_flee_position_at(vi_to_delta(qw.tactical_step))
-    if not best_pos then
-        return false
-    end
-
-    target_flee_position = best_pos
-    last_flee_turn = you.turns()
-    say("FLEEEEING.")
-    magic(qw.tactical_step .. "Y")
-    return true
 end
 
 -- XXX: This plan is broken due to changes to combat assessment.
@@ -951,34 +948,6 @@ function want_to_recall_ancestor()
     return check_elliptic(qw.los_radius)
 end
 
-function plan_continue_flee()
-    if you.turns() >= last_flee_turn + 10 or not target_flee_position then
-        return false
-    end
-
-    if qw.danger_in_los or not reason_to_flee()
-            or unable_to_move()
-            or you.confused()
-            or you.berserk()
-            or you.status("spiked")
-            or count_allies(3) > 0 then
-        return false
-    end
-
-    for pos in adjacent_iter(const.origin) do
-        if can_move_to(pos) and not is_solid_at(pos) and is_safe_at(pos) then
-            local map = get_distance_map(target_flee_position).excluded_map
-            local dist = map[qw.map_pos.x + pos.x][qw.map_pos.y + pos.y]
-            if dist and dist < map[qw.map_pos.x][qw.map_pos.y] then
-                dsay("STILL FLEEEEING.")
-                return move_to(pos)
-            end
-        end
-    end
-
-    return false
-end
-
 function plan_full_inventory_panic()
     if qw_full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
@@ -1043,13 +1012,7 @@ function plan_non_melee_berserk()
         return true
     end
 
-    local best_pos = best_flee_position_at(const.origin)
-    if not best_pos then
-        wait_one_turn()
-        return true
-    end
-
-    local result = best_move_towards(best_pos)
+    local result = best_move_towards_positions(qw.flee_positions)
     if result then
         return move_to(result.move)
     end
@@ -1123,32 +1086,14 @@ function plan_retreat()
         return false
     end
 
-    local best_pos = best_retreat_position()
-    if not best_pos then
+    local pos = best_retreat_position()
+    if not pos then
         return false
     end
 
-    local result = best_move_towards(best_pos)
+    local result = best_move_towards(pos)
     if result then
-        say("RETREEAATING.")
-        return move_towards_destination(result.move, result.dest, "retreat")
-    end
-
-    return false
-end
-
-function plan_continue_retreat()
-    if not qw.move_destination
-            or qw.move_reason ~= "retreat"
-            or not want_to_retreat()
-            or unable_to_move()
-            or dangerous_to_move() then
-        return false
-    end
-
-    local result = best_move_towards(qw.move_destination)
-    if result then
-        say("STILL RETREEAATING.")
+        say("RETREEEEATING.")
         return move_to(result.move)
     end
 
@@ -1173,15 +1118,9 @@ function set_plan_emergency()
         {plan_escape_net, "escape_net"},
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
-        {plan_continue_flee, "continue_flee"},
-        {plan_continue_retreat, "continue_retreat"},
+        {plan_flee, "flee"},
         {plan_retreat, "retreat"},
-        {plan_flee_step, "flee_step"},
-        {plan_retreat_step, "retreat_step"},
-        {plan_wall_step, "wall_step"},
-        {plan_water_step, "water_step"},
-        {plan_coward_step, "coward_step"},
-        {plan_other_step, "other_step"},
+        {plan_tactical_step, "tactical_step"},
         {plan_tomb2_arrival, "tomb2_arrival"},
         {plan_tomb3_arrival, "tomb3_arrival"},
         {plan_magic_points, "magic_points"},

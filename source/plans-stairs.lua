@@ -165,6 +165,13 @@ function unable_to_use_stairs()
     return unable_to_move() or you.mesmerised()
 end
 
+function count_stair_followers(radius)
+    return count_enemies(radius,
+        function (mons)
+            return mons:can_seek() and mons:can_use_stairs()
+        end)
+end
+
 function want_to_stairdance_up()
     local feat = view.feature_at(0, 0)
     if not qw.can_flee_upstairs or not feature_is_upstairs(feat) then
@@ -194,25 +201,15 @@ function want_to_stairdance_up()
     end
 
     local only_when_safe = you.berserk() or hp_is_low(33)
-    local follow_count = 0
-    local other_count = 0
-    for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:distance() == 1
-                and enemy:stabbability() == 0
-                and enemy:can_use_stairs() then
-            follow_count = follow_count + 1
-        else
-            other_count = other_count + 1
-        end
-    end
-
+    local follow_count = count_stair_followers(1)
+    local other_count = #qw.enemy_list - follow_count
     if only_when_safe and follow_count > 0 then
         return false
     end
 
     -- We have no stair followers, so we're going up because we're either
     -- fleeing or we want to rest safely.
-    if follow_count == 0 and reason_to_flee()
+    if follow_count == 0 and want_to_flee()
             -- We have stair followers, but there are even more non-following
             -- monsters around, so we go up to fight the following monsters in
             -- probable safety.
@@ -225,24 +222,27 @@ function want_to_stairdance_up()
 end
 
 function plan_stairdance_up()
-    if not unable_to_use_stairs() and want_to_stairdance_up() then
-        say("STAIRDANCE")
-        go_upstairs(you.status("spiked"))
-        return true
+    if unable_to_use_stairs()
+            or dangerous_to_move(true)
+            or not want_to_stairdance_up() then
+        return false
     end
 
-    return false
+    say("STAIRDANCE")
+    go_upstairs(you.status("spiked"))
+    return true
 end
 
--- It's dangerous to hatch through unexplored areas in Zot as opposed
--- to simply taking an explored route through stone stairs. So we only
--- take a hatch up in Zot if the destination level is fully explored.
 function want_to_use_escape_hatches(dir)
     return dir == const.dir.up
         and goal_status == "Escape"
         and not branch_is_temporary(where_branch)
         and not in_branch("Tomb")
         and where_depth > 1
+            -- It's dangerous to hatch through unexplored areas in Zot as
+            -- opposed to simply taking an explored route through stone stairs.
+            -- So we only take a hatch up in Zot if the destination level is
+            -- fully explored.
             and (where_branch ~= "Zot"
                 or explored_level(where_branch, where_depth - 1))
 end
@@ -269,19 +269,15 @@ function plan_move_towards_escape_hatch()
         return false
     end
 
-    local flee_pos = best_flee_position_at(const.origin)
-    if not flee_pos then
+    local result = best_move_towards_positions(qw.flee_positions, true)
+    if not result then
         return false
     end
 
-    if not c_persist.up_hatches[hash_position(flee_pos)] then
+    -- The best flee position is not a hatch.
+    if not c_persist.up_hatches[hash_position(result.dest)] then
         return false
     end
 
-    local result = best_move_towards(flee_pos, true)
-    if result then
-        return move_to(result.move)
-    end
-
-    return false
+    return move_to(result.move)
 end

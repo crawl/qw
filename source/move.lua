@@ -241,7 +241,8 @@ function best_move_towards(map_pos, ignore_exclusions)
                 and can_move_to(los_pos)
                 and is_safe_at(pos)
                 and (not safe_result or dist < safe_result.dist) then
-            safe_result = { move = los_pos, dest = map_pos, dist = dist }
+            safe_result = { move = los_pos, dest = map_pos, dist = dist,
+                safe = true }
         end
 
         if better_dist
@@ -262,8 +263,10 @@ end
 function best_move_towards_positions(map_positions, ignore_exclusions)
     local best_result
     for _, pos in ipairs(map_positions) do
-        local result = best_move_towards(pos)
-        if result and (not best_result or result.dist < best_result.dist) then
+        local result = best_move_towards(pos, ignore_exclusions)
+        if result and (not best_result
+                or result.safe and not best_result.safe
+                or result.dist < best_result.dist) then
             best_result = result
         end
     end
@@ -427,8 +430,6 @@ function update_move_destination()
     if qw.move_reason == "goal" and want_goal_update then
         clear = true
     elseif qw.move_reason == "monster" and qw.danger_in_los then
-        clear = true
-    elseif qw.move_reason == "retreat" and not qw.danger_in_los then
         clear = true
     elseif positions_equal(qw.map_pos, qw.move_destination) then
         if qw.move_reason == "unexplored"
