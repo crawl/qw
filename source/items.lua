@@ -4,6 +4,9 @@
 const.rune_suffix = " rune of Zot"
 const.orb_name = "Orb of Zot"
 
+const.wand_types = { "flame", "mindburst", "iceblast", "acid", "light",
+    "quicksilver", "paralysis" }
+
 function is_weapon(it)
     return it and it.class(true) == "weapon"
 end
@@ -13,23 +16,44 @@ function item_is_penetrating(item)
         return true
     end
 
-    return item.subtype() == "javelin"
+    local class = item.class(true)
+    local subtype = item.subtype()
+    return subtype == "javelin"
+        or class == "wand"
+            and (subtype == "acid"
+                or subtype == "light"
+                or subtype == "quicksilver")
 end
 
 function item_is_exploding(item)
     return item.name():find("{damnation}")
+        or item.class(true) == "wand"
+            and (item.subtype() == "iceblast" or item.subtype() == "roots")
 end
 
 function item_ignores_player(item)
     return item.name():find("{damnation}")
+        or item.class(true) == "wand" and item.subtype() == "roots"
 end
 
 function item_range(item)
+    if item.class(true) == "wand" then
+        local subtype = item.subtype()
+        if subtype == "acid"
+                or subtype == "iceblast"
+                or subtype == "light"
+                or subtype == "roots" then
+            return 5
+        else
+            return qw.los_radius
+        end
+    end
+
     return qw.los_radius
 end
 
 function item_can_target_empty(item)
-    return false
+    return item.class(true) == "wand" and item.subtype() == "iceblast"
 end
 
 function count_charges(wand_type, ignore_it)
@@ -49,8 +73,14 @@ function want_wand(it)
         return false
     end
 
-    local sub = it.subtype()
-    return not sub or sub == "digging"
+    local subtype = it.subtype()
+    if subtype == "flame" then
+        return you.xl() <= 8
+    elseif subtype == "mindburst" then
+        return you.xl() <= 17
+    else
+        return true
+    end
 end
 
 function want_potion(it)

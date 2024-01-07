@@ -44,10 +44,14 @@ function zap_item(item, pos, aim_at_target)
     local name = item.name()
     if not cur_quiver or name ~= cur_quiver.name() then
         magic("Q*" .. item_letter(item))
+        qw.do_dummy_action = false
+        coroutine.yield()
     end
 
-    say("ZAPPING " .. name .. ".")
-    return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
+    say("ZAPPING " .. name .. " at " .. cell_string_from_position(pos) .. ".")
+    magic("fr" .. vector_move(pos) .. (aim_at_target and "." or "\r"))
+    -- Currently broken when no monsters are available for autotargeting.
+    -- return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
 end
 
 function plan_wield_weapon()

@@ -317,6 +317,36 @@ function plan_poison_spit()
         .. (target.aim_at_target and "." or "\r"))
 end
 
+function plan_attack_wand()
+    if not danger or dangerous_to_attack() or not can_zap() then
+        return false
+    end
+
+    local result = assess_enemies()
+    if not result.scary_enemy then
+        return false
+    end
+
+    local attack = result.scary_enemy:best_player_attack()
+    if not attack or not attack.item or attack.item.class(true) ~= "wand" then
+        return false
+    end
+
+    local enemy_pos = result.scary_enemy:pos()
+    local primary_target = get_primary_target()
+    local secondary_pos
+    if primary_target and not positions_equal(primary_target.pos, enemy_pos) then
+        secondary_pos = primary_target.pos
+    end
+
+    local target = assess_ranged_target(attack, enemy_pos, secondary_pos)
+    if not target then
+        return false
+    end
+
+    zap_item(attack.item, target.pos, target.aim_at_target)
+end
+
 function plan_flight_move_towards_enemy()
     if not danger
             or have_ranged_weapon()
@@ -481,6 +511,7 @@ function set_plan_attack()
     plans.attack = cascade {
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
+        {plan_attack_wand, "attack_wand"},
         {plan_launcher, "launcher"},
         {plan_melee, "melee"},
         {plan_throw, "throw"},

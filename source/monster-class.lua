@@ -580,3 +580,22 @@ function Monster:throw_accuracy(item)
             return tonumber(str) / 100
         end, item)
 end
+
+function Monster:evoke_accuracy(item)
+    return self:property_memo_args("evoke_accuracy",
+        function(item_arg)
+            local str = self.minfo:target_evoke(item_arg)
+            if empty_string(str) then
+                return 1
+            end
+
+            -- Comes in two forms: "XX% to hit" and "chance to affect: XX%".
+            str = str:gsub(".-(%d+)%%.*", "%1")
+            local perc = tonumber(str)
+            if not perc then
+                return 0
+            end
+
+            return perc / 100
+        end, item)
+end

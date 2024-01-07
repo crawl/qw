@@ -460,6 +460,28 @@ function poison_spit_attack()
     return attack
 end
 
+function make_wand_attack(wand_type)
+    local wand = find_item("wand", wand_type)
+    if not wand then
+        return
+    end
+
+    local attack = { item = wand }
+    attack.uses_evoke = true
+    attack.range = item_range(wand)
+    attack.is_penetrating = item_is_penetrating(wand)
+    attack.is_exploding = item_is_exploding(wand)
+    attack.can_target_empty = item_can_target_empty(wand)
+    attack.ignores_player = item_ignores_player(wand)
+    attack.damage_is_hp = wand_type == "paralysis"
+    attack.test_spell = "Quicksilver Bolt"
+    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
+        "threat", "is_orc_priest_wizard" }
+    attack.reversed_props = { distance = true }
+    attack.min_props = { distance = true }
+    return attack
+end
+
 function get_attacks()
     if qw.attacks then
         return qw.attacks
@@ -473,6 +495,14 @@ function get_attacks()
     if attack then
         table.insert(qw.attacks, attack)
         attack.index = #qw.attacks
+    end
+
+    for _, wand_type in ipairs(const.wand_types) do
+        attack = make_wand_attack(wand_type)
+        if attack then
+            table.insert(qw.attacks, attack)
+            attack.index = #qw.attacks
+        end
     end
 
     return qw.attacks
@@ -540,6 +570,33 @@ function player_attack_damage(mons, index, duration_level)
         end
 
         return damage
+    elseif attack.uses_evoke then
+        local damage
+        if attack.damage_is_hp then
+            if mons:is("paralysed")
+                    or mons:status("confused")
+                    or mons:status("petrifying")
+                    or mons:status("petrified") then
+                return 0
+            else
+                damage = mons:hp()
+            end
+        else
+            damage = attack.item.evoke_damage
+            damage = damage:gsub(".-(%d+)d(%d+).*", "%1 %2")
+            local dice, size = unpack(split(damage, " "))
+            damage = dice * (1 + size) / 2
+
+            local res_prop = const.monster_resist_props[attack.resist]
+            if res_prop then
+                local res_level = mons[res_prop](mons)
+                damage = damage * (1 - attack.resistable
+                    + attack.resistable
+                    * monster_percent_unresisted(attack.resist, res_level))
+            end
+        end
+
+        return damage
     end
 end
 
@@ -552,6 +609,8 @@ function player_attack_accuracy(mons, index)
 
     if attack.has_damage_rating then
         return mons:weapon_accuracy(attack.item)
+    elseif attack.uses_evoke then
+        return mons:evoke_accuracy(attack.item)
     end
 end
 
