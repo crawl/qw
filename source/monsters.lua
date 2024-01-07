@@ -10,6 +10,8 @@ const.attitude = {
     "friendly"
 }
 
+const.high_threat = 10
+
 -- functions for use in the monster lists below
 function in_desc(lev, str)
     return function (mons)
@@ -23,21 +25,20 @@ function pan_lord(lev)
     end
 end
 
-local res_func_table = {
+local player_resist_funcs = {
     rF=you.res_fire,
     rC=you.res_cold,
     rPois=you.res_poison,
     rElec=you.res_shock,
     rN=you.res_draining,
     -- returns a boolean
-    rCorr=(function() return you.res_corr() and 1 or 0 end),
-    rSlow=(function() return you.race() == "Formicid" and 1 or 0 end),
+    rCorr=function() return you.res_corr() and 1 or 0 end,
     Will=you.willpower,
 }
 
 function check_resist(lev, resist, value)
     return function (enemy)
-        return you.xl() < lev and res_func_table[resist]() < value
+        return you.xl() < lev and player_resist_funcs[resist]() < value
     end
 end
 
@@ -79,63 +80,48 @@ end
 -- XL < num, otherwise we want a function. ["*"] should be a table of
 -- functions to check for every monster.
 local scary_monsters = {
-    ["*"] = {
-        hydra_check_flaming(17),
-        in_desc(100, "berserk[^e]"),
-        in_desc(100, "statue"),
-        in_desc(100, "'s? ghost"),
-        in_desc(100, "'s? illusion"),
-        pan_lord(100),
-    },
+    ["ice beast"] = { xl = 7, resists = { rC = 0.75 } },
 
-    ["worm"] = slow_berserk(4),
+    ["wolf spider"] = { xl = 14 },
+    ["ice statue"] = { xl = 14, resists = { rC = 1 } },
 
-    ["ice beast"] = check_resist(7, "rC", 1),
+    ["white ugly thing"] = { xl = 15, resists = { rC = 0.75 } },
+    ["freezing wraith"] = { xl = 15, resists = { rC = 0.75 } },
 
-    ["white ugly thing"] = check_resist(15, "rC", 1),
-    ["freezing wraith"] = check_resist(15, "rSlow", 1),
+    ["hydra"] = { xl = 17, edged_weapon = true },
+    ["entropy weaver"] = { xl = 17, resists = { rCorr = 0.75 } },
+    ["shock serpent"] = { xl = 17, resists = { rElec = 0.75 } },
+    ["spark wasp"] = { xl = 17, resists = { rElec = 0.75 } },
+    ["sun demon"] = { xl = 17, resists = { rF = 0.75 } },
+    ["white very ugly thing"] = { xl = 17, resists = { rC = 0.75 } },
+    ["Lodul"] = { xl = 17, resists = { rElec = 0.75 } },
 
-    ["shock serpent"] = check_resist(17, "rElec", 1),
-    ["sun demon"] = check_resist(17, "rF", 1),
-    ["white very ugly thing"] = check_resist(17, "rC", 1),
-    ["Lodul"] = check_resist(17, "rElec", 1),
+    ["ironbound frostheart"] = { xl = 20, resists = { rC = 0.75 } },
+    ["ironbound thunderhulk"] = { xl = 20, resists = { rElec = 0.75 } },
 
-    ["ironbound frostheart"] = check_resist(20, "rC", 1),
-    ["ironbound thunderhulk"] = check_resist(20, "rElec", 1),
+    ["azure jelly"] = { xl = 24, resists = { rC = 0.75 } },
+    ["fire giant"] = { xl = 24, resists = { rF = 0.75 } },
+    ["frost giant"] = { xl = 24, resists = { rC = 0.75 } },
+    ["hell hog"] = { xl = 24, resists = { rF = 0.75 } },
+    ["orange crystal statue"] = { xl = 24 },
+    ["shadow dragon"] = { xl = 24, resists = { rN = 0.75 } },
+    ["spriggan air mage"] = { xl = 24, resists = { rElec = 0.75 } },
+    ["storm dragon"] = { xl = 24, resists = { rElec = 0.75 } },
+    ["titan"] = { xl = 24, resists = { rElec = 0.5 } },
+    ["Margery"] = { xl = 24, resists = { rF = 0.75 } },
+    ["Xtahua"] = { xl = 24, resists = { rF = 0.75 } },
 
-    ["azure jelly"] = check_resist(24, "rC", 1),
-    ["fire giant"] = check_resist(24, "rF", 1),
-    ["frost giant"] = check_resist(24, "rC", 1),
-    ["hell hog"] = check_resist(24, "rF", 1),
-    ["shadow dragon"] = check_resist(24, "rN", 1),
-    ["storm dragon"] = check_resist(24, "rElec", 1),
-    ["titan"] = check_resist(24, "rElec", 1),
-    ["Margery"] = check_resist(24, "rF", 2),
-    ["Xtahua"] = check_resist(24, "rF", 2),
+    ["doom hound"] = { xl = 30,
+        check = function(mons) return mons:is("ready_to_howl") end },
+    ["electric golem"] = { xl = 30, resists = { rElec = 1 } },
+    ["orb of fire"] = { xl = 30, resists = { rF = 1 } },
+    ["pandemonium lord"] = { xl = 30 },
+    ["player ghost"] = { xl = 30 },
 
-    ["electric golem"] = check_resist(100, "rElec", 1),
-    ["entropy weaver"] = check_resist(100, "rCorr", 1),
-    ["spark wasp"] = check_resist(100, "rElec", 1),
-    ["spriggan air mage"] = check_resist(100, "rElec", 1),
-}
-
--- BiA these even at low piety.
-local brothers_in_arms_necessary_monsters = {
-    ["*"] = {
-        hydra_check_flaming(15),
-        in_desc(100, "statue"),
-    },
-
-    ["orb spider"] = 20,
-}
-
--- Use haste/might on these few.
-local ridiculous_uniques = {
-    ["*"] = {},
-    ["Antaeus"] = 100,
-    ["Asmodeus"] = 100,
-    ["Lom Lobon"] = 100,
-    ["Cerebov"] = 100,
+    ["Antaeus"] = { xl = 34 },
+    ["Asmodeus"] = { xl = 34 },
+    ["Lom Lobon"] = { xl = 34 },
+    ["Cerebov"] = { xl = 34 },
 }
 
 -- Trog's Hand these.
@@ -416,41 +402,61 @@ function monster_in_list(mons, mons_list)
     return false
 end
 
-function check_scary_monsters(radius, filter)
-    local score = 0
+function assess_enemies_func(radius, duration_level, filter)
+    if not radius then
+        radius = qw.los_radius
+    end
+
+    local result = { threat = 0, count = 0 }
     for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius
-                and (not filter or filter(enemy))
+        if enemy:distance() > radius then
+            break
+        end
+
+        if (not filter or filter(enemy))
                 and (enemy:is_ranged(true)
                     or enemy:has_path_to_melee_player()) then
-            if enemy:threat() >= 3
-                    or monster_in_list(enemy, scary_monsters) then
-                return true
+            local threat = enemy:threat(duration_level)
+            if not result.scary_enemy and threat >= 3 then
+                result.scary_enemy = enemy
             end
 
-            score = score + enemy:threat()
-
-            if score >= 10 then
-                return true
-            end
+            result.threat = result.threat + threat
+            result.count = result.count + 1
         end
     end
 
-    return false
+    return result
 end
 
-function total_monster_score(radius, filter)
-    local score = 0
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:distance() <= radius
-                and (not filter or filter(enemy))
-                and (enemy:is_ranged(true)
-                    or enemy:has_path_to_melee_player(true)) then
-            score = score + enemy:threat()
-        end
+function assess_enemies(radius, duration_level, filter)
+    return turn_memo_args("assess_enemies", assess_enemies_func, radius,
+        duration_level, filter)
+end
+
+function mons_holy_check(mons)
+    return not mons:res_holy()
+end
+
+function mons_tso_heal_check(mons)
+    return not mons:res_holy() and not mons:is_summoned()
+end
+
+function assess_hell_enemies(radius)
+    if not in_hell_branch() then
+        return { threat = 0, count = 0 }
     end
 
-    return score
+    -- We're most concerned with hell monsters that aren't vulnerable to any
+    -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
+    -- brand).
+    local weapon = get_weapon()
+    local have_holy_wrath = you.god() == "the Shining One"
+        or weapon and weapon.ego() == "holy wrath"
+    local filter = function(mons)
+        return not have_holy_wrath or mons:res_holy()
+    end
+    return assess_enemies(radius, filter)
 end
 
 function check_enemies_in_list(radius, mons_list, filter)
@@ -535,4 +541,135 @@ function should_dig_unreachable_monster(mons)
 
     return contains_string_in(mons:name(), grate_mon_list)
         and can_dig_to(mons:pos())
+end
+
+function monster_short_name(mons)
+    local desc = mons:desc()
+    if desc:find("hydra") then
+        local undead = { "skeleton", "zombie", "simulacrum", "spectral" }
+        for _, name in ipairs(undead) do
+            if desc:find(name) then
+                if name == "spectral" then
+                    return "spectral hydra"
+                else
+                    return name .. " hydra"
+                end
+            end
+        end
+    end
+
+    if mons:desc():find("'s? ghost") then
+        return "player ghost"
+    end
+
+    if mons:desc():find("'s? illusion") then
+        return "player illusion"
+    end
+
+    if mons:type() == const.pan_lord_type then
+        return "pandemonium lord"
+    end
+
+    return mons:name()
+end
+
+function monster_percent_unresisted(resist, level, ego)
+    if level < 0 then
+        return 1.5
+    elseif level == 0 then
+        return 1
+    end
+
+    if resist == "rF" or resist == "rC" or resist == "rN" or resist == "rCorr" then
+        if ego then
+            return level > 0 and 0 or 1
+        end
+
+        return level == 1 and 0.5 or (level == 2 and 0.2 or 0)
+    elseif resist == "rElec" or resist == "rPois" then
+        if ego then
+            return level > 0 and 0 or 1
+        end
+
+        return level == 1 and 0.5 or (level == 2 and 0.25 or 0)
+    else
+        return 1
+    end
+end
+
+const.monster_resist_props = {
+    ["rF"] = "res_fire",
+    ["rC"] = "res_cold",
+    ["rElec"] = "res_shock",
+    ["rPois"] = "res_poison",
+    ["rN"] = "res_draining",
+    ["rCorr"] = "res_corr",
+    ["rHoly"] = "res_holy",
+}
+
+function monster_threat(mons, duration_level)
+    if not duration_level then
+        duration_level = const.duration.active
+    end
+
+    local threat = mons.minfo:threat()
+    local entry = scary_monsters[mons:short_name()]
+    local player_xl = you.xl()
+    if entry and player_xl < entry.xl
+            and (not entry.check or entry.check(mons)) then
+        threat = threat + entry.xl - player_xl
+
+        local resist_factor = 1
+        if entry.resists then
+            for resist, factor in pairs(entry.resists) do
+                local perc = player_resist_percentage(resist,
+                    player_property(resist))
+                resist_factor = resist_factor + factor * (perc - 1)
+            end
+        end
+        threat = threat * resist_factor
+    end
+
+    if duration_level >= const.duration.active then
+        local mons_berserk = mons:is("berserk")
+        threat = threat
+            -- (3/2)^3 for +50% speed & +50% damage & +50% HP.
+            * (mons_berserk and 3.375 or 1)
+            * (not mons_berserk and mons:is("strong") and 1.5 or 1)
+            * (not mons_berserk and mons:is("hasted") and 1.5 or 1)
+            * (mons:is("slowed") and 2 / 3 or 1)
+    end
+
+    local attack = get_attack(1)
+    -- An optimization: we can avoid weapon delay calculations and use simple
+    -- multipliers if we're not incorporating heroism.
+    if have_duration("heroism", duration_level) then
+        threat = threat * player_attack_delay(1, duration_level)
+            / player_attack_delay(1, const.duration.ignore)
+    else
+        if have_duration("slow", duration_level) then
+            threat = threat * 1.5
+        end
+
+        if have_duration("finesse", duration_level) then
+            threat = threat / 2
+        elseif attack.uses_berserk
+                and have_duration("berserk", duration_level) then
+            threat = 2 * threat / 3
+        elseif have_duration("haste", duration_level) then
+            threat = 2 * threat / 3
+        end
+    end
+
+    -- Another optimization: don't bother with this set of damage calculations
+    -- if the durations don't apply.
+    if get_attack(1).uses_might
+            and (have_duration("berserk", duration_level)
+                or have_duration("might", duration_level)
+                or have_duration("weak", duration_level)) then
+        threat = threat * player_attack_damage(mons, 1, const.duration.ignore)
+            / player_attack_damage(mons, 1, duration_level)
+    end
+
+    return threat
 end

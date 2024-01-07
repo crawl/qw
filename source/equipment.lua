@@ -61,8 +61,13 @@ function have_two_hander()
     return false
 end
 
-function get_weapon()
-    return items.equipped_at("Weapon")
+function get_weapon(allow_melded)
+    local weapon = items.equipped_at("Weapon")
+    if not allow_melded and weapon.is_melded then
+        return
+    end
+
+    return weapon
 end
 
 function use_ranged_weapon()
@@ -77,13 +82,6 @@ function have_ranged_weapon()
         function()
             local weapon = get_weapon()
             return weapon and weapon.is_ranged
-        end)
-end
-
-function have_ranged_attack()
-    return turn_memo("have_ranged_attack",
-        function()
-            return have_ranged_weapon() or best_missile()
         end)
 end
 
@@ -123,10 +121,52 @@ function weapon_min_delay(weapon)
     return max(7, weapon.delay - 13.5)
 end
 
+function weapon_delay(weapon, duration_level)
+    if not durations then
+        durations = {}
+    end
+
+    local skill = you.skill(weapon.weap_skill)
+    if not have_duration("heroism", duration_level)
+            and duration_active("heroism") then
+        skill = skill - min(27 - skill, 5)
+    elseif have_duration("heroism", duration_level)
+            and not duration_active("heroism") then
+        skill = skill + min(27 - skill, 5)
+    end
+
+    local delay = weapon.delay - skill / 2
+    delay = max(weapon_min_delay(weapon), delay)
+
+    local ego = weapon:ego()
+    if ego == "speed" then
+        delay = delay * 2 / 3
+    elseif ego == "heavy" then
+        delay = delay * 1.5
+    end
+
+    if have_duration("finesse", duration_level) then
+        delay = delay / 2
+    elseif not weapon.is_ranged
+            and not weapon.class(true) == "missile"
+            and have_duration("berserk", duration_level) then
+        delay = delay * 2 / 3
+    elseif have_duration("haste", duration_level) then
+        delay = delay * 2 / 3
+    end
+
+    if have_duration("slow", duration_level) then
+        delay = delay * 3 / 2
+    end
+
+    return delay
+end
+
 function min_delay_skill()
     local weapon = get_weapon()
+    -- Unarmed combat.
     if not weapon then
-        return
+        return 27
     end
 
     return 2 * (weapon.delay - weapon_min_delay(weapon))
@@ -184,27 +224,9 @@ function can_swap(it, upgrade)
     if you.flying()
             and (feat == "deep_water" and not intrinsic_amphibious()
                 or feat == "lava" and not intrinsic_flight())
-            and player_resist("Fly", it) == 0 then
+            and player_property("Fly", it) == 0 then
         return false
     end
 
     return true
-end
-
-function is_weapon(it)
-    return it and it.class(true) == "weapon"
-end
-
-function weapon_is_penetrating(weapon)
-    return weapon.subtype() == "javelin"
-        or weapon.ego() == "penetration"
-        or weapon.name():find("storm bow")
-end
-
-function weapon_is_exploding(weapon)
-    return weapon.name():find("{damnation}")
-end
-
-function weapon_can_target_empty(weapon)
-    return false
 end

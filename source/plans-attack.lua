@@ -15,14 +15,14 @@ function plan_flail_at_invis()
     if invis_monster_pos then
         if is_adjacent(invis_monster_pos)
                 and can_attack_invis_at(invis_monster_pos) then
-            attack_melee(invis_monster_pos, can_ctrl)
+            do_melee_attack(invis_monster_pos, can_ctrl)
             return true
         end
 
         if invis_monster_pos.x == 0 then
             local apos = { x = 0, y = sign(invis_monster_pos.y) }
             if can_attack_invis_at(apos) then
-                attack_melee(apos, can_ctrl)
+                do_melee_attack(apos, can_ctrl)
                 return true
             end
         end
@@ -30,7 +30,7 @@ function plan_flail_at_invis()
         if invis_monster_pos.y == 0 then
             local apos = { x = sign(invis_monster_pos.x), y = 0 }
             if can_attack_invis_at(apos) then
-                attack_melee(apos, can_ctrl)
+                do_melee_attack(apos, can_ctrl)
                 return true
             end
         end
@@ -41,7 +41,7 @@ function plan_flail_at_invis()
         local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
         tries = tries + 1
         if supdist(pos) > 0 and can_attack_invis_at(pos) then
-            attack_melee(pos, can_ctrl)
+            do_melee_attack(pos, can_ctrl)
             return true
         end
     end
@@ -90,79 +90,7 @@ function plan_shoot_at_invis()
     return false
 end
 
--- Is the result from an attack on the first target better than the current
--- best result?
-function result_improves_attack(attack, result, best_result)
-    if not result then
-        return false
-    end
-
-    if not best_result then
-        return true
-    end
-
-    return compare_table_keys(result, best_result, attack.props,
-        attack.reversed_props)
-end
-
-function score_enemy_hit(result, enemy, attack)
-    if attack.check and not attack.check(enemy) then
-        return
-    end
-
-    for _, prop in ipairs(attack.props) do
-        if not result[prop] then
-            result[prop] = 0
-        end
-
-        local value
-        if prop == "hit" then
-            value = 1
-        else
-            value = enemy[prop](enemy)
-            if value == true then
-                value = 1
-            elseif value == false then
-                value = 0
-            end
-        end
-        result[prop] = result[prop] + value
-    end
-end
-
-function assess_melee_target(attack, enemy)
-    local result = { pos = enemy:pos() }
-    score_enemy_hit(result, enemy, attack)
-    return result
-end
-
-function get_melee_target_func(assume_flight)
-    local attack = {}
-    attack.props = { "player_can_melee", "distance", "is_constricting_you",
-        "stabbability", "damage_level", "threat", "is_orc_priest_wizard" }
-    -- We favor closer monsters.
-    attack.reversed_props = { distance = true }
-
-    local best_result
-    for _, enemy in ipairs(enemy_list) do
-        if enemy:player_can_melee()
-                or enemy:get_player_move_towards(assume_flight) then
-            local result = assess_melee_target(attack, enemy)
-            if result_improves_attack(attack, result, best_result) then
-                best_result = result
-            end
-        end
-    end
-
-    return best_result
-end
-
-function get_melee_target(assume_flight)
-    return turn_memo_args("get_melee_target", get_melee_target_func,
-        assume_flight)
-end
-
-function attack_melee(pos, use_control)
+function do_melee_attack(pos, use_control)
     if use_control or you.confused() and you.transform() == "tree" then
         magic(control(delta_to_vi(pos)) .. "Y")
         return
@@ -172,12 +100,15 @@ function attack_melee(pos, use_control)
 end
 
 -- This gets stuck if netted, confused, etc
-function attack_reach(pos)
+function do_reach_attack(pos)
     magic('vr' .. vector_move(pos) .. '.')
 end
 
 function plan_melee()
-    if not danger or unable_to_melee() or dangerous_to_melee() then
+    if not danger
+            or have_ranged_weapon()
+            or unable_to_melee()
+            or dangerous_to_melee() then
         return false
     end
 
@@ -192,236 +123,12 @@ function plan_melee()
     end
 
     if enemy:distance() == 1 then
-        attack_melee(enemy:pos())
+        do_melee_attack(enemy:pos())
     else
-        attack_reach(enemy:pos())
+        do_reach_attack(enemy:pos())
     end
 
     return true
-end
-
-function assess_explosion(attack, target)
-    local result = { pos = target }
-    for pos in adjacent_iter(target, true) do
-        local mons
-        if supdist(pos) <= qw.los_radius then
-            mons = get_monster_at(pos)
-        end
-        if mons then
-            if mons:attitude() > const.attitude.hostile
-                    and not mons:ignores_player_projectiles() then
-                return
-            end
-
-            if mons:is_enemy() then
-                score_enemy_hit(result, mons, attack)
-            end
-        end
-    end
-    return result
-end
-
-function projectile_hits_non_hostile(mons)
-    return mons and mons:attitude() > const.attitude.hostile
-        and not mons:ignores_player_projectiles()
-end
-
-function assess_ranged_target(attack, target, invis)
-    if debug_channel("ranged") then
-        dsay("Targeting " .. cell_string_from_position(target))
-    end
-
-    local positions = spells.path(attack.test_spell, target.x, target.y, 0, 0,
-        false)
-    local result = { pos = target }
-    local past_target, at_target_result
-    for i, coords in ipairs(positions) do
-        local pos = { x = coords[1], y = coords[2] }
-        local hit_target = positions_equal(pos, target)
-        local mons = get_monster_at(pos)
-        -- Non-penetrating attacks must reach the target before reaching any
-        -- other enemy, otherwise they're considered blocked and unusable.
-        if not attack.is_penetrating
-                and not past_target
-                and not hit_target
-                and mons and not mons:ignores_player_projectiles() then
-            if debug_channel("ranged") then
-                dsay("Aborted target: blocking monster at "
-                    .. cell_string_from_position(pos))
-            end
-            return
-        end
-
-        -- Never potentially hit non-hostiles. If at_target_result is defined,
-        -- we'll be using '.', otherwise we haven't yet reached our target and
-        -- the attack is unusable.
-        if projectile_hits_non_hostile(mons) then
-            if debug_channel("ranged") then
-                dsay("Aborted target: non-hostile monster at "
-                    .. cell_string_from_position(pos))
-            end
-            return at_target_result
-        end
-
-        -- Try to avoid losing ammo to destructive terrain at the end of our
-        -- throw path by using '.'.
-        if not hit_target
-                and not attack.is_explosion
-                and attack.uses_ammunition
-                and i == #positions
-                and destroys_items_at(pos)
-                and not destroys_items_at(target) then
-            if debug_channel("ranged") then
-                dsay("Using at-target key due to destructive terrain at "
-                    .. pos_string(pos))
-            end
-            return at_target_result
-        end
-
-        if mons and not mons:ignores_player_projectiles() then
-            if attack.is_explosion then
-                return assess_explosion(attack, target)
-            elseif mons:is_enemy()
-                    -- Non-penetrating attacks only get the values from the
-                    -- target.
-                    and (attack.is_penetrating or hit_target) then
-                score_enemy_hit(result, mons, attack)
-                if debug_channel("ranged") then
-                    dsay("Attack scores after enemy at " .. pos_string(pos)
-                        .. ": " .. stringify_table(result))
-                end
-            end
-        end
-
-        -- We've reached the target, so make a copy of the results up to this
-        -- point in case we later decide to use '.'.
-        if hit_target then
-            at_target_result = util.copy_table(result)
-            at_target_result.aim_at_target = true
-            past_target = true
-        end
-    end
-
-    -- We never hit anything, so make sure we return nil. This can happen in
-    -- rare cases like an eldritch tentacle residing in its portal feature,
-    -- which is solid terrain.
-    if not result.hit or result.hit == 0 then
-        return
-    end
-
-    return result
-end
-
-function assess_explosion_targets(attack, target)
-    local best_result
-    for pos in adjacent_iter(target, true) do
-        if supdist(pos) <= qw.los_radius
-                and not attack.seen_pos[pos.x][pos.y] then
-            local result = assess_ranged_target(attack, pos)
-            if result_improves_attack(attack, result, best_result) then
-                best_result = result
-            end
-
-            attack.seen_pos[pos.x][pos.y] = true
-        end
-    end
-    return best_result
-end
-
-function attack_test_spell(attack)
-    return "Quicksilver Bolt"
-end
-
-function weapon_range(weapon)
-    local class = weapon.class(true)
-    if class == "missile" or class == "weapon" and weapon.is_ranged then
-        return qw.los_radius
-    end
-end
-
-function ranged_attack(weapon)
-    local attack = {}
-    attack.range = weapon_range(weapon)
-    attack.is_penetrating = weapon_is_penetrating(weapon)
-    attack.is_explosion = weapon_is_exploding(weapon)
-    attack.uses_ammunition = weapon.class(true) == "missile"
-    attack.can_target_empty = weapon_can_target_empty(weapon)
-    attack.test_spell = attack_test_spell(weapon)
-    attack.props = { "hit", "distance", "is_constricting_you", "damage_level",
-        "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
-    return attack
-end
-
-function get_ranged_target(attack, prefer_melee)
-    local melee_target
-    if prefer_melee then
-        melee_target = get_melee_target()
-
-        -- Use our preferred melee attack.
-        if melee_target
-                and get_monster_at(melee_target.pos):player_can_melee() then
-            return
-        end
-    end
-
-    if attack.is_explosion then
-        attack.seen_pos = {}
-        for i = -qw.los_radius, qw.los_radius do
-            attack.seen_pos[i] = {}
-        end
-    end
-
-    local best_result
-    local abort_move_towards = false
-    for _, enemy in ipairs(enemy_list) do
-        -- If we have and prefer a melee target and there's a ranged monster,
-        -- we'll abort whenever there's a monster we could move towards
-        -- instead, since this is how the melee movement plan works.
-        if melee_target and enemy:is_ranged() then
-            abort_move_towards = true
-            return
-        end
-
-        if abort_move_towards and enemy:get_player_move_towards() then
-            return
-        end
-
-        local pos = enemy:pos()
-        if enemy:distance() <= attack.range
-                and you.see_cell_solid_see(pos.x, pos.y) then
-            local result
-            if attack.is_explosion and attack.can_target_empty then
-                result = assess_explosion_targets(attack, pos)
-            else
-                result = assess_ranged_target(attack, pos)
-            end
-
-            if result_improves_attack(attack, result, best_result) then
-                best_result = result
-            end
-        end
-    end
-    if best_result then
-        return best_result
-    end
-end
-
-function get_throwing_target()
-    return turn_memo("get_throwing_target",
-        function()
-            local missile = best_missile()
-            if missile then
-                return get_ranged_target(ranged_attack(missile), true)
-            end
-        end)
-end
-
-function get_launcher_target()
-    return turn_memo("get_launcher_target",
-        function()
-            return get_ranged_target(ranged_attack(get_weapon()))
-        end)
 end
 
 function plan_launcher()
@@ -444,6 +151,8 @@ function throw_missile(missile, pos, aim_at_target)
     local cur_missile = items.fired_item()
     if not cur_missile or missile.name() ~= cur_missile.name() then
         magic("Q*" .. item_letter(missile))
+        qw.do_dummy_action = false
+        coroutine.yield()
     end
 
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
@@ -454,6 +163,8 @@ function shoot_launcher(pos, aim_at_target)
     local cur_missile = items.fired_item()
     if not cur_missile or weapon.name() ~= cur_missile.name() then
         magic("Q*" .. item_letter(weapon))
+        qw.do_dummy_action = false
+        coroutine.yield()
     end
 
     return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
@@ -575,20 +286,6 @@ function plan_launcher_wait_for_enemy()
     end
 
     return false
-end
-
-function poison_spit_attack(weapon)
-    local attack = {}
-    local poison_gas = you.mutation("spit poison") > 1
-    attack.range = poison_gas and 6 or 5
-    attack.is_penetrating = poison_gas
-    attack.is_explosion = false
-    attack.test_spell = "Quicksilver Bolt"
-    attack.props = { "hit", "distance", "is_constricting_you",
-        "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
-    attack.check = function(mons) return mons:res_poison() < 1 end
-    return attack
 end
 
 function plan_poison_spit()

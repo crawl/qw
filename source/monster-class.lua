@@ -119,6 +119,13 @@ function Monster:name()
     return self:property_memo("name")
 end
 
+function Monster:short_name()
+    return self:property_memo("short_name",
+        function()
+            return monster_short_name(self)
+        end)
+end
+
 function Monster:desc()
     return self:property_memo("desc")
 end
@@ -149,12 +156,28 @@ function Monster:holiness()
     return self:property_memo("holiness")
 end
 
+function Monster:res_fire()
+    return self:property_memo("res_fire")
+end
+
+function Monster:res_cold()
+    return self:property_memo("res_cold")
+end
+
+function Monster:res_shock()
+    return self:property_memo("res_shock")
+end
+
 function Monster:res_poison()
     return self:property_memo("res_poison")
 end
 
 function Monster:res_draining()
     return self:property_memo("res_draining")
+end
+
+function Monster:res_corr()
+    return self:property_memo("res_corr")
 end
 
 function Monster:is_immune_vampirism()
@@ -168,11 +191,11 @@ function Monster:is_immune_vampirism()
         end)
 end
 
-function Monster:is_holy_vulnerable()
-    return self:property_memo("is_holy_vulnerable",
+function Monster:res_holy()
+    return self:property_memo("res_holy",
         function()
             local holiness = self:holiness()
-            return holiness == "undead" or holiness == "demonic"
+            return holiness ~= "undead" and holiness ~= "demonic"
         end)
 end
 
@@ -191,12 +214,28 @@ function Monster:is_friendly()
         end)
 end
 
-function Monster:player_can_attack()
-    return self:property_memo("player_can_attack",
-        function()
-            return self:name() ~= "orb of destruction"
-                and not self:attacking_causes_penance()
-        end)
+function player_can_attack_monster(mons, attack_index)
+    if mons:name() == "orb of destruction"
+            or mons:attacking_causes_penance() then
+        return false
+    end
+
+    if not attack_index then
+        return true
+    end
+
+    if get_attack(attack_index).is_melee then
+        return mons:player_can_melee()
+    else
+        return mons:player_has_line_of_fire(attack_index)
+    end
+end
+
+function Monster:player_can_attack(attack_index)
+    return self:property_memo_args("player_can_attack",
+        function(attack_index_arg)
+            return player_can_attack_monster(self, attack_index_arg)
+        end, attack_index)
 end
 
 function Monster:attacking_causes_penance()
@@ -236,21 +275,35 @@ function Monster:ignores_player_projectiles()
         end)
 end
 
-function Monster:threat()
-    return self:property_memo("threat",
+function Monster:threat(duration_level)
+    return self:property_memo_args("threat",
         function()
-            local mons_berserk = self:is("berserk")
-            local finesse = you.status("finesse-ful")
-            local ranged = have_ranged_weapon()
-            local berserk = you.berserk() and not ranged
-            return self.minfo:threat()
-                * (mons_berserk and 2 or 1)
-                * (not mons_berserk and self:is("strong") and 1.33 or 1)
-                * (not mons_berserk and self:is("hasted") and 1.5 or 1)
-                * (you.slowed() and 1.5 or 1)
-                * ((finesse or berserk) and 0.5 or 1)
-                * (not finesse and not berserk and you.hasted() and 0.67 or 1)
-                * (not berserk and not ranged and you.mighty() and 0.75 or 1)
+            return monster_threat(self, duration_level)
+        end, duration_level)
+end
+
+function Monster:hp()
+    return self:property_memo("hp",
+        function()
+            local hp = self.minfo:max_hp():gsub(".-(%d+).*", "%1")
+            return tonumber(hp)
+                -- The scaling factor takes the midpoint hitpoint value for the
+                -- damage level.
+                * min(1, max(0, (10 - 2 * self.minfo:damage_level() + 1) / 10))
+        end)
+end
+
+function Monster:player_attack_accuracy(index)
+    return self:property_memo_args("attack_accuracy",
+        function (index_arg)
+            return player_attack_accuracy(self, index_arg)
+        end, index)
+end
+
+function Monster:best_player_attack()
+    return self:property_memo("best_player_attack",
+        function()
+            return monster_best_player_attack(self)
         end)
 end
 
@@ -449,11 +502,11 @@ function Monster:player_can_wait_for_melee()
         end)
 end
 
-function Monster:player_has_line_of_fire()
-    return self:property_memo("player_has_line_of_fire",
-        function()
-            return player_has_line_of_fire(self:pos())
-        end)
+function Monster:player_has_line_of_fire(attack_id)
+    return self:property_memo_args("player_has_line_of_fire",
+        function(attack_id_arg)
+            return player_has_line_of_fire(self:pos(), attack_id_arg)
+        end, attack_id)
 end
 
 function Monster:adjacent_cells_known()
@@ -508,4 +561,22 @@ function Monster:get_player_move_towards(assume_flight)
                 tab_function(assume_flight_arg), reach_range())
             return result and result.move or false
         end, assume_flight)
+end
+
+function Monster:weapon_accuracy(item)
+    return self:property_memo_args("weapon_accuracy",
+        function(item_arg)
+            local str = self.minfo:target_weapon(item_arg)
+            str = str:gsub(".-(%d+)%% to evade.*", "%1")
+            return (100 - tonumber(str)) / 100
+        end, item)
+end
+
+function Monster:throw_accuracy(item)
+    return self:property_memo_args("throw_accuracy",
+        function(item_arg)
+            local str = self.minfo:target_throw(item_arg)
+            str = str:gsub(".-(%d+)%% to hit.*", "%1")
+            return tonumber(str) / 100
+        end, item)
 end

@@ -86,7 +86,6 @@ function plan_swap_weapon()
         return false
     end
 
-    local exploding_weapon = weapon_is_exploding(weapon)
     local sit
     local enemy_dist = qw.los_radius
     for _, enemy in ipairs(enemy_list) do

@@ -69,6 +69,7 @@ function turn_update()
     qw.time_passed = true
     qw.turn_count = turns
     qw.turn_memos = {}
+    qw.attacks = nil
 
     if you.turns() >= qw.dump_count then
         dump_count = qw.dump_count + 100

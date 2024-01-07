@@ -25,6 +25,7 @@ function initialize_enums()
     const.feat_state = enum(const.feat_state)
     const.map_select = enum(const.map_select)
     const.attitude = enum(const.attitude)
+    const.duration = enum(const.duration)
 end
 
 function initialize()

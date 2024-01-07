@@ -1,5 +1,58 @@
 -----------------------------------------
--- Player functions
+-- Player functions and data
+
+const.duration = {
+    -- Ignore this duration.
+    "ignore",
+    -- We can get this duration, but it's not currently active.
+    "usable",
+    -- The duration is currently active.
+    "active",
+    -- We can get this duration or it's currently active.
+    "available",
+}
+
+function initialize_player_durations()
+    const.player_durations = {
+        ["heroism"] = { status = "heroic", can_use_func = can_heroism },
+        ["finesse"] = { status = "finesse-ful", can_use_func = can_finesse },
+        ["berserk"] = { check_func = you.berserk, can_use_func = can_berserk },
+        ["haste"] = { check_func = you.hasted, can_use_func = can_haste },
+        ["slow"] = { check_func = you.slowed },
+        ["might"] = { check_func = you.mighty, can_use_func = can_might },
+        ["weak"] = { status = "weakened" },
+    }
+end
+
+function can_use_buff(name)
+    buff = const.player_durations[name]
+    return buff and buff.can_use_func and buff.can_use_func()
+end
+
+function duration_active(name)
+    duration = const.player_durations[name]
+    if not duration then
+        return false
+    end
+
+    if duration.status then
+        return you.status(duration.status)
+    else
+        return duration.check_func()
+    end
+end
+
+function have_duration(name, level)
+    if level == const.duration.ignore then
+        return false
+    elseif level == const.duration.usable then
+        return can_use_buff(name)
+    elseif level == const.duration.active then
+        return duration_active(name)
+    else
+        return can_use_buff(name) or duration_active(name)
+    end
+end
 
 function intrinsic_rpois()
     local sp = you.race()
@@ -134,6 +187,26 @@ function player_property(str, it)
         return other_res
     else
         return other_res > 0 and 1 or 0
+    end
+end
+
+function player_resist_percentage(resist, level)
+    if level < 0 then
+        return 1.5
+    elseif level == 0 then
+        return 1
+    end
+
+    if resist == "rF" or resist == "rC" then
+        return level == 1 and 0.5 or (level == 2 and 1 / 3 or 0.2)
+    elseif resist == "rElec" then
+        return 2 / 3
+    elseif resist == "rPois" then
+        return 1 / 3
+    elseif resist == "rCorr" then
+        return 0.5
+    elseif resist == "rN" then
+        return level == 1 and 0.5 or (level == 2 and 0.25 or 0)
     end
 end
 
@@ -326,7 +399,8 @@ function can_invoke()
 end
 
 function can_berserk()
-    return you.god() == "Trog"
+    return not have_ranged_weapon()
+        and you.god() == "Trog"
         and you.piety_rank() >= 1
         and you.race() ~= "Mummy"
         and you.race() ~= "Ghoul"

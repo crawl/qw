@@ -18,7 +18,7 @@ function buffed()
     end
 
     if you.god() == "Okawaru"
-            and (you.status("heroic") or you.status("finesse-ful")) then
+            and (have_duration("heroism") or have_duration("finesse")) then
         return true
     end
 
@@ -498,14 +498,31 @@ function plan_haste()
     return false
 end
 
+function can_might()
+    return can_drink() and find_item("potion", "might")
+end
+
 function want_to_might()
-    return not you.mighty()
-        and want_to_serious_buff()
-        and not have_ranged_weapon()
+    if not danger
+            or dangerous_to_attack()
+            or you.mighty()
+            or you.teleporting() then
+        return false
+    end
+
+    local result = assess_enemies()
+    if result.threat >= const.high_threat then
+        return true
+    elseif result.scary_enemy then
+        attack = result.scary_enemy:best_player_attack()
+        return attack and attack.uses_might
+    end
+
+    return false
 end
 
 function plan_might()
-    if can_drink() and find_item("potion", "might") and want_to_might() then
+    if can_might() and want_to_might() then
         return drink_by_name("might")
     end
 
@@ -586,19 +603,16 @@ function plan_fiery_armour()
 end
 
 function want_to_brothers_in_arms()
-    if not danger or dangerous_to_attack() or you.teleporting() then
+    if not danger
+            or dangerous_to_attack()
+            or you.teleporting()
+            or count_brothers_in_arms(4) > 0 then
         return false
     end
 
-    -- Always BiA this list of monsters.
-    if (check_enemies_in_list(qw.los_radius, brothers_in_arms_necessary_monsters)
-                -- If piety as high, we can also use BiA as a fallback for when
-                -- we'd like to berserk, but can't, or if when we see nasty
-                -- monsters.
-                or you.piety_rank() > 4
-                    and (want_to_berserk() and not can_berserk()
-                        or check_scary_monsters(qw.los_radius)))
-            and count_brothers_in_arms(4) == 0 then
+    -- If threat is too high even with any available buffs like berserk.
+    local result = assess_enemies(qw.los_radius, const.duration.available)
+    if result.threat >= 15 then
         return true
     end
 
@@ -622,13 +636,23 @@ function want_to_drain_life()
 end
 
 function want_to_greater_servant()
-    if you.skill("Invocations") >= 12
-            and (check_scary_monsters(qw.los_radius)
-                or hp_is_low(50) and immediate_danger) then
-        if count_greater_servants(4) == 0 and not you.teleporting() then
-            return true
-        end
+    if not danger
+            or dangerous_to_attack()
+            or you.teleporting()
+            or you.skill("Invocations") < 12
+            or count_greater_servants(4) > 0 then
+        return false
     end
+
+    if hp_is_low(50) and immediate_danger then
+        return true
+    end
+
+    local result = assess_enemies()
+    if result.threat >= 15 then
+        return true
+    end
+
     return false
 end
 
@@ -637,21 +661,15 @@ function want_to_cleansing_flame()
         return false
     end
 
-    local holy_check = function(mons)
-            return mons:is_holy_vulnerable()
-        end
-    if not check_scary_monsters(1, holy_check)
-                and check_scary_monsters(2, holy_check)
-            or count_enemies(2, holy_check) > 8 then
+    local result = assess_enemies(2, const.duration.active, mons_holy_check)
+    if result.scary_enemy and not result.scary_enemy:player_can_attack(1)
+            or result.threat >= const.high_threat and result.count >= 3 then
         return true
     end
 
-    local filter = function(mons)
-        return mons:is_holy_vulnerable() and not mons:is_summoned()
-    end
     if hp_is_low(50) and immediate_danger then
-        local flame_restore_count = count_enemies(2, filter)
-        return flame_restore_count > count_enemies(1, filter)
+        local flame_restore_count = count_enemies(2, mons_tso_heal_check)
+        return flame_restore_count > count_enemies(1, mons_tso_heal_check)
             and flame_restore_count >= 4
     end
 
@@ -659,20 +677,39 @@ function want_to_cleansing_flame()
 end
 
 function want_to_divine_warrior()
-    return danger
-        and not dangerous_to_attack()
-        and not you.teleporting()
-        and you.skill("Invocations") >= 8
-        and (check_scary_monsters(qw.los_radius)
-            or hp_is_low(50) and immediate_danger)
-        and count_divine_warriors(4) == 0
+    if not danger
+            or dangerous_to_attack()
+            or you.teleporting()
+            or you.skill("Invocations") < 8
+            or count_divine_warriors(4) > 0 then
+        return false
+    end
+
+    if hp_is_low(50) and immediate_danger then
+        return true
+    end
+
+    local result = assess_enemies()
+    if result.threat >= 15 then
+        return true
+    end
 end
 
 function want_to_fiery_armour()
-    return danger
-        and not you.status("fiery-armoured")
-        and not dangerous_to_attack()
-        and (hp_is_low(50) or check_scary_monsters(qw.los_radius))
+    if not danger or dangerous_to_attack() or you.status("fiery-armoured") then
+        return false
+    end
+
+    if hp_is_low(50) and immediate_danger then
+        return true
+    end
+
+    local result = assess_enemies()
+    if result.scary_enemy or result.threat >= const.high_threat then
+        return true
+    end
+
+    return false
 end
 
 function want_to_apocalypse()
@@ -681,8 +718,14 @@ function want_to_apocalypse()
     end
 
     local dlevel = drain_level()
-    return dlevel == 0 and check_scary_monsters(qw.los_radius)
-        or dlevel <= 2 and hp_is_low(50)
+    local result = assess_enemies()
+    if dlevel == 0
+                and (result.scary_enemy or result.threat >= const.high_threat)
+            or dlevel <= 2 and hp_is_low(50) then
+        return true
+    end
+
+    return false
 end
 
 function bad_corrosion()
@@ -729,9 +772,17 @@ function want_to_teleport()
         return true
     end
 
-    return immediate_danger and bad_corrosion()
-            or immediate_danger and hp_is_low(25)
-            or count_scary_hell_monsters(qw.los_radius) >= 9
+    if immediate_danger and bad_corrosion()
+            or immediate_danger and hp_is_low(25) then
+            return true
+    end
+
+    local result = assess_hell_enemies()
+    if result.threat >= 15 then
+        return true
+    end
+
+    return false
 end
 
 function want_to_heal_wounds()
@@ -748,65 +799,6 @@ function want_to_heal_wounds()
     end
 
     return hp_is_low(25)
-end
-
-function count_scary_hell_monsters(radius)
-    if not in_hell_branch() then
-        return 0
-    end
-
-    -- We're most concerned with hell monsters that aren't vulnerable to any
-    -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
-    -- brand).
-    local have_holy_wrath = you.god() == "the Shining One"
-        or items.equipped_at("weapon")
-            and items.equipped_at("weapon").ego() == "holy wrath"
-    local filter = function(mons)
-        return (enemy:threat() >= 3 or monster_in_list(mons, scary_monsters))
-            and not (have_holy_wrath and mons:is_holy_vulnerable())
-    end
-    return count_enemies(radius, filter)
-end
-
-function want_to_serious_buff()
-    if not danger or dangerous_to_attack() then
-        return false
-    end
-
-    if have_orb then
-        return want_to_orbrun_buff()
-    end
-
-    if in_branch("Zig")
-            and hp_is_low(50)
-            and count_enemies(qw.los_radius) >= 5 then
-        return true
-    end
-
-    -- These gods have their own buffs.
-    if you.god() == "Okawaru" or you.god() == "Trog" then
-        return false
-    end
-
-    -- None of these uniques exist early.
-    if you.num_runes() < 3 then
-        return false
-    end
-
-    -- Don't waste a potion if we are already leaving.
-    if you.teleporting() then
-        return false
-    end
-
-    if check_enemies_in_list(qw.los_radius, ridiculous_uniques) then
-        return true
-    end
-
-    if count_scary_hell_monsters(qw.los_radius) >= 5 then
-        return true
-    end
-
-    return false
 end
 
 function want_resistance()
@@ -845,17 +837,18 @@ function want_to_haste()
         return false
     end
 
-    if you.god() == "Okawaru"
-            and not you.status("finesse-ful")
-            and not can_finesse()
-            and want_to_finesse()
-            and not can_heroism()
-            and want_to_heroism() then
-        return true
-    end
-
-    if you.slowed() and total_monster_score(qw.los_radius) >= 10 then
-        return true
+    local result = assess_enemies()
+    if result.threat >= const.high_threat then
+        return not duration_active("finesse") or you.slowed()
+    elseif result.scary_enemy then
+        local attack = result.scary_enemy:best_player_attack()
+        return attack
+            -- We can always use haste if we're slowed().
+            and (you.slowed()
+                -- Only primary attacks are allowed to use haste.
+                or attack.index == 1
+                    -- Don't haste if we're already benefiting from Finesse.
+                    and not (attack.uses_finesse and duration_active("finesse")))
     end
 
     return false
@@ -891,39 +884,66 @@ function want_to_trogs_hand()
 end
 
 function want_to_berserk()
-    return danger
-        and not dangerous_to_melee()
-        and not you.berserk()
-        and (hp_is_low(50) and sense_danger(2, true)
-            or check_scary_monsters(2)
-            or invis_monster and nasty_invis_caster)
-end
-
-function want_to_finesse()
-    if not danger or dangerous_to_attack() or you.status("finesse-ful") then
+    if not danger or dangerous_to_melee() or you.berserk() then
         return false
     end
 
-    if in_branch("Zig")
-            and hp_is_low(80)
-            and count_enemies(qw.los_radius) >= 5 then
+    if hp_is_low(50) and sense_danger(2, true)
+            or invis_monster and nasty_invis_caster then
         return true
     end
 
-    if not you.teleporting() and check_scary_monsters(qw.los_radius) then
+    local result = assess_enemies(2)
+    if result.scary_enemy then
+        local attack = result.scary_enemy:best_player_attack()
+        if attack and attack.uses_berserk then
+            return true
+        end
+    end
+
+    if result.threat >= const.high_threat then
         return true
     end
 
     return false
 end
 
+function want_to_finesse()
+    if not danger
+            or dangerous_to_attack()
+            or you.teleporting()
+            or duration_active("finesse") then
+        return false
+    end
+
+    local result = assess_enemies()
+    if result.threat >= const.high_threat then
+        return true
+    elseif result.scary_enemy then
+        attack = result.scary_enemy:best_player_attack()
+        return attack and attack.uses_finesse
+    end
+
+    return false
+end
+
 function want_to_heroism()
-    return danger
-        and not dangerous_to_attack()
-        and not you.status("heroic")
-        and not you.teleporting()
-        and (want_to_finesse() and not can_finesse()
-            or total_monster_score(qw.los_radius) >= 10)
+    if not danger
+            or dangerous_to_attack()
+            or duration_active("heroism")
+            or you.teleporting() then
+        return false
+    end
+
+    local result = assess_enemies()
+    if result.threat >= const.high_threat then
+        return true
+    elseif result.scary_enemy then
+        local attack = result.scary_enemy:best_player_attack()
+        return attack and attack.uses_heroism
+    end
+
+    return false
 end
 
 function want_to_recall()
@@ -1098,7 +1118,7 @@ function plan_dig_grate()
     for _, enemy in ipairs(enemy_list) do
         if not map_is_reachable_at(enemy:map_pos())
                 and enemy:should_dig_unreachable() then
-            return zap_item(wand, enemy:pos)
+            return zap_item(wand, enemy:pos())
         end
     end
 
@@ -1176,6 +1196,7 @@ function set_plan_emergency()
         {plan_tomb3_arrival, "tomb3_arrival"},
         {plan_magic_points, "magic_points"},
         {plan_cleansing_flame, "try_cleansing_flame"},
+        {plan_divine_warrior, "divine_warrior"},
         {plan_brothers_in_arms, "brothers_in_arms"},
         {plan_greater_servant, "greater_servant"},
         {plan_apocalypse, "try_apocalypse"},
@@ -1186,7 +1207,6 @@ function set_plan_emergency()
         {plan_dig_grate, "try_dig_grate"},
         {plan_wield_weapon, "wield_weapon"},
         {plan_swap_weapon, "swap_weapon"},
-        {plan_divine_warrior, "divine_warrior"},
         {plan_resistance, "resistance"},
         {plan_finesse, "finesse"},
         {plan_heroism, "heroism"},

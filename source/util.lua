@@ -85,6 +85,10 @@ function table_is_empty(t)
     return empty
 end
 
+function empty_string(s)
+    return not s or s == ''
+end
+
 --[[
 Compare the numeric values of tables for the given keys. The keys are compared
 in the order given in `keys`, with the comparison moving to the next key when

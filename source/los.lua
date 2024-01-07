@@ -15,13 +15,23 @@ function feature_state(pos)
     return const.feat_state.seen
 end
 
-function player_has_line_of_fire(target)
-    local attack = ranged_attack(get_weapon())
-    local positions = spells.path(attack.test_spell, target.x, target.y, 0, 0,
-        false)
+function player_has_line_of_fire(target_pos, attack_id)
+    local attack
+    if attack_id then
+        attack = get_attack(attack_id)
+    else
+        attack = get_ranged_attack()
+    end
+
+    local positions = spells.path(attack.test_spell, target_pos.x,
+        target_pos.y, 0, 0, false)
     for i, coords in ipairs(positions) do
         local pos = { x = coords[1], y = coords[2] }
-        local hit_target = positions_equal(pos, target)
+        if position_distance(pos, const.origin) > attack.range then
+            break
+        end
+
+        local hit_target = positions_equal(pos, target_pos)
         local mons = get_monster_at(pos)
         if not attack.is_penetrating
                 and not hit_target

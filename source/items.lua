@@ -4,6 +4,34 @@
 const.rune_suffix = " rune of Zot"
 const.orb_name = "Orb of Zot"
 
+function is_weapon(it)
+    return it and it.class(true) == "weapon"
+end
+
+function item_is_penetrating(item)
+    if item.ego() == "penetration" or item.name():find("storm bow") then
+        return true
+    end
+
+    return item.subtype() == "javelin"
+end
+
+function item_is_exploding(item)
+    return item.name():find("{damnation}")
+end
+
+function item_ignores_player(item)
+    return item.name():find("{damnation}")
+end
+
+function item_range(item)
+    return qw.los_radius
+end
+
+function item_can_target_empty(item)
+    return false
+end
+
 function count_charges(wand_type, ignore_it)
     local count = 0
     for it in inventory() do
