@@ -28,22 +28,52 @@ function initialize_enums()
     const.duration = enum(const.duration)
 end
 
+function initialize_rc_variables()
+    qw.max_memory = MAX_MEMORY
+    qw.max_memory_percentage = MAX_MEMORY_PERCENTAGE
+    qw.coroutine_throttle = COROUTINE_THROTTLE
+
+    qw.delayed = DELAYED
+    qw.delay_time = DELAY_TIME
+
+    qw.single_step = SINGLE_STEP
+    if AUTO_START then
+        qw.automatic = true
+    end
+
+    qw.quit_turns = QUIT_TURNS
+    qw.wizmode_death = WIZMODE_DEATH
+
+    qw.combo_cycle = COMBO_CYCLE
+    qw.combo_cycle_list = COMBO_CYCLE_LIST
+    qw.goals = GOALS
+    qw.default_goal = DEFAULT_GOAL
+
+    qw.god_list = GOD_LIST
+    qw.faded_altar = FADED_ALTAR
+    qw.ck_abandon_xom = CK_ABANDON_XOM
+
+    qw.allowed_portals = ALLOWED_PORTALS
+    qw.early_second_rune = EARLY_SECOND_RUNE
+    qw.late_orc = LATE_ORC
+    qw.rune_preference = RUNE_PREFERENCE
+
+    qw.shield_crazy = SHIELD_CRAZY
+    qw.full_inventory_panic = FULL_INVENTORY_PANIC
+end
+
 function initialize()
     -- The version of qw for logging purposes. Run the make-qw.sh script to set
     -- this variable automatically based on the latest annotated git tag and
     -- commit, or change it here to a custom version string.
     qw.version = "%VERSION%"
 
+    initialize_rc_variables()
+
     -- We don't want to hit max_memory since that will delete the c_persist
     -- table. Generally qw only gets clua memory usage above 32MB due to bugs.
     -- Leave some memory left over so we can avoid deleting c_persist as well
     -- as reset the coroutine and attempt debugging.
-    if MAX_MEMORY then
-        qw.max_memory = MAX_MEMORY
-    end
-    if MAX_MEMORY_PERCENTAGE then
-        qw.max_memory_percentage = MAX_MEMORY_PERCENTAGE
-    end
     if qw.max_memory and qw.max_memory_percentage then
         set_memory_limit(qw.max_memory * qw.max_memory_percentage / 100)
     end
@@ -80,12 +110,6 @@ function initialize()
     first_turn_initialize()
     initialize_c_persist()
 
-    qw.shield_crazy = SHIELD_CRAZY
-    qw.full_inventory_panic = FULL_INVENTORY_PANIC
-    qw.faded_altar = FADED_ALTAR
-    qw.late_orc = LATE_ORC
-    qw.early_second_rune = EARLY_SECOND_RUNE
-    qw.rune_preference = RUNE_PREFERENCE
     note_qw_data()
 
     calc_los_radius()
@@ -99,21 +123,10 @@ function initialize()
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)
 
-    qw.coroutine_throttle = COROUTINE_THROTTLE
-    if AUTO_START then
-        qw.automatic = true
-    end
-
-    qw.delayed = DELAYED
-    qw.delay_time = DELAY_TIME
-
     qw.turn_count = you.turns() - 1
     qw.dump_count = you.turns() + 100 - (you.turns() % 100)
     qw.skill_count = you.turns() - (you.turns() % 5)
     qw.read_message = true
-
-    qw.single_step = SINGLE_STEP
-    qw.wizmode_death = WIZMODE_DEATH
 
     qw.incoming_monsters_turn = -1
     qw.full_hp_turn = -1
@@ -165,10 +178,10 @@ function first_turn_initialize()
     end
 
     if not god_list then
-        if GOD_LIST and #GOD_LIST > 0 then
-            god_list = GOD_LIST
+        if qw.god_list and #qw.god_list > 0 then
+            god_list = qw.god_list
         else
-            error("No default god list defined in GOD_LIST.")
+            error("No default god list defined in GOD_LIST rc variable.")
         end
     end
 
@@ -190,15 +203,15 @@ function first_turn_initialize()
     c_persist.current_god_list = god_list
 
     if not goals then
-        goals = DEFAULT_GOAL
+        goals = qw.default_goal
         if not goals then
-            error("No default goal defined in DEFAULT_GOAL.")
+            error("No default goal defined in DEFAULT_GOAL rc varaible.")
         end
     end
     c_persist.current_goals = goals
 
-    if COMBO_CYCLE then
-        local combo_string_list = split(COMBO_CYCLE_LIST, ",")
+    if qw.combo_cycle then
+        local combo_string_list = split(qw.combo_cycle_list, ",")
         local combo_string = combo_string_list[
             1 + (c_persist.record.counter % (#combo_string_list))]
         combo_string = trim(combo_string)
@@ -211,7 +224,7 @@ function first_turn_initialize()
                 table.insert(c_persist.next_god_list, god_full_name(g))
             end
             if #goal_parts > 1 then
-                if not GOALS[goal_parts[2]] then
+                if not qw.goals[goal_parts[2]] then
                     error("Unknown goal name '" .. goal_parts[2] .. "'"
                         ..  " given in combo spec '" .. combo_string .. "'")
                 end

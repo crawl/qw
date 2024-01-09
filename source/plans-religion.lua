@@ -15,7 +15,7 @@ function plan_abandon_god()
     if goal_god(goal_status) == "No God"
             or you.class() == "Chaos Knight"
                 and you.god() == "Xom"
-                and CK_ABANDON_XOM then
+                and qw.ck_abandon_xom then
         magic("aXYY")
         return true
     end

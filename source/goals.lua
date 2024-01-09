@@ -281,7 +281,8 @@ function determine_goal()
         return
     end
 
-    if stuck_turns > QUIT_TURNS or select(2, you.hp()) == 1 then
+    if qw.quit_turns and stuck_turns > qw.quit_turns
+            or select(2, you.hp()) == 1 then
         status = "Quit"
     end
 
@@ -835,7 +836,7 @@ function goal_options()
         return override_goals
     end
 
-    return GOALS[c_persist.current_goals]
+    return qw.goals[c_persist.current_goals]
 end
 
 function next_exploration_depth(branch, min_depth, max_depth)

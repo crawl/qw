@@ -344,7 +344,7 @@ function in_portal()
 end
 
 function portal_allowed(portal)
-    return util.contains(ALLOWED_PORTALS, portal)
+    return qw.allowed_portals and util.contains(qw.allowed_portals, portal)
 end
 
 function record_portal(level, portal, permanent)
