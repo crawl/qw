@@ -552,7 +552,7 @@ end
 function update_cell_feature(cell)
     if cell.feat == "expired_portal" then
         expire_cell_portal(cell)
-    elseif cell.feat == "slimy_wall" then
+    elseif not qw.have_slimy_walls and cell.feat == "slimy_wall" then
         qw.have_slimy_walls = true
     end
 
@@ -871,6 +871,7 @@ function update_map(new_level, full_clear)
     if new_level then
         qw.have_slimy_walls = false
     end
+
     local cell_queue, map_reset = update_map_cells()
     update_adjacent_floor(cell_queue)
 
