@@ -142,9 +142,7 @@ end
 -- return to the previous level, we'll take a different set of stairs from that
 -- level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
-    if unable_to_travel()
-            or goal_travel.want_go
-            or not goal_travel.stairs_dir then
+    if unable_to_travel() or goal_travel.want_go or not goal_travel.stairs_dir then
         return false
     end
 
@@ -238,12 +236,11 @@ function want_to_use_escape_hatches(dir)
         and not branch_is_temporary(where_branch)
         and not in_branch("Tomb")
         and where_depth > 1
-            -- It's dangerous to hatch through unexplored areas in Zot as
-            -- opposed to simply taking an explored route through stone stairs.
-            -- So we only take a hatch up in Zot if the destination level is
-            -- fully explored.
-            and (where_branch ~= "Zot"
-                or explored_level(where_branch, where_depth - 1))
+        -- It's dangerous to hatch through unexplored areas in Zot as opposed
+        -- to simply taking an explored route through stone stairs. So we only
+        -- take a hatch up in Zot if the destination level is fully explored.
+        and (where_branch ~= "Zot"
+            or explored_level(where_branch, where_depth - 1))
 end
 
 function plan_take_escape_hatch()
@@ -264,7 +261,9 @@ function plan_take_escape_hatch()
 end
 
 function plan_move_towards_escape_hatch()
-    if want_to_use_escape_hatches(const.dir.up) then
+    if not want_to_use_escape_hatches(const.dir.up)
+            or unable_to_move()
+            or dangerous_to_move() then
         return false
     end
 
@@ -279,4 +278,38 @@ function plan_move_towards_escape_hatch()
     end
 
     return move_to(result.move)
+end
+
+function plan_use_travel_stairs()
+    if unable_to_use_stairs() or dangerous_to_move() then
+        return false
+    end
+
+    local feat = view.feature_at(0, 0)
+    if goal_travel.safe_hatch and not goal_travel.want_go then
+        local map_pos = unhash_position(goal_travel.safe_hatch)
+        if not positions_equal(qw.map_pos, map_pos)
+                or feat ~= "escape_hatch_down" then
+            return false
+        end
+    else
+        local feats = goal_travel_features()
+        if not feats then
+            return false
+        end
+
+        if not util.contains(feats, feat) then
+            return false
+        end
+    end
+
+    if feature_uses_map_key(">", feat) then
+        go_downstairs()
+        return true
+    elseif feature_uses_map_key("<", feat) then
+        go_upstairs()
+        return true
+    end
+
+    return false
 end

@@ -143,32 +143,6 @@ function plan_exit_portal()
     return true
 end
 
-function plan_use_travel_stairs()
-    if unable_to_use_stairs() or dangerous_to_move() then
-        return false
-    end
-
-    local feats = goal_travel_features()
-    if not feats then
-        return false
-    end
-
-    local feat = view.feature_at(0, 0)
-    if not util.contains(feats, feat) then
-        return false
-    end
-
-    if feature_uses_map_key(">", feat) then
-        go_downstairs()
-        return true
-    elseif feature_uses_map_key("<", feat) then
-        go_upstairs()
-        return true
-    end
-
-    return false
-end
-
 function plan_move_towards_rune()
     if have_branch_runes(where_branch)
             or unable_to_move()
@@ -519,9 +493,9 @@ function set_plan_explore()
     plans.explore = cascade {
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
+        {plan_move_towards_destination, "move_towards_destination"},
         {plan_take_escape_hatch, "take_escape_hatch"},
         {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
-        {plan_move_towards_destination, "move_towards_destination"},
         {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
     }
