@@ -156,31 +156,29 @@ function record_seen_item(level, name)
     c_persist.seen_items[level][name] = true
 end
 
-function have_progression_item(name)
+function have_quest_item(name)
     return name:find(const.rune_suffix)
             and you.have_rune(name:gsub(const.rune_suffix, ""))
         or name == const.orb_name and have_orb
 end
 
 function autopickup(it, name)
-    if not qw.initialized then
+    if not qw.initialized or it.is_useless then
         return
     end
 
-    local item_name = it.name()
-    if item_name:find(const.rune_suffix) then
-        record_seen_item(you.where(), item_name)
+    local class = it.class(true)
+    if class == "Ancient Gems" then
         return true
-    elseif item_name == const.orb_name then
-        record_seen_item(you.where(), item_name)
+    elseif class == "Runes of Zot" then
+        record_seen_item(you.where(), it.name())
+        return true
+    elseif class == "Orbs of Power" then
+        record_seen_item(you.where(), it.name())
         c_persist.found_orb = true
         return true
     end
 
-    if it.is_useless then
-        return false
-    end
-    local class = it.class(true)
     if class == "armour" or class == "weapon" or class == "jewellery" then
         return not item_is_dominated(it)
     elseif class == "gold" then

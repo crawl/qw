@@ -762,7 +762,7 @@ function reset_item_tracking()
 
     local purged = {}
     for name, _ in pairs(item_map_positions) do
-        if have_progression_item(name) then
+        if have_quest_item(name) then
             table.insert(purged, name)
         end
     end
