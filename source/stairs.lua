@@ -87,42 +87,37 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
         data[level] = {}
     end
 
-    if not data[level][num] then
-        data[level][num] = {}
-    end
-
     local current = data[level][num]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        data[level][num] = current
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
-
     if state.feat == nil then
         state.feat = current.feat
     end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe ~= current.safe or feat_state_changed then
-        if debug_channel("explore") then
-            dsay("Updating stone " .. (dir == const.dir.up and "up" or "down")
-                .. "stairs " .. num .. " on " .. level
-                .. " from " .. stairs_state_string(current) .. " to "
-                .. stairs_state_string(state))
-        end
+    if state.safe == current.safe and not feat_state_changed then
+        return
+    end
 
-        current.safe = state.safe
+    if debug_channel("explore") then
+        dsay("Updating stone " .. (dir == const.dir.up and "up" or "down")
+            .. "stairs " .. num .. " on " .. level
+            .. " from " .. stairs_state_string(current) .. " to "
+            .. stairs_state_string(state))
+    end
 
-        if feat_state_changed then
-            current.feat = state.feat
-            want_goal_update = true
-        end
+    current.safe = state.safe
+    if feat_state_changed then
+        current.feat = state.feat
+        want_goal_update = true
     end
 end
 
@@ -243,16 +238,11 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     end
 
     local level = make_level(branch, depth)
-    if not data[dest_branch][level] then
-        data[dest_branch][level] = {}
-    end
-
     local current = data[dest_branch][level]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        data[dest_branch][level] = current
     end
 
     if state.safe == nil then
@@ -276,12 +266,11 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     end
 
     current.safe = state.safe
+    current.feat = state.feat
 
     if not feat_state_changed then
         return
     end
-
-    current.feat = state.feat
 
     if dir == const.dir.down then
         -- Update the entry depth in the branch data with the depth where
@@ -315,42 +304,35 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
         data[level] = {}
     end
 
-    if not data[level][hash] then
-        data[level][hash] = {}
-    end
-
     local current = data[level][hash]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        data[level][hash] = current
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
-
     if state.feat == nil then
         state.feat = current.feat
     end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe ~= current.safe or feat_state_changed then
-        if debug_channel("explore") then
-            dsay("Updating escape hatch " .. " on " .. level .. " at "
-                .. cell_string_from_map_position(unhash_position(hash))
-                .. " from " .. stairs_state_string(current) .. " to "
-                .. stairs_state_string(state))
-        end
-
-        current.safe = state.safe
-
-        if feat_state_changed then
-            current.feat = state.feat
-        end
+    if state.safe == current.safe and not feat_state_changed then
+        return
     end
+
+    if debug_channel("explore") then
+        dsay("Updating escape hatch " .. " on " .. level .. " at "
+            .. cell_string_from_map_position(unhash_position(hash))
+            .. " from " .. stairs_state_string(current) .. " to "
+            .. stairs_state_string(state))
+    end
+
+    current.safe = state.safe
+    current.feat = state.feat
 end
 
 function get_map_escape_hatch(branch, depth, pos)
@@ -374,37 +356,28 @@ function update_pan_transit(hash, state, force)
     end
 
     local current = c_persist.pan_transits[hash]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
-    end
-
     if state.safe == nil then
         state.safe = current.safe
     end
-
     if state.feat == nil then
         state.feat = current.feat
     end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe ~= current.safe or feat_state_changed then
-        if debug_channel("explore") then
-            dsay("Updating Pan transit at "
-                .. los_pos_string(unhash_position(hash)) .. " from "
-                .. stairs_state_string(current) .. " to "
-                .. stairs_state_string(state))
-        end
-
-        current.safe = state.safe
-
-        if feat_state_changed then
-            current.feat = state.feat
-        end
+    if state.safe == current.safe and not feat_state_changed then
+        return
     end
+
+    if debug_channel("explore") then
+        dsay("Updating Pan transit at "
+            .. los_pos_string(unhash_position(hash)) .. " from "
+            .. stairs_state_string(current) .. " to "
+            .. stairs_state_string(state))
+    end
+
+    current.safe = state.safe
+    current.feat = state.feat
 end
 
 function get_map_pan_transit(pos)
@@ -416,41 +389,36 @@ function update_abyssal_stairs(hash, state, force)
         error("Undefined Abyssal stairs state.")
     end
 
-    if not c_persist.abyssal_stairs[hash] then
-        c_persist.abyssal_stairs[hash] = {}
-    end
-
     local current = c_persist.abyssal_stairs[hash]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        c_persist.abyssal_stairs[hash] = current
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
-
     if state.feat == nil then
         state.feat = current.feat
     end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe ~= current.safe or feat_state_changed then
-        if debug_channel("explore") then
-            dsay("Updating Abyssal stairs at "
-                .. los_pos_string(unhash_position(hash)) .. " from "
-                .. stairs_state_string(current) .. " to "
-                .. stairs_state_string(state))
-        end
+    if state.safe == current.safe and not feat_state_changed then
+        return
+    end
 
-        current.safe = state.safe
+    if debug_channel("explore") then
+        dsay("Updating Abyssal stairs at "
+            .. los_pos_string(unhash_position(hash)) .. " from "
+            .. stairs_state_string(current) .. " to "
+            .. stairs_state_string(state))
+    end
 
-        if feat_state_changed then
-            current.feat = state.feat
-        end
+    current.safe = state.safe
+    if feat_state_changed then
+        current.feat = state.feat
     end
 end
 

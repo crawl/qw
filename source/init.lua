@@ -1,6 +1,40 @@
 ------------------
 -- Start of game and session initialization.
 
+function cleanup_feature_state(state)
+    if state.safe == nil then
+        state.safe = true
+    end
+    if state.feat == nil then
+        state.feat = const.explore.none
+    end
+end
+
+function cleanup_feature_table(feat_table, table_level)
+    for key, inner_table in pairs(feat_table) do
+        if table_level == 1 then
+            cleanup_feature_state(inner_table)
+        else
+            cleanup_feature_table(inner_table, table_level - 1)
+        end
+    end
+end
+
+function cleanup_c_persist_features()
+    cleanup_feature_table(c_persist.upstairs, 2)
+    cleanup_feature_table(c_persist.downstairs, 2)
+
+    cleanup_feature_table(c_persist.branch_exits, 2)
+    cleanup_feature_table(c_persist.branch_entries, 2)
+
+    cleanup_feature_table(c_persist.up_hatches, 2)
+    cleanup_feature_table(c_persist.down_hatches, 2)
+
+    cleanup_feature_table(c_persist.altars, 3)
+
+    cleanup_feature_table(c_persist.abyssal_stairs, 1)
+end
+
 function initialize_c_persist()
     if not c_persist.waypoint_count then
         c_persist.waypoint_count = 0
@@ -20,14 +54,6 @@ function initialize_c_persist()
     end
 
     cleanup_c_persist_features()
-end
-
-function initialize_enums()
-    const.autoexplore = enum(const.autoexplore)
-    const.explore = enum(const.explore)
-    const.map_select = enum(const.map_select)
-    const.attitude = enum(const.attitude)
-    const.duration = enum(const.duration)
 end
 
 function initialize_rc_variables()
@@ -64,6 +90,20 @@ function initialize_rc_variables()
     qw.full_inventory_panic = FULL_INVENTORY_PANIC
 end
 
+function initialize_enums()
+    const.autoexplore = enum(const.autoexplore)
+    const.explore = enum(const.explore)
+    const.map_select = enum(const.map_select)
+    const.attitude = enum(const.attitude)
+    const.duration = enum(const.duration)
+end
+
+function initialize_const()
+    initialize_enums()
+    initialize_player_durations()
+    initialize_ego_damage()
+end
+
 function initialize()
     -- The version of qw for logging purposes. Run the make-qw.sh script to set
     -- this variable automatically based on the latest annotated git tag and
@@ -80,8 +120,8 @@ function initialize()
         set_memory_limit(qw.max_memory * qw.max_memory_percentage / 100)
     end
 
-    initialize_enums()
     initialize_debug()
+    initialize_const()
     initialize_plan_cascades()
     initialize_c_persist()
 

@@ -473,41 +473,33 @@ function update_altar(god, level, hash, state, force)
     end
 
     local current = c_persist.altars[god][level][hash]
-    if current.safe == nil then
-        current.safe = true
-    end
-    if current.feat == nil then
-        current.feat = const.explore.none
-    end
-
     if state.safe == nil then
         state.safe = current.safe
     end
-
     if state.feat == nil then
         state.feat = current.feat
     end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe ~= current.safe or feat_state_changed then
-        if debug_channel("explore") then
-            dsay("Updating altar on " .. level .. " at "
-                .. cell_string_from_map_position(unhash_position(hash))
-                .. " from " .. stairs_state_string(current)
-                .. " to " .. stairs_state_string(state))
-        end
-
-        current.safe = state.safe
-
-        if feat_state_changed then
-            current.feat = state.feat
-            want_goal_update = true
-        end
-        return true
+    if state.safe == current.safe and not feat_state_changed then
+        return false
     end
 
-    return false
+    if debug_channel("explore") then
+        dsay("Updating altar on " .. level .. " at "
+            .. cell_string_from_map_position(unhash_position(hash))
+            .. " from " .. stairs_state_string(current)
+            .. " to " .. stairs_state_string(state))
+    end
+
+    current.safe = state.safe
+    if feat_state_changed then
+        current.feat = state.feat
+        want_goal_update = true
+    end
+
+    return true
 end
 
 function estimate_slouch_damage()
