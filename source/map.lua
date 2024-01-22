@@ -568,7 +568,7 @@ function update_cell_feature(cell)
     update_feature(where_branch, where_depth, cell.feat, cell.hash,
         { safe = exclusion_map[cell.pos.x][cell.pos.y], feat = feat_state })
 
-    if feat_state < const.feat_state.reachable then
+    if feat_state < const.explore.reachable then
         check_reachable_features[cell.feat] = true
     end
 end

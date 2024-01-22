@@ -117,8 +117,7 @@ function plan_take_unexplored_stairs()
     end
 
     local state = get_stone_stairs(where_branch, where_depth, dir, num)
-    assert(state, "Stone stairs at current position with undefined state")
-    if state.feat >= const.feat_state.explored then
+    if state.feat >= const.explore.explored then
         return false
     end
 

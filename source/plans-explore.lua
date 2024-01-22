@@ -226,8 +226,8 @@ function plan_move_towards_travel_feature()
 
     if c_persist.altars[god] and c_persist.altars[god][where] then
         for hash, _ in pairs(c_persist.altars[god][where]) do
-            if update_altar(god, where, hash,
-                    { feat = const.feat_state.seen }, true) then
+            if update_altar(god, where, hash, { feat = const.explore.seen },
+                    true) then
                 qw.restart_cascade = true
             end
         end

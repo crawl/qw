@@ -8,11 +8,11 @@ end
 
 function feature_state(pos)
     if you.see_cell_solid_see(pos.x, pos.y) then
-        return const.feat_state.reachable
+        return const.explore.reachable
     elseif you.see_cell_no_trans(pos.x, pos.y) then
-        return const.feat_state.diggable
+        return const.explore.diggable
     end
-    return const.feat_state.seen
+    return const.explore.seen
 end
 
 function player_has_line_of_fire(target_pos, attack_id)

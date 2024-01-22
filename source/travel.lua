@@ -39,7 +39,7 @@ function travel_branch_levels(result, dest_depth)
 
     while result.depth ~= dest_depth do
         if count_stairs(result.branch, result.depth, dir,
-                const.feat_state.seen) == 0 then
+                const.explore.seen) == 0 then
             return
         end
 
@@ -59,7 +59,7 @@ function travel_up_branches(result, parents, entries, dest_branch)
         end
 
         if is_hell_branch(result.branch) then
-            if not branch_found(result.branch, const.feat_state.reachable)
+            if not branch_found(result.branch, const.explore.reachable)
                     or parents[i] ~= parent_branch(result.branch) then
                 return
             end
@@ -97,7 +97,7 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
 
         -- We stop if we haven't found the next branch or if we can't actually
         -- enter it with travel.
-        if not branch_found(next_branch, const.feat_state.reachable)
+        if not branch_found(next_branch, const.explore.reachable)
                 or not branch_travel(next_branch) then
             result.stop_branch = next_branch
             break
@@ -218,17 +218,17 @@ function finalize_depth_dir(result, dir)
     -- We can already reach all required stairs in the given direction on the
     -- target level, so there's nothing to do in that direction.
     if count_stairs(result.branch, result.depth, dir,
-                const.feat_state.reachable)
+                const.explore.reachable)
             == num_required_stairs(result.branch, depth, dir) then
         return false
     end
 
-    -- The level in the given direction isn't autoexplored, so we start there.
     local dir_depth = result.depth + dir
     local dir_depth_stairs = count_stairs(result.branch, dir_depth, -dir,
-            const.feat_state.explored)
+            const.explore.explored)
         < count_stairs(result.branch, dir_depth, -dir,
-            const.feat_state.reachable)
+            const.explore.reachable)
+    -- The level in the given direction isn't autoexplored, so we start there.
     if not autoexplored_level(result.branch, dir_depth) then
         result.depth = dir_depth
 
@@ -250,9 +250,9 @@ function finalize_depth_dir(result, dir)
     -- autoexplored, so we try any unexplored stairs on the target level in
     -- that direction.
     if count_stairs(result.branch, result.depth, dir,
-                const.feat_state.explored)
+                const.explore.explored)
             < count_stairs(result.branch, result.depth, dir,
-                const.feat_state.reachable) then
+                const.explore.reachable) then
         result.stairs_dir = dir
         return true
     end
@@ -276,10 +276,10 @@ end
 
 function travel_opens_runed_doors(result)
     if result.stop_branch == "Pan"
-                and not branch_found("Pan", const.feat_state.reachable)
+                and not branch_found("Pan", const.explore.reachable)
             or result.stop_branch == "Slime"
                 and branch_found("Slime")
-                and not branch_found("Slime", const.feat_state.reachable) then
+                and not branch_found("Slime", const.explore.reachable) then
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
         local level = make_level(result.branch, result.depth)
         return result.branch == parent
@@ -302,7 +302,7 @@ function finalize_travel_depth(result)
 
     local up_reachable = result.depth > 1
         and count_stairs(result.branch, result.depth, const.dir.up,
-            const.feat_state.reachable) > 0
+            const.explore.reachable) > 0
     local finished
     if up_reachable then
         if finalize_depth_dir(result, const.dir.up) then
@@ -312,7 +312,7 @@ function finalize_travel_depth(result)
 
     local down_reachable = result.depth < branch_depth(result.branch)
         and count_stairs(result.branch, result.depth, const.dir.down,
-            const.feat_state.reachable) > 0
+            const.explore.reachable) > 0
     if down_reachable and finalize_depth_dir(result, const.dir.down) then
         return
     end
@@ -357,7 +357,7 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
     -- We were unable enter the branch in result.stop_branch, so figure out the
     -- next best travel location in the branch's parent.
     if result.stop_branch
-            and not branch_found(result.stop_branch, const.feat_state.reachable) then
+            and not branch_found(result.stop_branch, const.explore.reachable) then
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
         result.branch = parent
         result.depth = next_exploration_depth(parent, min_depth, max_depth)
@@ -393,13 +393,13 @@ function update_goal_travel()
         or goal_status:find("^God") and goal_branch ~= "Temple"
         or is_portal_branch(goal_branch)
             and not in_portal()
-            and branch_found(goal_branch, const.feat_state.reachable)
+            and branch_found(goal_branch, const.explore.reachable)
         or goal_branch == "Abyss"
             and not in_branch("Abyss")
-            and branch_found("Abyss", const.feat_state.reachable)
+            and branch_found("Abyss", const.explore.reachable)
         or goal_branch == "Pan"
             and not in_branch("Pan")
-            and branch_found("Pan", const.feat_state.reachable)
+            and branch_found("Pan", const.explore.reachable)
 
     goal_travel = travel_destination(goal_branch, goal_depth,
         not want_stash and goal_status ~= "Escape")
@@ -481,7 +481,7 @@ function goal_travel_features()
         local wanted_feats = {}
         for _, feat in ipairs(feats) do
             local state = get_stairs(where_branch, where_depth, feat)
-            if not state or state.feat < const.feat_state.explored then
+            if not state or state.feat < const.explore.explored then
                 table.insert(wanted_feats, feat)
             end
         end

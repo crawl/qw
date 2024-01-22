@@ -271,7 +271,7 @@ function branch_found(branch, min_state)
     end
 
     if not min_state then
-        min_state = const.feat_state.seen
+        min_state = const.explore.seen
     end
 
     if not c_persist.branch_entries[branch] then

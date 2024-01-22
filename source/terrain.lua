@@ -1,8 +1,8 @@
 ------------------
 -- Terrain data and functions.
 
--- Feature state enum
-const.feat_state = {
+-- Feature exploration state enum
+const.explore = {
     "none",
     "seen",
     "diggable",

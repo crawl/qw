@@ -96,7 +96,7 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then
@@ -139,7 +139,7 @@ end
 
 function reset_stone_stairs(branch, depth, dir)
     update_all_stone_stairs(branch, depth, dir,
-        { feat = const.feat_state.reachable }, true)
+        { feat = const.explore.reachable }, true)
 
     local level = make_level(branch, depth)
     if level == where then
@@ -252,7 +252,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then
@@ -324,7 +324,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then
@@ -378,7 +378,7 @@ function update_pan_transit(hash, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then
@@ -425,7 +425,7 @@ function update_abyssal_stairs(hash, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then

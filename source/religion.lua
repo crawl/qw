@@ -219,7 +219,7 @@ end
 
 function altar_found(god, feat_state)
     if not feat_state then
-        feat_state = const.feat_state.reachable
+        feat_state = const.explore.reachable
     end
 
     if not c_persist.altars[god] then
@@ -477,7 +477,7 @@ function update_altar(god, level, hash, state, force)
         current.safe = true
     end
     if current.feat == nil then
-        current.feat = const.feat_state.none
+        current.feat = const.explore.none
     end
 
     if state.safe == nil then
@@ -542,10 +542,10 @@ function update_permanent_flight()
     for god, levels in pairs(c_persist.altars) do
         for level, altars in pairs(levels) do
             for hash, state in pairs(altars) do
-                if state.feat >= const.feat_state.seen
-                        and state.feat < const.feat_state.reachable then
+                if state.feat >= const.explore.seen
+                        and state.feat < const.explore.reachable then
                     update_altar(god, level, hash,
-                        { feat = const.feat_state.reachable })
+                        { feat = const.explore.reachable })
                 end
             end
         end

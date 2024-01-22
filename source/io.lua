@@ -146,9 +146,9 @@ function c_message(text, channel)
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
                 update_stone_stairs(branch, depth, dir, num,
-                    { feat = const.feat_state.explored })
+                    { feat = const.explore.explored })
                 update_stone_stairs(branch, depth + dir, travel_dir,
-                    travel_num, { feat = const.feat_state.explored })
+                    travel_num, { feat = const.explore.explored })
             end
         end
         stairs_travel = nil

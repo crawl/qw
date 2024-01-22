@@ -305,7 +305,7 @@ function update_reachable_features()
     for i, pos in ipairs(positions) do
         if map_is_reachable_at(pos, true) then
             update_feature(where_branch, where_depth, feats[i],
-                hash_position(pos), { feat = const.feat_state.reachable })
+                hash_position(pos), { feat = const.explore.reachable })
         end
     end
 

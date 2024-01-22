@@ -18,11 +18,13 @@ function initialize_c_persist()
             c_persist[table] = {}
         end
     end
+
+    cleanup_c_persist_features()
 end
 
 function initialize_enums()
     const.autoexplore = enum(const.autoexplore)
-    const.feat_state = enum(const.feat_state)
+    const.explore = enum(const.explore)
     const.map_select = enum(const.map_select)
     const.attitude = enum(const.attitude)
     const.duration = enum(const.duration)
