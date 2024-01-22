@@ -43,7 +43,7 @@ function turn_memo_args(name, func, ...)
     end
 
     if parent[key] == nil then
-        local val = func(unpack(arg))
+        local val = func()
         if val == nil then
             val = false
         end

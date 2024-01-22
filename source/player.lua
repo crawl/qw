@@ -491,8 +491,8 @@ end
 
 function dangerous_to_move(allow_spiked)
     return turn_memo_args("dangerous_to_move",
-        function(allow_spiked_arg)
-            return not allow_spiked_arg and you.status("spiked")
+        function()
+            return not allow_spiked and you.status("spiked")
                 or you.confused()
                     and (check_brothers_in_arms(1)
                         or check_greater_servants(1)

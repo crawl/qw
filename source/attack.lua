@@ -134,8 +134,10 @@ function get_melee_target_func(assume_flight)
 end
 
 function get_melee_target(assume_flight)
-    return turn_memo_args("get_melee_target", get_melee_target_func,
-        assume_flight)
+    return turn_memo_args("get_melee_target",
+        function()
+            return get_melee_target_func(assume_flight)
+        end, assume_flight)
 end
 
 function assess_explosion_position(attack, target_pos, second_pos)

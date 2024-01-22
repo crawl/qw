@@ -233,9 +233,9 @@ end
 
 function find_item(cls, name)
     return turn_memo_args("find_item",
-        function(cls_arg, name_arg)
+        function()
             for it in inventory() do
-                if it.class(true) == cls_arg and it.name():find(name_arg) then
+                if it.class(true) == cls and it.name():find(name) then
                     return it
                 end
             end

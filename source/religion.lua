@@ -385,7 +385,10 @@ function check_allies_func(radius, filter)
 end
 
 function check_allies(radius, filter)
-    return turn_memo_args("check_allies", check_allies_func, radius, filter)
+    return turn_memo_args("check_allies",
+        function()
+            return check_allies_func(radius, filter)
+        end, radius, filter)
 end
 
 function check_brothers_in_arms(radius)

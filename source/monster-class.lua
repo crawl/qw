@@ -56,7 +56,7 @@ function Monster:property_memo_args(name, func, ...)
     end
 
     if parent[key] == nil then
-        local val = func(unpack(arg))
+        local val = func()
         if val == nil then
             val = false
         end
@@ -233,8 +233,8 @@ end
 
 function Monster:player_can_attack(attack_index)
     return self:property_memo_args("player_can_attack",
-        function(attack_index_arg)
-            return player_can_attack_monster(self, attack_index_arg)
+        function()
+            return player_can_attack_monster(self, attack_index)
         end, attack_index)
 end
 
@@ -305,16 +305,14 @@ end
 
 function Monster:player_attack_accuracy(index)
     return self:property_memo_args("attack_accuracy",
-        function (index_arg)
-            return player_attack_accuracy(self, index_arg)
+        function()
+            return player_attack_accuracy(self, index)
         end, index)
 end
 
 function Monster:best_player_attack()
     return self:property_memo("best_player_attack",
-        function()
-            return monster_best_player_attack(self)
-        end)
+        function() return monster_best_player_attack(self) end)
 end
 
 function Monster:is_stationary()
@@ -389,9 +387,9 @@ end
 
 function Monster:is_ranged(ignore_reach)
     return self:property_memo_args("is_ranged",
-        function(ignore_reach_arg)
+        function()
             return self.minfo:has_known_ranged_attack()
-                    and not (ignore_reach_arg and self:reach_range() > 1
+                    and not (ignore_reach and self:reach_range() > 1
                         or self:name():find("kraken")
                         or self:name() == "lost soul")
                 -- We want to treat these as ranged.
@@ -501,8 +499,8 @@ end
 
 function Monster:player_has_line_of_fire(attack_id)
     return self:property_memo_args("player_has_line_of_fire",
-        function(attack_id_arg)
-            return player_has_line_of_fire(self:pos(), attack_id_arg)
+        function()
+            return player_has_line_of_fire(self:pos(), attack_id)
         end, attack_id)
 end
 
@@ -527,15 +525,15 @@ end
 
 function Monster:is(flag)
     return self:property_memo_args("is",
-        function(flag_arg)
-            return self.minfo:is(flag_arg)
+        function()
+            return self.minfo:is(flag)
         end, flag)
 end
 
 function Monster:status(status)
     return self:property_memo_args("status",
-        function(status_arg)
-            return self.minfo:status(status_arg)
+        function()
+            return self.minfo:status(status)
         end, status)
 end
 
@@ -553,17 +551,17 @@ end
 
 function Monster:get_player_move_towards(assume_flight)
     return self:property_memo_args("get_player_move_towards",
-        function(assume_flight_arg)
+        function()
             local result = move_search_result(const.origin, self:pos(),
-                tab_function(assume_flight_arg), reach_range())
+                tab_function(assume_flight), reach_range())
             return result and result.move or false
         end, assume_flight)
 end
 
 function Monster:weapon_accuracy(item)
     return self:property_memo_args("weapon_accuracy",
-        function(item_arg)
-            local str = self.minfo:target_weapon(item_arg)
+        function()
+            local str = self.minfo:target_weapon(item)
             str = str:gsub(".-(%d+)%% to evade.*", "%1")
             return (100 - tonumber(str)) / 100
         end, item)
@@ -571,8 +569,8 @@ end
 
 function Monster:throw_accuracy(item)
     return self:property_memo_args("throw_accuracy",
-        function(item_arg)
-            local str = self.minfo:target_throw(item_arg)
+        function()
+            local str = self.minfo:target_throw(item)
             str = str:gsub(".-(%d+)%% to hit.*", "%1")
             return tonumber(str) / 100
         end, item)
@@ -580,8 +578,8 @@ end
 
 function Monster:evoke_accuracy(item)
     return self:property_memo_args("evoke_accuracy",
-        function(item_arg)
-            local str = self.minfo:target_evoke(item_arg)
+        function()
+            local str = self.minfo:target_evoke(item)
             if empty_string(str) then
                 return 1
             end
