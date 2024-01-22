@@ -266,6 +266,7 @@ function Monster:los_danger()
             local name = self:name()
             return name == "moth of wrath"
                 or name == "glass eye"
+                or name == "hellion"
                 or name == "doom hound" and self:is("ready_to_howl")
         end)
 end
