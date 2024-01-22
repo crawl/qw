@@ -10,7 +10,7 @@ function initialize_c_persist()
         "abyssal_stairs", "altars", "autoexplore", "branch_entries",
         "branch_exits", "down_hatches", "downstairs", "exclusions",
         "expiring_portals", "pan_transits", "plan_fail_count", "portals",
-        "potion_ident", "runelights", "scroll_ident", "seen_items",
+        "potion_ident", "scroll_ident", "seen_items",
         "up_hatches", "upstairs", "waypoints",
     }
     for _, table in ipairs(tables) do

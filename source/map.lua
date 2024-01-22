@@ -506,11 +506,6 @@ function update_feature(branch, depth, feat, hash, state)
         return
     end
 
-    if feat == "runelight" then
-        update_runelight(hash, state)
-        return
-    end
-
     local god = altar_god(feat)
     if god then
         update_altar(god, make_level(branch, depth), hash, state)
@@ -527,7 +522,6 @@ function feature_has_map_state(feat)
             or branch_stairs_type(feat)
             or escape_hatch_type(feat)
             or feat == "transit_pandemonium"
-            or feat == "runelight"
             or altar_god(feat)
         state_features[feat] = has_state
     end
@@ -556,8 +550,18 @@ function update_cell_feature(cell)
         qw.have_slimy_walls = true
     end
 
-    if not feature_has_map_state(cell.feat) then
-        return false
+    local has_state = feature_has_map_state(cell.feat)
+    if cell.feat == "runelight" or has_state then
+        if not feature_map_positions[cell.feat] then
+            feature_map_positions[cell.feat] = {}
+        end
+        if not feature_map_positions[cell.feat][cell.hash] then
+            feature_map_positions[cell.feat][cell.hash] = cell.pos
+        end
+    end
+
+    if not has_state then
+        return
     end
 
     local feat_state = feature_state(cell.los_pos)
@@ -566,13 +570,6 @@ function update_cell_feature(cell)
 
     if feat_state < const.feat_state.reachable then
         check_reachable_features[cell.feat] = true
-    end
-
-    if not feature_map_positions[cell.feat] then
-        feature_map_positions[cell.feat] = {}
-    end
-    if not feature_map_positions[cell.feat][cell.hash] then
-        feature_map_positions[cell.feat][cell.hash] = cell.pos
     end
 end
 
@@ -716,7 +713,6 @@ function reset_c_persist(new_waypoint, new_level)
     if in_branch("Abyss") then
         if new_waypoint then
             c_persist.abyssal_stairs = {}
-            c_persist.runelights = {}
         end
 
         if new_level then
