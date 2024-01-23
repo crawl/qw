@@ -837,6 +837,10 @@ function want_to_haste()
 end
 
 function want_magic_points()
+    if you.race() == "Djinni" then
+        return false
+    end
+
     local mp, mmp = you.mp()
     return qw.danger_in_los
         and not dangerous_to_attack()
@@ -940,8 +944,13 @@ function want_to_recall()
         return false
     end
 
-    local mp, mmp = you.mp()
-    return mp == mmp
+    if you.race() == "Djinni" then
+        local hp, mhp = you.hp()
+        return hp == mhp
+    else
+        local mp, mmp = you.mp()
+        return mp == mmp
+    end
 end
 
 function want_to_recall_ancestor()

@@ -412,6 +412,14 @@ function can_berserk()
         and can_invoke()
 end
 
+function can_use_mp(mp)
+    if you.race() == "Djinni" then
+        return you.hp() > mp
+    else
+        return you.mp() >= mp
+    end
+end
+
 function player_speed()
     local num = 3
     local form = you.transform()

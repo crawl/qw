@@ -95,7 +95,7 @@ function armour_value(it, cur, it2)
         end
 
         if it.name():find("Mad Mage's Maulers") then
-            if god_uses_mp() then
+            if you.race() == "Djinni" or god_uses_mp() then
                 if cur then
                     return -1, -1
                 else
@@ -335,19 +335,21 @@ function weapon_value(it, cur, it2, sit)
                 val2 = val2 + 50
             end
         elseif ego == "antimagic" then
-            local new_mmp = select(2, you.mp())
-            -- Swapping to antimagic reduces our max MP by 2/3.
-            if weap.ego() ~= "antimagic" then
-                new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
-            end
-            if not enough_max_mp_for_god(new_mmp, you.god()) then
-                if cur then
-                    return -1, -1
-                else
+            if you.race() ~= "Djinni" then
+                local new_mmp = select(2, you.mp())
+                -- Swapping to antimagic reduces our max MP by 2/3.
+                if weap.ego() ~= "antimagic" then
+                    new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
+                end
+                if not enough_max_mp_for_god(new_mmp, you.god()) then
+                    if cur then
+                        return -1, -1
+                    else
+                        val1 = -10000
+                    end
+                elseif not cur and not future_gods_enough_max_mp(new_mmp) then
                     val1 = -10000
                 end
-            elseif not cur and not future_gods_enough_max_mp(new_mmp) then
-                val1 = -10000
             end
 
             if you.race() == "Vine Stalker" then

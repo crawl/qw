@@ -198,7 +198,11 @@ function absolute_property_value(str, n)
             return 1000
         end
     elseif str == "Spirit" then
-        return god_uses_mp() and -150 or 100
+        if you.race() == "Djinni" then
+            return 0
+        else
+            return god_uses_mp() and -150 or 100
+        end
     elseif str == "Acrobat" then
         return 100
     elseif str == "Reflect" then
@@ -272,9 +276,13 @@ function max_property_value(str, d)
             return 1000
         end
     elseif str == "Spirit" then
-        return ires < 1
-            and (not (god_uses_mp() and future_gods_use_mp)) and 0
-                or 100
+        if ires >= 1
+                or you.race() == "Djinni"
+                or god_uses_mp() and future_gods_use_mp then
+            return 0
+        else
+            return 100
+        end
     elseif str == "Acrobat" then
         return 100
     elseif str == "Reflect" then

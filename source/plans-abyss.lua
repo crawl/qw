@@ -60,7 +60,7 @@ function plan_lugonu_exit_abyss()
             or you.god() ~= "Lugonu"
             or not can_invoke()
             or you.piety_rank() < 1
-            or you.mp() < 1 then
+            or not can_use_mp(1) then
         return false
     end
 

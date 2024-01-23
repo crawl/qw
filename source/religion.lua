@@ -83,6 +83,10 @@ function god_full_name(str)
 end
 
 function god_uses_mp(god)
+    if you.race() == "Djinni" then
+        return false
+    end
+
     if not god then
         god = you.god()
     end
@@ -95,6 +99,10 @@ function god_uses_mp(god)
 end
 
 function enough_max_mp_for_god(max_mp, god)
+    if you.race() == "Djinni" then
+        return true
+    end
+
     -- Hero costs 2 and Finesse costs 5, so we want at least 7mmp
     if god == "Okawaru" then
         return max_mp >= 7
@@ -109,6 +117,10 @@ function enough_max_mp_for_god(max_mp, god)
 end
 
 function future_gods_enough_max_mp(max_mp)
+    if you.race() == "Djinni" then
+        return true
+    end
+
     for _, god in ipairs(future_gods) do
         if not enough_max_mp_for_god(max_mp, god) then
             return false
@@ -251,14 +263,14 @@ end
 function can_heroism()
     return you.god() == "Okawaru"
         and you.piety_rank() >= 1
-        and you.mp() >= 2
+        and can_use_mp(2)
         and can_invoke()
 end
 
 function can_finesse()
     return you.god() == "Okawaru"
         and you.piety_rank() >= 4
-        and you.mp() >= 5
+        and can_use_mp(5)
         and can_invoke()
 end
 
@@ -266,41 +278,41 @@ function can_recall()
     return you.god() == "Yredelemnul"
             or you.god() == "Beogh" and you.piety_rank() >= 4
         and not you.status("recalling")
-        and you.mp() >= 2
+        and can_use_mp(2)
         and can_invoke()
 end
 
 function can_drain_life()
     return you.god() == "Yredelemnul"
         and you.piety_rank() >= 4
-        and you.mp() >= 6
+        and can_use_mp(6)
         and can_invoke()
 end
 
 function can_recall_ancestor()
     return you.god() == "Hepliaklqana"
-        and you.mp() >= 2
+        and can_use_mp(2)
         and can_invoke()
 end
 
 function can_slouch()
     return you.god() == "Cheibriados"
         and you.piety_rank() >= 4
-        and you.mp() >= 5
+        and can_use_mp(5)
         and can_invoke()
 end
 
 function can_ely_healing()
     return you.god() == "Elyvilon"
         and you.piety_rank() >= 4
-        and you.mp() >= 2
+        and can_use_mp(2)
         and can_invoke()
 end
 
 function can_purification()
     return you.god() == "Elyvilon"
         and you.piety_rank() >= 3
-        and you.mp() >= 3
+        and can_use_mp(3)
         and can_invoke()
 end
 
@@ -321,7 +333,7 @@ end
 function can_apocalypse()
     return you.god() == "Ru"
         and you.piety_rank() >= 5
-        and you.mp() >= 8
+        and can_use_mp(8)
         and not you.exhausted()
         and can_invoke()
 end
@@ -329,7 +341,7 @@ end
 function can_grand_finale()
     return you.god() == "Uskayaw"
         and you.piety_rank() >= 5
-        and you.mp() >= 8
+        and can_use_mp(8)
         and can_invoke()
 end
 
@@ -343,14 +355,14 @@ end
 function can_cleansing_flame(ignore_mp)
     return you.god() == "the Shining One"
         and you.piety_rank() >= 3
-        and (ignore_mp or you.mp() >= 5)
+        and (ignore_mp or can_use_mp(5))
         and can_invoke()
 end
 
 function can_divine_warrior(ignore_mp)
     return you.god() == "the Shining One"
         and you.piety_rank() >= 5
-        and (ignore_mp or you.mp() >= 8)
+        and (ignore_mp or can_use_mp(8))
         and can_invoke()
 end
 

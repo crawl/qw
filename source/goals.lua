@@ -490,6 +490,10 @@ function planning_convert_to_god(god)
 end
 
 function planning_convert_to_mp_using_gods()
+    if you.race() == "Djinni" then
+        return false
+    end
+
     return planning_convert_to_gods(mp_using_gods)
 end
 
@@ -506,7 +510,7 @@ function update_planning()
     planning_cocytus = goals_visit_branch("Coc")
 
     future_gods = goals_future_gods()
-    future_gods_use_mp = planning_convert_to_gods(mp_using_gods)
+    future_gods_use_mp = planning_convert_to_mp_using_gods()
     future_tso = planning_convert_to_god("the Shining One")
     future_okawaru = planning_convert_to_god("Okawaru")
 end

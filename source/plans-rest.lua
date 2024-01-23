@@ -60,7 +60,9 @@ function reason_to_rest(percentage)
         end
     end
 
-    if you.god() == "Elyvilon" and you.piety_rank() >= 4 then
+    if you.race() ~= "Djinni"
+            and you.god() == "Elyvilon"
+            and you.piety_rank() >= 4 then
         local mp, mmp = you.mp()
         if mp < mmp and mp < 10 then
             return true

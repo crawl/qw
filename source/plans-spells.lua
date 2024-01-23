@@ -29,7 +29,7 @@ function spell_castable(sp)
             or you.confused()
             or you.berserk()
             or in_bad_form()
-            or you.mp() < spells.mana_cost(sp) then
+            or can_use_mp(spells.mana_cost(sp)) then
         return false
     end
 
