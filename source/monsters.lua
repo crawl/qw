@@ -236,7 +236,7 @@ function update_invis_monsters(closest_invis_pos)
         invis_monster_pos = closest_invis_pos
     end
 
-    if not position_is_safe or options.autopick_on then
+    if not qw.position_is_safe or options.autopick_on then
         invis_monster = false
         nasty_invis_caster = false
     end

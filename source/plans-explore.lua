@@ -4,7 +4,7 @@
 function plan_move_towards_safety()
     if autoexplored_level(where_branch, where_depth)
             or disable_autoexplore
-            or position_is_safe
+            or qw.position_is_safe
             or unable_to_move()
             or dangerous_to_move()
             or you.mesmerised() then
@@ -46,7 +46,7 @@ function send_travel(branch, depth)
 end
 
 function unable_to_travel()
-    return qw.danger_in_los or position_is_cloudy or unable_to_move()
+    return qw.danger_in_los or qw.position_is_cloudy or unable_to_move()
 end
 
 function plan_go_to_portal_entrance()
@@ -229,7 +229,7 @@ function plan_move_towards_destination()
 end
 
 function plan_move_towards_monster()
-    if not position_is_safe or unable_to_move() or dangerous_to_move() then
+    if not qw.position_is_safe or unable_to_move() or dangerous_to_move() then
         return false
     end
 

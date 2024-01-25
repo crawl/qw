@@ -40,8 +40,8 @@ end
 function plan_use_zigfig()
     if goal_branch ~= "Zig"
             or branch_is_temporary(where_branch)
-            or position_is_cloudy
             or qw.danger_in_los
+            or not qw.position_is_safe
             or you.berserk()
             or you.confused()
             or feature_is_critical(view.feature_at(0, 0)) then

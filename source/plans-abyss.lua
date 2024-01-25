@@ -5,8 +5,7 @@ function plan_go_to_abyss_portal()
     if unable_to_travel()
             or in_branch("Abyss")
             or goal_branch ~= "Abyss"
-            or not branch_found("Abyss")
-            or position_is_cloudy then
+            or not branch_found("Abyss") then
         return false
     end
 

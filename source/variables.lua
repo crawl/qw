@@ -102,8 +102,6 @@ local prev_hatch
 
 local ignore_traps
 local stairs_travel
-local position_is_safe
-local position_is_cloudy
 
 local next_delay = 100
 

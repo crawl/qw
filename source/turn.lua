@@ -84,8 +84,8 @@ function turn_update()
     if hp_is_full() then
         qw.full_hp_turn = qw.turn_count
     end
-    position_is_safe = is_safe_at(const.origin)
-    position_is_cloudy = not position_is_safe and view.cloud_at(0, 0) ~= nil
+    qw.position_is_safe = is_safe_at(const.origin)
+    qw.position_is_cloudy = not qw.position_is_safe and view.cloud_at(0, 0) ~= nil
 
     if you.god() ~= previous_god then
         previous_god = you.god()

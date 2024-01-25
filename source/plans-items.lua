@@ -180,7 +180,9 @@ function can_read_acquirement()
 end
 
 function plan_move_for_acquirement()
-    if not can_read_acquirement()
+    if qw.danger_in_los
+            or not qw.position_is_safe
+            or not can_read_acquirement()
                 and not can_receive_okawaru_weapon()
                 and not can_receive_okawaru_armour()
             or not destroys_items_at(const.origin)
@@ -203,7 +205,9 @@ function plan_move_for_acquirement()
 end
 
 function plan_receive_okawaru_weapon()
-    if c_persist.okawaru_weapon_gifted
+    if qw.danger_in_los
+            or not qw.position_is_safe
+            or c_persist.okawaru_weapon_gifted
             or you.god() ~= "Okawaru"
             or you.piety_rank() < 6
             or not contains_string_in("Receive Weapon", you.abilities())
@@ -220,7 +224,9 @@ function plan_receive_okawaru_weapon()
 end
 
 function plan_receive_okawaru_armour()
-    if c_persist.okawaru_armour_gifted
+    if qw.danger_in_los
+            or not qw.position_is_safe
+            or c_persist.okawaru_armour_gifted
             or you.god() ~= "Okawaru"
             or you.piety_rank() < 6
             or not contains_string_in("Receive Armour", you.abilities())
@@ -304,6 +310,10 @@ function plan_maybe_upgrade_amulet()
 end
 
 function plan_upgrade_amulet()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
     local it_old = items.equipped_at("Amulet")
     swappable = can_swap(it_old, true)
     for it in inventory() do
@@ -340,6 +350,10 @@ function plan_maybe_upgrade_rings()
 end
 
 function plan_upgrade_rings()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
     local it_rings = ring_list()
     local empty = empty_ring_slots() > 0
     for it in inventory() do
@@ -410,7 +424,7 @@ function plan_maybe_upgrade_armour()
 end
 
 function plan_upgrade_armour()
-    if position_is_cloudy or you.mesmerised() then
+    if qw.danger_in_los or not qw.position_is_safe then
         return false
     end
 
@@ -699,6 +713,10 @@ function get_enchantable_armour(unknown)
 end
 
 function plan_use_good_consumables()
+    if qw.danger_in_los then
+        return false
+    end
+
     local read_ok = can_read()
     local drink_ok = can_drink()
     for it in inventory() do
@@ -737,6 +755,10 @@ function plan_use_good_consumables()
 end
 
 function plan_drop_other_items()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
     upgrade_phase = false
     for it in inventory() do
         if it.class(true) == "missile" and not want_missile(it)
@@ -765,7 +787,7 @@ function quaff_unided_potion(min_quantity)
 end
 
 function plan_quaff_unided_potions()
-    if not can_drink() then
+    if qw.danger_in_los or not qw.position_is_safe or not can_drink() then
         return false
     end
 
@@ -784,7 +806,7 @@ function read_unided_scroll()
 end
 
 function plan_read_unided_scrolls()
-    if not can_read() then
+    if qw.danger_in_los or not qw.position_is_safe or not can_read() then
         return false
     end
 
@@ -792,7 +814,7 @@ function plan_read_unided_scrolls()
 end
 
 function plan_use_identify_scrolls()
-    if not can_read() then
+    if qw.danger_in_los or not qw.position_is_safe or not can_read() then
         return false
     end
 
@@ -827,7 +849,9 @@ function shop_item_sort(i1, i2)
 end
 
 function plan_shop()
-    if view.feature_at(0, 0) ~= "enter_shop" or free_inventory_slots() == 0 then
+    if qw.danger_in_los
+            or view.feature_at(0, 0) ~= "enter_shop"
+            or free_inventory_slots() == 0 then
         return false
     end
     if you.berserk() or you.caught() or you.mesmerised() then
@@ -1112,7 +1136,4 @@ function c_choose_enchant_armour()
         say("ENCHANTING " .. armour:name() .. ".")
         return item_letter(armour)
     end
-end
-
-function c_choose_controlled_blink()
 end

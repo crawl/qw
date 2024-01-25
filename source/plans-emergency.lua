@@ -385,6 +385,7 @@ end
 
 function can_haste()
     return can_drink()
+        and not you.berserk()
         and you.god() ~= "Cheibriados"
         and you.race() ~= "Formicid"
         and find_item("potion", "haste")
@@ -881,6 +882,10 @@ function want_to_recall()
 end
 
 function plan_full_inventory_panic()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
     if qw_full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
     else

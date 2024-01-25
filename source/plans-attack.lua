@@ -200,7 +200,7 @@ function plan_melee_wait_for_enemy()
     end
 
     if dangerous_to_attack()
-            or position_is_cloudy
+            or qw.position_is_cloudy
             or not options.autopick_on
             or view.feature_at(0, 0) == "shallow_water"
                 and intrinsic_fumble()
@@ -262,7 +262,7 @@ function plan_launcher_wait_for_enemy()
     end
 
     if dangerous_to_attack()
-            or position_is_cloudy
+            or qw.position_is_cloudy
             or not options.autopick_on
             or view.feature_at(0, 0) == "shallow_water"
                 and intrinsic_fumble()
