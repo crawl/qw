@@ -107,19 +107,8 @@ function plan_flee()
         return false
     end
 
-    if not qw.danger_in_los and qw.last_flee_turn then
-        if you.turns() >= qw.last_flee_turn + 10 then
-            qw.last_flee_turn = nil
-            return false
-        end
-
-        result = best_move_towards_positions(qw.flee_positions)
-        if result then
-            return move_to(result.move)
-        end
-    end
-
     local result = best_move_towards_positions(qw.flee_positions)
+
     if not result and in_bad_form() then
         result = best_move_towards_unexplored(true)
         if result then
@@ -130,7 +119,10 @@ function plan_flee()
     end
 
     if result then
-        qw.last_flee_turn = you.turns()
+        if not qw.danger_in_los then
+            qw.last_flee_turn = you.turns()
+        end
+
         say("FLEEEEING.")
         return move_to(result.move)
     end
@@ -650,13 +642,7 @@ function want_to_teleport()
         return false
     end
 
-    if want_to_orbrun_teleport() then
-        return true
-    end
-
-    if in_bad_form()
-            and not find_item("potion", "cancellation")
-            and check_enemies(1) then
+    if in_bad_form() and not will_flee() then
         return true
     end
 
@@ -669,27 +655,25 @@ function want_to_teleport()
         return true
     end
 
-    if in_branch("Pan")
-            and (count_enemies_by_name(qw.los_radius, "hellion") >= 3
-                or count_enemies_by_name(qw.los_radius, "daeva") >= 3) then
-        dislike_pan_level = true
-        return true
-    end
-
-    if you.xl() <= 17
-            and not can_berserk()
-            and count_big_slimes(qw.los_radius) > 0 then
-        return true
-    end
-
     if qw.immediate_danger and bad_corrosion()
             or qw.immediate_danger and hp_is_low(25) then
             return true
     end
 
-    local result = assess_hell_enemies()
-    if result.threat >= 15 then
+    if will_flee() then
+        return false
+    end
+
+    local enemies = assess_enemies(qw.los_radius, const.duration.available)
+    if enemies.scary_enemy
+            and enemies.scary_enemy:threat(const.duration.available) >= 5
+            and enemies.scary_enemy:name():find("slime creature")
+            and enemies.scary_enemy:name() ~= "slime creature" then
         return true
+    end
+
+    if enemies.threat >= const.extreme_threat then
+        return not will_fight_or_retreat()
     end
 
     return false
@@ -1014,10 +998,7 @@ function plan_dig_grate()
 end
 
 function plan_retreat()
-    if not qw.danger_in_los
-            or unable_to_move()
-            or dangerous_to_move()
-            or not want_to_retreat() then
+    if not want_to_retreat() or unable_to_move() or dangerous_to_move() then
         return false
     end
 
@@ -1038,11 +1019,10 @@ end
 function set_plan_emergency()
     plans.emergency = cascade {
         {plan_stairdance_up, "stairdance_up"},
-        {plan_non_melee_berserk, "non_melee_berserk"},
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
-        {plan_teleport, "teleport"},
         {plan_cancellation, "cancellation"},
+        {plan_teleport, "teleport"},
         {plan_remove_terrible_jewellery, "remove_terrible_jewellery"},
         {plan_cure_bad_poison, "cure_bad_poison"},
         {plan_blinking, "blinking"},

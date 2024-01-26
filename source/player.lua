@@ -382,6 +382,7 @@ function can_teleport()
             or you.transform() == "tree"
             or you.race() == "Formicid"
             or in_branch("Gauntlet"))
+        and find_item("scroll", "teleportation")
 end
 
 function can_use_altars()

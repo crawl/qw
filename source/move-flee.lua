@@ -86,11 +86,24 @@ function update_flee_positions()
     end
 end
 
+function mons_can_follow(mons)
+    return mons:can_seek()
+end
+
 function check_following_enemies(radius)
-    return check_enemies(radius,
-        function (mons)
-            return mons:can_seek()
-        end)
+    return check_enemies(radius, mons_can_follow)
+end
+
+function going_to_flee()
+    if unable_to_move() or dangerous_to_move() or not want_to_flee() then
+        return false
+    end
+
+    local result = best_move_towards_positions(qw.flee_positions)
+    if not result and in_bad_form() then
+        result = best_move_towards_unexplored(true)
+    end
+    return result
 end
 
 function want_to_flee()
@@ -98,23 +111,68 @@ function want_to_flee()
         return false
     end
 
-    -- If we're stuck in a bad form, fleeing is our best bet.
-    if in_bad_form() then
+    -- If we're stuck in danger a bad form or berserked with a non-melee
+    -- weapon, fleeing is our best bet.
+    if (qw.danger_in_los or options.autopick_on)
+            and (in_bad_form() or you.berserk() and have_ranged_weapon()) then
         return true
     end
 
+    if not qw.danger_in_los then
+        if qw.last_flee_turn and you.turns() >= qw.last_flee_turn + 10 then
+            qw.last_flee_turn = nil
+        end
+
+        if not qw.last_flee_turn then
+            return false
+        end
+
+        return not buffed() and reason_to_rest(90)
+    end
+
+    -- Don't flee from a place were we'll be opportunity attacked, and don't
+    -- flee when we have allies close by.
+    if check_following_enemies(1) or check_allies(3) then
+        return false
+    end
+
+    -- When we're at low XL and trying to go up, we want to flee to known
+    -- stairs when autoexplore is disabled, instead of engaging in combat. This
+    -- rule helps Delvers in particular avoid fights near their starting level
+    -- that would get them killed.
+    if you.xl() <= 8
+            and disable_autoexplore
+            and goal_travel.first_dir == const.dir.up
+            and not goal_travel.stairs_dir then
+        return true
+    end
+
+    local enemies = assess_enemies(qw.los_radius, const.duration.available)
+    if enemies.scary_enemy
+            and enemies.scary_enemy:threat(const.duration.available) >= 5
+            and enemies.scary_enemy:name():find("slime creature")
+            and enemies.scary_enemy:name() ~= "slime creature" then
+        return true
+    end
+
+    if enemies.threat >= const.extreme_threat then
+        return not will_fight_or_retreat()
+    end
+
     return not buffed()
-        -- Don't flee from a place were we'll be opportunity attacked.
-        and not check_following_enemies(1)
-        and not check_allies(3)
-        and (reason_to_rest(90)
-            -- When we're at low XL and trying to go up, we want to flee to
-            -- known stairs when autoexplore is disabled, instead of
-            -- engaging in combat. This rule helps Delvers in particular
-            -- avoid fights near their starting level that would get them
-            -- killed.
-            or you.xl() <= 8
-                and disable_autoexplore
-                and goal_travel.first_dir == const.dir.up)
+        and reason_to_rest(90)
         and starting_spell ~= "Summon Small Mammal"
+end
+
+function will_flee()
+    if not want_to_flee() or unable_to_move() or dangerous_to_move() then
+        return false
+    end
+
+    local result = best_move_towards_positions(qw.flee_positions)
+    if not result and in_bad_form() then
+        result = best_move_towards_unexplored(true)
+    end
+
+    return result
 end

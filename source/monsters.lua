@@ -12,6 +12,7 @@ const.attitude = {
 }
 
 const.high_threat = 10
+const.extreme_threat = 20
 
 -- functions for use in the monster lists below
 function in_desc(lev, str)
@@ -101,6 +102,7 @@ local scary_monsters = {
     ["ironbound thunderhulk"] = { xl = 20, resists = { rElec = 0.75 } },
 
     ["azure jelly"] = { xl = 24, resists = { rC = 0.75 } },
+    ["enormous slime creature"] = { xl = 24 },
     ["fire giant"] = { xl = 24, resists = { rF = 0.75 } },
     ["frost giant"] = { xl = 24, resists = { rC = 0.75 } },
     ["hell hog"] = { xl = 24, resists = { rF = 0.75 } },
@@ -112,6 +114,9 @@ local scary_monsters = {
     ["Margery"] = { xl = 24, resists = { rF = 0.75 } },
     ["Xtahua"] = { xl = 24, resists = { rF = 0.75 } },
 
+    ["daeva"] = { xl = 30 },
+    ["hellion"] = { xl = 30 },
+    ["titanic slime creature"] = { xl = 30 },
     ["doom hound"] = { xl = 30,
         check = function(mons) return mons:is("ready_to_howl") end },
     ["electric golem"] = { xl = 30, resists = { rElec = 1 } },
@@ -506,14 +511,6 @@ function count_hostile_summons(radius)
     return count_enemies(radius,
         function(enemy) return enemy:is_summoned()
             and monster_is_greater_servant(enemy) end)
-end
-
-function count_big_slimes(radius)
-    return count_enemies(radius,
-        function(mons)
-            return contains_string_in(mons:name(),
-                { "enormous slime creature", "titanic slime creature" })
-        end)
 end
 
 function count_pan_lords(radius)

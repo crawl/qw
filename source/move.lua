@@ -263,6 +263,10 @@ end
 function best_move_towards_positions(map_positions, ignore_exclusions)
     local best_result
     for _, pos in ipairs(map_positions) do
+        if positions_equal(qw.map_pos, pos) then
+            return
+        end
+
         local result = best_move_towards(pos, ignore_exclusions)
         if result and (not best_result
                 or result.safe and not best_result.safe
