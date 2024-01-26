@@ -155,7 +155,7 @@ end
 -- This needs higher priority than other step types to get us out of harm's
 -- way.
 function plan_cloud_step()
-    if qw.tactical_step == "cloud" then
+    if qw.tactical_reason == "cloud" then
         return plan_tactical_step()
     end
 
