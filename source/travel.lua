@@ -290,6 +290,103 @@ function travel_opens_runed_doors(result)
     return false
 end
 
+function travel_safe_stairs(result)
+    -- We only consider taking stair safety when taking downstairs or branch
+    -- entries. Taking alternate upstairs would be far less useful generally,
+    -- and fleeing doesn't yet support fleeing to downstairs, which would be
+    -- necessary before we could take alternate upstairs.
+    if result.stairs_dir
+            or where_branch == result.branch
+                and where_depth >= result.depth then
+        return
+    end
+
+    local best_stairs, best_threat, best_safe, worst_threat
+    local stairs = level_stairs_features(result.branch, result.depth, const.dir.up)
+    local level = make_level(result.branch, result.depth)
+    for _, feat in ipairs(stairs) do
+        -- If the stairs are unknown, assume a threat of 0.
+        local state = get_stairs(result.branch, result.depth, feat)
+        local threat = 0
+        -- Unknown stairs are safe.
+        local safe = true
+        if state then
+            threat = state.threat
+            safe = state.safe
+        -- We're arriving to the Vaults:$ ambush, which is guaranteed to have
+        -- 25 vaults guards.
+        elseif level == vaults_end then
+            threat = 25
+        -- We prefer taking stairs that have a known but low threat over taking
+        -- unknown ones. So assume unknown stairs have high threat.
+        else
+            threat = const.high_threat
+        end
+
+        if not worst_threat or threat > worst_threat then
+            worst_threat = threat
+        end
+
+        local dest_feat = feat
+        if result.depth > 1 then
+            dest_feat = dest_feat:gsub("_up_", "_down_", 1)
+        else
+            dest_feat = branch_entrance(result.branch)
+        end
+        local dest_state = get_destination_stairs(result.branch, result.depth, feat)
+        safe = safe and dest_state and dest_state.safe
+        if (not best_safe or safe)
+                and (not best_threat or threat < best_threat) then
+            best_stairs = dest_feat
+            best_threat = threat
+            best_safe = safe
+        end
+    end
+
+    -- If no stair has enough threat that we need to buff, we don't need to
+    -- take safe stairs.
+    if worst_threat < const.high_threat
+            -- If all stairs have equally bad threat and we don't need to
+            -- teleport, don't use safe stairs. This will most commonly happen
+            -- when all stairs at the destination are unknown.
+            or (best_threat == worst_threat
+                and best_threat < const.extreme_threat) then
+        return
+    end
+
+    -- If the best destination stair threat is high enough, we try to use down
+    -- hatches to reach the level.
+    local hatches, best_hash
+    if best_threat >= const.extreme_threat and result.depth > 1 then
+        local prev_level = make_level(result.branch, result.depth - 1)
+        hatches = c_persist.down_hatches[prev_level]
+    end
+    if hatches then
+        for hash, state in pairs(hatches) do
+            if not best_safe or state.safe then
+                best_hash = hash
+                best_safe = state.safe
+
+                -- Stop if we find a safe hatch.
+                if best_safe then
+                    break
+                end
+            end
+        end
+    end
+
+    if best_hash then
+        result.safe_hatch = best_hash
+    elseif best_stairs then
+        result.safe_stairs = best_stairs
+    else
+        return
+    end
+
+    result.depth = result.depth - 1
+end
+
+-- Try to get a "final" depth and any needed stair search direction.
 function finalize_travel_depth(result)
     if travel_opens_runed_doors(result) then
         result.open_runed_doors = true
@@ -300,6 +397,8 @@ function finalize_travel_depth(result)
         return
     end
 
+    -- If we can go up a level within our current branch, finalize depth and
+    -- direction in that direction.
     local up_reachable = result.depth > 1
         and count_stairs(result.branch, result.depth, const.dir.up,
             const.explore.reachable) > 0
@@ -310,6 +409,8 @@ function finalize_travel_depth(result)
         end
     end
 
+    -- If up is not reachable or we didn't finalize in that direction, try to
+    -- finalize down.
     local down_reachable = result.depth < branch_depth(result.branch)
         and count_stairs(result.branch, result.depth, const.dir.down,
             const.explore.reachable) > 0
@@ -317,6 +418,8 @@ function finalize_travel_depth(result)
         return
     end
 
+    -- We're not successfully finalized, so we'll attempt resets of stair
+    -- states for stairs going up and stairs on the level above going down.
     local finished
     if up_reachable
             -- Don't reset up stairs if we still need the branch rune, since we
@@ -375,6 +478,8 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
             or result.depth ~= dest_depth then
         finalize_travel_depth(result)
     end
+
+    travel_safe_stairs(result)
 
     return result
 end
@@ -436,6 +541,8 @@ function update_goal_travel()
     -- Don't autoexplore if we want to travel in some way. This allows us to
     -- leave the level before it's completely explored.
     disable_autoexplore = (goal_travel.stairs_dir
+            or goal_travel.safe_stairs
+            or goal_travel.safe_hatch
             or goal_travel.want_go
             or goal_travel.want_stash)
         and goal_reachable
@@ -455,17 +562,24 @@ function update_goal_travel()
                 or goal_travel.branch and not goal_travel.want_go))
 
     if debug_channel("explore") then
-        dsay("Travel branch: " .. tostring(goal_travel.branch)
-            ..  ", depth: " .. tostring(goal_travel.depth))
+        dsay("Travel destination: " .. make_level(goal_travel.branch, goal_travel.depth))
+
         if goal_travel.stairs_dir then
             dsay("Stairs search dir: " .. tostring(goal_travel.stairs_dir))
+        elseif goal_travel.safe_stairs then
+            dsay("Taking specific stairs for safety: "
+                .. goal_travel.safe_stairs)
+        elseif goal_travel.safe_hatch then
+            dsay("Taking hatch on destination level for safety at "
+                .. pos_string(unhash_position(goal_travel.safe_hatch)))
         end
+
         if goal_travel.first_dir then
             dsay("First dir: " .. tostring(goal_travel.first_dir))
-        end
-        if goal_travel.first_branch then
+        elseif goal_travel.first_branch then
             dsay("First branch: " .. tostring(goal_travel.first_branch))
         end
+
         dsay("Want stash travel: " .. bool_string(want_stash))
         dsay("Want go travel: " .. bool_string(goal_travel.want_go))
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore))
@@ -488,6 +602,8 @@ function goal_travel_features()
         if #wanted_feats > 0 then
             return wanted_feats
         end
+    elseif goal_travel.safe_stairs and on_travel_level then
+        return { goal_travel.safe_stairs }
     elseif goal_travel.first_dir then
         return level_stairs_features(where_branch, where_depth,
             goal_travel.first_dir)

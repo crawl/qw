@@ -283,6 +283,35 @@ function plan_move_towards_escape_hatch()
     return move_to(result.move)
 end
 
+function teleporting_before_dangerous_stairs()
+    if goal_travel.want_go or not goal_travel.safe_stairs then
+        return false
+    end
+
+    local feat = view.feature_at(0, 0)
+    if feat ~= goal_travel.safe_stairs then
+        return false
+    end
+
+    local state = get_destination_stairs(where_branch, where_depth, feat)
+    local threat = 0
+    if state then
+        threat = state.threat
+    elseif where_branch == "Vaults"
+            and where_depth == branch_depth("Vaults") - 1 then
+        threat = 25
+    end
+    return threat >= const.extreme_threat
+end
+
+function plan_teleport_dangerous_stairs()
+    if not can_teleport() or not teleporting_before_dangerous_stairs() then
+        return false
+    end
+
+    return teleport()
+end
+
 function plan_use_travel_stairs()
     if unable_to_use_stairs() or dangerous_to_move() then
         return false

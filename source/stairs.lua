@@ -66,12 +66,13 @@ function level_stairs_features(branch, depth, dir)
 end
 
 function stairs_state_string(state)
-    return enum_string(state.feat, const.feat_state) .. "/"
-        .. (state.safe and "safe" or "unsafe")
+    return enum_string(state.feat, const.explore) .. "/"
+        .. (state.safe and "safe" or "unsafe") .. "/"
+        .. "threat:" .. tostring(state.threat)
 end
 
 function update_stone_stairs(branch, depth, dir, num, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined stone stairs state.")
     end
 
@@ -100,10 +101,15 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return
     end
 
@@ -115,6 +121,7 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
     end
 
     current.safe = state.safe
+    current.threat = state.threat
     if feat_state_changed then
         current.feat = state.feat
         want_goal_update = true
@@ -227,7 +234,7 @@ function have_all_stairs(branch, depth, dir, feat_state)
 end
 
 function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined branch stairs state.")
     end
 
@@ -251,10 +258,15 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
         or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return
     end
 
@@ -267,6 +279,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
 
     current.safe = state.safe
     current.feat = state.feat
+    current.threat = state.threat
 
     if not feat_state_changed then
         return
@@ -288,7 +301,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
 end
 
 function update_escape_hatch(branch, depth, dir, hash, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined escape hatch state.")
     end
 
@@ -317,10 +330,15 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return
     end
 
@@ -333,6 +351,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
 
     current.safe = state.safe
     current.feat = state.feat
+    current.threat = state.threat
 end
 
 function get_map_escape_hatch(branch, depth, pos)
@@ -347,25 +366,32 @@ function get_map_escape_hatch(branch, depth, pos)
 end
 
 function update_pan_transit(hash, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined Pan transit state.")
     end
 
-    if not c_persist.pan_transits[hash] then
-        c_persist.pan_transits[hash] = {}
+    local current = c_persist.pan_transits[hash]
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        c_persist.pan_transits[hash] = current
     end
 
-    local current = c_persist.pan_transits[hash]
     if state.safe == nil then
         state.safe = current.safe
     end
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return
     end
 
@@ -378,6 +404,7 @@ function update_pan_transit(hash, state, force)
 
     current.safe = state.safe
     current.feat = state.feat
+    current.threat = state.threat
 end
 
 function get_map_pan_transit(pos)
@@ -385,7 +412,7 @@ function get_map_pan_transit(pos)
 end
 
 function update_abyssal_stairs(hash, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined Abyssal stairs state.")
     end
 
@@ -402,10 +429,15 @@ function update_abyssal_stairs(hash, state, force)
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return
     end
 
@@ -417,6 +449,7 @@ function update_abyssal_stairs(hash, state, force)
     end
 
     current.safe = state.safe
+    current.threat = state.threat
     if feat_state_changed then
         current.feat = state.feat
     end

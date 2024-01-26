@@ -468,7 +468,7 @@ function check_beogh_allies(radius)
 end
 
 function update_altar(god, level, hash, state, force)
-    if state.safe == nil and not state.feat then
+    if state.safe == nil and not state.feat and not state.threat then
         error("Undefined altar state.")
     end
 
@@ -480,21 +480,28 @@ function update_altar(god, level, hash, state, force)
         c_persist.altars[god][level] = {}
     end
 
-    if not c_persist.altars[god][level][hash] then
-        c_persist.altars[god][level][hash] = {}
+    local current = c_persist.altars[god][level][hash]
+    if not current then
+        current = {}
+        cleanup_feature_state(current)
+        c_persist.altars[god][level][hash] = current
     end
 
-    local current = c_persist.altars[god][level][hash]
     if state.safe == nil then
         state.safe = current.safe
     end
     if state.feat == nil then
         state.feat = current.feat
     end
+    if state.threat == nil then
+        state.threat = current.threat
+    end
 
     local feat_state_changed = current.feat < state.feat
             or force and current.feat ~= state.feat
-    if state.safe == current.safe and not feat_state_changed then
+    if state.safe == current.safe
+            and not feat_state_changed
+            and state.threat == current.threat then
         return false
     end
 
@@ -506,6 +513,7 @@ function update_altar(god, level, hash, state, force)
     end
 
     current.safe = state.safe
+    current.threat = state.threat
     if feat_state_changed then
         current.feat = state.feat
         want_goal_update = true

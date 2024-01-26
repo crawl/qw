@@ -74,6 +74,7 @@ function reason_to_rest(percentage)
         or you.slowed() and not qw.slow_aura
         or you.exhausted()
         or you.teleporting()
+            and not teleporting_before_dangerous_stairs()
         or you.status("on berserk cooldown")
         or you.status("marked")
         or you.status("spiked")
@@ -82,6 +83,7 @@ function reason_to_rest(percentage)
         or you.silencing()
         or you.corrosion() > base_corrosion
         or hp_is_low(percentage)
+            -- Don't rest if we're in good shape and have divine warriors nearby.
             and not (you.god() == "the Shining One"
                 and check_divine_warriors(2)
                 and not hp_is_low(75))

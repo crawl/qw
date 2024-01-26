@@ -564,9 +564,11 @@ function update_cell_feature(cell)
         return
     end
 
+    local enemies = assess_enemies(qw.los_radius, const.duration.ignore)
     local feat_state = feature_state(cell.los_pos)
     update_feature(where_branch, where_depth, cell.feat, cell.hash,
-        { safe = exclusion_map[cell.pos.x][cell.pos.y], feat = feat_state })
+        { safe = exclusion_map[cell.pos.x][cell.pos.y], feat = feat_state,
+            threat = enemies.threat })
 
     if feat_state < const.explore.reachable then
         check_reachable_features[cell.feat] = true

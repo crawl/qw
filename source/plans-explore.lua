@@ -174,6 +174,16 @@ function plan_move_towards_travel_feature()
         return false
     end
 
+    if goal_travel.safe_hatch and not goal_travel.want_go then
+        local map_pos = unhash_position(goal_travel.safe_hatch)
+        local result = best_move_towards(map_pos)
+        if result then
+            return move_towards_destination(result.move, result.des, "goal")
+        end
+
+        return false
+    end
+
     local feats = goal_travel_features()
     if not feats then
         return false
@@ -540,6 +550,7 @@ function set_plan_explore2()
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
         {plan_move_towards_rune, "move_towards_rune"},
+        {plan_teleport_dangerous_stairs, "teleport_dangerous_stairs"},
         {plan_use_travel_stairs, "use_travel_stairs"},
         {plan_move_towards_travel_feature, "move_towards_travel_feature"},
         {plan_autoexplore, "try_autoexplore2"},

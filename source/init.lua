@@ -8,6 +8,9 @@ function cleanup_feature_state(state)
     if state.feat == nil then
         state.feat = const.explore.none
     end
+    if state.threat == nil then
+        state.threat = 0
+    end
 end
 
 function cleanup_feature_table(feat_table, table_level)
