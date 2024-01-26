@@ -537,7 +537,7 @@ function make_level_range(branch, first, last)
             or last < 1
             or last > max_depth
             or first > last then
-        error("Invalid level level range for " .. tostring(branch)
+        error("Invalid level range for " .. tostring(branch)
             ..": " .. tostring(first) .. ", " .. tostring(last))
     end
 
@@ -559,7 +559,7 @@ function make_level(branch, depth)
 end
 
 -- Parse components of a level range.
--- @string      range The level range.
+-- @string range The level range.
 --
 -- @treturn string The branch. Will be nil if the level is invalid.
 -- @treturn int    The starting level.
