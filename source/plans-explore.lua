@@ -239,7 +239,7 @@ function plan_move_towards_monster()
     end
 
     if #mons_targets == 0 then
-        for pos in square_iter(const.origin) do
+        for pos in square_iter(const.origin, qw.los_radius) do
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons and Monster:new(mons):is_enemy() then
                 table.insert(mons_targets, position_sum(qw.map_pos, pos))

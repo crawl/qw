@@ -2,6 +2,7 @@
 -- monster functions and data
 
 const.pan_lord_type = 344
+
 const.attitude = {
     "hostile",
     "neutral",
