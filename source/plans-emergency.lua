@@ -29,107 +29,47 @@ function buffed()
     return false
 end
 
-function berserk()
-    use_ability("Berserk")
-end
-
-function heroism()
-    use_ability("Heroism")
-end
-
-function recall()
-    if you.god() == "Yredelemnul" then
-        use_ability("Recall Undead Slaves", "", true)
-    else
-        use_ability("Recall Orcish Followers", "", true)
-    end
-end
-
-function recall_ancestor()
-    use_ability("Recall Ancestor", "", true)
-end
-
-function finesse()
-    use_ability("Finesse")
-end
-
-function slouch()
-    use_ability("Slouch")
-end
-
-function drain_life()
-    use_ability("Drain Life")
-end
-
-function trogs_hand()
-    use_ability("Trog's Hand")
-end
-
-function ru_healing()
+function use_ru_healing()
     use_ability("Draw Out Power")
 end
 
-function ely_healing()
+function use_ely_healing()
     use_ability("Greater Healing")
 end
 
-function purification()
+function use_purification()
     use_ability("Purification")
-end
-
-function recite()
-    use_ability("Recite", "", true)
-end
-
-function brothers_in_arms()
-    use_ability("Brothers in Arms")
-end
-
-function greater_servant()
-    use_ability("Greater Servant of Makhleb")
-end
-
-function cleansing_flame()
-    use_ability("Cleansing Flame")
-end
-
-function divine_warrior()
-    use_ability("Summon Divine Warrior")
-end
-
-function apocalypse()
-    use_ability("Apocalypse")
 end
 
 function plan_brothers_in_arms()
     if can_brothers_in_arms() and want_to_brothers_in_arms() then
-        brothers_in_arms()
-        return true
+        return use_ability("Brothers in Arms")
     end
+
     return false
 end
 
 function plan_greater_servant()
     if can_greater_servant() and want_to_greater_servant() then
-        greater_servant()
-        return true
+        return use_ability("Greater Servant of Makhleb")
     end
+
     return false
 end
 
 function plan_cleansing_flame()
     if can_cleansing_flame() and want_to_cleansing_flame() then
-        cleansing_flame()
-        return true
+        return use_ability("Cleansing Flame")
     end
+
     return false
 end
 
 function plan_divine_warrior()
     if can_divine_warrior() and want_to_divine_warrior() then
-        divine_warrior()
-        return true
+        return use_ability("Summon Divine Warrior")
     end
+
     return false
 end
 
@@ -137,9 +77,9 @@ function plan_recite()
     if can_recite()
             and qw.danger_in_los
             and not (qw.immediate_danger and hp_is_low(33)) then
-        recite()
-        return true
+        return use_ability("Recite", "", true)
     end
+
     return false
 end
 
@@ -237,9 +177,9 @@ end
 
 function plan_apocalypse()
     if can_apocalypse() and want_to_apocalypse() then
-        apocalypse()
-        return true
+        return use_ability("Apocalypse")
     end
+
     return false
 end
 
@@ -289,22 +229,10 @@ end
 
 function plan_trogs_hand()
     if can_trogs_hand() and want_to_trogs_hand() then
-        trogs_hand()
-        return true
+        return use_ability("Trog's Hand")
     end
 
     return false
-end
-
-function prefer_ru_healing()
-    return drain_level() <= 1
-end
-
-function prefer_ely_healing()
-    if you.god() ~= "Elyvilon" or you.piety_rank() < 4 then
-        return false
-    end
-    return true
 end
 
 function plan_cure_bad_poison()
@@ -317,9 +245,9 @@ function plan_cure_bad_poison()
             say("(to cure bad poison)")
             return true
         end
+
         if can_purification() then
-            purification()
-            return true
+            return use_purification()
         end
     end
 
@@ -334,12 +262,8 @@ function plan_cancellation()
     if you.petrifying()
             or you.corrosion() >= 4 + base_corrosion
             or you.corrosion() >= 3 + base_corrosion and hp_is_low(70)
-            or you.transform() == "pig"
-            or you.transform() == "wisp"
-            or you.transform() == "bat" then
-        if drink_by_name("cancellation") then
-            return true
-        end
+            or in_bad_form() then
+        return drink_by_name("cancellation")
     end
 
     return false
@@ -423,14 +347,12 @@ function can_drink_heal_wounds()
 end
 
 function heal_general()
-    if can_ru_healing() and prefer_ru_healing() then
-        ru_healing()
-        return true
+    if can_ru_healing() and drain_level() <= 1 then
+        return use_ru_healing()
     end
 
-    if can_ely_healing() and prefer_ely_healing() then
-        ely_healing()
-        return true
+    if can_ely_healing() then
+        return use_ely_healing()
     end
 
     if can_drink_heal_wounds() then
@@ -443,13 +365,11 @@ function heal_general()
     end
 
     if can_ru_healing() then
-        ru_healing()
-        return true
+        return use_ru_healing()
     end
 
     if can_ely_healing() then
-        ely_healing()
-        return true
+        return use_ely_healing()
     end
 
     return false
@@ -519,64 +439,67 @@ end
 
 function plan_berserk()
     if can_berserk() and want_to_berserk() then
-        berserk()
-        return true
+        return use_ability("Berserk")
     end
+
     return false
 end
 
 function plan_heroism()
     if can_heroism() and want_to_heroism() then
-        heroism()
-        return true
+        return use_ability("Heroism")
     end
+
     return false
 end
 
 function plan_recall()
     if can_recall() and want_to_recall() then
-        recall()
-        return true
+        if you.god() == "Yredelemnul" then
+            use_ability("Recall Undead Slaves", "", true)
+        else
+            use_ability("Recall Orcish Followers", "", true)
+        end
     end
+
     return false
 end
 
 function plan_recall_ancestor()
-    if can_recall_ancestor() and want_to_recall_ancestor() then
-        recall_ancestor()
-        return true
+    if can_recall_ancestor() and check_elliptic(qw.los_radius) then
+        return use_ability("Recall Ancestor", "", true)
     end
+
     return false
 end
 
 function plan_finesse()
     if can_finesse() and want_to_finesse() then
-        finesse()
-        return true
+        return use_ability("Finesse")
     end
+
     return false
 end
 
 function plan_slouch()
     if can_slouch() and want_to_slouch() then
-        slouch()
-        return true
+        return use_ability("Slouch")
     end
+
     return false
 end
 
 function plan_drain_life()
     if can_drain_life() and want_to_drain_life() then
-        drain_life()
-        return true
+        return use_ability("Drain Life")
     end
+
     return false
 end
 
 function plan_fiery_armour()
     if can_fiery_armour() and want_to_fiery_armour() then
-        fiery_armour()
-        return true
+        return use_ability("Fiery Armour")
     end
 
     return false
@@ -953,10 +876,6 @@ function want_to_recall()
     end
 end
 
-function want_to_recall_ancestor()
-    return check_elliptic(qw.los_radius)
-end
-
 function plan_full_inventory_panic()
     if qw_full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
@@ -979,8 +898,7 @@ function plan_cure_confusion()
     end
 
     if can_purification() then
-        purification()
-        return true
+        return use_purification()
     end
 
     if not item_type_is_ided("potion", "curing") then
@@ -1037,18 +955,17 @@ function plan_special_purification()
     end
 
     if you.slowed() and not qw.slow_aura or you.petrifying() then
-        purification()
-        return true
+        return use_purification()
     end
 
     local str, mstr = you.strength()
     local int, mint = you.intelligence()
     local dex, mdex = you.dexterity()
-    if str < mstr and (str < mstr - 5 or str < 3)
-         or int < mint and int < 3
-         or dex < mdex and (dex < mdex - 8 or dex < 3) then
-        purification()
-        return true
+    if str < mstr
+            and (str < mstr - 5 or str < 3)
+                or int < mint and int < 3
+                or dex < mdex and (dex < mdex - 8 or dex < 3) then
+        return use_purification()
     end
 
     return false
