@@ -17,8 +17,6 @@ local portal_data = {}
 local god_data = {}
 local good_gods
 local mp_using_gods = {}
-local upstairs_features
-local downstairs_features
 
 local goal_list
 local which_goal = 1
@@ -94,7 +92,6 @@ local transp_search
 
 local reachable_position
 
-local have_orb
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0

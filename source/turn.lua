@@ -65,7 +65,7 @@ function turn_update()
         return
     end
 
-    have_orb = you.have_orb()
+    qw.have_orb = you.have_orb()
     qw.time_passed = true
     qw.turn_count = turns
     qw.turn_memos = {}
@@ -128,7 +128,7 @@ function turn_update()
         end
     end
 
-    if have_orb and where == zot_end then
+    if qw.have_orb and where == zot_end then
         ignore_traps = true
     else
         ignore_traps = false

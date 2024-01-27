@@ -1,12 +1,8 @@
 ------------------
 -- Plans specific to the Orb run.
 
-function want_to_orbrun_teleport()
-    return have_orb and hp_is_low(33) and sense_danger(2)
-end
-
 function want_to_orbrun_heal_wounds()
-    if not have_orb then
+    if not qw.have_orb then
         return false
     end
 

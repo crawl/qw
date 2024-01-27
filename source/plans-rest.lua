@@ -29,7 +29,7 @@ function should_rest()
         return false
     end
 
-    if have_orb then
+    if qw.have_orb then
         return you.confused()
             or transformed()
             or you.slowed() and not qw.slow_aura

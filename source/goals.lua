@@ -149,7 +149,7 @@ function goal_complete(plan, final)
             and have_branch_runes("Abyss")
         or plan == "Pan" and have_branch_runes("Pan")
         or plan == "Zig" and c_persist.zig_completed
-        or plan == "Orb" and have_orb
+        or plan == "Orb" and qw.have_orb
         or plan == "Save" and c_persist.last_completed_goal == "Save"
 end
 
@@ -374,7 +374,7 @@ function determine_goal()
     end
 
     if status == "Win" then
-        status = have_orb and "Escape" or "Orb"
+        status = qw.have_orb and "Escape" or "Orb"
     end
 
     if status == "Escape" then
@@ -423,7 +423,7 @@ function undead_or_demon_branch_soon()
         or branch_soon("Tomb")
         or branch_soon("Zig")
         -- Once you have the ORB, every branch is an demon branch.
-        or have_orb
+        or qw.have_orb
 end
 
 function goals_visit_branches(branches)
@@ -447,7 +447,7 @@ function goals_visit_branches(branches)
         end
     end
 
-    if not have_orb and util.contains(branches, "Zot") then
+    if not qw.have_orb and util.contains(branches, "Zot") then
         return true
     end
 

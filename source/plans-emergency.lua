@@ -659,6 +659,10 @@ function want_to_teleport()
         return true
     end
 
+    if qw.have_orb and hp_is_low(33) and sense_danger(2) then
+        return true
+    end
+
     if count_hostile_summons(qw.los_radius) > 0 and you.xl() < 21 then
         hostile_summons_timer = you.turns()
         return true

@@ -451,7 +451,7 @@ function update_goal_travel()
         -- exist. In that case autoexplore would move us next to a runed door
         -- and off of our intermediate stair, altar, etc., where we need to be.
             or (in_branch("Abyss")
-                or goal_status == "Escape" and have_orb
+                or goal_status == "Escape" and qw.have_orb
                 or goal_travel.branch and not goal_travel.want_go))
 
     if debug_channel("explore") then

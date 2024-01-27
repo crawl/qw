@@ -159,7 +159,7 @@ end
 function have_quest_item(name)
     return name:find(const.rune_suffix)
             and you.have_rune(name:gsub(const.rune_suffix, ""))
-        or name == const.orb_name and have_orb
+        or name == const.orb_name and qw.have_orb
 end
 
 function autopickup(it, name)
@@ -168,15 +168,15 @@ function autopickup(it, name)
     end
 
     local class = it.class(true)
-    if class == "Ancient Gems" then
+    if class == "gem" then
         return true
-    elseif class == "Runes of Zot" then
+    elseif class == "rune" then
         record_seen_item(you.where(), it.name())
         return true
-    elseif class == "Orbs of Power" then
+    elseif class == "orb" then
         record_seen_item(you.where(), it.name())
         c_persist.found_orb = true
-        return true
+        return goal_status == "Orb"
     end
 
     if class == "armour" or class == "weapon" or class == "jewellery" then

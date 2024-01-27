@@ -550,7 +550,7 @@ function brand_is_great(brand)
     -- good once we have the ORB. XXX: Nor if we're only doing undead or demon
     -- branches from now on.
     elseif brand == "vampirism" then
-        return not have_orb
+        return not qw.have_orb
     else
         return false
     end
