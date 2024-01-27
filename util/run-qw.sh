@@ -5,12 +5,12 @@
 name=qw
 num_games=1
 rc_dir=$(pwd)
-rc_file="qw.rc"
+rc_file=qw.rc
 track_count=
 
 read -d '' usage_string <<EOF
 $(basename $0)  [-n NUM] [-d RC-DIR] [-r RC-FILE] [-u NAME] [-t] CRAWL-DIR
-Run qw locally
+Run qw locally from a crawl directory
 Default number of games: $num_games
 Default rc directory: $rc_dir
 Default rc file: $rc_file
@@ -45,12 +45,8 @@ fi
 
 set -e
 
-if [ ! -e "$crawl_dir/$name.rc" ] ; then
-    ln -s "$rc_dir/$rc_file" "$crawl_dir/$name.rc"
-fi
-
-if [ -e "$rc_dir/qw.lua" ] && [ ! -e "$crawl_dir/qw.lua" ] ; then
-    ln -s "$rc_dir/qw.lua" "$crawl_dir/qw.lua"
+if [ ! -e "$crawl_dir/morgue" ] ; then
+    mkdir "$crawl_dir/morgue"
 fi
 
 if [ ! -e "$crawl_dir/morgue/$name" ] ; then
@@ -74,14 +70,15 @@ do
     echo "Running iteration $count"
 
     ./crawl -lua-max-memory 96 -no-throttle -wizard -name "$name" \
-        -morgue "$crawl_dir/morgue/$name" -rc "$name.rc"
+        -morgue "$crawl_dir/morgue/$name" -rcdir "$rc_dir" -rc "$rc_file"
 
-    # We ended without finishing our current game, so just exit.
+    # We ended without finishing our current game, so back up save and
+    # c_persist files, then exit.
     if [ -e ".$name.cs" ] ; then
         echo "Game suspended."
         echo "Backing up save to $name.cs.bak and persist to $name.rc.persist.bak"
         cp ".$name.cs" "$name.cs.bak"
-        cp "$name.rc.persist" "$name.rc.persist.bak"
+        cp "$rc_file".persist "$rc_file".persist.bak
         exit 1
     fi
 

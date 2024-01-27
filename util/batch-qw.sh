@@ -7,19 +7,17 @@ base_name=qw
 num_instances=1
 num_games=1
 rc_dir=$(pwd)
-rc_file="qw.rc"
 
 read -d '' usage_string <<EOF
-$(basename $0) [-c] [-i NUM] [-n NUM] [-d RC-DIR] [-r RC-FILE] [-b NAME] CRAWL-DIR
-Run qw locally
+$(basename $0) [-i NUM] [-n NUM] [-b NAME] [-d RC-DIR] [-c] CRAWL-DIR
+Run qw locally in multiple parallel instances
 Default number of instances: $num_instances
 Default number of games: $num_games
 Default base name: $base_name
 Default rc directory: $rc_dir
-Default rc file: $rc_file
 EOF
 
-while getopts "h?ci:n:b:d:r:" opt; do
+while getopts "h?ci:n:b:d:" opt; do
     case "$opt" in
         h|\?)
             echo -e "$usage_string"
@@ -35,8 +33,6 @@ while getopts "h?ci:n:b:d:r:" opt; do
             ;;
         d)  rc_dir="$OPTARG"
             ;;
-        r)  rc_file="$OPTARG"
-            ;;
     esac
 done
 shift $(($OPTIND - 1))
@@ -50,9 +46,8 @@ fi
 set -e
 
 if [ $do_clean ] ; then
-    rm -f "$crawl_dir/logfile" "$crawl_dir/milestones" "$crawl_dir"/.qw*.cs \
-        "$crawl_dir"/qw*.rc "$crawl_dir"/qw.lua "$crawl_dir"/qw*.count
-    rm -rf "$crawl_dir"/morgue/qw*
+    rm -f "$crawl_dir/logfile" "$crawl_dir/milestones" \
+        "$crawl_dir"/."$base_name"*.cs "$crawl_dir"/*.count
 fi
 
 tmux new-session -d -s "$base_name"
@@ -69,8 +64,8 @@ do
         tmux new-window -a -t "$base_name" -n "$username"
     fi
 
-    tmux send-keys "util/run-qw.sh -t -n $num_games -r \"$rc_file\" \
-        -u \"$username\" \"$crawl_dir\"" C-m
+    tmux send-keys "util/run-qw.sh -t -n $num_games -u \"$username\" \
+        -d \"$rc_dir\" -r \"$rc_dir/$username\".rc \"$crawl_dir\"" C-m
 
     count=$(( $count + 1 ))
 done
