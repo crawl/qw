@@ -879,6 +879,7 @@ end
 
 function plan_cure_confusion()
     if not you.confused()
+            or not can_drink()
             or not (qw.danger_in_los or options.autopick_on)
             or view.cloud_at(0, 0) == "noxious fumes"
                 and not meph_immune() then
