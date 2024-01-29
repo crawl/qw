@@ -82,7 +82,7 @@ function player_last_position_towards(dest_pos)
     for pos in adjacent_iter(dest_pos) do
         local map_pos = position_sum(pos, qw.map_pos)
         local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
-        if can_move_to(pos)
+        if dist and can_move_to(pos)
                 and is_safe_at(pos)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
@@ -130,7 +130,8 @@ function attacking_monster_count_at(pos)
 end
 
 function can_move_from_position_to(from_pos, to_pos)
-    if not is_safe_at(to_pos)
+    if not map_is_unexcluded_at(position_sum(qw.map_pos, to_pos))
+            or not is_safe_at(to_pos)
             or view.withheld(from_pos.x, from_pos.y)
             or view.withheld(to_pos.x, to_pos.y) then
         return false
@@ -203,8 +204,9 @@ function assess_retreat_position(map_pos, max_distance, attacking_limit)
     -- current position and the clouds there are safe enough.
     local pos = position_difference(map_pos, qw.map_pos)
     local is_origin = position_is_origin(pos)
-    if not is_safe_at(pos)
-            and (not is_origin or not is_cloud_safe_at(pos, false)) then
+    if not map_is_unexcluded_at(map_pos)
+            or not is_safe_at(pos)
+                and (not is_origin or not is_cloud_safe_at(pos, false)) then
         return
     end
 
