@@ -217,6 +217,12 @@ function plan_move_towards_travel_feature()
         end
     end
 
+    -- If we're restarting the cascade, we have to do the goal update ourself
+    -- to ensure earlier plans have current goal information.
+    if qw.restart_cascade and qw.want_goal_update then
+        update_goal()
+    end
+
     return false
 end
 

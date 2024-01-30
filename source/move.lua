@@ -431,7 +431,7 @@ function update_move_destination()
     end
 
     local clear = false
-    if qw.move_reason == "goal" and want_goal_update then
+    if qw.move_reason == "goal" and qw.want_goal_update then
         clear = true
     elseif qw.move_reason == "monster" and qw.danger_in_los then
         clear = true

@@ -380,7 +380,7 @@ function record_portal(level, portal, permanent)
     end
 
     if portal_allowed(portal) then
-        want_goal_update = true
+        qw.want_goal_update = true
     end
 end
 
@@ -405,7 +405,7 @@ function remove_portal(level, portal, silent)
             say("RIP " .. portal:upper())
         end
 
-        want_goal_update = true
+        qw.want_goal_update = true
     end
 end
 

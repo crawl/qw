@@ -718,7 +718,7 @@ function reset_c_persist(new_waypoint, new_level)
         end
 
         if new_level then
-            c_persist.sensed_abyssal_rune = false
+            c_persist.sense_abyssal_rune = false
         end
     end
 
@@ -748,7 +748,7 @@ function reset_item_tracking()
         local rune = branch_runes(where_branch, true)[1]
         if not (c_persist.seen_items[where]
                     and c_persist.seen_items[where][rune])
-                and not c_persist.sensed_abyssal_rune then
+                and not c_persist.sense_abyssal_rune then
             item_map_positions[rune] = nil
         end
     end
@@ -941,7 +941,7 @@ function get_item_map_positions(item_names, radius)
         local rune = branch_runes(where_branch, true)[1]
         if util.contains(item_names, rune)
                 and not util.contains(found_items, rune) then
-            c_persist.sensed_abyssal_rune = false
+            c_persist.sense_abyssal_rune = false
         end
     end
 

@@ -124,7 +124,7 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
     current.threat = state.threat
     if feat_state_changed then
         current.feat = state.feat
-        want_goal_update = true
+        qw.want_goal_update = true
     end
 end
 
@@ -297,7 +297,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
         end
     end
 
-    want_goal_update = true
+    qw.want_goal_update = true
 end
 
 function update_escape_hatch(branch, depth, dir, hash, state, force)

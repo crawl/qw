@@ -116,17 +116,17 @@ function c_message(text, channel)
         qw.have_message = true
     elseif text:find("Done exploring") then
         c_persist.autoexplore[you.where()] = const.autoexplore.full
-        want_goal_update = true
+        qw.want_goal_update = true
     elseif text:find("Partly explored") then
         if text:find("transporter") then
             c_persist.autoexplore[you.where()] = const.autoexplore.transporter
         else
             c_persist.autoexplore[you.where()] = const.autoexplore.partial
         end
-        want_goal_update = true
+        qw.want_goal_update = true
     elseif text:find("Could not explore") then
         c_persist.autoexplore[you.where()] = const.autoexplore.runed_door
-        want_goal_update = true
+        qw.want_goal_update = true
     -- Track which stairs we've fully explored by watching pairs of messages
     -- corresponding to standing on stairs and then taking them. The climbing
     -- message happens before the level transition.
@@ -153,17 +153,17 @@ function c_message(text, channel)
         end
         stairs_travel = nil
     elseif text:find("You pick up the.*rune and feel its power") then
-        want_goal_update = true
+        qw.want_goal_update = true
     elseif text:find("abyssal rune vanishes from your memory and reappears")
             or text:find("detect the abyssal rune") then
-        c_persist.sensed_abyssal_rune = true
+        c_persist.sense_abyssal_rune = true
     -- Timed portals are recorded by the "Hurry and find it" message handling,
     -- but a permanent bazaar doesn't have this. Check messages for "a gateway
     -- to a bazaar", which happens via autoexplore. Timed bazaars are described
     -- as "a flickering gateway to a bazaar", so by looking for the right
     -- message, we prevent counting timed bazaars twice.
     elseif text:find("abyssal rune vanishes from your memory") then
-        c_persist.sensed_abyssal_rune = false
+        c_persist.sense_abyssal_rune = false
     elseif text:find("potion of [%a ]+%.") then
         text = remove_message_tags(text)
         record_item_ident("potion",
@@ -195,9 +195,9 @@ function c_message(text, channel)
     elseif text:find("You feel very bouyant") then
         temporary_flight = true
     elseif text:find("You pick up the Orb of Zot") then
-        want_goal_update = true
+        qw.want_goal_update = true
     elseif text:find("Zot's power touches on you") then
-        want_goal_update = true
+        qw.want_goal_update = true
     elseif text:find("You die...") then
         crawl.sendkeys(string.char(27) .. string.char(27)
             .. string.char(27))

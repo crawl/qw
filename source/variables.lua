@@ -25,7 +25,6 @@ local goal_status
 local goal_branch
 local goal_depth
 local goal_travel
-local want_goal_update
 
 local early_first_lair_branch
 local first_lair_branch_end

@@ -123,7 +123,7 @@ function want_to_move_to_abyssal_rune()
 
     local rune_pos = item_map_positions[branch_runes(where_branch, true)[1]]
     return rune_pos and not positions_equal(qw.map_pos, rune_pos)
-        or c_persist.sensed_abyssal_rune
+        or c_persist.sense_abyssal_rune
 end
 
 function plan_move_towards_abyssal_rune()

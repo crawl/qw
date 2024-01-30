@@ -516,7 +516,7 @@ function update_altar(god, level, hash, state, force)
     current.threat = state.threat
     if feat_state_changed then
         current.feat = state.feat
-        want_goal_update = true
+        qw.want_goal_update = true
     end
 
     return true

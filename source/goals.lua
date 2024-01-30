@@ -828,7 +828,7 @@ function update_goal()
     open_runed_doors = branch_is_temporary(where_branch)
         or goal_travel.open_runed_doors
 
-    want_goal_update = false
+    qw.want_goal_update = false
 end
 
 function god_options()
@@ -918,5 +918,5 @@ function reset_autoexplore(level)
     end
 
     c_persist.autoexplore[level] = const.autoexplore.needed
-    want_goal_update = true
+    qw.want_goal_update = true
 end

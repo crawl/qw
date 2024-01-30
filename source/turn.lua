@@ -89,7 +89,7 @@ function turn_update()
 
     if you.god() ~= previous_god then
         previous_god = you.god()
-        want_goal_update = true
+        qw.want_goal_update = true
     end
 
     local new_level = false
@@ -106,7 +106,7 @@ function turn_update()
         where = you.where()
         where_branch = you.branch()
         where_depth = you.depth()
-        want_goal_update = true
+        qw.want_goal_update = true
 
         qw.can_flee_upstairs = not (in_branch("D") and where_depth == 1
             or in_portal()
@@ -141,7 +141,7 @@ function turn_update()
         gained_permanent_flight = permanent_flight == false
             and not temporary_flight
         if gained_permanent_flight then
-            want_goal_update = true
+            qw.want_goal_update = true
         end
 
         permanent_flight = not temporary_flight
@@ -163,7 +163,7 @@ function turn_update()
     update_reachable_position()
     update_reachable_features()
 
-    if want_goal_update then
+    if qw.want_goal_update then
         update_goal()
 
         if goal_status == "Save" or goal_status == "Quit" then
