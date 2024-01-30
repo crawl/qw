@@ -11,6 +11,20 @@ function say(x)
     note(x)
 end
 
+function magic(command)
+    crawl.process_keys(command .. string.char(27) .. string.char(27)
+        .. string.char(27))
+end
+
+function magicfind(target, secondary)
+    if secondary then
+        crawl.sendkeys(control('f') .. target .. "\r", arrowkey('d'), "\r\r" ..
+            string.char(27) .. string.char(27) .. string.char(27))
+    else
+        magic(control('f') .. target .. "\r\r\r")
+    end
+end
+
 function c_answer_prompt(prompt)
     if prompt == "Die?" then
         return qw.wizmode_death

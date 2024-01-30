@@ -1,5 +1,5 @@
 ------------------
--- Plans for god worship and abilities.
+-- General plans related to religion
 
 function plan_go_to_altar()
     local god = goal_god(goal_status)

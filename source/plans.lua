@@ -1,19 +1,5 @@
 ------------------
--- The common plan functions and the overall move plan.
-
-function magic(command)
-    crawl.process_keys(command .. string.char(27) .. string.char(27)
-        .. string.char(27))
-end
-
-function magicfind(target, secondary)
-    if secondary then
-        crawl.sendkeys(control('f') .. target .. "\r", arrowkey('d'), "\r\r" ..
-            string.char(27) .. string.char(27) .. string.char(27))
-    else
-        magic(control('f') .. target .. "\r\r\r")
-    end
-end
+-- The common plan functions and the overall turn plan.
 
 function use_ability(name, extra, mute)
     for letter, abil in pairs(you.ability_table()) do
@@ -36,30 +22,7 @@ function use_ability(name, extra, mute)
     return false
 end
 
-function move_to(pos)
-    local mons_in_way = monster_in_way(pos)
-    if mons_in_way and not get_monster_at(pos):player_can_attack() then
-        return false
-    end
-
-    if mons_in_way and have_ranged_weapon() and not unable_to_shoot() then
-        return shoot_launcher(pos)
-    end
-
-    magic(delta_to_vi(pos) .. "YY")
-    return true
-end
-
-function move_towards_destination(pos, dest, reason)
-    if move_to(pos) then
-        qw.move_destination = dest
-        qw.move_reason = reason
-        return true
-    end
-
-    return false
-end
--- these few functions are called directly from ready()
+-- This plan is called outside of the turn plan cascade.
 function plan_message()
     if qw.read_message then
         crawl.setopt("clear_messages = false")
@@ -170,12 +133,12 @@ function initialize_plan_cascades()
     set_plan_explore()
     set_plan_explore2()
     set_plan_stuck()
-    set_plan_move()
+    set_plan_turn()
 end
 
--- This is the main move planning cascade.
-function set_plan_move()
-    plans.move = cascade {
+-- This is the main turn planning cascade.
+function set_plan_turn()
+    plans.turn = cascade {
         {plan_save, "save"},
         {plan_quit, "quit"},
         {plan_ancestor_identity, "try_ancestor_identity"},

@@ -460,3 +460,27 @@ function update_move_destination()
         qw.move_reason = nil
     end
 end
+
+function move_to(pos)
+    local mons_in_way = monster_in_way(pos)
+    if mons_in_way and not get_monster_at(pos):player_can_attack() then
+        return false
+    end
+
+    if mons_in_way and have_ranged_weapon() and not unable_to_shoot() then
+        return shoot_launcher(pos)
+    end
+
+    magic(delta_to_vi(pos) .. "YY")
+    return true
+end
+
+function move_towards_destination(pos, dest, reason)
+    if move_to(pos) then
+        qw.move_destination = dest
+        qw.move_reason = reason
+        return true
+    end
+
+    return false
+end
