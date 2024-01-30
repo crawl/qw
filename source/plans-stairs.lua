@@ -345,3 +345,18 @@ function plan_use_travel_stairs()
 
     return false
 end
+
+function plan_abort_safe_stairs()
+    if goal_travel.want_go or not (goal_travel.safe_stairs or goal_travel.safe_hatch) then
+        return false
+    end
+
+    -- We need to update goal travel ourself immediately because we also need
+    -- to restart the cascade so that previous plans can do something besides
+    -- attempting to use safe stairs.
+    qw.safe_stairs_failed = true
+    update_goal()
+
+    qw.restart_cascade = true
+    return true
+end

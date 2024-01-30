@@ -563,5 +563,6 @@ function set_plan_explore2()
         {plan_move_towards_monster, "move_towards_monster"},
         {plan_move_towards_unexplored, "move_towards_unexplored"},
         {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
+        {plan_abort_safe_stairs, "try_abort_safe_stairs"},
     }
 end

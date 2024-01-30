@@ -70,6 +70,7 @@ function turn_update()
     qw.turn_count = turns
     qw.turn_memos = {}
     qw.attacks = nil
+    qw.safe_stairs_failed = false
 
     if you.turns() >= qw.dump_count then
         dump_count = qw.dump_count + 100

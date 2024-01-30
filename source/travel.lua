@@ -295,7 +295,8 @@ function travel_safe_stairs(result)
     -- entries. Taking alternate upstairs would be far less useful generally,
     -- and fleeing doesn't yet support fleeing to downstairs, which would be
     -- necessary before we could take alternate upstairs.
-    if result.stairs_dir
+    if qw.safe_stairs_failed
+            or result.stairs_dir
             or where_branch == result.branch
                 and where_depth >= result.depth then
         return
