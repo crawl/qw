@@ -129,18 +129,30 @@ function c_message(text, channel)
     elseif text:find("Your pager goes off") then
         qw.have_message = true
     elseif text:find("Done exploring") then
-        c_persist.autoexplore[you.where()] = const.autoexplore.full
-        qw.want_goal_update = true
-    elseif text:find("Partly explored") then
-        if text:find("transporter") then
-            c_persist.autoexplore[you.where()] = const.autoexplore.transporter
-        else
-            c_persist.autoexplore[you.where()] = const.autoexplore.partial
+        local where = you.where()
+        if c_persist.autoexplore[where] ~= const.autoexplore.full then
+            c_persist.autoexplore[where] = const.autoexplore.full
+            qw.want_goal_update = true
         end
-        qw.want_goal_update = true
+    elseif text:find("Partly explored") then
+        local where = you.where()
+        if text:find("transporter") then
+            if c_persist.autoexplore[where] ~= const.autoexplore.transporter then
+                c_persist.autoexplore[where] = const.autoexplore.transporter
+                qw.want_goal_update = true
+            end
+        else
+            if c_persist.autoexplore[where] ~= const.autoexplore.partial then
+                c_persist.autoexplore[where] = const.autoexplore.partial
+                qw.want_goal_update = true
+            end
+        end
     elseif text:find("Could not explore") then
-        c_persist.autoexplore[you.where()] = const.autoexplore.runed_door
-        qw.want_goal_update = true
+        local where = you.where()
+        if c_persist.autoexplore[where] ~= const.autoexplore.runed_door then
+            c_persist.autoexplore[where] = const.autoexplore.runed_door
+            qw.want_goal_update = true
+        end
     -- Track which stairs we've fully explored by watching pairs of messages
     -- corresponding to standing on stairs and then taking them. The climbing
     -- message happens before the level transition.
