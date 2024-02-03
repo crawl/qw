@@ -67,6 +67,8 @@ function c_answer_prompt(prompt)
         return true
     elseif prompt:find("Really explore while Zot is near") then
         return true
+    elseif prompt:find("beam is likely to hit you") then
+        return true
     end
 end
 
