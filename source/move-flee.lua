@@ -86,12 +86,8 @@ function update_flee_positions()
     end
 end
 
-function mons_can_follow(mons)
-    return mons:can_seek()
-end
-
 function check_following_enemies(radius)
-    return check_enemies(radius, mons_can_follow)
+    return check_enemies(radius, function(mons) return mons:can_seek() end)
 end
 
 function going_to_flee()
