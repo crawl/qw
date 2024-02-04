@@ -401,15 +401,14 @@ end
 
 function can_berserk()
     return not have_ranged_weapon()
+        and not intrinsic_undead()
+        and you.race() ~= "Formicid"
+        and not you.mesmerised()
+        and not you.status("afraid")
+        and not you.transform() == "lich"
+        and not you.status("on berserk cooldown")
         and you.god() == "Trog"
         and you.piety_rank() >= 1
-        and you.race() ~= "Mummy"
-        and you.race() ~= "Ghoul"
-        and you.race() ~= "Formicid"
-        and not (you.status("on berserk cooldown")
-            or you.mesmerised()
-            or you.transform() == "lich"
-            or you.status("afraid"))
         and can_invoke()
 end
 
