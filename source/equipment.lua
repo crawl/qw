@@ -81,7 +81,7 @@ function have_ranged_weapon()
     return turn_memo("have_ranged_weapon",
         function()
             local weapon = get_weapon()
-            return weapon and weapon.is_ranged
+            return weapon and not weapon.is_melded and weapon.is_ranged
         end)
 end
 

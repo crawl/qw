@@ -162,7 +162,6 @@ ignore =
 ignore += .*
 
 runrest_ignore_poison = 3:15
-runrest_ignore_monster += butterfly:1
 
 # These keys are useful to answer prompts and aren't critical for manual play.
 bindkey = [Y] CMD_NO_CMD_DEFAULT

@@ -88,20 +88,17 @@ function assess_square(pos)
     -- Avoid corners if possible.
     a.cornerish = is_cornerish_at(pos)
 
-    -- Will we fumble if we try to attack from this square?
-    a.fumble = not you.flying()
-        and view.feature_at(pos.x, pos.y) == "shallow_water"
-        and intrinsic_fumble()
-        and not (you.god() == "Beogh" and you.piety_rank() >= 5)
-
     -- Is the wall next to us dangerous?
     a.bad_wall = count_adjacent_slimy_walls_at(pos) > 0
 
+    -- Will we fumble if we try to attack from this square?
+    local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
+        and not (you.flying()
+            or you.god() == "Beogh" and you.piety_rank() >= 5)
+    a.fumble = in_water and not have_ranged_weapon() and intrinsic_fumble()
+
     -- Will we be slow if we move into this square?
-    a.slow = not you.flying()
-        and view.feature_at(pos.x, pos.y) == "shallow_water"
-        and not intrinsic_amphibious()
-        and not (you.god() == "Beogh" and you.piety_rank() >= 5)
+    a.slow = in_water and not intrinsic_amphibious()
 
     -- Is the square safe to step in? (checks traps & clouds)
     a.safe = is_safe_at(pos)

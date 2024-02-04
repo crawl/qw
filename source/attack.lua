@@ -1,21 +1,6 @@
 -----------------------------------------
 -- Attack setup and evaluation
 
-function have_ranged_attack()
-    return turn_memo("have_ranged_attack",
-        function()
-            return have_ranged_weapon() or best_missile()
-        end)
-end
-
-function get_ranged_attack()
-    if have_ranged_weapon() then
-        return get_attack(1)
-    end
-
-    return get_throwing_attack()
-end
-
 -- Is the result from an attack on the first target better than the current
 -- best result?
 function result_improves_attack(attack, result, best_result)
@@ -171,12 +156,6 @@ function assess_explosion_position(attack, target_pos, second_pos)
     end
 end
 
-function projectile_hits_non_hostile(mons)
-    return mons
-        and mons:attitude() > const.attitude.hostile
-        and not mons:ignores_player_projectiles()
-end
-
 function assess_ranged_position(attack, target_pos, second_pos)
     if debug_channel("ranged") then
         dsay("Targeting " .. cell_string_from_position(target_pos))
@@ -210,22 +189,31 @@ function assess_ranged_position(attack, target_pos, second_pos)
                 dsay("Aborted target: blocking monster at "
                     .. cell_string_from_position(pos))
             end
+
             return
         end
 
-        -- Never potentially hit non-hostiles. If at_target_result is defined,
-        -- we'll be using '.', otherwise we haven't yet reached our target and
-        -- the attack is unusable.
-        if projectile_hits_non_hostile(mons) then
+        -- Never potentially hit non-enemy monsters that are allies, would get
+        -- aggravated, or would cause penance. If at_target_result is defined,
+        -- we'll be using '.', otherwise we abort this target.
+        if mons and not mons:is_enemy()
+                and not mons:is_harmless()
+                and not mons:ignores_player_projectiles() then
             if debug_channel("ranged") then
-                dsay("Aborted target: non-hostile monster at "
-                    .. cell_string_from_position(pos))
+                if at_target_result then
+                    dsay("Using at-target key due to non-enemy monster at "
+                        .. cell_string_from_position(pos))
+                else
+                    dsay("Aborted target: non-enemy monster at "
+                        .. cell_string_from_position(pos))
+                end
             end
+
             return at_target_result
         end
 
-        -- Try to avoid losing ammo to destructive terrain at the end of our
-        -- throw path by using '.'.
+        -- Unless we're hitting our target right now, try to avoid losing ammo
+        -- to destructive terrain at the end of our throw path by using '.'.
         if not hit_target
                 and not attack.is_exploding
                 and attack.uses_ammunition
@@ -236,6 +224,7 @@ function assess_ranged_position(attack, target_pos, second_pos)
                 dsay("Using at-target key due to destructive terrain at "
                     .. pos_string(pos))
             end
+
             return at_target_result
         end
 
@@ -513,6 +502,37 @@ end
 function get_attack(index)
     local attacks = get_attacks()
     return attacks[index]
+end
+
+function have_ranged_target()
+    return turn_memo("have_ranged_target",
+        function()
+            if you.berserk() then
+                return false
+            end
+
+            if have_ranged_weapon() then
+                return get_launcher_target()
+            else
+                return get_throwing_target()
+            end
+        end)
+end
+
+function have_target()
+    if get_primary_target() then
+        return true
+    end
+
+    return get_throwing_target()
+end
+
+function get_ranged_attack()
+    if have_ranged_weapon() then
+        return get_attack(1)
+    end
+
+    return get_throwing_attack()
 end
 
 function make_damage_func(resist, chance, add, damage_mult)

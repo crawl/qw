@@ -23,14 +23,14 @@ function player_has_line_of_fire(target_pos, attack_id)
         attack = get_ranged_attack()
     end
 
+    if position_distance(const.origin, target_pos) > attack.range then
+        return false
+    end
+
     local positions = spells.path(attack.test_spell, target_pos.x,
         target_pos.y, 0, 0, false)
     for i, coords in ipairs(positions) do
         local pos = { x = coords[1], y = coords[2] }
-        if position_distance(pos, const.origin) > attack.range then
-            break
-        end
-
         local hit_target = positions_equal(pos, target_pos)
         local mons = get_monster_at(pos)
         if not attack.is_penetrating
@@ -40,7 +40,9 @@ function player_has_line_of_fire(target_pos, attack_id)
             return false
         end
 
-        if projectile_hits_non_hostile(mons) then
+        if mons and not mons:is_enemy()
+                and not mons:is_harmless()
+                and not mons:ignores_player_projectiles() then
             return false
         end
 

@@ -129,12 +129,20 @@ function attacking_monster_count_at(pos)
     return occupied_positions.size
 end
 
-function can_move_from_position_to(from_pos, to_pos)
-    if not map_is_unexcluded_at(position_sum(qw.map_pos, to_pos))
-            or not is_safe_at(to_pos)
-            or view.withheld(from_pos.x, from_pos.y)
-            or view.withheld(to_pos.x, to_pos.y) then
+function can_retreat_from(from_pos, to_pos)
+    if view.withheld(from_pos.x, from_pos.y) or not is_safe_at(from_pos) then
         return false
+    end
+
+    -- Once we're in the player's los, we start checking for los-related issues
+    -- that prevent movement, such as non-hostile monsters we can't move past
+    -- or attack to get out of our way.
+    if supdist(to_pos) > qw.los_radius then
+        return true
+    end
+
+    if positions_equal(from_pos, const.origin) then
+        return not monster_in_way(to_pos, true)
     end
 
     local mons = get_monster_at(to_pos)
@@ -142,22 +150,9 @@ function can_move_from_position_to(from_pos, to_pos)
         return true
     end
 
-    if positions_equal(from_pos, const.origin)
-            and mons:name() == "orb of destruction" then
-        return false
-    end
-
-    local attitude = mons:attitude()
-    if attitude == const.attitude.neutral
-            and mons:attacking_causes_penance() then
-        return false
-    end
-
-    if attitude > const.attitude.neutral then
-        return friendly_can_swap_to(mons, from_pos)
-    end
-
-    return true
+    return mons:attitude() > const.attitude.neutral
+            and friendly_can_swap_to(mons, from_pos)
+        or not mons:attacking_causes_penance()
 end
 
 function reverse_retreat_move_to(to_pos, dist_map)
@@ -174,13 +169,7 @@ function reverse_retreat_move_to(to_pos, dist_map)
         local from_dist = map[from_pos.x][from_pos.y]
         if from_dist
                 and from_dist < to_dist
-                -- Once we're in the player's los, we start checking for
-                -- los-related issues that prevent movement, such as
-                -- non-hostile monsters we can't move past. Hostile monsters
-                -- will be considered by the caller of this function.
-                and (supdist(to_los_pos) > qw.los_radius
-                        or can_move_from_position_to(from_los_pos,
-                            to_los_pos)) then
+                and can_retreat_from(from_los_pos, to_los_pos) then
             local mons = get_monster_at(from_los_pos)
             local has_mons = mons
                 and mons:attitude() < const.attitude.peaceful

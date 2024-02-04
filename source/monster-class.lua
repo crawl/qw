@@ -185,7 +185,7 @@ function Monster:is_immune_vampirism()
         function()
             local holiness = self:holiness()
             return self:is_summoned()
-                or self:is_firewood()
+                or self:is_harmless()
                 or holiness ~= "natural" and holiness ~= "plant"
                 or res_draining() >= 3
         end)
@@ -197,10 +197,6 @@ function Monster:res_holy()
             local holiness = self:holiness()
             return holiness ~= "undead" and holiness ~= "demonic"
         end)
-end
-
-function Monster:is_firewood()
-    return self:property_memo("is_firewood")
 end
 
 function Monster:is_safe()
@@ -215,19 +211,24 @@ function Monster:is_friendly()
 end
 
 function player_can_attack_monster(mons, attack_index)
+    local attack = get_attack(attack_index)
+    if attack.is_melee then
+        return mons:player_can_melee()
+    end
+
     if mons:name() == "orb of destruction"
             or mons:attacking_causes_penance() then
         return false
     end
 
-    if not attack_index then
-        return true
-    end
-
-    if get_attack(attack_index).is_melee then
-        return mons:player_can_melee()
-    else
-        return mons:player_has_line_of_fire(attack_index)
+    if attack.item and attack.item.is_ranged then
+        return not unable_to_shoot()
+            and mons:player_has_line_of_fire(attack_index)
+    elseif attack.uses_ammunition then
+        return not unable_to_throw()
+            and mons:player_has_line_of_fire(attack_index)
+    elseif attack.uses_evoke then
+        return can_zap() and mons:player_has_line_of_fire(attack_index)
     end
 end
 
@@ -271,18 +272,13 @@ function Monster:los_danger()
         end)
 end
 
-function Monster:ignores_player_damage()
-    return self:property_memo("ignores_player_damage",
-        function()
-            return self:holiness() == "plant" and you.god() == "Fedhas"
-                or self:name():find("^elliptic") and you.god() == "Hepliaklqana"
-        end)
-end
-
 function Monster:ignores_player_projectiles()
     return self:property_memo("ignores_player_projectiles",
         function()
-            return self:name() == "bush" or self:ignores_player_damage()
+            return self:name() == "bush"
+                or self:name() == "orb of destruction"
+                or self:holiness() == "plant" and you.god() == "Fedhas"
+                or self:name():find("^elliptic") and you.god() == "Hepliaklqana"
         end)
 end
 
@@ -398,15 +394,29 @@ function Monster:is_ranged(ignore_reach)
         end, ignore_reach)
 end
 
+function Monster:is_harmless()
+    return self:property_memo("is_harmless",
+        function()
+            return self.minfo:is_firewood() or self:name() == "butterfly"
+        end)
+end
+
 -- Whether we'd ever want to attack this monster, and hence whether it'll be
 -- put in the enemy list.
 function Monster:is_enemy()
     return self:property_memo("is_enemy",
         function()
-            return self:attitude() < const.attitude.neutral
-                and not self:is_firewood()
-                and self:name() ~= "butterfly"
-                and self:name() ~= "orb of destruction"
+            if self:is_harmless() then
+                return false
+            end
+
+            if self:name() == "orb of destruction" then
+                return false
+            end
+
+            local attitude = self:attitude()
+            return attitude < const.attitude.neutral
+                or attitude == const.attitude.neutral and self:is("frenzied")
         end)
 end
 

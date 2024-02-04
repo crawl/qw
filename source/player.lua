@@ -544,6 +544,12 @@ function unable_to_throw()
 end
 
 function player_can_melee_mons(mons)
+    if mons:name() == "orb of destruction"
+            or mons:attacking_causes_penance()
+            or unable_to_melee() then
+        return false
+    end
+
     local range = reach_range()
     local dist = mons:distance()
     if range == 2 then
@@ -582,17 +588,6 @@ end
 -- Currently we only use this to disallow attacking when in an exclusion.
 function dangerous_to_attack()
     return not map_is_unexcluded_at(qw.map_pos)
-end
-
-function have_ranged_target()
-    return turn_memo("have_ranged_target",
-        function()
-            if have_ranged_weapon() then
-                return get_launcher_target()
-            else
-                return get_throwing_target()
-            end
-        end)
 end
 
 function want_to_be_surrounded()

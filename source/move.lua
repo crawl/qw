@@ -1,11 +1,11 @@
 ----------------------
 -- General movement calculations
 
-function can_move_to(pos, ignore_hostiles)
+function can_move_to(pos, allow_hostiles)
     return is_traversable_at(pos)
         and not view.withheld(pos.x, pos.y)
         and (supdist(pos) > qw.los_radius
-            or not monster_in_way(pos, ignore_hostiles))
+            or not monster_in_way(pos, allow_hostiles))
 end
 
 function traversal_function(assume_flight)
@@ -24,7 +24,7 @@ end
 function tab_function(assume_flight)
     return function(pos)
         local mons = get_monster_at(pos)
-        if mons and not mons:is_firewood() then
+        if mons and not mons:is_harmless() then
             return false
         end
 
@@ -46,22 +46,18 @@ function friendly_can_swap_to(mons, pos)
 end
 
 -- Should only be called for adjacent squares.
-function monster_in_way(pos, ignore_hostiles)
+function monster_in_way(pos, allow_hostiles)
     local mons = get_monster_at(pos)
     if not mons then
         return false
     end
 
-    local attitude = mons:attitude()
-    return mons:name() == "orb of destruction"
-        or not ignore_hostiles and attitude == const.attitude.hostile
-        -- Attacking neutrals causes penance under the good gods.
-        or attitude == const.attitude.neutral
-            and mons:attacking_causes_penance()
-        -- Strict neutral and up will swap with us, but we have to check that
-        -- they can. We assume we never want to attack these.
-        or mons:attitude() > const.attitude.neutral
+    -- Strict neutral and up will swap with us, but we have to check that
+    -- they can. We assume we never want to attack these.
+    return mons:attitude() > const.attitude.neutral
             and not friendly_can_swap_to(mons, const.origin)
+        or not allow_hostiles
+        or not mons:player_can_attack(1)
 end
 
 function get_move_closer(pos)
@@ -433,7 +429,7 @@ function update_move_destination()
     local clear = false
     if qw.move_reason == "goal" and qw.want_goal_update then
         clear = true
-    elseif qw.move_reason == "monster" and qw.danger_in_los then
+    elseif qw.move_reason == "monster" and have_target() then
         clear = true
     elseif positions_equal(qw.map_pos, qw.move_destination) then
         if qw.move_reason == "unexplored"
@@ -462,13 +458,12 @@ function update_move_destination()
 end
 
 function move_to(pos)
-    local mons_in_way = monster_in_way(pos)
-    if mons_in_way and not get_monster_at(pos):player_can_attack() then
-        return false
-    end
-
-    if mons_in_way and have_ranged_weapon() and not unable_to_shoot() then
-        return shoot_launcher(pos)
+    if monster_in_way(pos, true) then
+        if get_monster_at(pos):player_can_attack(1) then
+            return shoot_launcher(pos)
+        else
+            return false
+        end
     end
 
     magic(delta_to_vi(pos) .. "YY")
