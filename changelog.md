@@ -1,8 +1,95 @@
 # Changelog
 
-## 0.3-a
+## 0.3.0 (2024-02-11)
 
-This version supports DCSS 0.31-a.
+This version supports DCSS 0.31.
+
+### Release Highlights
+
+* Retreating tactics for characters using launchers.
+* Greatly improved threat assessment.
+* Attack comparison that lets qw use throwing or wands for nasty monsters.
+
+### Backgrounds and Species
+* Support for Djinni and using HP as MP.
+
+### Configuration and Performance
+* Scripts to run qw locally:
+  - The util/run-qw.sh script runs qw for a given number of iterations,
+    optionally keeping track of completed games.
+  - This script will back up the save and c\_persist files if it sees that a
+    crawl run did not remove its save file.
+  - The util/batch-qw.sh script runs instances of run-qw.sh in parallel via
+    tmux, passing through command-line arguments as necessary.
+* A `Save` goal for testing that saves and quits. Upon resumption of the game,
+  qw considers this goal complete.
+* A `Quit` goal that can be used for testing.
+
+### Debug
+* `toggle_single_step()` enables/disables automatic mode.
+* `toggle_delay()` enables/disables the delay between actions.
+* `get_qw()` becomes `get_vars()`, which now returns both the `qw` and `const`
+  tables.
+
+### Exploration and Map
+* Take alternative stairs when threat levels are high at a destination
+  staircase:
+  - Track the total threat levels last seen in LOS for all staircases.
+  - If at least one destination staircase has high threat level, take whichever
+    other staircase has the lowest threat level instead.
+  - Unvisited stairs are considered to have high threat.
+  - Assume very high threat levels for unvisited arrival stairs on Vaults:5.
+  - If a destination staircase has very high threat levels, take a down-hatch
+    to the level instead when one is available.
+  - If no hatch is available when all destination staircases have very high
+    threat levels, read teleport before taking one of the stairs.
+* Exploration for and movement to the Abyssal rune is greatly improved:
+  - Move towards a reachable position that's both adjacent to unexplored areas
+    and as close as possible to the runelight/rune.
+  - Always move towards positions related to the Abyssal rune goal if we're at
+    least 75% HP.
+* A plan for distance-mapped movement towards runes to cover cases when those
+  are blocked by plants, clouds, or traps.
+* Traps are considered traversable, but we try to avoid moving onto them when
+  possible.
+
+### Items and Equipment
+* Use of the following wands for individual high threat monsters: acid,
+  iceblast, light, mindburst, paralysis, and quicksilver.
+* Use of might and haste potions based on threat.
+* Use Fragile equipment. qw gives Fragile items the lowest min rating, but
+  doesn't penalize current or max rating. It will unequip/destroy Fragile items
+  when an upgrade is found, but never temporarily swap Fragile weapons.
+* Evaluate Okawaru's capstone gifts similar to how we evaluate acquirement
+  items. For armour, pick the item giving the biggest increase in utility
+  compared to what's currently in the slot.
+* Increase valuation of the penetration launcher ego (based on results seen
+  with Stormbow).
+* Evaluation for the Dreamshard Necklace.
+* Pick up gems we happen to find.
+
+### Strategy and Tactics
+* Retreating for characters using launchers. Evaluate nearby retreat squares
+  based on how many monsters could melee qw at that position compared to our
+  current position. Retreat distance and number of non-reaching ranged monsters
+  are also weighed when considering a potential retreat position.
+* Improved threat assessment.
+  - Monsters are evaluated based on threat level, with usage of buffs such as
+    Finesse, Heroism, Berserk, Might, and Haste being based on the cumulative
+    threat in los and on individual monsters having high threat.
+  - Attempt to flee to upstairs if threat levels are extremely high and we
+    can't find a retreat position where two of fewer monsters can melee us. If
+    we can't flee in this situation, read teleport.
+* Treat certain monsters such as moths of wrath, glass eyes, and hellions as
+  threats that should receive targeting priority over the default
+  considerations like distance and threat level.
+* Attempt to flee or teleport when in bad forms when no potions of cancellation
+  are available.
+* Track item identification and try to emergency quaff unided potions/read
+  unided scrolls when we need to heal wounds or teleport and those items aren't
+  identified yet.
+* Add enemy monsters crawl currently considers as "safe" to the enemy list so
+  we can attack them from safety.
 
 ## 0.2.0 (2023-06-16)
 
