@@ -182,7 +182,7 @@ autopickup_exceptions =
 : COROUTINE_THROTTLE = true
 
 # Tell qw how much memory it has available in megabytes.
-: MAX_MEMORY = 32
+: MAX_MEMORY = 96
 
 # qw will halt execution if it uses more than this percentage of the above max
 # memory.
