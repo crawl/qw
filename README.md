@@ -24,8 +24,13 @@ doc](docs/debugging.md) for help with debugging.
 
 ## Running qw
 
-To run qw, you'll need a local trunk build of crawl, or your own crawl WebTiles
-server with this build availabe.
+To run qw, you'll need a local build of crawl, or your own crawl WebTiles or
+dgamelaunch server with an appropriate build available. qw needs substantially
+more memory than the 16MB clua limit. Additionally,
+because qw is computationally demanding even with an action delay, it needs to
+run without the lua throttle enabled. For local play, the recommended arguments
+are `-lua-max-memory 96`, and if you're running qw through a WebTiles or
+dgamelaunch server via a DGL build of crawl, you'll also need `-no-throttle`.
 
 ### Setting up an rcfile
 
@@ -37,7 +42,8 @@ files in one of two ways.
 
 #### Method 1: lua include file (recommended)
 
-This puts all source lua into a single `qw.lua` file that gets included into the rcfile via an `include` statement.
+This puts all source lua into a single `qw.lua` file that gets included into
+the rcfile via an `include` statement.
 
 Steps:
 * Run `make-qw.sh` to create `qw.lua`.
@@ -47,7 +53,7 @@ Steps:
   ```
 * To run qw locally use a command like:
   ```bash
-  ./crawl -lua-max-memory 32 -rc /path/to/qw/qw.rc -rcdir /path/to/qw
+  ./crawl -lua-max-memory 96 -rc /path/to/qw/qw.rc -rcdir /path/to/qw
   ```
   The `-rcdir` option is necessary for crawl to find qw.lua.
 
@@ -66,10 +72,10 @@ a single account.
 
 Steps:
 * Run `make-qw.sh -r qw.rc` to inline all lua directly into the contents of
-  `qw.rc`, saving the results in `qw-final.rc`.
+  `qw.rc` and saving the results in a new file (`qw-final.rc` by default).
 * To run qw locally use a command like:
   ```bash
-  ./crawl -lua-max-memory 32 -rc /path/to/qw/qw-final.rc
+  ./crawl -lua-max-memory 96 -rc /path/to/qw/qw-final.rc
   ```
 Note that `make-qw.sh` looks for a marker in `qw.rc` to know where to insert
 the lua. This is `# include = qw.lua` by default.
@@ -91,18 +97,18 @@ servers, so you will need to run your own server. Please don't try to run qw on
 an official server. Misconfigured (or even well-configured) bots can eat up
 server server resources.
 
-Your server needs to start crawl with the arguments `-lua-max-memory 32` and
-`-no-throttle`. For WebTiles, you can add these under the `options` section of
-the game entry. To track games for your instance of qw, you can set up
-[Sequell](https://github.com/crawl/sequell) or the DCSS
+When running your own WebTiles server, you need to add the options mentioned
+above in [Running qw](#running-qw). You can add these under the `options`
+section of the game entry. To track games for your instance of qw, you can set
+up [Sequell](https://github.com/crawl/sequell) or the DCSS
 [scoring](https://github.com/crawl/scoring) scripts.
 
 ## qw Configuration
 
-Most qw variables are straightforward and are described in in comments in
-qw.rc. Some important and more complicated variables are described here. Note
-that lines in qw.rc beginning with `:` define Lua variables and must be valid
-Lua code, otherwise the lines are Crawl options as described in the [options
+qw has a number of variables set directly in its RC and described there in
+comments. Some of the more important variables are described here. Note that
+lines in qw.rc beginning with `:` define Lua variables and must be valid Lua
+code, otherwise the lines are Crawl options as described in the [options
 guide](https://github.com/crawl/crawl/blob/master/crawl-ref/docs/options_guide.txt).
 
 ### Starting and Action Delay
@@ -251,6 +257,12 @@ branch.
 * `Hells`
 
   Do Hell and the 4 Hell branches in random order.
+
+* `Save`
+
+  Save the game and exit. This is useful to have qw reach a certain goal and
+  provide a save and `c_persist` file you can back up for further use in
+  development.
 
 * `Quit`
 
