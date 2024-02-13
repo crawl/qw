@@ -116,9 +116,8 @@ function initialize()
     initialize_rc_variables()
 
     -- We don't want to hit max_memory since that will delete the c_persist
-    -- table. Generally qw only gets clua memory usage above 32MB due to bugs.
-    -- Leave some memory left over so we can avoid deleting c_persist as well
-    -- as reset the coroutine and attempt debugging.
+    -- table. Leave some memory left over so we both avoid this and will be
+    -- able to reset the coroutine, attempt debugging, etc.
     if qw.max_memory and qw.max_memory_percentage then
         set_memory_limit(qw.max_memory * qw.max_memory_percentage / 100)
     end

@@ -4,7 +4,7 @@
 -- Max memory available to clua in megabytes. These defaults are overridden by
 -- the MAX_MEMORY and MAX_MEMORY_PERCENTAGE rc variables, when those are
 -- defined.
-qw.max_memory = 32
+qw.max_memory = 96
 qw.max_memory_percentage = 90
 
 function stop()

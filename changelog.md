@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4-a
+
+### Configuration and Performance
+
+* Use 96MB everywhere as the default clua memory limit.
+
 ## 0.3.0 (2024-02-11)
 
 This version supports DCSS 0.31.
