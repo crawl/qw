@@ -262,7 +262,8 @@ branch.
 
   Save the game and exit. This is useful to have qw reach a certain goal and
   provide a save and `c_persist` file you can back up for further use in
-  development.
+  development. When qw resumes after a `Save` goal, it will move on to the next
+  goal in its goal list.
 
 * `Quit`
 

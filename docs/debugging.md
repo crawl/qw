@@ -34,8 +34,9 @@ This variables should be configured in the qw rc file.
 
 * `SINGLE_STEP`
 
-  Set to `true` to have qw take one action at a time with the *Tab* key by
-  default. Also see the `toggle_single_step()` function.
+  Set to `true` to disable automatic made and have qw take one action at a time
+  with the *Tab* key. You can also toggle this with the `toggle_single_step()`
+  function.
 
 * `WIZMODE_DEATH`
 
@@ -68,6 +69,11 @@ These can be executed from the clua console.
 * `disable_all_debug_channels()`
 
   Disable all debug channels.
+
+* `toggle_delay()`
+
+  Enable or disable the use of the delay as configured in the `DELAY_TIME` RC
+  variable.
 
 * `toggle_throttle()`
 
@@ -128,11 +134,62 @@ These can be executed from the clua console.
   above 180, `∞` is shown. The player and center positions are represented the
   same way as for `print_traversal_map()`.
 
+## Batch runs of qw
+
+The scripts `util/run-qw.sh` and `util/batch-qw.sh` can be used to run qw a
+specific number of times and in parallel. These scripts aren't mature and might
+need modifications to fit your desired setup.
+
+### `run-qw.sh`
+
+Runs qw from the given crawl directory multiple times.
+
+#### Usage:
+```
+run-qw.sh  [-n <num>] [-d <dir>] [-r <file>] [-u <name>] [-t] <dir>
+```
+
+#### Arguments:
+ * `<dir>`: The crawl directory. Must have a binary named `crawl` and any
+   necessary data files given the binary's build.
+ * `-n <num>`: The number of games to play.
+ * `-d <dir>`: The RC directory. Any include statements in the RC file will be
+   relative to this.
+ * `-r <file>`: The RC fileto use.
+ * `-u <name>`: The player name to use.
+ * `-t`:  Create and update the file `<name>.count` with the number of
+   completed games. If the file already exists, resume the completed game count
+   from the number in the file.
+
+### `batch-qw.sh`
+
+Run qw via run-qw.sh in parallel instances from tmux of `run-qw.sh` in the
+given crawl directory.
+
+#### Usage:
+```
+batch-qw.sh [-i <num>] [-n <num>] [-b <name>] [-d <dir>] [-c] <dir>
+```
+
+#### Arguments:
+ * `<dir>`: The crawl directory. Must have a binary named `crawl` and any
+   necessary data files given the binary's build.
+ * `-i <num>`: The instances of `run-qw.sh` to run in parallel.
+ * `-n <num>`: The number of games to play per instance.
+ * `-b <name>`: The base player name to use. The player name for all games in
+   the instance will be `<name><n>`, where `<n>` is the instance number.
+ * `-d <dir>`: The RC directory. Any include statements in the RC file will be
+   relative to this.
+ * `-c`:  Remove any existing logfile, milestones, save, and count files.
+   Useful if you want to reset any statistics for games tracked in a local copy
+   of Sequell.
 
 ## Miscellaneous tips for coding and testing
 
-* You can run qw with the DCSS command-line option -seed <n> to use a seeded
-  RNG for (relatively) reproducible testing.
+* You can run qw with the DCSS command-line option `-seed <n>` or by setting
+  the seed with the `game_seed` RC option. This gives the same generated
+  dungeon every game for more reproducible testing, although combat RNG will
+  still vary.
 
 * qw outputs its version string and current configuration as notes at the start
   of every game. These can be viewed from the in-progress game dump and the

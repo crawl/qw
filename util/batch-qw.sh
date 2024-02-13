@@ -9,12 +9,14 @@ num_games=1
 rc_dir=$(pwd)
 
 read -d '' usage_string <<EOF
-$(basename $0) [-i NUM] [-n NUM] [-b NAME] [-d RC-DIR] [-c] CRAWL-DIR
-Run qw locally in multiple parallel instances
-Default number of instances: $num_instances
-Default number of games: $num_games
-Default base name: $base_name
-Default rc directory: $rc_dir
+$(basename $0) [-i <num>] [-n <num>] [-b <name>] [-d <dir>] [-c] <dir>
+Run qw in parallel instances from tmux using the crawl directory <dir>.
+
+    -i <num>        Number of instances to run. Default: $num_instances
+    -n <num>        Number of games to run for each instance. Default: $num_games
+    -b <name>       Base player name. Default: $base_name
+    -d <dir>        RC directory for any includes. Default: $rc_dir
+    -c              Remove any existing logfile, milestones, save, and count files.
 EOF
 
 while getopts "h?ci:n:b:d:" opt; do

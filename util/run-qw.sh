@@ -9,12 +9,14 @@ rc_file=qw.rc
 track_count=
 
 read -d '' usage_string <<EOF
-$(basename $0)  [-n NUM] [-d RC-DIR] [-r RC-FILE] [-u NAME] [-t] CRAWL-DIR
-Run qw locally from a crawl directory
-Default number of games: $num_games
-Default rc directory: $rc_dir
-Default rc file: $rc_file
-Default name: $name
+usage: $(basename $0)  [-n <num>] [-d <dir>] [-r <file>] [-u <name>] [-t] <dir>
+Run qw from the crawl directory <dir>.
+
+    -n <num>        number of games to play. Default: $num_games
+    -d <dir>        RC directory for includes. Default: $rc_dir
+    -r <file>       RC file. Default: $rc_file
+    -u <name>       player name. Default: $name
+    -t              track and resume the number of completed games from a .count file.
 EOF
 
 while getopts "h?n:u:d:r:t" opt; do
