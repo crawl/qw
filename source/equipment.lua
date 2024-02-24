@@ -101,7 +101,7 @@ function weapon_min_delay(weapon)
     -- The maxes used in this function are used to cover cases like Dark Maul
     -- and Sniper, which have high base delays that can't reach the usual min
     -- delays.
-    if contains_string_in(weapon.subtype(), { "crossbow", "arbalest" }) then
+    if contains_string_in(weapon.subtype(), { "crossbow", "arbalest", "cannon" }) then
         return max(10, weapon.delay - 13.5)
     end
 
