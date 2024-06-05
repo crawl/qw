@@ -55,12 +55,12 @@ fi
 tmux new-session -d -s "$base_name"
 
 username=
-count=1
-while [ $count -le $num_instances ]
+count=0
+while [ $count -lt $num_instances ]
 do
     username="${base_name}$count"
 
-    if [ $count -eq 1 ] ; then
+    if [ $count -eq 0 ] ; then
         tmux rename-window "$username"
     else
         tmux new-window -a -t "$base_name" -n "$username"
