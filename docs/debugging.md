@@ -89,8 +89,8 @@ These can be executed from the clua console.
 
 * `get_vars()`
 
-  Get local tables that contain internal qw information. This returns the below
-  tables in order:
+  Get local tables that contain internal qw information. This returns the
+  following tables in order:
 
   1. `qw`: qw state information. Currently most state resides in inaccessible
      local variables, but in the future these will all be moved into the `qw`
