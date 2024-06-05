@@ -273,7 +273,6 @@ function determine_goal()
     local old_status = goal_status
     local status = chosen_goal
     local goal = status
-    local desc
 
     if status == "Save" then
         goal_status = status
@@ -299,6 +298,7 @@ function determine_goal()
 
     -- Once we have the rune for this branch, this goal will be complete.
     -- Until then, we're diving to and exploring the branch end.
+    local desc
     if status:find("^Rune:") then
         local branch = goal_rune_branch(status)
         goal = make_level(branch, branch_rune_depth(branch))
@@ -321,6 +321,7 @@ function determine_goal()
                 and not explored_level_range("Temple") then
             status = "Temple"
             goal = "Temple"
+            desc = "Temple"
         elseif #found > 0 then
             if not c_persist.chosen_god then
                 c_persist.chosen_god = found[crawl.roll_dice(1, #found)]
@@ -347,6 +348,7 @@ function determine_goal()
     if portal then
         status = portal
         goal = portal
+        desc = portal
     end
 
     -- Make sure we respect Vaults locking when we don't have the rune.
