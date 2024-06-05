@@ -465,7 +465,12 @@ function goals_future_gods()
         return {}
     end
 
+    local options = god_options()
     local gods = {}
+    if not util.contains(options, you.god()) then
+        gods = util.copy_table(options)
+    end
+
     for i = which_goal, #goal_list do
         local plan = goal_list[i]
         local plan_god = goal_god(plan)
