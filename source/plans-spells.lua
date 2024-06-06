@@ -3,8 +3,8 @@ function get_starting_spell()
         return
     end
 
-    local spell_list = { "Beastly Appendage", "Foxfire", "Freeze", "Magic Dart",
-        "Necrotise", "Sandblast", "Shock", "Sting", "Summon Small Mammal" }
+    local spell_list = { "Foxfire", "Freeze", "Magic Dart", "Necrotise", "Sandblast",
+        "Shock", "Sting", "Summon Small Mammal" }
     for _, sp in ipairs(spell_list) do
         if spells.memorised(sp) and spells.fail(sp) <= 25 then
             return sp
@@ -64,7 +64,7 @@ function distance_to_tabbable_enemy()
 end
 
 function plan_starting_spell()
-    if not starting_spell or not spell_castable(starting_spell) then
+    if not qw.starting_spell or not spell_castable(qw.starting_spell) then
         return false
     end
 
@@ -75,15 +75,16 @@ function plan_starting_spell()
             return false
         end
     end
-    if dist > spell_range(starting_spell) then
+
+    if dist > spell_range(qw.starting_spell) then
         return false
     end
 
-    say("CASTING " .. starting_spell)
-    if spells.range(starting_spell) > 0 then
-        magic("z" .. spells.letter(starting_spell) .. "f")
+    say("CASTING " .. qw.starting_spell)
+    if spells.range(qw.starting_spell) > 0 then
+        magic("z" .. spells.letter(qw.starting_spell) .. "f")
     else
-        magic("z" .. spells.letter(starting_spell))
+        magic("z" .. spells.letter(qw.starting_spell))
     end
     return true
 end

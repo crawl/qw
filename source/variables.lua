@@ -129,5 +129,3 @@ local swamp_rune_reachable = false
 local last_min_delay_skill = 18
 
 local only_linear_resists = false
-
-local starting_spell

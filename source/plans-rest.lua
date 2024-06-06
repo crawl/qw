@@ -53,7 +53,7 @@ end
 -- include some things in should_rest() because they are not clearly good to
 -- wait out with monsters around.
 function reason_to_rest(percentage)
-    if starting_spell or god_uses_mp() then
+    if qw.starting_spell or god_uses_mp() then
         local mp, mmp = you.mp()
         if mp < mmp then
             return true

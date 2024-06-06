@@ -157,7 +157,7 @@ function want_to_flee()
 
     return not buffed()
         and reason_to_rest(90)
-        and starting_spell ~= "Summon Small Mammal"
+        and qw.starting_spell ~= "Summon Small Mammal"
 end
 
 function will_flee()

@@ -160,7 +160,7 @@ function initialize()
     initialize_monster_map()
 
     initialize_goals()
-    starting_spell = get_starting_spell()
+    qw.starting_spell = get_starting_spell()
 
     set_options()
 
