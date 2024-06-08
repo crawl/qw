@@ -60,8 +60,10 @@ function initialize_c_persist()
 end
 
 function initialize_rc_variables()
-    qw.max_memory = MAX_MEMORY
-    qw.max_memory_percentage = MAX_MEMORY_PERCENTAGE
+    if MAX_MEMORY then
+        qw.max_memory = MAX_MEMORY * 1024
+    end
+
     qw.coroutine_throttle = COROUTINE_THROTTLE
 
     qw.delayed = DELAYED
@@ -116,13 +118,6 @@ function initialize()
     qw.version = "%VERSION%"
 
     initialize_rc_variables()
-
-    -- We don't want to hit max_memory since that will delete the c_persist
-    -- table. Leave some memory left over so we both avoid this and will be
-    -- able to reset the coroutine, attempt debugging, etc.
-    if qw.max_memory and qw.max_memory_percentage then
-        set_memory_limit(qw.max_memory * qw.max_memory_percentage / 100)
-    end
 
     initialize_debug()
     initialize_const()

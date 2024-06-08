@@ -181,12 +181,13 @@ autopickup_exceptions =
 # high memory usage.
 : COROUTINE_THROTTLE = true
 
-# Tell qw how much memory it has available in megabytes.
-: MAX_MEMORY = 96
-
-# qw will halt execution if it uses more than this percentage of the above max
-# memory.
-: MAX_MEMORY_PERCENTAGE = 90
+# How much memory in megabytes qw is allowed to use before trying to garbage
+# collect and subsequently terminating if it's still using more than this
+# limit. Note that you muse use the -lua-max-memory crawl command-line option
+# to actually give qw more memory than the default of 16mb. Setting MAX_MEMORY
+# a few mb less than the value used for -lua-max-memory may let you detect and
+# debug memory leaks without losing data in e.g. c_persist.
+: MAX_MEMORY = 120
 
 #################
 ### Debugging ###

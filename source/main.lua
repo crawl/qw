@@ -1,12 +1,6 @@
 ---------------------------------------------
 -- ready function and main coroutine
 
--- Max memory available to clua in megabytes. These defaults are overridden by
--- the MAX_MEMORY and MAX_MEMORY_PERCENTAGE rc variables, when those are
--- defined.
-qw.max_memory = 96
-qw.max_memory_percentage = 90
-
 function stop()
     qw.automatic = false
     unset_options()
@@ -116,12 +110,12 @@ function run_qw()
         dsay("Memory count is " .. tostring(memory_count))
     end
 
-    if qw.memory_limit and memory_count > qw.memory_limit then
+    if qw.max_memory and memory_count > qw.max_memory then
         collectgarbage("collect")
 
-        if collectgarbage("count") > qw.memory_limit then
+        if collectgarbage("count") > qw.max_memory then
             qw.abort = true
-            dsay("Memory usage above " .. tostring(qw.memory_limit))
+            dsay("Memory usage above " .. tostring(qw.max_memory))
             dsay("Aborting...")
             return
         end
@@ -140,8 +134,4 @@ end
 
 function hit_closest()
     startstop()
-end
-
-function set_memory_limit(limit_mb)
-    qw.memory_limit = math.floor(limit_mb * 1024)
 end

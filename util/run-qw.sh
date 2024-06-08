@@ -71,7 +71,7 @@ do
 
     echo "Running iteration $count"
 
-    ./crawl -lua-max-memory 96 -no-throttle -wizard -name "$name" \
+    ./crawl -lua-max-memory 128 -no-throttle -wizard -name "$name" \
         -morgue "$crawl_dir/morgue/$name" -rcdir "$rc_dir" -rc "$rc_file"
 
     # We ended without finishing our current game, so back up save and

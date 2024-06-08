@@ -29,7 +29,7 @@ dgamelaunch server with an appropriate build available. qw needs substantially
 more memory than the 16MB clua limit. Additionally,
 because qw is computationally demanding even with an action delay, it needs to
 run without the lua throttle enabled. For local play, the recommended arguments
-are `-lua-max-memory 96`, and if you're running qw through a WebTiles or
+are `-lua-max-memory 128`, and if you're running qw through a WebTiles or
 dgamelaunch server via a DGL build of crawl, you'll also need `-no-throttle`.
 
 ### Setting up an rcfile
@@ -53,7 +53,7 @@ Steps:
   ```
 * To run qw locally use a command like:
   ```bash
-  ./crawl -lua-max-memory 96 -rc /path/to/qw/qw.rc -rcdir /path/to/qw
+  ./crawl -lua-max-memory 128 -rc /path/to/qw/qw.rc -rcdir /path/to/qw
   ```
   The `-rcdir` option is necessary for crawl to find qw.lua.
 
@@ -75,7 +75,7 @@ Steps:
   `qw.rc` and saving the results in a new file (`qw-final.rc` by default).
 * To run qw locally use a command like:
   ```bash
-  ./crawl -lua-max-memory 96 -rc /path/to/qw/qw-final.rc
+  ./crawl -lua-max-memory 128 -rc /path/to/qw/qw-final.rc
   ```
 Note that `make-qw.sh` looks for a marker in `qw.rc` to know where to insert
 the lua. This is `# include = qw.lua` by default.

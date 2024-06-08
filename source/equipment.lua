@@ -269,7 +269,7 @@ end
 function armour_evp()
     local armour = get_slot_item("body", true)
     if armour then
-        return body_armour.encumbrance
+        return armour.encumbrance
     else
         return 0
     end
@@ -277,7 +277,7 @@ end
 
 function base_ac()
     local ac = 0
-    for slot, item in equipped_slots_iter(const.armour_slots) do
+    for slot, item in equipped_slots_iter(const.armour_slots, true) do
         if slot ~= "shield" then
             ac = ac + item.ac
         end
