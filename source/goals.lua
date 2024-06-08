@@ -825,6 +825,8 @@ function initialize_goals()
 end
 
 function update_goal()
+    local last_goal_branch = goal_branch
+
     update_expired_portals()
     update_permanent_flight()
 
@@ -834,6 +836,11 @@ function update_goal()
 
     open_runed_doors = branch_is_temporary(where_branch)
         or goal_travel.open_runed_doors
+
+    -- The branch we're planning to visit can affect equipment decisions.
+    if last_goal_branch ~= goal_branch then
+        reset_best_equip()
+    end
 
     qw.want_goal_update = false
 end

@@ -39,94 +39,48 @@ function teleport()
     return read_scroll_by_name("teleportation")
 end
 
-function zap_item(item, pos, aim_at_target)
-    local cur_quiver = items.fired_item()
-    local name = item.name()
-    if not cur_quiver or name ~= cur_quiver.name() then
-        magic("Q*" .. item_letter(item))
-        qw.do_dummy_action = false
-        coroutine.yield()
+function dangerous_hydra_distance()
+    if you.xl() >= 18 or hydra_melee_value() > 0 then
+        return
     end
 
-    say("ZAPPING " .. name .. " at " .. cell_string_from_position(pos) .. ".")
-    magic("fr" .. vector_move(pos) .. (aim_at_target and "." or "\r"))
-    -- Currently broken when no monsters are available for autotargeting.
-    -- return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
+    for _, enemy in ipairs(qw.enemy_list) do
+        if enemy:is_real_hydra() then
+            return enemy:distance()
+        end
+    end
+end
+
+function best_hydra_swap_weapon()
+    local best_weapon, best_value
+    local cur_weapons = inventory_equip(const.inventory.equipped).weapon
+    for weapon in inventory_slot_iter("weapon") do
+        if equip_letter_for_item(weapon, "weapon") then
+            local value = equip_value(weapon, true, cur_weapons, "hydra")
+            if value > 0 and (not best_value or value > best_value) then
+                best_weapon = weapon
+                best_value = value
+            end
+        end
+    end
+    return best_weapon
 end
 
 function plan_wield_weapon()
-    local weap = get_weapon()
-    if is_weapon(weap)
-            or weapon_skill() == "Unarmed Combat"
-            or you.berserk()
-            or transformed() then
+    if unable_to_swap_weapons() then
         return false
     end
 
-    for it in inventory() do
-        if it and it.class(true) == "weapon" then
-            if should_equip(it) then
-                say("Wielding weapon " .. it.name() .. ".")
-                magic("w" .. item_letter(it) .. "YY")
-                -- this might have a 0-turn fail because of unIDed holy
-                return nil
-            end
+    local hydra_dist = dangerous_hydra_distance()
+    if hydra_dist and hydra_dist <= 2 then
+        return equip_item(best_hydra_swap_weapon(), "weapon")
+    end
+
+    local best_equip = best_equip_set()
+    for weapon in equip_set_slot_iter(best_equip, "weapon") do
+        if equip_item(weapon, "weapon", best_equip) then
+            return true
         end
-    end
-    if weap and not is_melee_weapon(weap) then
-        magic("w-")
-        return true
-    end
-
-    return false
-end
-
-function plan_swap_weapon()
-    local weapon = get_weapon()
-    if you.race() == "Troll"
-            or you.berserk()
-            or transformed()
-            or not weapon then
-        return false
-    end
-
-    local sit
-    local enemy_dist = qw.los_radius
-    for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:distance() <= 2 and string.find(enemy:desc(), "hydra") then
-            sit = "hydra"
-            break
-        end
-    end
-
-    local twohands = true
-    if items.equipped_at("Shield") and you.race() ~= "Formicid" then
-        twohands = false
-    end
-
-    local it_old = get_weapon()
-    local swappable = can_swap(it_old)
-    if not swappable then
-        return false
-    end
-
-    local max_val = weapon_value(it_old, true, it_old, sit)
-    local max_it
-    for it in inventory() do
-        if it and it.class(true) == "weapon" and not it.equipped then
-            if twohands or it.hands < 2 then
-                local val2 = weapon_value(it, true, it_old, sit)
-                if val2 > max_val then
-                    max_val = val2
-                    max_it = it
-                end
-            end
-        end
-    end
-    if max_it then
-        say("SWAPPING to " .. max_it.name() .. ".")
-        magic("w" .. item_letter(max_it) .. "YY")
-        return true
     end
 
     return false
@@ -140,19 +94,18 @@ function plan_bless_weapon()
         return false
     end
 
-    local bestv = -1
-    local minv, maxv, bestletter
-    for it in inventory() do
-        if equip_slot(it) == "Weapon" then
-            minv, maxv = equip_value(it, true, nil, "bless")
-            if minv > bestv then
-                bestv = minv
-                bestletter = item_letter(it)
-            end
+    local cur_equip = inventory_equip(const.inventory.equipped)
+    local best_weapon, best_value
+    for weapon in inventory_slot_iter("weapon") do
+        local value = equip_value(weapon, true, cur_equip, "bless")
+        if value > 0 and (not best_value or value > best_value) then
+            best_weapon = item
+            best_value = value
         end
     end
-    if bestv > 0 then
-        use_ability("Brand Weapon With Holy Wrath", bestletter .. "Y")
+
+    if best_weapon then
+        use_ability("Brand Weapon With Holy Wrath", item_letter(best_weapon))
         return true
     end
 
@@ -177,6 +130,12 @@ end
 
 function can_read_acquirement()
     return find_item("scroll", "acquirement") and can_read()
+end
+
+function can_invent_gizmo()
+    return not c_persist.invented_gizmo
+        and you.xl() >= 14
+        and contains_string_in("Invent Gizmo", you.abilities())
 end
 
 function plan_move_for_acquirement()
@@ -207,11 +166,7 @@ end
 function plan_receive_okawaru_weapon()
     if qw.danger_in_los
             or not qw.position_is_safe
-            or c_persist.okawaru_weapon_gifted
-            or you.god() ~= "Okawaru"
-            or you.piety_rank() < 6
-            or not contains_string_in("Receive Weapon", you.abilities())
-            or not can_invoke() then
+            or not can_receive_okawaru_weapon() then
         return false
     end
 
@@ -226,11 +181,7 @@ end
 function plan_receive_okawaru_armour()
     if qw.danger_in_los
             or not qw.position_is_safe
-            or c_persist.okawaru_armour_gifted
-            or you.god() ~= "Okawaru"
-            or you.piety_rank() < 6
-            or not contains_string_in("Receive Armour", you.abilities())
-            or not can_invoke() then
+            or not can_receive_okawaru_armour() then
         return false
     end
 
@@ -242,10 +193,25 @@ function plan_receive_okawaru_armour()
     return false
 end
 
+function plan_invent_gizmo()
+    if qw.danger_in_los
+            or not qw.position_is_safe
+            or not can_invent_gizmo() then
+        return false
+    end
+
+    if use_ability("Invent Gizmo") then
+        c_persist.invented_gizmo = true
+        return true
+    end
+
+    return false
+end
+
 function plan_maybe_pickup_acquirement()
-    if acquirement_pickup then
+    if qw.acquirement_pickup then
         magic(",")
-        acquirement_pickup = false
+        qw.acquirement_pickup = false
         return true
     end
 
@@ -253,312 +219,128 @@ function plan_maybe_pickup_acquirement()
 end
 
 function plan_upgrade_weapon()
-    if acquirement_class == "Weapon" then
-        acquirement_class = nil
-    end
-
-    if you.race() == "Troll" then
+    if unable_to_wield_weapon() or you.race() == "Troll" then
         return false
     end
 
-    local twohands = not items.equipped_at("Shield")
-        or you.race() == "Formicid"
-    local it_old = get_weapon()
-    swappable = can_swap(it_old, true)
-    for it in inventory() do
-        if it and it.class(true) == "weapon" and not it.equipped then
-            if should_upgrade(it, it_old)
-                    and swappable
-                    and (twohands or it.hands < 2) then
-                say("UPGRADING to " .. it.name() .. ".")
-                magic("w" .. item_letter(it) .. "YY")
-                return true
-            elseif should_drop(it) then
-                say("DROPPING " .. it.name() .. ".")
-                magic("d" .. item_letter(it) .. "\r")
-                return true
-            end
-        end
-    end
-
-    return false
-end
-
-function plan_remove_terrible_jewellery()
-    if you.berserk() or transformed() then
-        return false
-    end
-    for it in inventory() do
-        if it and it.equipped and it.class(true) == "jewellery"
-                    and not it.cursed
-                    and should_remove(it) then
-            say("REMOVING " .. it.name() .. ".")
-            magic("P" .. item_letter(it) .. "YY")
+    local best_equip = best_equip_set()
+    for weapon in equip_set_slot_iter(best_equip, "weapon") do
+        if equip_item(weapon, "weapon", best_equip) then
             return true
         end
     end
+
     return false
 end
 
-function plan_maybe_upgrade_amulet()
-    if acquirement_class ~= "Amulet" then
+function plan_remove_shield()
+    if you.race() == "Felid" then
         return false
     end
 
-    acquirement_class = nil
-    return plan_upgrade_amulet()
-end
-
-function plan_upgrade_amulet()
-    if qw.danger_in_los or not qw.position_is_safe then
-        return false
-    end
-
-    local it_old = items.equipped_at("Amulet")
-    swappable = can_swap(it_old, true)
-    for it in inventory() do
-        if it and equip_slot(it) == "Amulet" and not it.equipped then
-            local equip = false
-            local drop = false
-            if should_upgrade(it, it_old) then
-                equip = true
-            elseif should_drop(it) then
-                drop = true
-            end
-            if equip and swappable then
-                say("UPGRADING to " .. it.name() .. ".")
-                magic("P" .. item_letter(it) .. "YY")
-                return true
-            end
-            if drop then
-                say("DROPPING " .. it.name() .. ".")
-                magic("d" .. item_letter(it) .. "\r")
-                return true
-            end
-        end
-    end
-    return false
-end
-
-function plan_maybe_upgrade_rings()
-    if acquirement_class ~= "Ring" then
-        return false
-    end
-
-    acquirement_class = nil
-    return plan_upgrade_rings()
-end
-
-function plan_upgrade_rings()
-    if qw.danger_in_los or not qw.position_is_safe then
-        return false
-    end
-
-    local it_rings = ring_list()
-    local empty = empty_ring_slots() > 0
-    for it in inventory() do
-        if it and equip_slot(it) == "Ring" and not it.equipped then
-            local equip = false
-            local drop = false
-            local swap
-            if empty then
-                if should_equip(it) then
-                    equip = true
-                end
-            else
-                for _, it_old in ipairs(it_rings) do
-                    if not equip
-                            and not it_old.cursed
-                            and should_upgrade(it, it_old) then
-                        equip = true
-                        swap = it_old
-                    end
-                end
-            end
-            if not equip and should_drop(it) then
-                drop = true
-            end
-            if equip then
-                local letter = item_letter(it)
-                say("UPGRADING to " .. it.name() .. ".")
-                if swap then
-                    items.swap_slots(swap.slot, letter_slot('Y'), false)
-
-                    if letter == 'Y' then
-                        letter = item_letter(swap)
-                    end
-                end
-                magic("P" .. letter .. "YY")
-                return true
-            end
-            if drop then
-                say("DROPPING " .. it.name() .. ".")
-                magic("d" .. item_letter(it) .. "\r")
-                return true
-            end
-        end
-    end
-    return false
-end
-
-function plan_maybe_upgrade_armour()
-    local acquire = false
-    if acquirement_class ~= nil then
-        for _, s in pairs(good_slots) do
-            if acquirement_class == s then
-                acquire = true
-                break
-            end
-        end
-    end
-
-    if not upgrade_phase and not acquire then
-        return false
-    end
-
-    if acquire then
-        acquirement_class = nil
-    end
-
-    return plan_upgrade_armour()
-end
-
-function plan_upgrade_armour()
-    if qw.danger_in_los or not qw.position_is_safe then
-        return false
-    end
-
-    for it in inventory() do
-        if it and it.class(true) == "armour" and not it.equipped then
-            local st, _ = it.subtype()
-            local equip = false
-            local drop = false
-            local swappable
-            local it_old = items.equipped_at(good_slots[st])
-            local swappable = can_swap(it_old, true)
-            if should_upgrade(it, it_old) then
-                equip = true
-            elseif should_drop(it) then
-                drop = true
-            end
-
-            if good_slots[st] == "Helmet"
-                   -- Proper helmet items restricted by one level of these
-                   -- muts.
-                   and (it.ac == 1
-                           and (you.mutation("horns") > 0
-                               or you.mutation("beak") > 0
-                               or you.mutation("antennae") > 0)
-                       -- All helmet slot items restricted by level three of
-                       -- these muts.
-                       or you.mutation("horns") >= 3
-                       or you.mutation("antennae") >= 3) then
-                equip = false
-                drop = true
-            elseif good_slots[st] == "Cloak"
-                    and you.mutation("weakness stinger") >= 3 then
-                equip = false
-                drop = true
-            elseif good_slots[st] == "Boots"
-                    and (you.mutation("float") > 0
-                        or you.mutation("talons") >= 3
-                        or you.mutation("hooves") >= 3) then
-                equip = false
-                drop = true
-            elseif good_slots[st] == "Boots"
-                    and you.mutation("mertail") > 0
-                    and (view.feature_at(0, 0) == "shallow_water"
-                        or view.feature_at(0, 0) == "deep_water") then
-                equip = false
-                drop = false
-            elseif good_slots[st] == "Gloves"
-                    and (you.mutation("claws") >= 3
-                        or you.mutation("demonic touch") >= 3) then
-                equip = false
-                drop = true
-            end
-
-            if equip and swappable then
-                say("UPGRADING to " .. it.name() .. ".")
-                magic("W" .. item_letter(it) .. "YN")
-                upgrade_phase = true
-                return true
-            end
-
-            if drop then
-                say("DROPPING " .. it.name() .. ".")
-                magic("d" .. item_letter(it) .. "\r")
-                return true
-            end
-        end
-    end
-    for it in inventory() do
-        if it and it.equipped
-                and it.class(true) == "armour"
-                and not it.cursed
-                and should_remove(it) then
-            say("REMOVING " .. it.name() .. ".")
-            magic("T" .. item_letter(it) .. "YN")
+    local best_equip = best_equip_set()
+    for shield in equipped_slot_iter("shield") do
+        if not item_in_equip_set(shield, best_equip)
+                and unequip_item(shield) then
             return true
         end
     end
+
+    return false
+end
+
+function plan_wear_shield()
+    if you.race() == "Felid" then
+        return false
+    end
+
+    local best_equip = best_equip_set()
+    for shield in equip_set_slot_iter(best_equip, "shield") do
+        if equip_item(shield, "shield", best_equip) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function plan_remove_terrible_rings()
+    if you.berserk()
+            or (you.strength() > 0
+                and you.intelligence() > 0
+                and you.dexterity() > 0) then
+        return false
+    end
+
+    local equip = best_equip_set()
+    local worst_ring, worst_value = equip_set_value_search(equip,
+        function(item)
+            return item.equipped
+                and equip_slot(item) == "ring"
+                and can_swap_item(item, true)
+        end, true)
+    if not worst_ring or worst_value >= 0 then
+        return false
+    end
+
+    say("REMOVING " .. worst_ring.name() .. ".")
+    magic("R" .. item_letter(worst_ring))
+    return true
+end
+
+function plan_upgrade_equipment()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
+    local best_equip = best_equip_set()
+    for slot, item in equip_set_iter(best_equip, const.upgrade_slots) do
+        if equip_item(item, slot, best_equip) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function plan_remove_equipment()
+    if qw.danger_in_los or not qw.position_is_safe then
+        return false
+    end
+
+    local best_equip = best_equip_set()
+    for slot, item in equipped_slots_iter(const.upgrade_slots) do
+        if not item_in_equip_set(item, best_equip)
+                and unequip_item(item, slot) then
+            return true
+        end
+    end
+
     return false
 end
 
 function plan_unwield_weapon()
-    if weapon_skill() ~= "Unarmed Combat"
-           or not items.equipped_at("Weapon") then
-        return false
+    local best_equip = best_equip_set()
+    for weapon in equipped_slot_iter("weapon") do
+        if not item_in_equip_set(weapon, best_equip)
+                and unequip_item(weapon, "weapon") then
+            return true
+        end
     end
 
-    magic("w-")
-    return true
-end
-
-function body_armour_is_great(arm)
-    local name = arm.name()
-    local ap = armour_plan()
-    if ap == "heavy" then
-        return (name:find("gold dragon") or name:find("crystal plate")
-                        or name:find("plate armour of fire")
-                        or name:find("pearl dragon"))
-    elseif ap == "large" then
-        return name:find("dragon scales")
-    elseif ap == "dodgy" then
-        return arm.encumbrance <= 11 and name:find("dragon scales")
-    else
-        return name:find("dragon scales") or name:find("robe of resistance")
-    end
-end
-
-function body_armour_is_good(arm)
-    if in_branch("Zot") then
-        return true
-    end
-
-    local name = arm.name()
-    local ap = armour_plan()
-    if ap == "heavy" then
-        return name:find("plate") or name:find("dragon scales")
-    elseif ap == "large" then
-        return false
-    elseif ap == "dodgy" then
-        return name:find("ring mail") or name:find("robe of resistance")
-    else
-        return name:find("robe of resistance")
-            or name:find("robe of fire resistance")
-            or name:find("troll leather armour")
-    end
+    return false
 end
 
 -- Do we want to keep this brand?
-function brand_is_great(brand)
+function weapon_brand_is_great(weapon)
+    local brand = weapon.ego()
     if brand == "speed"
             or brand == "spectralizing"
-            or brand == "holy wrath" then
+            or brand == "holy wrath"
+                and (undead_or_demon_branch_soon() or future_tso) then
         return true
     -- The best that brand weapon can give us for ranged weapons.
-    elseif brand == "heavy" and use_ranged_weapon() then
+    elseif brand == "heavy" and want_ranged_weapon() then
         return true
     -- The best that brand weapon can give us for melee weapons. No longer as
     -- good once we have the ORB. XXX: Nor if we're only doing undead or demon
@@ -600,21 +382,34 @@ function get_enchantable_weapon(unknown)
         unknown = true
     end
 
-    local weapon = get_weapon()
-    -- Prefer enchanting our wielded weapon.
-    if weapon and weapon.is_enchantable then
-        return weapon
-    end
+    local best_equip = best_equip_set()
+    local slay_value = linear_property_value("Slay")
+    local enchantable_weapon
+    for weapon in inventory_slot_iter("weapon") do
+        if weapon.is_enchantable then
+            local equip = best_inventory_equip(weapon)
+            if equip and equip.value > 0
+                    and (not best_equip
+                        or equip.value + slay_value > best_equip.value) then
+                best_equip = equip
+            end
 
-    if not unknown then
-        return
-    end
-
-    for item in inventory() do
-        if item.class(true) == "weapon" and item.is_enchantable then
-            return item
+            if unknown then
+                enchantable_weapon = weapon
+            end
         end
     end
+
+    if not best_equip then
+        return enchantable_weapon
+    end
+
+    -- Because of Coglins, we want to find the best of what may be two
+    -- enchantable weapons.
+    return equip_set_value_search(best_equip,
+        function(item)
+            return equip_slot(item) == "weapon" and item.is_enchantable
+        end)
 end
 
 function get_brandable_weapon(unknown)
@@ -622,92 +417,127 @@ function get_brandable_weapon(unknown)
         unknown = true
     end
 
-    local weapon = get_weapon()
-    -- Prefer enchanting our wielded weapon.
-    if weapon
-            and not weapon.artefact
-            and not brand_is_great(weapon.ego()) then
-        return weapon
-    end
-
-    if not unknown then
+    local best_equip = best_equip_set()
+    if not best_equip or not best_equip.weapon then
         return
     end
 
-    for item in inventory() do
-        if item.class(true) == "weapon"
+    local best_weapon = equip_set_value_search(best_equip,
+        function(item)
+            return equip_slot(item) == "weapon"
                 and not item.artefact
-                and not brand_is_great(item.ego()) then
-            return item
+                and not weapon_brand_is_great(item)
+        end)
+    if not unknown then
+        return best_weapon
+    end
+
+    best_equip = nil
+    local fallback_weapon
+    for weapon in inventory_slot_iter("weapon") do
+        if not weapon.artefact then
+            fallback_weapon = weapon
+
+            local equip = best_inventory_equip(weapon)
+            if equip and equip.value > 0
+                    and (not best_equip or equip.value > best_equip.value) then
+                best_equip = equip
+            end
         end
+    end
+    if best_equip then
+        return equip_set_value_search(best_equip,
+            function(item)
+                return equip_slot(item) == "weapon"
+                    and not item.artefact
+            end)
+    end
+
+    return fallback_weapon
+end
+
+function body_armour_is_great_to_enchant(armour)
+    local name = armour.name("base")
+    local ap = armour_plan()
+    if ap == "heavy" then
+        return name == "gold dragon scales"
+            or name == "crystal plate armour"
+            or name == "plate armour" and item_property("rF", armour) > 0
+            or name == "pearl dragon scales"
+    elseif ap == "large" then
+        return name:find("dragon scales")
+    elseif ap == "dodgy" then
+        return armour.encumbrance <= 11 and name:find("dragon scales")
+    else
+        return name:find("dragon scales")
+            or name == "robe" and item_property("rF", armour) > 0
     end
 end
 
-function get_enchantable_armour(unknown)
-    if unknown == nil then
-        unknown = true
+function body_armour_is_good_to_enchant(armour)
+    local name = armour.name("base")
+    local ap = armour_plan()
+    if ap == "heavy" then
+        return name == "plate armour" or name:find("dragon scales")
+    elseif ap == "large" then
+        return false
+    elseif ap == "dodgy" then
+        return name == "ring mail"
+            or name == "robe" and armour.ego() == "resistance"
+    else
+        return name == "robe" and item_property("rF", armour) > 0
+            or name == "troll leather armour"
+    end
+end
+
+function get_enchantable_armour(scroll_unknown)
+    if scroll_unknown == nil then
+        scroll_unknown = true
     end
 
-    -- Prefer enchanting body armour if it's of sufficient quality.
-    local body_armour = items.equipped_at("Body Armour")
+    local best_equip = best_equip_set()
+    local ac_value = linear_property_value("AC")
+    local fallback_armour, body_armour
+    local best_armour = equip_set_value_search(best_equip,
+        function(item)
+            if item.class(true) ~= "armour" or not item.is_enchantable then
+                return false
+            end
+
+            local slot = equip_slot(item)
+            return slot ~= "shield"
+                and (slot ~= "body"
+                    or body_armour_is_great_to_enchant(item))
+        end)
+    if best_armour then
+        return best_armour
+    end
+
+    local body_armour
+    if best_equip.body then
+        body_armour = best_equip.body[1]
+    end
     if body_armour
             and body_armour.is_enchantable
-            and body_armour_is_great(body_armour) then
+            and body_armour_is_good_to_enchant(body_armour) then
         return body_armour
     end
 
-    -- This item will not be what we'd prefer to enchant, but we'll use this
-    -- target if we read-id the scroll.
-    for _, slotname in pairs(good_slots) do
-        local armour = items.equipped_at(slotname)
-
-        -- We prefer not to enchant shields, but will use one as a fallback if
-        -- we're using a shield.
-        if unknown
-                and not fallback_armour
-                and slotname == "Shield"
-                and armour
-                and armour.is_enchantable then
-            fallback_armour = armour
-        end
-
-        if armour and armour.is_enchantable
-                and slotname ~= "Body Armour"
-                and slotname ~= "Shield" then
-            -- Prefer not to enchant items with negative enchant.
-            if armour.plus >= 0 then
-                return armour
-            elseif unknown and not fallback_armour then
-                fallback_armour = armour
-            end
-
-            if slotname == "Boots" and armour.name():find("barding") then
-                if armour.plus >= 0 then
-                    return armour
-                elseif unknown and not fallback_armour then
-                    fallback_armour = armour
-                end
-            end
-        end
+    local shield
+    if best_equip.shield then
+        shield = best_equip.shield[1]
     end
-
-    if body_armour
-            and body_armour.is_enchantable
-            and body_armour_is_good(body_armour) then
-        return body_armour
+    if shield and shield.is_enchantable then
+        return shield
     end
 
     if not unknown then
         return
     end
 
-    if fallback_armour then
-        return fallback_armour
-    end
-
-    for item in inventory() do
-        if item.is_enchantable then
-            return item
+    for slot, armour in inventory_slot_iter(const.armour_slots) do
+        if armour.is_enchantable then
+            return armour
         end
     end
 end
@@ -719,33 +549,33 @@ function plan_use_good_consumables()
 
     local read_ok = can_read()
     local drink_ok = can_drink()
-    for it in inventory() do
-        if read_ok and it.class(true) == "scroll" then
-            if it.name():find("acquirement")
+    for item in inventory_iter() do
+        if read_ok and item.class(true) == "scroll" then
+            if item.name():find("acquirement")
                     and not destroys_items_at(const.origin) then
-                read_scroll(it)
+                read_scroll(item)
                 return true
-            elseif it.name():find("enchant weapon")
+            elseif item.name():find("enchant weapon")
                     and get_enchantable_weapon(false) then
-                read_scroll(it)
+                read_scroll(item)
                 return true
-            elseif it.name():find("brand weapon")
+            elseif item.name():find("brand weapon")
                     and get_brandable_weapon(false) then
-                read_scroll(it)
+                read_scroll(item)
                 return true
-            elseif it.name():find("enchant armour")
+            elseif item.name():find("enchant armour")
                     and get_enchantable_armour(false) then
-                read_scroll(it)
+                read_scroll(item)
                 return true
             end
-        elseif drink_ok and it.class(true) == "potion" then
-            if it.name():find("experience") then
-                drink_potion(it)
+        elseif drink_ok and item.class(true) == "potion" then
+            if item.name():find("experience") then
+                drink_potion(item)
                 return true
             end
 
-            if it.name():find("mutation") and want_cure_mutations() then
-                drink_potion(it)
+            if item.name():find("mutation") and want_cure_mutations() then
+                drink_potion(item)
                 return true
             end
         end
@@ -754,19 +584,29 @@ function plan_use_good_consumables()
     return false
 end
 
-function plan_drop_other_items()
+function want_drop_item(item)
+    local class = item.class(true)
+    if class == "missile" and not want_missile(item)
+            or class == "wand" and not want_wand(item)
+            or class == "potion" and not want_potion(item)
+            or class == "scroll" and not want_scroll(item) then
+        return true
+    end
+
+    return equip_slot(item)
+        and equip_is_dominated(item)
+        and (not item.equipped or can_swap_item(item, true))
+end
+
+function plan_drop_items()
     if qw.danger_in_los or not qw.position_is_safe then
         return false
     end
 
-    upgrade_phase = false
-    for it in inventory() do
-        if it.class(true) == "missile" and not want_missile(it)
-                or it.class(true) == "wand" and not want_wand(it)
-                or it.class(true) == "potion" and not want_potion(it)
-                or it.class(true) == "scroll" and not want_scroll(it) then
-            say("DROPPING " .. it.name() .. ".")
-            magic("d" .. item_letter(it) .. "\r")
+    for item in inventory_iter() do
+        if want_drop_item(item) then
+            say("DROPPING " .. item.name() .. ".")
+            magic("d" .. item_letter(item) .. "\r")
             return true
         end
     end
@@ -775,7 +615,7 @@ function plan_drop_other_items()
 end
 
 function quaff_unided_potion(min_quantity)
-    for it in inventory() do
+    for it in inventory_iter() do
         if it.class(true) == "potion"
                 and (not min_quantity or it.quantity >= min_quantity)
                 and not it.fully_identified then
@@ -795,7 +635,7 @@ function plan_quaff_unided_potions()
 end
 
 function read_unided_scroll()
-    for item in inventory() do
+    for item in inventory_iter() do
         if item.class(true) == "scroll" and not item.fully_identified then
             read_scroll(item, ".Y")
             return true
@@ -871,7 +711,7 @@ function plan_shop()
             local wealth = you.gold()
             if price <= wealth then
                 say("BUYING " .. it.name() .. " (" .. price .. " gold).")
-                magic("<//" .. slot_letter(n - 1) .. "\ry")
+                magic("<//" .. items.index_to_letter(n - 1) .. "\ry")
                 return
             -- Should in theory also work in Bazaar, but doesn't make much
             -- sense (since we won't really return or acquire money and travel
@@ -880,12 +720,12 @@ function plan_shop()
                  and not in_branch("Bazaar") and not branch_soon("Zot") then
                 say("SHOPLISTING " .. it.name() .. " (" .. price .. " gold"
                  .. ", have " .. wealth .. ").")
-                magic("<//" .. string.upper(slot_letter(n - 1)))
+                magic("<//" .. string.upper(items.index_to_letter(n - 1)))
                 return
             end
         elseif on_list then
             -- We no longer want the item. Remove it from shopping list.
-            magic("<//" .. string.upper(slot_letter(n - 1)))
+            magic("<//" .. string.upper(items.index_to_letter(n - 1)))
             return
         end
     end
@@ -907,7 +747,7 @@ function plan_shopping_spree()
         return false
     end
 
-    magic("$" .. slot_letter(which_item - 1))
+    magic("$" .. items.index_to_letter(which_item - 1))
     return true
 end
 
@@ -953,140 +793,56 @@ end
 -- These plans will only execute after a successful acquirement.
 function set_plan_acquirement()
     plans.acquirement = cascade {
+        {plan_maybe_pickup_acquirement, "try_pickup_acquirement"},
         {plan_move_for_acquirement, "move_for_acquirement"},
         {plan_receive_okawaru_weapon, "receive_okawaru_weapon"},
         {plan_receive_okawaru_armour, "receive_okawaru_armour"},
-        {plan_maybe_pickup_acquirement, "try_pickup_acquirement"},
-        {plan_maybe_upgrade_armour, "maybe_upgrade_armour"},
-        {plan_maybe_upgrade_amulet, "maybe_upgrade_amulet"},
-        {plan_maybe_upgrade_rings, "maybe_upgrade_rings"},
+        {plan_invent_gizmo, "invent_gizmo"},
     }
 end
 
+function choose_acquirement(acquire_type)
+    local acq_items = items.acquirement_items(acquire_type)
+    local cur_equip = inventory_equip(const.inventory.equipped)
+    for _, item in ipairs(acq_items) do
+        local min_val, max_val = equip_value(item)
+        say("Offered " .. item.name() .. " with min/max values "
+            .. tostring(min_val) .. "/" .. tostring(max_val))
+    end
+
+    local index = best_acquirement_index(acq_items)
+    if index then
+        if acquire_type ~= const.acquire.gizmo then
+            qw.acquirement_pickup = true
+        end
+
+        say("ACQUIRING " .. acq_items[index].name())
+        return index
+    else
+        say("GAVE UP ACQUIRING")
+        return 1
+    end
+end
+
 function c_choose_acquirement()
-    local acq_items = items.acquirement_items(const.acquire.scroll)
-
-    -- These categories should be in order of preference.
-    local wanted = {"weapon", "armour", "jewellery", "gold"}
-    local item_ind = {}
-    for _, c in ipairs(wanted) do
-        item_ind[c] = 0
-    end
-
-    for i, item in ipairs(acq_items) do
-        if debug_channel("items") then
-            dsay("Offered " .. item.name(), true)
-        end
-
-        local class = item.class(true)
-        if item_ind[class] ~= nil then
-            item_ind[class] = i
-        end
-    end
-
-    for _, c in ipairs(wanted) do
-        local ind = item_ind[c]
-        if ind > 0 then
-            local item = acq_items[ind]
-            if autopickup(item, item.name()) then
-                say("ACQUIRING " .. item.name())
-                acquirement_class = equip_slot(item)
-                acquirement_pickup = true
-                return ind
-            end
-        end
-    end
-
-    -- If somehow we didn't find anything, pick the first item and move on.
-    say("GAVE UP ACQUIRING")
-    return 1
+    return choose_acquirement(const.acquire.scroll)
 end
 
 function c_choose_okawaru_weapon()
-    local best_val = -1000
-    local best_ind, best_item
-    local cur_weapon = get_weapon()
-    local acq_items = items.acquirement_items(const.acquire.okawaru_weapon)
-    for i, item in ipairs(acq_items) do
-        local val = equip_value(item, true, cur_weapon)
-
-        if debug_channel("items") then
-            dsay("Offered " .. item.name() .. " with value " .. tostring(val),
-                true)
-        end
-
-        if val > best_val then
-            best_val = val
-            best_ind = i
-            best_item = item
-        end
-    end
-
-    -- If somehow we didn't find anything, pick the first item and move on.
-    if not best_ind then
-        say("GAVE UP ACQUIRING OKAWARU WEAPON")
-        return 1
-    end
-
-    say("ACQUIRING " .. best_item.name())
-    acquirement_class = equip_slot(best_item)
-    acquirement_pickup = true
-    return best_ind
-end
-
-function equip_value_difference(item, cur_vals)
-    local subtype = item.subtype()
-    local cur_item = items.equipped_at(good_slots[subtype])
-    local val = equip_value(item, true, cur_item)
-    if val < 0 then
-        return
-    end
-
-    if not cur_vals[subtype] then
-        local cur_val = 0
-        if cur_item then
-            cur_val = equip_value(cur_item, true, cur_item)
-        end
-        cur_vals[subtype] = cur_val
-    end
-
-    return val - cur_vals[subtype]
+    return choose_acquirement(const.acquire.okawaru_weapon)
 end
 
 function c_choose_okawaru_armour()
-    local cur_vals = {}
-    local best_diff, best_int, best_item
-    local acq_items = items.acquirement_items(const.acquire.okawaru_armour)
-    for i, item in ipairs(acq_items) do
-        local diff = equip_value_difference(item, cur_vals)
+    return choose_acquirement(const.acquire.okawaru_armour)
+end
 
-        if debug_channel("items") then
-            dsay("Offered " .. item.name() .. " with value difference "
-                .. tostring(diff), true)
-        end
-
-        if diff and (not best_diff or diff > best_diff) then
-            best_diff = diff
-            best_ind = i
-            best_item = item
-        end
-    end
-
-    -- If somehow we didn't find anything, pick the first item and move on.
-    if not best_ind then
-        say("GAVE UP ACQUIRING OKAWARU ARMOUR")
-        return 1
-    end
-
-    say("ACQUIRING " .. best_item.name())
-    acquirement_class = equip_slot(best_item)
-    acquirement_pickup = true
-    return best_ind
+function c_choose_coglin_gizmo()
+    return choose_acquirement(const.acquire.gizmo)
 end
 
 function get_unidentified_item()
     local id_item
-    for item in inventory() do
+    for item in inventory_iter() do
         if item.class(true) == "potion"
                 and not item.fully_identified
                 -- Prefer identifying potions over scrolls and prefer

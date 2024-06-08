@@ -110,7 +110,7 @@ function want_to_flee()
     -- If we're stuck in danger a bad form or berserked with a non-melee
     -- weapon, fleeing is our best bet.
     if (qw.danger_in_los or options.autopick_on)
-            and (in_bad_form() or you.berserk() and have_ranged_weapon()) then
+            and (in_bad_form() or you.berserk() and using_ranged_weapon()) then
         return true
     end
 
@@ -143,7 +143,7 @@ function want_to_flee()
         return true
     end
 
-    local enemies = assess_enemies(qw.los_radius, const.duration.available)
+    local enemies = assess_enemies(const.duration.available)
     if enemies.scary_enemy
             and enemies.scary_enemy:threat(const.duration.available) >= 5
             and enemies.scary_enemy:name():find("slime creature")

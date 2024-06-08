@@ -4,6 +4,8 @@
 const.duration = {
     -- Ignore this duration.
     "ignore",
+    -- Ignore this duration if it's a buff.
+    "ignore_buffs",
     -- We can get this duration, but it's not currently active.
     "usable",
     -- The duration is currently active.
@@ -43,7 +45,9 @@ function duration_active(name)
 end
 
 function have_duration(name, level)
-    if level == const.duration.ignore then
+    if level == const.duration.ignore
+            or level == const.duration.ignore_buffs
+                and const.player_durations[name].can_use_func then
         return false
     elseif level == const.duration.usable then
         return can_use_buff(name)
@@ -118,76 +122,82 @@ function intrinsic_undead()
 end
 
 -- Returns the player's intrinsic level of an artprop string.
-function intrinsic_property(str)
-    if str == "rF" then
+function intrinsic_property(prop)
+    if prop == "rF" then
         return you.mutation("fire resistance")
-    elseif str == "rC" then
+    elseif prop == "rC" then
         return you.mutation("cold resistance")
-    elseif str == "rElec" then
+    elseif prop == "rElec" then
         return you.mutation("electricity resistance")
-    elseif str == "rPois" then
+    elseif prop == "rPois" then
         if intrinsic_rpois() or you.mutation("poison resistance") > 0 then
             return 1
         else
             return 0
         end
-    elseif str == "rN" then
+    elseif prop == "rN" then
         local val = you.mutation("negative energy resistance")
         if you.god() == "the Shining One" then
             val = val + math.floor(you.piety_rank() / 3)
         end
         return val
-    elseif str == "Will" then
+    elseif prop == "Will" then
         return you.mutation("strong-willed") + (you.god() == "Trog" and 1 or 0)
-    elseif str == "rCorr" then
+    elseif prop == "rCorr" then
         return 0
-    elseif str == "SInv" then
+    elseif prop == "SInv" then
         if intrinsic_sinv() or you.mutation("see invisible") > 0 then
             return 1
         else
             return 0
         end
-    elseif str == "Fly" then
+    elseif prop == "Fly" then
         return intrinsic_flight() and 1 or 0
-    elseif str == "Spirit" then
+    elseif prop == "Spirit" then
         return you.race() == "Vine Stalker" and 1 or 0
     end
 
     return 0
 end
 
-
 --[[
 Returns the current level of player property by artprop string. If an item is
 provided, assume the item is equipped and try to pretend that it is unequipped.
 Does not include some temporary effects.
 ]]--
-function player_property(str, it)
-    local it_res = it and it.equipped and item_property(str, it) or 0
-    local stat
-    if str == "Str" then
-        stat, _ = you.strength()
-        return stat - it_res
-    elseif str == "Dex" then
-        stat, _ = you.dexterity()
-        return stat - it_res
-    elseif str == "Int" then
-        stat, _ = you.intelligence()
-        return stat - it_res
+function player_property(prop, ignore_equip)
+    local value
+    local prop_is_stat = false
+    if prop == "Str" then
+        value = you.strength()
+        prop_is_stat = true
+    elseif prop == "Dex" then
+        value = you.dexterity()
+        prop_is_stat = true
+    elseif prop == "Int" then
+        value = you.intelligence()
+        prop_is_stat = true
+    else
+        value = intrinsic_property(prop)
     end
 
-    local other_res = intrinsic_property(str)
-    for it2 in inventory() do
-        if it2.equipped and (not it or it2.slot ~= it.slot) then
-            other_res = other_res + item_property(str, it2)
+    for slot, item in equipped_slots_iter() do
+        local is_ignored = item_in_equip_set(item, ignore_equip)
+        -- For stats, we must remove the value contributed by an ignored
+        -- item.
+        if is_ignored and prop_is_stat then
+            value = value - item_property(prop, item)
+        elseif not is_ignored and not prop_is_stat then
+            value = value + item_property(prop, item)
         end
     end
 
-    if str == "rF" or str == "rC" or str == "rN" or str == "Will" then
-        return other_res
-    else
-        return other_res > 0 and 1 or 0
+    local max_level = const.property_max_levels[prop]
+    if max_level and value > max_level then
+        value = max_level
     end
+
+    return value
 end
 
 function player_resist_percentage(resist, level)
@@ -250,25 +260,8 @@ function unfitting_armour()
     return armour_plan() == "large" or sp == "Armataur" or sp == "Naga"
 end
 
-function want_buckler()
-    local sp = you.race()
-    local skill = weapon_skill()
-    return sp ~= "Felid"
-        and (skill ~= "Ranged Weapons" or sp == "Formicid")
-        and (qw.shield_crazy
-            or sp == "Formicid"
-            or sp == "Kobold"
-            or skill == "Short Blades"
-            or skill == "Unarmed Combat")
-end
-
-function want_shield()
-    return want_buckler()
-        and (qw.shield_crazy or you.race() == "Troll" or you.race() == "Formicid")
-end
-
--- used for backgrounds who don't get to choose a weapon
-function weapon_choice()
+-- Used for backgrounds who don't get to choose a weapon.
+function weapon_skill_choice()
     local sp = you.race()
     if sp == "Felid" or sp == "Troll" then
         return "Unarmed Combat"
@@ -287,31 +280,6 @@ function weapon_choice()
         return "Short Blades"
     else
         return "Axes"
-    end
-end
-
-function weapon_skill()
-    -- Cache in case we unwield a weapon somehow.
-    if c_persist.cached_wskill then
-        return c_persist.cached_wskill
-    end
-
-    weap = items.equipped_at("Weapon")
-    if weap and weap.class(true) == "weapon"
-            and weap.weap_skill ~= "Short Blades"
-            and you.class() ~= "Wanderer" then
-        c_persist.cached_wskill = weap.weap_skill
-    else
-        c_persist.cached_wskill = weapon_choice()
-    end
-    return c_persist.cached_wskill
-end
-
-function max_rings()
-    if you.race() == "Octopode" then
-        return 8
-    else
-        return 2
     end
 end
 
@@ -353,6 +321,33 @@ function transformed()
     return you.transform() ~= ""
 end
 
+function unable_to_wield_weapon()
+    if you.berserk() or you.race() == "Felid" then
+        return true
+    end
+
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "maw"
+        or form == "death")
+end
+
+function unable_to_swap_weapons()
+    if unable_to_wield_weapon() then
+        return true
+    end
+
+    -- XXX: hack
+    if qw.danger_in_los == nil then
+        return you.race() == "Coglin"
+    end
+
+    return you.race() == "Coglin"
+            and (qw.danger_in_los or not qw.position_is_safe)
+end
+
 function can_read()
     return not (you.berserk()
         or you.confused()
@@ -368,7 +363,7 @@ function can_drink()
         or you.status("unable to drink"))
 end
 
-function can_zap()
+function can_evoke()
     return not (you.berserk()
         or you.confused()
         or transformed()
@@ -400,7 +395,7 @@ function can_invoke()
 end
 
 function can_berserk()
-    return not have_ranged_weapon()
+    return not using_ranged_weapon()
         and not intrinsic_undead()
         and you.race() ~= "Formicid"
         and not you.mesmerised()
@@ -550,7 +545,7 @@ function player_can_melee_mons(mons)
         return false
     end
 
-    local range = reach_range()
+    local range = player_reach_range()
     local dist = mons:distance()
     if range == 2 then
         return dist <= range and view.can_reach(mons:x_pos(), mons:y_pos())
@@ -593,10 +588,15 @@ end
 function want_to_be_surrounded()
     return turn_memo("want_to_be_surrounded",
         function()
-            local weapon = get_weapon()
-            if not weapon
-                    or weapon.weap_skill ~= "Axes"
-                    or weapon:ego() ~= "vampirism" then
+            local have_vamp_cleave = false
+            for weapon in equipped_slot_iter("weapon") do
+                if weapon.weap_skill == "Axe"
+                        and weapon:ego() == "vampirism" then
+                    have_vamp_cleave = true
+                    break
+                end
+            end
+            if not have_vamp_cleave then
                 return false
             end
 
@@ -605,4 +605,12 @@ function want_to_be_surrounded()
                 end
             return count_enemies(qw.los_radius, vamp_check) >= 4
         end)
+end
+
+function max_strength()
+    return select(2, you.strength())
+end
+
+function max_dexterity()
+    return select(2, you.dexterity())
 end

@@ -1,7 +1,7 @@
 ------------------
 -- Skill selection
 
-local skill_list = {
+const.skill_list = {
     "Fighting", "Maces & Flails", "Axes", "Polearms", "Staves",
     "Unarmed Combat", "Throwing", "Short Blades", "Long Blades",
     "Ranged Weapons", "Armour", "Dodging", "Shields", "Stealth",
@@ -10,36 +10,53 @@ local skill_list = {
     "Earth Magic", "Invocations", "Evocations", "Shapeshifting",
 }
 
-function choose_single_skill(sk)
-    you.train_skill(sk, 1)
-    for _, sk2 in ipairs(skill_list) do
-        if sk ~= sk2 then
-            you.train_skill(sk2, 0)
+function weapon_skill()
+    -- Cache in case we unwield a weapon somehow.
+    if c_persist.weapon_skill then
+        return c_persist.weapon_skill
+    end
+
+    if you.class() ~= "Wanderer" then
+        for weapon in equipped_slot_iter("weapon") do
+            if weapon.weap_skill ~= "Short Blades" then
+                c_persist.weapon_skill = weapon.weap_skill
+                return c_persist.weapon_skill
+            end
+        end
+    end
+
+    c_persist.weapon_skill = weapon_skill_choice()
+    return c_persist.weapon_skill
+end
+
+function choose_single_skill(chosen_sk)
+    you.train_skill(chosen_sk, 1)
+    for _, sk in ipairs(const.skill_list) do
+        if sk ~= chosen_sk then
+            you.train_skill(sk, 0)
         end
     end
 end
 
 function shield_skill_utility()
-    local shield = items.equipped_at("Shield")
+    local shield = get_shield()
     if not shield then
         return 0
     end
 
-    local shield_factor = you.mutation("four strong arms") > 0 and -2
-        or 2 * body_size()
     local shield_penalty = 2 * shield.encumbrance * shield.encumbrance
         * (27 - you.base_skill("Shields"))
-        / (5 * (20 - 3 * shield_factor)) / 27
+        / (25 + 5 * max_strength()) / 27
     return 0.25 + 0.5 * shield_penalty
 end
 
 function skill_value(sk)
     if sk == "Dodging" then
-        local str, _ = you.strength()
+        local str = max_strength()
         if str < 1 then
             str = 1
         end
-        local dex, _ = you.dexterity()
+
         local evp_adj = max(armour_evp() - 3, 0)
         local penalty_factor
         if evp_adj >= str then
@@ -50,24 +67,23 @@ function skill_value(sk)
         if you.race() == "Tengu" and intrinsic_flight() then
             penalty_factor = penalty_factor * 1.2 -- flying EV mult
         end
-        return 18 * math.log(1 + dex / 18)
+        return 18 * math.log(1 + you.dexterity() / 18)
             / (20 + 2 * body_size()) * penalty_factor
     elseif sk == "Armour" then
-        local str, _ = you.strength()
+        local str = max_strength()
         if str < 0 then
             str = 0
         end
-        local val1 = 2 / 225 * armour_evp() ^ 2 / (3 + str)
-        local val2 = base_ac() / 22
-        return val1 + val2
+
+        return base_ac() / 22 + 2 / 225 * armour_evp() ^ 2 / (3 + str)
     elseif sk == "Fighting" then
         return 0.75
     elseif sk == "Shields" then
         return shield_skill_utility()
     elseif sk == "Throwing" then
-        local missile = best_missile()
+        local missile = best_missile(missile_damage)
         if missile then
-            return 0.2 * missile_rating(missile)
+            return missile_damage(missile) / 25
         else
             return 0
         end
@@ -87,42 +103,39 @@ function skill_value(sk)
 end
 
 function choose_skills()
-    local skills = {}
     -- Choose one martial skill to train.
-    local martial_skills = {
-        weapon_skill(), "Fighting", "Shields", "Armour", "Dodging",
-        "Invocations", "Throwing"
-    }
+    local martial_skills = { weapon_skill(), "Fighting", "Shields", "Armour",
+        "Dodging", "Invocations", "Throwing" }
 
-    local best_sk
-    local best_utility = 0
-    local utility
+    local best_sk, best_val
     for _, sk in ipairs(martial_skills) do
         if you.skill_cost(sk) then
-            utility = skill_value(sk) / you.skill_cost(sk)
-            if utility > best_utility then
-                best_utility = utility
+            local val = skill_value(sk) / you.skill_cost(sk)
+            if val and (not best_val or val > best_val) then
+                best_val = val
                 best_sk = sk
             end
         end
     end
-    if best_utility > 0 then
+
+    local skills = {}
+    if best_val then
         if debug_channel("skills") then
-            dsay("Best skill: " .. best_sk .. ", utility: " .. best_utility)
+            dsay("Best skill: " .. best_sk .. ", value: " .. best_val)
         end
 
         table.insert(skills, best_sk)
     end
 
     -- Choose one MP skill to train.
-    mp_skill = "Evocations"
+    local mp_skill = "Evocations"
     if god_uses_invocations() then
         mp_skill = "Invocations"
     elseif you.god() == "Ru" or you.god() == "Xom" then
         mp_skill = "Spellcasting"
     end
-    mp_skill_level = you.base_skill(mp_skill)
-    bmp = you.base_mp()
+    local mp_skill_level = you.base_skill(mp_skill)
+
     if you.god() == "Makhleb"
             and you.piety_rank() >= 2
             and mp_skill_level < 15 then
@@ -151,32 +164,33 @@ function choose_skills()
         table.insert(skills, mp_skill)
     end
 
-    skills2 = {}
-    safe_count = 0
+    local trainable_skills = {}
+    local safe_count = 0
     for _, sk in ipairs(skills) do
         if you.can_train_skill(sk) and you.base_skill(sk) < 27 then
-            table.insert(skills2, sk)
+            table.insert(trainable_skills, sk)
             if you.base_skill(sk) < 26.5 then
                 safe_count = safe_count + 1
             end
         end
     end
+
     -- Try to avoid getting stuck in the skill screen.
     if safe_count == 0 then
         if you.base_skill("Fighting") < 26.5 then
-            table.insert(skills2, "Fighting")
+            table.insert(trainable_skills, "Fighting")
         elseif you.base_skill(mp_skill) < 26.5 then
-            table.insert(skills2, mp_skill)
+            table.insert(trainable_skills, mp_skill)
         else
-            for _, sk in ipairs(skill_list) do
+            for _, sk in ipairs(const.skill_list) do
                 if you.can_train_skill(sk) and you.base_skill(sk) < 26.5 then
-                    table.insert(skills2, sk)
-                    return skills2
+                    table.insert(trainable_skills, sk)
+                    return trainable_skills
                 end
             end
         end
     end
-    return skills2
+    return trainable_skills
 end
 
 function handle_skills()
@@ -187,6 +201,22 @@ function handle_skills()
     end
 end
 
+function update_skill_tracking()
+    if not qw.base_skills then
+        qw.base_skills = {}
+    end
+
+    for _, sk in ipairs(const.skill_list) do
+        local base_skill = you.base_skill(sk)
+        if base_skill > 0
+                and (not qw.base_skills[sk]
+                    or base_skill - qw.base_skills[sk] >= 1) then
+            reset_best_equip()
+            qw.base_skills[sk] = base_skill
+        end
+    end
+end
+
 function choose_stat_gain()
     local ap = armour_plan()
     if ap == "heavy" or ap == "large" then
@@ -194,9 +224,7 @@ function choose_stat_gain()
     elseif ap == "light" then
         return "d"
     else
-        local str, _ = you.strength()
-        local dex, _ = you.dexterity()
-        if 3 * str < 2 * dex then
+        if 3 * max_strength() < 2 * max_dexterity() then
             return "s"
         else
             return "d"
@@ -204,6 +232,8 @@ function choose_stat_gain()
     end
 end
 
+-- clua hook for experience menu after quaffing !experience. Simply accepts the
+-- default skill allocations.
 function auto_experience()
     return true
 end

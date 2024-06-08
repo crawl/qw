@@ -1,6 +1,8 @@
 -----------------------------------------
 -- Attack setup and evaluation
 
+const.attack = { "melee", "launcher", "throw", "evoke" }
+
 -- Is the result from an attack on the first target better than the current
 -- best result?
 function result_improves_attack(attack, result, best_result)
@@ -27,17 +29,15 @@ function score_enemy_hit(result, enemy, attack)
             result[prop] = 0
         end
 
-        local value
         if prop == "hit" then
-            value = 1
-            result[prop] = result[prop] + value
+            result[prop] = result[prop] + 1
         elseif use_min then
-            value = enemy[prop](enemy)
+            local value = enemy[prop](enemy)
             if not result[prop] or value < result[prop] then
                 result[prop] = value
             end
         else
-            value = enemy[prop](enemy)
+            local value = enemy[prop](enemy)
             if value == true then
                 value = 1
             elseif value == false then
@@ -50,17 +50,16 @@ function score_enemy_hit(result, enemy, attack)
 end
 
 function assess_melee_target(attack, enemy)
-    local result = { pos = enemy:pos() }
+    local result = { attack = attack, pos = enemy:pos() }
     score_enemy_hit(result, enemy, attack)
     return result
 end
 
-function make_melee_attack(weapon)
+function make_melee_attack(weapons)
     local attack = {
-        item = weapon,
-        is_melee = true,
+        type = const.attack.melee,
+        items = weapons,
         has_damage_rating = true,
-        ignores_player = true,
         uses_finesse = true,
         uses_heroism = true,
         uses_berserk = true,
@@ -76,16 +75,21 @@ function make_melee_attack(weapon)
 end
 
 function make_primary_attack()
-    local weapon = get_weapon()
-    if weapon and weapon.is_ranged then
-        return make_launcher_attack(weapon)
+    local weapons
+    local equip = inventory_equip(const.inventory.equipped)
+    if equip then
+        weapons = equip.weapon
+    end
+
+    if weapons and weapons[1].is_ranged then
+        return make_launcher_attack(weapons)
     else
-        return make_melee_attack(weapon)
+        return make_melee_attack(weapons)
     end
 end
 
 function get_primary_target()
-    if have_ranged_weapon() then
+    if using_ranged_weapon() then
         return get_launcher_target()
     else
         return get_melee_target()
@@ -95,7 +99,7 @@ end
 
 function get_melee_attack()
     local attack = get_attack(1)
-    if not attack or not attack.is_melee then
+    if not attack or attack.type ~= const.attack.melee then
         return
     end
 
@@ -104,6 +108,10 @@ end
 
 function get_melee_target_func(assume_flight)
     local attack = get_melee_attack()
+    if not attack then
+        return
+    end
+
     local best_result
     for _, enemy in ipairs(qw.enemy_list) do
         if enemy:player_can_melee()
@@ -126,12 +134,12 @@ function get_melee_target(assume_flight)
 end
 
 function assess_explosion_position(attack, target_pos, second_pos)
-    local result = { pos = target_pos, positions = {} }
+    local result = { attack = attack, pos = target_pos, positions = {} }
     for pos in adjacent_iter(target_pos, true) do
         result.positions[hash_position(pos)] = true
 
         if positions_equal(target_pos, const.origin)
-                and not attack.ignores_player then
+                and not attack.explosion_ignores_player then
             return
         end
 
@@ -169,7 +177,7 @@ function assess_ranged_position(attack, target_pos, second_pos)
 
     local positions = spells.path(attack.test_spell, target_pos.x,
         target_pos.y, 0, 0, false)
-    local result = { pos = target_pos, positions = {} }
+    local result = { attack = attack, pos = target_pos, positions = {} }
     local past_target, at_target_result
     for i, coords in ipairs(positions) do
         local pos = { x = coords[1], y = coords[2] }
@@ -216,7 +224,8 @@ function assess_ranged_position(attack, target_pos, second_pos)
         -- to destructive terrain at the end of our throw path by using '.'.
         if not hit_target
                 and not attack.is_exploding
-                and attack.uses_ammunition
+                and attack.type == const.attack.throw
+                and attack.items[1].subtype() ~= "boomerang"
                 and i == #positions
                 and destroys_items_at(pos)
                 and not destroys_items_at(target_pos) then
@@ -273,7 +282,7 @@ function assess_possible_explosion_positions(attack, target_pos, second_pos)
         local valid, mon
         if supdist(pos) <= qw.los_radius
                 and (not attack.seen_pos or not attack.seen_pos[pos.x][pos.y])
-                and (attack.ignores_player
+                and (attack.explosion_ignores_player
                     or position_distance(pos, const.origin) > 1)
                 -- If we have a second position, don't consider explosion
                 -- centers that won't reach the position.
@@ -299,22 +308,35 @@ function assess_possible_explosion_positions(attack, target_pos, second_pos)
 end
 
 function attack_test_spell(attack)
-    return "Quicksilver Bolt"
 end
 
-function make_launcher_attack(item)
+function make_launcher_attack(weapons)
     local attack = {
-        item = item,
+        type = const.attack.launcher,
+        items = weapons,
         has_damage_rating = true,
         uses_finesse = true,
         uses_heroism = true,
         range = qw.los_radius,
-        is_penetrating = item_is_penetrating(item),
-        is_exploding = item_is_exploding(item),
-        can_target_empty = item_can_target_empty(item),
-        ignores_player = item_ignores_player(item),
-        test_spell = attack_test_spell(item),
+        can_target_empty = false,
+        test_spell = "Quicksilver Bolt",
     }
+
+    for _, weapon in ipairs(weapons) do
+        if item_is_penetrating(weapon) then
+            attack.is_penetrating = true
+        end
+
+        if item_is_exploding(weapon) then
+            attack.is_exploding = true
+
+            attack.explosion_ignores_player = true
+            if not item_explosion_ignores_player(weapon) then
+                attack.explosion_ignores_player = false
+            end
+        end
+    end
+
     attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
         "damage_level", "threat", "is_orc_priest_wizard" }
     attack.reversed_props = { distance = true }
@@ -322,23 +344,22 @@ function make_launcher_attack(item)
     return attack
 end
 
-function make_throwing_attack()
-    local missile = best_missile()
+function make_throwing_attack(missile, prefer_melee)
     if not missile then
         return
     end
 
     local attack = {
-        item = missile,
+        type = const.attack.throw,
+        items = { missile },
         has_damage_rating = true,
+        prefer_melee = prefer_melee,
         uses_finesse = true,
         uses_heroism = true,
         range = qw.los_radius,
         is_penetrating = item_is_penetrating(missile),
-        is_exploding = item_is_exploding(missile),
-        uses_ammunition = true,
         can_target_empty = true,
-        test_spell = attack_test_spell(missile),
+        test_spell = "Quicksilver Bolt",
     }
     attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
         "damage_level", "threat", "is_orc_priest_wizard" }
@@ -363,12 +384,14 @@ function assess_ranged_target(attack, pos, second_pos)
     return result
 end
 
-function get_ranged_target(attack, prefer_melee)
-    local melee_target
-    if prefer_melee then
-        melee_target = get_melee_target()
+function get_ranged_attack_target(attack)
+    if not attack then
+        return
+    end
 
-        -- Use our preferred melee attack.
+    local melee_target
+    if attack.prefer_melee then
+        melee_target = get_melee_target()
         if melee_target
                 and get_monster_at(melee_target.pos):player_can_melee() then
             return
@@ -411,43 +434,109 @@ function get_ranged_target(attack, prefer_melee)
     end
 end
 
-function get_throwing_attack()
+function get_best_throwing_attack()
     local attack = get_attack(2)
-    if not attack or not attack.uses_ammunition then
+    if not attack or attack.type ~= const.attack.throw then
         return
     end
 
     return attack
 end
 
+function get_secondary_throwing_attack()
+    local attack = get_attack(3)
+    if not attack or attack.type ~= const.attack.throw then
+        return
+    end
+
+    return attack
+end
+
+function get_high_threat_target()
+    local result = assess_enemies(const.duration.ignore_buffs)
+    if not result.scary_enemy then
+        return
+    end
+
+    local attack = result.scary_enemy:best_player_attack()
+    if not attack then
+        return
+    end
+
+    local pos = result.scary_enemy:pos()
+    local primary_target = get_primary_target()
+    if attack.type == const.attack.melee then
+        if positions_equal(primary_target.pos, pos) then
+            return primary_target
+        else
+            return
+        end
+    end
+
+    local secondary_pos
+    if primary_target and not positions_equal(primary_target.pos, pos) then
+        secondary_pos = primary_target.pos
+    end
+
+    return assess_ranged_target(attack, pos, secondary_pos)
+end
+
+function get_throwing_target_func()
+    local target = get_high_threat_target()
+    if target then
+        if target.attack.type ~= const.attack.throw then
+            return
+        end
+
+        return target
+    end
+
+    local result = assess_enemies()
+    if result.threat < const.moderate_threat
+            and qw.incoming_monsters_turn == you.turns() then
+        return
+    end
+
+    local attack = get_secondary_throwing_attack()
+    if not attack then
+        return
+    end
+
+    return get_ranged_attack_target(attack)
+end
+
 function get_throwing_target()
-    return turn_memo("get_throwing_target",
+    return turn_memo("get_throwing_target", get_throwing_target_func)
+end
+
+function get_evoke_target()
+    return turn_memo("get_evoke_target",
         function()
-            local attack = get_throwing_attack()
-            if attack then
-                return get_ranged_target(attack, true)
+            local target = get_high_threat_target()
+            if target and target.attack.type == const.attack.evoke then
+                return target
             end
         end)
 end
 
 function get_launcher_target()
     return turn_memo("get_launcher_target",
-        function()
-            return get_ranged_target(get_attack(1))
-        end)
+        function() return get_ranged_attack_target(get_attack(1)) end)
 end
 
 function poison_spit_attack()
-    local attack = {}
     local poison_gas = you.mutation("spit poison") > 1
-    attack.range = poison_gas and 6 or 5
-    attack.is_penetrating = poison_gas
-    attack.test_spell = "Quicksilver Bolt"
-    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
-        "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
-    attack.min_props = { distance = true }
-    attack.check = function(mons) return mons:res_poison() < 1 end
+    local attack = {
+        range = poison_gas and 6 or 5,
+        is_penetrating = poison_gas,
+        prefer_melee = not using_ranged_weapon(),
+        test_spell = "Quicksilver Bolt",
+        props = { "los_danger", "hit", "distance", "is_constricting_you",
+            "damage_level", "threat", "is_orc_priest_wizard" },
+        reversed_props = { distance = true },
+        min_props = { distance = true },
+        check = function(mons) return mons:res_poison() < 1 end,
+    }
     return attack
 end
 
@@ -457,19 +546,21 @@ function make_wand_attack(wand_type)
         return
     end
 
-    local attack = { item = wand }
-    attack.uses_evoke = true
-    attack.range = item_range(wand)
-    attack.is_penetrating = item_is_penetrating(wand)
-    attack.is_exploding = item_is_exploding(wand)
-    attack.can_target_empty = item_can_target_empty(wand)
-    attack.ignores_player = item_ignores_player(wand)
-    attack.damage_is_hp = wand_type == "paralysis"
-    attack.test_spell = "Quicksilver Bolt"
-    attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
-        "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
-    attack.min_props = { distance = true }
+    local attack = {
+        type = const.attack.evoke,
+        items = { wand },
+        range = item_range(wand),
+        is_penetrating = item_is_penetrating(wand),
+        is_exploding = item_is_exploding(wand),
+        can_target_empty = item_can_target_empty(wand),
+        explosion_ignores_player = item_explosion_ignores_player(wand),
+        damage_is_hp = wand_type == "paralysis",
+        test_spell = "Quicksilver Bolt",
+        props = { "los_danger", "hit", "distance", "is_constricting_you",
+            "damage_level", "threat", "is_orc_priest_wizard" },
+        reversed_props = { distance = true },
+        min_props = { distance = true },
+    }
     return attack
 end
 
@@ -482,7 +573,13 @@ function get_attacks()
     attack.index = 1
     qw.attacks = { attack }
 
-    attack = make_throwing_attack()
+    attack = make_throwing_attack(best_missile(missile_damage))
+    if attack then
+        table.insert(qw.attacks, attack)
+        attack.index = #qw.attacks
+    end
+
+    attack = make_throwing_attack(best_missile(missile_quantity), true)
     if attack then
         table.insert(qw.attacks, attack)
         attack.index = #qw.attacks
@@ -504,17 +601,25 @@ function get_attack(index)
     return attacks[index]
 end
 
-function have_ranged_target()
-    return turn_memo("have_ranged_target",
+function get_ranged_target()
+    return turn_memo("get_ranged_target",
         function()
             if you.berserk() then
                 return false
             end
 
-            if have_ranged_weapon() then
+            local target = get_evoke_target()
+            if target then
+                return target
+            end
+
+            target = get_throwing_target()
+            if target then
+                return target
+            end
+
+            if using_ranged_weapon() then
                 return get_launcher_target()
-            else
-                return get_throwing_target()
             end
         end)
 end
@@ -528,11 +633,11 @@ function have_target()
 end
 
 function get_ranged_attack()
-    if have_ranged_weapon() then
+    if using_ranged_weapon() then
         return get_attack(1)
     end
 
-    return get_throwing_attack()
+    return get_best_throwing_attack()
 end
 
 function make_damage_func(resist, chance, add, damage_mult)
@@ -561,19 +666,22 @@ function initialize_ego_damage()
     }
 end
 
-function player_attack_damage(mons, index, duration_level)
-    if not duration_level then
-        duration_level = const.duration.active
+function rated_attack_average_damage(mons, attack, duration_level)
+    if not attack.items then
+        local damage = you.unarmed_damage_rating()
+        damage = (1 + damage) / 2
+
+        local damage_func = const.ego_damage_funcs[you.unarmed_ego()]
+        if damage_func then
+            damage = damage_func(mons, damage)
+        end
+
+        return damage
     end
 
-    local attack = get_attack(index)
-    -- XXX: Need a clua implementation of damage rating for unarmed.
-    if not attack.item then
-        return
-    end
-
-    if attack.has_damage_rating then
-        local damage = attack.item.damage_rating()
+    local total_damage = 0
+    for _, item in ipairs(attack.items) do
+        local damage = item.damage_rating()
         damage = (1 + damage) / 2
 
         if attack.uses_berserk and have_duration("berserk", duration_level) then
@@ -586,13 +694,51 @@ function player_attack_damage(mons, index, duration_level)
             damage = 0.75 * damage
         end
 
-        local damage_func = const.ego_damage_funcs[attack.item.ego()]
+        local damage_func = const.ego_damage_funcs[item.ego()]
         if damage_func then
             damage = damage_func(mons, damage)
         end
 
-        return damage
-    elseif attack.uses_evoke then
+        if attack.type == const.attack.melee
+                and you.xl() < 18
+                and mons:is_real_hydra() then
+            local value = hydra_weapon_value(item)
+            damage = damage * math.pow(2, value)
+        end
+
+        total_damage = total_damage + damage * mons:weapon_accuracy(item)
+    end
+    return total_damage
+end
+
+function evoked_attack_average_damage(mons, attack)
+    -- Crawl doesn't have dual evoking, so for simplicity we assume one item.
+    local item = attack.items[1]
+    local damage = item.evoke_damage
+    damage = damage:gsub(".-(%d+)d(%d+).*", "%1 %2")
+    local dice, size = unpack(split(damage, " "))
+    damage = dice * (1 + size) / 2
+
+    local res_prop = const.monster_resist_props[attack.resist]
+    if res_prop then
+        local res_level = mons[res_prop](mons)
+        damage = damage * (1 - attack.resistable
+            + attack.resistable
+            * monster_percent_unresisted(attack.resist, res_level))
+    end
+
+    return damage * mons:evoke_accuracy(item)
+end
+
+function player_attack_damage(mons, index, duration_level)
+    if not duration_level then
+        duration_level = const.duration.active
+    end
+
+    local attack = get_attack(index)
+    if attack.has_damage_rating then
+        return rated_attack_average_damage(mons, attack, duration_level)
+    elseif attack.type == const.attack.evoke then
         local damage
         if attack.damage_is_hp then
             if mons:is("paralysed")
@@ -604,35 +750,10 @@ function player_attack_damage(mons, index, duration_level)
                 damage = mons:hp()
             end
         else
-            damage = attack.item.evoke_damage
-            damage = damage:gsub(".-(%d+)d(%d+).*", "%1 %2")
-            local dice, size = unpack(split(damage, " "))
-            damage = dice * (1 + size) / 2
-
-            local res_prop = const.monster_resist_props[attack.resist]
-            if res_prop then
-                local res_level = mons[res_prop](mons)
-                damage = damage * (1 - attack.resistable
-                    + attack.resistable
-                    * monster_percent_unresisted(attack.resist, res_level))
-            end
+            damage = evoked_attack_average_damage(mons, attack)
         end
 
         return damage
-    end
-end
-
-function player_attack_accuracy(mons, index)
-    local attack = get_attack(index)
-    -- XXX: Need a clua implementation of accuracy for unarmed.
-    if not attack.item then
-        return
-    end
-
-    if attack.has_damage_rating then
-        return mons:weapon_accuracy(attack.item)
-    elseif attack.uses_evoke then
-        return mons:evoke_accuracy(attack.item)
     end
 end
 
@@ -668,15 +789,22 @@ function unarmed_attack_delay(duration_level)
     return delay
 end
 
-function player_attack_delay(index, duration_level)
+function player_attack_delay_func(index, duration_level)
     if not duration_level then
         duration_level = const.duration.active
     end
 
     local attack = get_attack(index)
-    if attack.item then
+    if attack.items then
         if attack.has_damage_rating then
-            return weapon_delay(attack.item, duration_level)
+            local count = 0
+            local delay = 0
+            for _, weapon in ipairs(attack.items) do
+                count = count + 1
+                delay = delay + weapon_delay(weapon, duration_level)
+            end
+            return delay / count
+        -- Evocable items.
         else
             local delay = 10
 
@@ -695,18 +823,21 @@ function player_attack_delay(index, duration_level)
     end
 end
 
+function player_attack_delay(index, duration_level)
+    return turn_memo_args("player_attack_delay",
+        function()
+            return player_attack_delay_func(index, duration_level)
+        end, index, duration_level)
+end
+
 function monster_best_player_attack(mons)
     local base_threat = mons:threat()
-    local base_damage = mons:player_attack_accuracy(1)
-        * player_attack_damage(mons, 1)
-        / player_attack_delay(1)
-
-    local attacks = get_attacks()
+    local base_damage = mons:player_attack_damage(1) / player_attack_delay(1)
     local best_attack, best_threat
-    for i, attack in ipairs(attacks) do
-        if mons:player_can_attack(i) then
-            local damage = mons:player_attack_accuracy(i)
-                * player_attack_damage(mons, i, const.duration.available)
+    for i, attack in ipairs(get_attacks()) do
+        if not attack.prefer_melee and mons:player_can_attack(i) then
+            local damage = player_attack_damage(mons, i,
+                    const.duration.available)
                 / player_attack_delay(i, const.duration.available)
             local threat = base_threat * base_damage / damage
             if threat < 3 then

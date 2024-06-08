@@ -27,7 +27,7 @@ function assess_square_enemies(a, pos)
                 a.followers = true
             end
 
-            if (have_reaching() or have_ranged_weapon())
+            if (player_reach_range() > 1 or using_ranged_weapon())
                     and not ranged
                     and enemy:speed() < player_speed() then
                 a.kite_adjacent = a.kite_adjacent + 1
@@ -95,7 +95,7 @@ function assess_square(pos)
     local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
         and not (you.flying()
             or you.god() == "Beogh" and you.piety_rank() >= 5)
-    a.fumble = in_water and not have_ranged_weapon() and intrinsic_fumble()
+    a.fumble = in_water and not using_ranged_weapon() and intrinsic_fumble()
 
     -- Will we be slow if we move into this square?
     a.slow = in_water and not intrinsic_amphibious()
@@ -125,14 +125,14 @@ function step_reason(a1, a2)
         return false
     elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
         return false
-    elseif not have_ranged_weapon()
+    elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
             and not a1.near_ally
             and a2.ranged == 0
             and a2.adjacent == 0
             and a1.longranged > 0 then
         return "hiding"
-    elseif not have_ranged_weapon()
+    elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
             and not a1.near_ally
             and a2.ranged == 0
@@ -142,11 +142,11 @@ function step_reason(a1, a2)
     elseif not a1.cloud_safe then
         return "cloud"
     elseif a1.fumble then
-        -- We require that we have some close threats we want to melee that try
-        -- to stay adjacent to us before we'll try to move out of water. We
-        -- also require that we are no worse in at least one of ranged threats
-        -- or enemy distance at the new position.
-        if (not have_ranged_target() and a1.followers)
+        -- We require that we have some close threats we want to melee that
+        -- try to stay adjacent to us before we'll try to move out of water.
+        -- We also require that we are no worse in at least one of ranged
+        -- threats or enemy distance at the new position.
+        if (not get_ranged_target() and a1.followers)
                 and (a2.ranged <= a1.ranged
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "water"
@@ -155,7 +155,7 @@ function step_reason(a1, a2)
         end
     elseif a1.bad_wall then
         -- Same conditions for dangerous walls as for water.
-        if (have_ranged_target() or a1.followers)
+        if (get_ranged_target() or a1.followers)
                 and (a2.ranged <= a1.ranged
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "wall"

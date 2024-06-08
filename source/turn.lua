@@ -53,6 +53,21 @@ function turn_memo_args(name, func, ...)
     return parent[key]
 end
 
+function reset_cached_turn_data(force)
+    local turns = you.turns()
+    if not force and qw.last_turn_reset == turns then
+        return
+    end
+
+    qw.turn_memos = {}
+    qw.best_equip = nil
+    qw.attacks = nil
+
+    qw.safe_stairs_failed = false
+
+    qw.last_turn_reset = turns
+end
+
 -- We want to call this exactly once each turn.
 function turn_update()
     if not qw.initialized then
@@ -68,9 +83,10 @@ function turn_update()
     qw.have_orb = you.have_orb()
     qw.time_passed = true
     qw.turn_count = turns
-    qw.turn_memos = {}
-    qw.attacks = nil
-    qw.safe_stairs_failed = false
+
+    reset_cached_turn_data(true)
+
+    update_equip_tracking()
 
     if you.turns() >= qw.dump_count then
         dump_count = qw.dump_count + 100

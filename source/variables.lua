@@ -111,10 +111,6 @@ local hostile_summon_timer = -200
 
 local stuck_turns = 0
 
-local upgrade_phase = false
-local acquirement_pickup = false
-local acquirement_class
-
 local stairdance_count = {}
 local clear_exclusion_count = {}
 local vaults_end_entry_turn
@@ -123,7 +119,3 @@ local tomb3_entry_turn
 
 local last_swamp_fail_count = -1
 local swamp_rune_reachable = false
-
-local last_min_delay_skill = 18
-
-local only_linear_resists = false

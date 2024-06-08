@@ -212,7 +212,7 @@ end
 
 function player_can_attack_monster(mons, attack_index)
     local attack = get_attack(attack_index)
-    if attack.is_melee then
+    if attack.type == const.attack.melee then
         return mons:player_can_melee()
     end
 
@@ -221,14 +221,14 @@ function player_can_attack_monster(mons, attack_index)
         return false
     end
 
-    if attack.item and attack.item.is_ranged then
+    if attack.type == const.attack.launcher then
         return not unable_to_shoot()
             and mons:player_has_line_of_fire(attack_index)
-    elseif attack.uses_ammunition then
+    elseif attack.type == const.attack.throw then
         return not unable_to_throw()
             and mons:player_has_line_of_fire(attack_index)
-    elseif attack.uses_evoke then
-        return can_zap() and mons:player_has_line_of_fire(attack_index)
+    elseif attack.type == const.attack.evoke then
+        return can_evoke() and mons:player_has_line_of_fire(attack_index)
     end
 end
 
@@ -300,11 +300,11 @@ function Monster:hp()
         end)
 end
 
-function Monster:player_attack_accuracy(index)
-    return self:property_memo_args("attack_accuracy",
+function Monster:player_attack_damage(index, duration)
+    return self:property_memo_args("player_attack_damage",
         function()
-            return player_attack_accuracy(self, index)
-        end, index)
+            return player_attack_damage(self, index, duration)
+        end, index, duration)
 end
 
 function Monster:best_player_attack()
@@ -503,7 +503,7 @@ function Monster:player_can_wait_for_melee()
             return not self:player_can_melee()
                 and self:has_path_to_melee_player()
                 and (self:reach_range() == 1
-                    or reach_range() > 1
+                    or player_reach_range() > 1
                     or get_move_closer(self:pos()))
         end)
 end
@@ -556,7 +556,7 @@ function Monster:player_has_path_to_melee()
             end
 
             return move_search_result(const.origin, self:pos(),
-                traversal_function(), reach_range())
+                traversal_function(), player_reach_range())
         end)
 end
 
@@ -564,7 +564,7 @@ function Monster:get_player_move_towards(assume_flight)
     return self:property_memo_args("get_player_move_towards",
         function()
             local result = move_search_result(const.origin, self:pos(),
-                tab_function(assume_flight), reach_range())
+                tab_function(assume_flight), player_reach_range())
             return result and result.move or false
         end, assume_flight)
 end

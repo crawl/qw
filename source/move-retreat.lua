@@ -354,7 +354,7 @@ function want_to_retreat()
     if not qw.danger_in_los
             or you.berserk()
             or you.confused()
-            or have_ranged_weapon()
+            or using_ranged_weapon()
             or want_to_be_surrounded() then
         return false
     end

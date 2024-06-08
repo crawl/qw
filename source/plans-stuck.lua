@@ -92,7 +92,7 @@ function plan_stuck_dig_grate()
     end
 
     if grate_offset < 20 then
-        return zap_item(wand, grate_pos)
+        return evoke_targeted_item(wand, grate_pos)
     end
 
     return false

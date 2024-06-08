@@ -7,7 +7,7 @@ function can_attack_invis_at(pos)
 end
 
 function plan_flail_at_invis()
-    if not invis_monster or have_ranged_weapon() or dangerous_to_melee() then
+    if not invis_monster or using_ranged_weapon() or dangerous_to_melee() then
         return false
     end
 
@@ -51,7 +51,7 @@ end
 
 function plan_shoot_at_invis()
     if not invis_monster
-            or not have_ranged_weapon()
+            or not using_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_shoot() then
         return false
@@ -106,7 +106,7 @@ end
 
 function plan_melee()
     if not qw.danger_in_los
-            or have_ranged_weapon()
+            or using_ranged_weapon()
             or unable_to_melee()
             or dangerous_to_melee() then
         return false
@@ -133,7 +133,7 @@ end
 
 function plan_launcher()
     if not qw.danger_in_los
-            or not have_ranged_weapon()
+            or not using_ranged_weapon()
             or unable_to_shoot()
             or dangerous_to_attack() then
         return false
@@ -180,7 +180,8 @@ function plan_throw()
         return false
     end
 
-    return throw_missile(best_missile(), target.pos, target.aim_at_target)
+    return throw_missile(target.attack.items[1], target.pos,
+        target.aim_at_target)
 end
 
 function wait_combat()
@@ -190,7 +191,7 @@ function wait_combat()
 end
 
 function plan_melee_wait_for_enemy()
-    if not qw.danger_in_los or have_ranged_weapon() then
+    if not qw.danger_in_los or using_ranged_weapon() then
         return false
     end
 
@@ -252,7 +253,7 @@ function plan_melee_wait_for_enemy()
 end
 
 function plan_launcher_wait_for_enemy()
-    if not qw.danger_in_los or not have_ranged_weapon() then
+    if not qw.danger_in_los or not using_ranged_weapon() then
         return false
     end
 
@@ -306,8 +307,8 @@ function plan_poison_spit()
         ability = "Breathe Poison Gas"
     end
 
-    local target = get_ranged_target(poison_spit_attack(),
-        not have_ranged_weapon())
+    local target = get_ranged_attack_target(poison_spit_attack(),
+        not using_ranged_weapon())
     if not target then
         return false
     end
@@ -316,39 +317,38 @@ function plan_poison_spit()
         .. (target.aim_at_target and "." or "\r"))
 end
 
-function plan_attack_wand()
-    if not qw.danger_in_los or dangerous_to_attack() or not can_zap() then
+function evoke_targeted_item(item, pos, aim_at_target)
+    local cur_quiver = items.fired_item()
+    local name = item.name()
+    if not cur_quiver or name ~= cur_quiver.name() then
+        magic("Q*" .. item_letter(item))
+        qw.do_dummy_action = false
+        coroutine.yield()
+    end
+
+    say("EVOKING " .. name .. " at " .. cell_string_from_position(pos) .. ".")
+    magic("fr" .. vector_move(pos) .. (aim_at_target and "." or "\r"))
+    -- Currently broken when no monsters are available for autotargeting.
+    -- return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
+end
+
+function plan_targeted_evoke()
+    if not qw.danger_in_los or dangerous_to_attack() or not can_evoke() then
         return false
     end
 
-    local result = assess_enemies()
-    if not result.scary_enemy then
-        return false
-    end
-
-    local attack = result.scary_enemy:best_player_attack()
-    if not attack or not attack.item or attack.item.class(true) ~= "wand" then
-        return false
-    end
-
-    local enemy_pos = result.scary_enemy:pos()
-    local primary_target = get_primary_target()
-    local secondary_pos
-    if primary_target and not positions_equal(primary_target.pos, enemy_pos) then
-        secondary_pos = primary_target.pos
-    end
-
-    local target = assess_ranged_target(attack, enemy_pos, secondary_pos)
+    local target = get_evoke_target()
     if not target then
         return false
     end
 
-    zap_item(attack.item, target.pos, target.aim_at_target)
+    evoke_targeted_item(target.attack.items[1], target.pos,
+        target.aim_at_target)
 end
 
 function plan_flight_move_towards_enemy()
     if not qw.danger_in_los
-            or have_ranged_weapon()
+            or using_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -380,7 +380,7 @@ end
 
 function plan_move_towards_enemy()
     if not qw.danger_in_los
-            or have_ranged_weapon()
+            or using_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
@@ -440,7 +440,7 @@ function plan_continue_move_towards_enemy()
 
     if qw.enemy_memory_turns_left > 0 then
         local result = move_search_result(const.origin, qw.enemy_memory,
-            tab_function(), reach_range())
+            tab_function(), player_reach_range())
         if not result then
             return false
         end
@@ -510,10 +510,10 @@ function set_plan_attack()
     plans.attack = cascade {
         {plan_starting_spell, "starting_spell"},
         {plan_poison_spit, "poison_spit"},
-        {plan_attack_wand, "attack_wand"},
+        {plan_targeted_evoke, "attack_wand"},
+        {plan_throw, "throw"},
         {plan_launcher, "launcher"},
         {plan_melee, "melee"},
-        {plan_throw, "throw"},
         {plan_launcher_wait_for_enemy, "launcher_wait_for_enemy"},
         {plan_melee_wait_for_enemy, "melee_wait_for_enemy"},
         {plan_continue_move_towards_enemy, "continue_move_towards_enemy"},

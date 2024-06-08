@@ -69,11 +69,8 @@ function plan_starting_spell()
     end
 
     local dist = distance_to_tabbable_enemy()
-    if dist < 2 and weapon_skill() ~= "Unarmed Combat" then
-        local weap = get_weapon()
-        if weap and weap.weap_skill == weapon_skill() then
-            return false
-        end
+    if dist < 2 and weapons_match_skill(weapon_skill()) then
+        return false
     end
 
     if dist > spell_range(qw.starting_spell) then

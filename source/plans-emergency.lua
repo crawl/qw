@@ -178,25 +178,17 @@ end
 function plan_hydra_destruction()
     if not can_destruction()
             or you.skill("Invocations") < 8
-            or check_greater_servants(4)
-            or hydra_weapon_value(get_weapon()) > -1
-            or you.xl() >= 20 then
+            or check_greater_servants(4) then
         return false
     end
 
-    for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:distance() <= 5 and string.find(enemy:desc(), "hydra") then
-            say("invoking major destruction")
-            for letter, abil in pairs(you.ability_table()) do
-                if abil == "Major Destruction" then
-                    magic("a" .. letter .. "r"
-                        .. vector_move(enemy.pos.x, enemy.pos.y) .. "\r")
-                    return true
-                end
-            end
-        end
+    local hydra_dist = dangerous_hydra_distance()
+    if not hydra_dist or hydra_dist > 5 then
+        return false
     end
-    return false
+
+    return use_ability("Major Destruction",
+        "r" .. vector_move(enemy:x_pos(), enemy:y_pos()) .. "\r")
 end
 
 function fiery_armour()
@@ -331,11 +323,18 @@ function plan_blinking()
 end
 
 function can_drink_heal_wounds()
-    return can_drink()
-        and find_item("potion", "heal wounds")
-        and you.mutation("no potion heal") < 2
-        and not (items.equipped_at("Body Armour")
-            and items.equipped_at("Body Armour"):name():find("NoPotionHeal"))
+    if not can_drink()
+            or not find_item("potion", "heal wounds")
+            or you.mutation("no potion heal") > 1 then
+        return false
+    end
+
+    local armour = get_slot_item("body")
+    if armour and armour:name():find("NoPotionHeal") then
+        return false
+    end
+
+    return true
 end
 
 function heal_general()
@@ -507,7 +506,7 @@ function want_to_brothers_in_arms()
     end
 
     -- If threat is too high even with any available buffs like berserk.
-    local result = assess_enemies(qw.los_radius, const.duration.available)
+    local result = assess_enemies(const.duration.available)
     if result.threat >= 15 then
         return true
     end
@@ -557,7 +556,7 @@ function want_to_cleansing_flame()
         return false
     end
 
-    local result = assess_enemies(2, const.duration.active, mons_holy_check)
+    local result = assess_enemies(const.duration.active, 2, mons_holy_check)
     if result.scary_enemy and not result.scary_enemy:player_can_attack(1)
             or result.threat >= const.high_threat and result.count >= 3 then
         return true
@@ -664,7 +663,7 @@ function want_to_teleport()
         return false
     end
 
-    local enemies = assess_enemies(qw.los_radius, const.duration.available)
+    local enemies = assess_enemies(const.duration.available)
     if enemies.scary_enemy
             and enemies.scary_enemy:threat(const.duration.available) >= 5
             and enemies.scary_enemy:name():find("slime creature")
@@ -798,7 +797,7 @@ function want_to_berserk()
         return true
     end
 
-    local result = assess_enemies(2)
+    local result = assess_enemies(const.duration.available, 2)
     if result.scary_enemy then
         local attack = result.scary_enemy:best_player_attack()
         if attack and attack.uses_berserk then
@@ -924,7 +923,7 @@ function plan_wait_confusion()
 end
 
 function plan_non_melee_berserk()
-    if not you.berserk() or not have_ranged_weapon() then
+    if not you.berserk() or not using_ranged_weapon() then
         return false
     end
 
@@ -991,7 +990,7 @@ function plan_dig_grate()
     for _, enemy in ipairs(qw.enemy_list) do
         if not map_is_reachable_at(enemy:map_pos())
                 and enemy:should_dig_unreachable() then
-            return zap_item(wand, enemy:pos())
+            return evoke_targeted_item(wand, enemy:pos())
         end
     end
 
@@ -1024,7 +1023,7 @@ function set_plan_emergency()
         {plan_cure_confusion, "cure_confusion"},
         {plan_cancellation, "cancellation"},
         {plan_teleport, "teleport"},
-        {plan_remove_terrible_jewellery, "remove_terrible_jewellery"},
+        {plan_remove_terrible_rings, "remove_terrible_rings"},
         {plan_cure_bad_poison, "cure_bad_poison"},
         {plan_blinking, "blinking"},
         {plan_drain_life, "drain_life"},
@@ -1051,7 +1050,6 @@ function set_plan_emergency()
         {plan_fiery_armour, "fiery_armour"},
         {plan_dig_grate, "try_dig_grate"},
         {plan_wield_weapon, "wield_weapon"},
-        {plan_swap_weapon, "swap_weapon"},
         {plan_resistance, "resistance"},
         {plan_finesse, "finesse"},
         {plan_heroism, "heroism"},

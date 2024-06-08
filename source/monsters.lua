@@ -11,6 +11,7 @@ const.attitude = {
     "friendly"
 }
 
+const.moderate_threat = 5
 const.high_threat = 10
 const.extreme_threat = 20
 
@@ -60,22 +61,33 @@ function hydra_weapon_value(weap)
             or sk == "Maces & Flails"
             or sk == "Short Blades"
             or sk == "Polearms" and weap.hands == 1 then
-        return sk == weapon_skill() and 1 or 0
+        return 0
     elseif weap.ego() == "flaming" then
-        return 1
+        return 2
     else
-        return -1
+        return -2
     end
 end
 
-function hydra_check_flaming(lev)
-    return function (mons)
-        return you.xl() < lev
-            and mons:desc():find("hydra")
-            and not contains_string_in(mons:name(),
-                { "skeleton", "zombie", "simulacrum", "spectral" })
-            and hydra_weapon_value(get_weapon()) ~= 1
+function hydra_melee_value()
+    local total_value = 0
+    for weapon in equipped_slot_iter("weapon") do
+        total_value = total_value + hydra_weapon_value(weapon)
     end
+    return total_value
+end
+
+function hydra_is_scary(mons)
+    if hydra_melee_value() > 0 then
+        return false
+    end
+
+    if unable_to_swap_weapons() then
+        return true
+    end
+
+    local best_weapon = best_hydra_swap_weapon()
+    return hydra_weapon_value(best_weapon) <= 0
 end
 
 -- The format in monster lists below is that a num is equivalent to checking
@@ -90,7 +102,7 @@ local scary_monsters = {
     ["white ugly thing"] = { xl = 15, resists = { rC = 0.75 } },
     ["freezing wraith"] = { xl = 15, resists = { rC = 0.75 } },
 
-    ["hydra"] = { xl = 17, edged_weapon = true },
+    ["hydra"] = { xl = 17, check = hydra_is_scary },
     ["entropy weaver"] = { xl = 17, resists = { rCorr = 0.75 } },
     ["shock serpent"] = { xl = 17, resists = { rElec = 0.75 } },
     ["spark wasp"] = { xl = 17, resists = { rElec = 0.75 } },
@@ -376,7 +388,7 @@ function monster_in_list(mons, mons_list)
     return false
 end
 
-function assess_enemies_func(radius, duration_level, filter)
+function assess_enemies_func(duration_level, radius, filter)
     if not radius then
         radius = qw.los_radius
     end
@@ -391,14 +403,13 @@ function assess_enemies_func(radius, duration_level, filter)
         if (not filter or filter(enemy))
                 and (ranged or enemy:has_path_to_melee_player()) then
             local threat = enemy:threat(duration_level)
-            if not result.scary_enemy and threat >= 3 then
-                result.scary_enemy = enemy
-            end
-
             result.threat = result.threat + threat
-
             if ranged then
                 result.ranged_threat = result.ranged_threat + threat
+            end
+
+            if not result.scary_enemy and threat >= 3 then
+                result.scary_enemy = enemy
             end
 
             result.count = result.count + 1
@@ -408,11 +419,11 @@ function assess_enemies_func(radius, duration_level, filter)
     return result
 end
 
-function assess_enemies(radius, duration_level, filter)
+function assess_enemies(duration_level, radius, filter)
     return turn_memo_args("assess_enemies",
         function()
-            return assess_enemies_func(radius, duration_level, filter)
-        end, radius, duration_level, filter)
+            return assess_enemies_func(duration_level, radius, filter)
+        end, duration_level, radius, filter)
 end
 
 function mons_holy_check(mons)
@@ -431,13 +442,17 @@ function assess_hell_enemies(radius)
     -- We're most concerned with hell monsters that aren't vulnerable to any
     -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
     -- brand).
-    local weapon = get_weapon()
     local have_holy_wrath = you.god() == "the Shining One"
-        or weapon and weapon.ego() == "holy wrath"
+    for weapon in equipped_slot_iter("weapon") do
+        if weapon.ego() == "holy wrath" then
+            have_holy_wrath = true
+        end
+    end
+
     local filter = function(mons)
         return not have_holy_wrath or mons:res_holy()
     end
-    return assess_enemies(radius, filter)
+    return assess_enemies(radius, const.duration.active, filter)
 end
 
 function check_enemies_func(radius, filter)
@@ -549,10 +564,12 @@ function monster_short_name(mons)
                 if name == "spectral" then
                     return "spectral hydra"
                 else
-                    return name .. " hydra"
+                    return "hydra " .. name
                 end
             end
         end
+
+        return "hydra"
     end
 
     if mons:desc():find("'s? ghost") then

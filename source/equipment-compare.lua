@@ -18,120 +18,330 @@
 -- if it2, pretend we aren't equipping it2
 -- if sit = "hydra", assume we are fighting a hydra at lowish XL
 --        = "bless", assume we want to bless the weapon with TSO eventually
-function equip_value(it, cur, it2, sit)
-    if not it then
-        return 0, 0
+function equip_value(item, cur, ignore_equip, sit, only_linear)
+    if not item then
+        return -1, -1
     end
-    local class = it.class(true)
-    if class == "armour" then
-        return armour_value(it, cur, it2)
-    elseif class == "weapon" then
-        return weapon_value(it, cur, it2, sit)
-    elseif class == "jewellery" then
-        if equip_slot(it) == "Amulet" then
-            return amulet_value(it, cur, it2)
-        else
-            return ring_value(it, cur, it2)
-        end
+
+    local slot = equip_slot(item)
+    if const.armour_equip_names[slot] then
+        return armour_value(item, cur, ignore_equip, only_linear)
+    elseif slot == "weapon" then
+        return weapon_value(item, cur, ignore_equip, sit, only_linear)
+    elseif slot == "amulet" then
+        return amulet_value(item, cur, ignore_equip, only_linear)
+    elseif slot == "ring" then
+        return ring_value(item, cur, ignore_equip, only_linear)
+    elseif slot == "gizmo" then
+        return gizmo_value(item, ignore_equip, only_linear)
     end
+
     return -1, -1
 end
 
-function base_equip_value(it)
-    only_linear_properties = true
-    local val1, val2 = equip_value(it)
-    only_linear_properties = false
-    return val1, val2
+function equip_set_value(equip, ignore_item)
+    if ignore_item then
+        new_equip = {}
+        local found_equip = false
+        for slot, item in equip_set_iter(equip) do
+            if item.slot ~= ignore_item.slot then
+                if not new_equip[slot] then
+                    new_equip[slot] = {}
+                end
+
+                table.insert(new_equip[slot], item)
+                found_equip = true
+            end
+        end
+
+        if not found_equip then
+            return 0
+        end
+
+        equip = new_equip
+    end
+
+    local total_value, weapon_delay, weapon_count = 0, 0, 0
+    for slot, item in equip_set_iter(equip) do
+        local value = 0
+        if slot == "weapon" then
+            weapon_delay = weapon_delay + weapon_min_delay(item)
+            weapon_count = weapon_count + 1
+        elseif const.armour_equip_names[slot] then
+            value = armour_base_value(item, true)
+        elseif slot == "amulet" then
+            value = amulet_base_value(item, true)
+        elseif slot == "gizmo" then
+            value = gizmo_base_value(item)
+        end
+
+        if value < 0 then
+            return value
+        end
+
+        for _, prop in ipairs(const.linear_properties) do
+            value = value
+                + item_property(prop, item) * linear_property_value(prop)
+        end
+
+        total_value = total_value + value
+    end
+
+    if weapon_count > 0 then
+        weapon_delay = weapon_delay / weapon_count
+        local skill = weapon_skill()
+        for weapon in equip_set_slot_iter(equip, "weapon") do
+            local value = weapon_base_value(weapon, true)
+            if value < 0 then
+                return value
+            end
+
+            value = value + weapon_damage_value(weapon, weapon_delay)
+
+            if weapon.weap_skill ~= skill then
+                value = value / 10
+            end
+
+            total_value = total_value + value
+        end
+    end
+
+    local cur_equip = inventory_equip(const.inventory.equipped)
+    for _, prop in ipairs(const.nonlinear_properties) do
+        local level = 0
+        for _, item in equip_set_iter(equip) do
+            level = level + item_property(prop, item)
+        end
+
+        local player_level = player_property(prop, cur_equip)
+        total_value = total_value
+            + absolute_property_value(prop, player_level + level)
+            - absolute_property_value(prop, player_level)
+    end
+
+    return total_value
+end
+
+function best_inventory_equip(extra_item)
+    local extra_slot = equip_slot(extra_item)
+    if extra_item and (not extra_slot or equip_is_dominated(extra_item)) then
+        return
+    end
+
+    local inventory = inventory_equip(const.inventory.value)
+    if not inventory then
+        if not extra_item then
+            return
+        end
+
+        inventory = {}
+    end
+
+    local best_equip
+    local iter_count = 1
+    for equip in equip_combo_iter(inventory, extra_item) do
+        equip.value = equip_set_value(equip)
+
+        if debug_channel("items") then
+            dsay("Iteration #" .. tostring(iter_count) .. ": "
+                .. equip_set_string(equip) .. "; value: "
+                .. tostring(equip.value))
+        end
+
+        if equip.value > 0
+                and (not best_equip or equip.value > best_equip.value) then
+            best_equip = equip
+        end
+
+        iter_count = iter_count + 1
+    end
+
+    if debug_channel("items") then
+        if best_equip then
+            dsay("Best equip set: " .. equip_set_string(best_equip)
+                .. "; value: " .. tostring(best_equip.value))
+        else
+            dsay("No best equip set found")
+        end
+    end
+
+    return best_equip
+end
+
+function best_equip_from_c_persist()
+    if not c_persist.best_equip or not c_persist.best_equip.value then
+        return
+    end
+
+    local equip = { value = c_persist.best_equip.value }
+    c_persist.best_equip.value = nil
+    for letter, name in pairs(c_persist.best_equip) do
+        local item = get_item(letter)
+        if not item or item.name() ~= name then
+            return
+        end
+
+        local slot = equip_slot(item)
+        if not equip[slot] then
+            equip[slot] = {}
+        end
+
+        table.insert(equip[slot], item)
+    end
+    c_persist.best_equip.value = equip.value
+    return equip
+end
+
+function equip_set_value_search(equip, filter, min_value)
+    local best_item, best_value
+    for slot, item in equip_set_iter(equip) do
+        if not filter or filter(item) then
+            local value = equip.value - equip_set_value(equip, item)
+            if not best_value
+                    or min_value and value < best_value
+                    or not min_value and value > best_value then
+                best_item = item
+                best_value = value
+            end
+        end
+    end
+    return best_item, best_value
+end
+
+function remove_equip_set_item(item, equip)
+    local slot = equip_slot(item)
+    if not equip[slot] then
+        return
+    end
+
+    for i, set_item in ipairs(equip[slot]) do
+        if equip[slot][i].slot == item.slot then
+            if #equip[slot] == 1 then
+                equip[slot] = nil
+            else
+                table.remove(equip[slot], i)
+            end
+
+            return
+        end
+    end
+end
+
+function best_equip_set()
+    if qw.best_equip then
+        return qw.best_equip
+    end
+
+    qw.best_equip = best_equip_from_c_persist()
+    if qw.best_equip then
+        return qw.best_equip
+    end
+
+    local equip = best_inventory_equip()
+    if not equip then
+        c_persist.best_equip = nil
+        return
+    end
+
+    repeat
+        local worst_item, worst_value = equip_set_value_search(equip,
+            nil, true)
+
+        if worst_value and worst_value <= 0 then
+            if debug_channel("items") then
+                dsay("Removing best equip set item " .. worst_item.name()
+                    .. " with value " .. tostring(worst_value))
+            end
+
+            remove_equip_set_item(worst_item, equip)
+            equip.value = equip.value - worst_value
+        end
+    until not worst_value or worst_value > 0
+    qw.best_equip = equip
+
+    if debug_channel("items") then
+        dsay("Final best equip set: " .. equip_set_string(qw.best_equip)
+            .. "; value: " .. tostring(qw.best_equip.value))
+    end
+
+    c_persist.best_equip = {}
+    for _, item in equip_set_iter(qw.best_equip) do
+        c_persist.best_equip[item_letter(item)] = item.name()
+    end
+    c_persist.best_equip.value = qw.best_equip.value
+
+    return qw.best_equip
 end
 
 -- Is the first item going to be worse than the second item no matter what
 -- other properties we have?
-function property_dominated(it, it2)
-    local bmin, bmax = base_equip_value(it)
-    local bmin2, bmax2 = base_equip_value(it2)
-    local diff = bmin2 - bmax
+function property_dominated(item1, item2)
+    local bmin1, bmax1 = equip_value(item1, false, nil, nil, true)
+    local bmin2, bmax2 = equip_value(item2, false, nil, nil, true)
+    local diff = bmin2 - bmax1
     if diff < 0 then
         return false
     end
 
-    local vec = property_vec(it)
-    local vec2 = property_vec(it2)
-    for i = 1, #vec do
-        if vec[i] > vec2[i] then
-            diff = diff - (vec[i] - vec2[i])
+    local props1 = property_array(item1)
+    local props2 = property_array(item2)
+    for i = 1, #props1 do
+        if props1[i] > props2[i] then
+            diff = diff - (props1[i] - props2[i])
         end
     end
     return diff >= 0
 end
 
-function armour_value(it, cur, it2)
-    local name = it.name()
+function armour_base_value(item, cur)
     local value = 0
-    local val1, val2 = 0, 0
-    if current_god_hates_item(it) then
+    local min_val, max_val = 0, 0
+
+    if current_god_hates_item(item) then
         if cur then
             return -1, -1
         else
-            val1 = -10000
+            min_val = -10000
         end
-    elseif not cur and future_gods_hate_item(it) then
-        val1 = -10000
+    elseif not cur and future_gods_hate_item(item) then
+        min_val = -10000
     end
 
-    local res_val1, res_val2 = total_property_value(it, cur, it2)
-    val1 = val1 + res_val1
-    val2 = val2 + res_val2
-
-    local ego = it.ego()
-    if it.artefact then
-        if not it.fully_identified then -- could be good or bad
-            val1 = val1 + (cur and 400 or -400)
-            val2 = val2 + 400
-        end
-
+    local name = item.name()
+    if item.artefact then
         -- Unrands
         if name:find("hauberk") then
             return -1, -1
         end
 
-        if it.name():find("Mad Mage's Maulers") then
+        if item.name():find("Mad Mage's Maulers") then
             if you.race() == "Djinni" or god_uses_mp() then
                 if cur then
                     return -1, -1
                 else
-                    val1 = -10000
+                    min_val = -10000
                 end
             elseif not cur and future_gods_use_mp then
-                val1 = -10000
+                min_val = -10000
             end
 
             value = value + 200
-        elseif it.name():find("lightning scales") then
+        elseif item.name():find("lightning scales") then
             value = value + 100
         end
-    elseif name:find("runed") or name:find("glowing") or name:find("dyed")
-            or name:find("embroidered") or name:find("shiny") then
-        val1 = val1 + (cur and 400 or -200)
-        val2 = val2 + 400
     end
 
-    value = value + 50 * expected_armour_multiplier() * it.ac
-    if it.plus then
-        value = value + 50 * it.plus
-    end
-    local st = it.subtype()
-    if good_slots[st] == "Shield" then
-        if it.encumbrance == 0 then
-            if not want_buckler() then
-                return -1, -1
-            end
-        elseif (not want_shield()) and (have_two_hander()
-                or you.base_skill("Shields") == 0) then
-            return -1, -1
-        end
+    value = value + 50 * expected_armour_multiplier() * item.ac
+    if item.plus then
+        value = value + 50 * item.plus
     end
 
-    if good_slots[st] == "Boots" then
+    local slot = equip_slot(item)
+    if slot == "shield" and not want_shield() then
+        return -1, -1
+    end
+
+    if slot == "boots" then
         local want_barding = you.race() == "Armataur" or you.race() == "Naga"
         local is_barding = name:find("barding") or name:find("lightning scales")
         if want_barding and not is_barding
@@ -140,11 +350,12 @@ function armour_value(it, cur, it2)
         end
     end
 
-    if good_slots[st] == "Body Armour" then
+    if slot == "body" then
         if unfitting_armour() then
-            value = value - 25 * it.ac
+            value = value - 25 * item.ac
         end
-        evp = it.encumbrance
+
+        evp = item.encumbrance
         ap = armour_plan()
         if ap == "heavy" or ap == "large" then
             if evp >= 20 then
@@ -167,71 +378,100 @@ function armour_value(it, cur, it2)
         end
     end
 
-    val1 = val1 + value
-    val2 = val2 + value
-    return val1, val2
+    return min_val + value, max_val + value
 end
 
-function weapon_value(it, cur, it2, sit)
-    if it.class(true) ~= "weapon" then
-        return -1, -1
+function armour_value(item, cur, ignore_equip, only_linear)
+    local min_val, max_val = armour_base_value(item, cur)
+
+    if cur and min_val < 0 or max_val < 0 then
+        return min_val, max_val
     end
 
+    -- Subtype is known and has given us a reasonable value range. We adjust
+    -- this range based on the fact that the unknown properties could be good
+    -- or bad.
+    if not cur and equip_is_valuable_unidentified(item) then
+        min_val = min_val + (item.artefact and -400 or -200)
+        max_val = max_val + 400
+    end
+
+    local res_min, res_max = total_property_value(item, cur, ignore_equip,
+        only_linear)
+    min_val = min_val + res_min
+    max_val = max_val + res_max
+
+    return min_val, max_val
+end
+
+function weapons_match_skill(skill)
+    for weapon in equipped_slot_iter("weapon") do
+        if weapon.weap_skill ~= skill then
+            return false
+        end
+    end
+
+    return true
+end
+
+function weapons_have_antimagic()
+    for weapon in equipped_slot_iter("weapon") do
+        if weapon.ego() == "antimagic" then
+            return true
+        end
+    end
+
+    return false
+end
+
+function weapon_base_value(item, cur, sit)
+    local value = 1000
+    local min_val, max_val = 0, 0
+
     local hydra_swap = sit == "hydra"
-    local weap = get_weapon()
     local weap_skill = weapon_skill()
     -- The evaluating weapon doesn't match our desired skill...
-    if it.weap_skill ~= weap_skill
+    if item.weap_skill ~= weap_skill
             -- ...and our current weapon already matches our desired skill or
             -- we use UC...
-            and (weap and weap.weap_skill == weap_skill
+            and (weapons_match_skill(weap_skill)
                 or weap_skill == "Unarmed Combat")
             -- ...and we either don't need a hydra swap weapon or the
             -- evaluating weapon isn't a hydra swap weapon for our desired
             -- skill.
             and (not hydra_swap
-                or not (it.weap_skill == "Maces & Flails"
+                or not (item.weap_skill == "Maces & Flails"
                             and weap_skill == "Axes"
-                        or it.weap_skill == "Short Blades"
+                        or item.weap_skill == "Short Blades"
                             and weap_skill == "Long Blades")) then
         return -1, -1
     end
 
-    if it.hands == 2 and want_buckler() then
-        return -1, -1
-    end
-
-    local name = it.name()
-    local value = 1000
-    local val1, val2 = 0, 0
-
+    local name = item.name()
     if sit == "bless" then
-        if it.artefact then
+        if item.artefact then
             return -1, -1
-        elseif name:find("runed")
-                or name:find("glowing")
-                or name:find("enchanted")
-                or it.ego() and not it.fully_identified then
-            val1 = val1 + (cur and 150 or -150)
-            val2 = val2 + 150
+        elseif not cur and equip_is_valuable_unidentified(item) then
+            min_val = min_val - 150
+            max_val = max_val + 150
         end
 
-        if it.plus then
-            value = value + 30 * it.plus
+        if item.plus then
+            value = value + 30 * item.plus
         end
 
-        value = value + 1200 * it.damage / weapon_min_delay(it)
-        return value + val1, value + val2
+        value = value + 1200 * item.damage / weapon_min_delay(item)
+        return value + min_val, value + max_val
     end
 
-    if current_god_hates_item(it) then
+    if current_god_hates_item(item) then
         if cur then
             return -1, -1
         else
-            val1 = -10000
+            min_val = -10000
         end
-    elseif not cur and future_gods_hate_item(it) then
-        val1 = -10000
+    elseif not cur and future_gods_hate_item(item) then
+        min_val = -10000
     end
 
     -- XXX: De-value this on certain levels or give qw better strats while
@@ -241,8 +481,8 @@ function weapon_value(it, cur, it2, sit)
         if you.mutation("hated by all") or you.god() == "Okawaru" then
             value = value - 200
         elseif future_okawaru then
-            val1 = val1 + (cur and 200 or -200)
-            val2 = val2 + 200
+            min_val = min_val + (cur and 200 or -200)
+            max_val = max_val + 200
         else
             value = value + 200
         end
@@ -254,29 +494,23 @@ function weapon_value(it, cur, it2, sit)
         value = value + 1000
     end
 
-    local res_val1, res_val2 = total_property_value(it, cur, it2)
-    val1 = val1 + res_val1
-    val2 = val2 + res_val2
-
-    if it.artefact and not it.fully_identified
-            or name:find("runed")
-            or name:find("glowing") then
-        val1 = val1 + (cur and 500 or -250)
-        val2 = val2 + 500
+    if item.hands == 2 and not want_two_handed_weapon() then
+        return -1, -1
     end
 
     if hydra_swap then
-        local hydra_value = hydra_weapon_value(it)
-        if hydra_value == -1 then
+        local hydra_value = hydra_weapon_value(item)
+        if hydra_value < 0 then
             return -1, -1
-        elseif hydra_value == 1 then
+        elseif hydra_value > 0 then
             value = value + 500
         end
     end
 
+    -- Names are mostly in weapon_brands_verbose[].
     local undead_demon = undead_or_demon_branch_soon()
-    local ego = it.ego()
-    if ego then -- names are mostly in weapon_brands_verbose[]
+    local ego = item.ego()
+    if ego then
         if ego == "distortion" then
             return -1, -1
         elseif ego == "holy wrath" then
@@ -286,11 +520,11 @@ function weapon_value(it, cur, it2, sit)
             end
 
             if undead_demon then
-                val1 = val1 + (cur and 500 or 0)
-                val2 = val2 + 500
+                min_val = min_val + (cur and 500 or 0)
+                max_val = max_val + 500
             -- This will eventaully be good on the Orb run.
             else
-                val2 = val2 + 500
+                max_val = max_val + 500
             end
         -- Not good against demons or undead, otherwise this is what we want.
         elseif ego == "vampirism" then
@@ -298,10 +532,10 @@ function weapon_value(it, cur, it2, sit)
             -- before the Orb. XXX: Determine this from goals and adjust this
             -- value based on the result.
             if undead_demon then
-                val2 = val2 + 500
+                max_val = max_val + 500
             else
-                val1 = val1 + (cur and 500 or 0)
-                val2 = val2 + 500
+                min_val = min_val + (cur and 500 or 0)
+                max_val = max_val + 500
             end
         elseif ego == "speed" then
             -- This is good too
@@ -311,10 +545,10 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "draining" then
             -- XXX: Same issue as for vampirism above.
             if undead_demon then
-                val2 = val2 + 75
+                max_val = max_val + 75
             else
-                val1 = val1 + (cur and 75 or 0)
-                val2 = val2 + 75
+                min_val = min_val + (cur and 75 or 0)
+                max_val = max_val + 75
             end
         elseif ego == "penetration" then
             value = value + 150
@@ -329,26 +563,26 @@ function weapon_value(it, cur, it2, sit)
         elseif ego == "venom" and not undead_demon then
             -- XXX: Same issue as for vampirism above.
             if undead_demon then
-                val2 = val2 + 50
+                max_val = max_val + 50
             else
-                val1 = val1 + (cur and 50 or 0)
-                val2 = val2 + 50
+                min_val = min_val + (cur and 50 or 0)
+                max_val = max_val + 50
             end
         elseif ego == "antimagic" then
             if you.race() ~= "Djinni" then
                 local new_mmp = select(2, you.mp())
                 -- Swapping to antimagic reduces our max MP by 2/3.
-                if weap.ego() ~= "antimagic" then
+                if not weapons_have_antimagic() then
                     new_mmp = math.floor(select(2, you.mp()) * 1 / 3)
                 end
                 if not enough_max_mp_for_god(new_mmp, you.god()) then
                     if cur then
                         return -1, -1
                     else
-                        val1 = -10000
+                        min_val = -10000
                     end
                 elseif not cur and not future_gods_enough_max_mp(new_mmp) then
-                    val1 = -10000
+                    min_val = -10000
                 end
             end
 
@@ -362,10 +596,10 @@ function weapon_value(it, cur, it2, sit)
                 if cur then
                     return -1, -1
                 else
-                    val1 = -10000
+                    min_val = -10000
                 end
             elseif not cur and planning_slime then
-                val1 = -10000
+                min_val = -10000
             end
 
             -- The best possible ranged brand aside from possibly holy wrath vs
@@ -376,166 +610,202 @@ function weapon_value(it, cur, it2, sit)
         end
     end
 
-    if it.plus then
-        value = value + 30 * it.plus
+    if item.plus then
+        value = value + 30 * item.plus
     end
 
-    -- We might be delayed by a shield or not yet at min delay, so add a little.
-    value = value + 1200 * it.damage / (weapon_min_delay(it) + 1)
-
-    if it.weap_skill ~= weap_skill then
-        value = value / 10
-        if val1 > 0 then
-            val1 = val1 / 10
-        end
-        val2 = val2 / 10
-    end
-
-    val1 = val1 + value
-    val2 = val2 + value
-    return val1, val2
+    return min_val + value, max_val + value
 end
 
-function amulet_value(it, cur, it2)
-    local name = it.name()
+function weapon_damage_value(item, delay)
+    -- We might be delayed by a shield or not yet at min delay, so add a little.
+    return 1200 * item.damage / (delay + 1)
+end
+
+function weapon_value(item, cur, ignore_equip, sit, only_linear)
+    local min_val, max_val = weapon_base_value(item, cur, sit)
+
+    if cur and min_val < 0 or max_val < 0 then
+        return min_val, max_val
+    end
+
+    local damage_value = weapon_damage_value(item, weapon_min_delay(item))
+    min_val = min_val + damage_value
+    max_val = max_val + damage_value
+
+    -- The utility from damage is worth much less without training in the skill.
+    if item.weap_skill ~= weapon_skill() then
+        if min_val > 0 then
+            min_val = min_val / 10
+        end
+
+        max_val = max_val / 10
+    end
+
+    if not cur and equip_is_valuable_unidentified(item) then
+        min_val = min_val - 250
+        max_val = max_val + 500
+    end
+
+    local prop_min, prop_max = total_property_value(item, cur, ignore_equip,
+        only_linear)
+    return min_val + prop_min, max_val + prop_max
+end
+
+function amulet_base_value(item, cur)
+    local name = item.name()
     if name:find("macabre finger necklace") then
         return -1, -1
     end
 
-    local val1, val2 = 0, 0
-    if current_god_hates_item(it) then
+    local min_val, max_val = 0, 0
+    if current_god_hates_item(item) then
         if cur then
             return -1, -1
         else
-            val1 = -10000
+            min_val = -10000
         end
-    elseif not cur and future_gods_hate_item(it) then
-        val1 = -10000
+    elseif not cur and future_gods_hate_item(item) then
+        min_val = -10000
     end
 
-    if not it.fully_identified then
-        if cur then
-            return 800, 800
-        end
-
-        if val1 > -1 then
-            val1 = -1
-        end
-        val2 = 1000
+    if name:find("of the Air.*Innac") then
+        min_val = min_val - 200
+        max_val = max_val - 200
     end
 
-    local res_val1, res_val2 = total_property_value(it, cur, it2)
-    val1 = val1 + res_val1
-    val2 = val2 + res_val2
-    return val1, val2
+    return min_val, max_val
 end
 
-function ring_value(it, cur, it2)
-    if not it.fully_identified then
-        if cur then
-            return 5000, 5000
-        else
-            return -1, 5000
-        end
+function amulet_value(item, cur, ignore_equip, only_linear)
+    local min_val, max_val = amulet_base_value(item, cur)
+
+    if cur and min_val < 0 or max_val < 0 then
+        return min_val, max_val
     end
 
-    local val1, val2 = total_property_value(it, cur, it2)
-    return val1, val2
+    if not cur and equip_is_valuable_unidentified(item) then
+        min_val = min_val - 250
+        max_val = max_val + 1000
+    end
+
+    local prop_min, prop_max = total_property_value(item, cur, ignore_equip,
+        only_linear)
+    return min_val + prop_min, max_val + prop_max
 end
 
--- This doesn't handle rings correctly at the moment, but right now we are
--- only using this for weapons anyway.
--- Also maybe this should check property_dominated too?
-function item_is_sit_dominated(it, sit)
-    local slotname = equip_slot(it)
-    local minv, maxv = equip_value(it, nil, nil, sit)
-    if maxv <= 0 then
+function ring_value(item, cur, ignore_equip, only_linear)
+    local min_val, max_val = 0, 0
+
+    if not cur and equip_is_valuable_unidentified(item) then
+        min_val = min_val - 250
+        max_val = max_val + 500
+    end
+
+    local prop_min, prop_max= total_property_value(item, cur, ignore_equip,
+        only_linear)
+    return min_val + prop_min, max_val + prop_max
+end
+
+function gizmo_base_value(item)
+    local value = 0
+    local ego = item.ego()
+    if ego == "Gadgeteer" then
+        value = 20
+    elseif ego == "AutoDazzle" then
+        value = 100
+    -- This gets additional value added from its AC property.
+    elseif ego == "RevParry" then
+        value = 20
+    end
+    return value
+end
+
+function gizmo_value(item, ignore_equip, only_linear)
+    return gizmo_base_value(item)
+        + total_property_value(item, true, ignore_equip, only_linear)
+end
+
+-- Maybe this should check property_dominated too?
+function weapon_is_sit_dominated(item, sit)
+    local max_val = select(2, weapon_value(item, false, nil, sit))
+    if max_val < 0 then
         return true
     end
 
-    for it2 in inventory() do
-        if equip_slot(it2) == slotname and it2.slot ~= it.slot then
-            local minv2, maxv2 = weapon_value(it2, nil, nil, sit)
-            if minv2 >= maxv
-                    and not (slotname == "Weapon"
-                        and you.base_skill("Shields") > 0
-                        and it.hands == 1 and it2.hands == 2) then
-                return true
-            end
+    for weapon in inventory_slot_iter("weapon") do
+        if weapon.slot ~= item.slot
+                    and (weapon.hands == 1 or want_two_handed_weapon())
+                    and select(2, weapon_value(weapon, false, nil, sit))
+                        >= max_val then
+            return true
         end
     end
 
     return false
 end
 
-function item_is_dominated(it)
-    local slotname = equip_slot(it)
-    if slotname == "Weapon" and you.xl() < 18
-            and not item_is_sit_dominated(it, "hydra") then
-        return false
-    elseif slotname == "Weapon"
+function equip_is_dominated(item)
+    local slot = equip_slot(item)
+    if you.race() ~= "Coglin"
+                and slot == "weapon"
+                and you.xl() < 18
+                and not weapon_is_sit_dominated(item, "hydra")
+            or slot == "weapon"
                 and (you.god() == "the Shining One"
                         and not you.one_time_ability_used()
                     or future_tso)
-                and not item_is_sit_dominated(it, "bless") then
+                and not weapon_is_sit_dominated(item, "bless")
+            or slot == "gizmo" then
         return false
     end
 
-    local minv, maxv = equip_value(it)
-    if maxv <= 0 then
+    local min_val, max_val = equip_value(item)
+    if max_val < 0 then
         return true
     end
 
-    local num_slots = 1
-    if slotname == "Ring" then
-        num_slots = max_rings()
-    end
-    for it2 in inventory() do
-        if equip_slot(it2) == slotname and it2.slot ~= it.slot then
-            local minv2, maxv2 = equip_value(it2)
-            if minv2 >= maxv
-                    or minv2 >= minv
-                        and maxv2 >= maxv
-                        and property_dominated(it, it2) then
-                num_slots = num_slots - 1
-                if num_slots == 0 then
+    local slots_free = slot_max_items(slot)
+    for item2 in inventory_slot_iter(slot) do
+        if item2.slot ~= item.slot
+                and not (want_shield()
+                    and weapon_allows_shield(item)
+                    and not weapon_allows_shield(item2)) then
+            local min_val2, max_val2 = equip_value(item2)
+            if min_val2 >= max_val
+                    or min_val2 >= min_val
+                        and max_val2 >= max_val
+                        and property_dominated(item, item2) then
+                slots_free = slots_free - 1
+
+                if slots_free == 0 then
                     return true
                 end
             end
         end
     end
+
     return false
 end
 
-function should_drop(it)
-    return item_is_dominated(it)
-end
-
--- Assumes old_it is equipped.
-function should_upgrade(it, old_it, sit)
-    if not old_it then
-        return should_equip(it, sit)
-    end
-
-    if not it.fully_identified and not should_drop(it) then
-        if equip_slot(it) == "Weapon" and it.weap_skill ~= weapon_skill() then
-            return true
+function best_acquirement_index(acq_items)
+    local best_index, gold_index
+    local best_equip = best_equip_set()
+    for i, item in ipairs(acq_items) do
+        local equip = best_inventory_equip(item)
+        if equip and (not best_equip or equip.value > best_equip.value) then
+            best_equip = equip
+            best_index = i
         end
 
-        -- Don't like to swap Faith.
-        return item_property("Faith", old_it) == 0
+        if item.class(true) == "gold" then
+            gold_index = i
+        end
     end
 
-    return equip_value(it, true, old_it, sit)
-        > equip_value(old_it, true, old_it, sit)
-end
-
--- Assumes it is not equipped and an empty slot is available.
-function should_equip(it, sit)
-    return equip_value(it, true, nil, sit) > 0
-end
-
--- Assumes it is equipped.
-function should_remove(it)
-    return equip_value(it, true, it) <= 0
+    if best_index then
+        return best_index
+    elseif gold_index then
+        return gold_index
+    end
 end

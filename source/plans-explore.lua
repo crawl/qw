@@ -486,22 +486,11 @@ function set_plan_pre_explore()
         {plan_sacrifice, "sacrifice"},
         {plans.acquirement, "acquirement"},
         {plan_bless_weapon, "bless_weapon"},
+        {plan_remove_shield, "remove_shield"},
         {plan_upgrade_weapon, "upgrade_weapon"},
+        {plan_wear_shield, "wear_shield"},
         {plan_use_good_consumables, "use_good_consumables"},
         {plan_unwield_weapon, "unwield_weapon"},
-    }
-end
-
-function set_plan_pre_explore2()
-    plans.pre_explore2 = cascade {
-        {plan_upgrade_armour, "upgrade_armour"},
-        {plan_upgrade_amulet, "upgrade_amulet"},
-        {plan_upgrade_rings, "upgrade_rings"},
-        {plan_use_identify_scrolls, "use_identify_scrolls"},
-        {plan_read_unided_scrolls, "try_read_unided_scrolls"},
-        {plan_quaff_unided_potions, "quaff_unided_potions"},
-        {plan_drop_other_items, "drop_other_items"},
-        {plan_full_inventory_panic, "full_inventory_panic"},
     }
 end
 
@@ -514,6 +503,18 @@ function set_plan_explore()
         {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
         {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
+    }
+end
+
+function set_plan_pre_explore2()
+    plans.pre_explore2 = cascade {
+        {plan_upgrade_equipment, "upgrade_equipment"},
+        {plan_remove_equipment, "remove_equipment"},
+        {plan_use_identify_scrolls, "use_identify_scrolls"},
+        {plan_read_unided_scrolls, "try_read_unided_scrolls"},
+        {plan_quaff_unided_potions, "quaff_unided_potions"},
+        {plan_drop_items, "drop_items"},
+        {plan_full_inventory_panic, "full_inventory_panic"},
     }
 end
 

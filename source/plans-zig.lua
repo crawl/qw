@@ -82,7 +82,7 @@ function plan_zig_dig()
         return false
     end
 
-    return zap_item(wand, { x = 1, y = 0 })
+    return evoke_targeted_item(wand, { x = 1, y = 0 })
 end
 
 function plan_zig_go_to_stairs()

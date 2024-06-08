@@ -89,7 +89,7 @@ function initialize_rc_variables()
     qw.late_orc = LATE_ORC
     qw.rune_preference = RUNE_PREFERENCE
 
-    qw.shield_crazy = SHIELD_CRAZY
+    qw.shield_crazy = SHIELD_CRAZY and you.race() ~= "Coglin"
     qw.full_inventory_panic = FULL_INVENTORY_PANIC
 end
 
@@ -99,6 +99,8 @@ function initialize_enums()
     const.map_select = enum(const.map_select)
     const.attitude = enum(const.attitude)
     const.duration = enum(const.duration)
+    const.inventory = enum(const.inventory)
+    const.attack = enum(const.attack)
 end
 
 function initialize_const()
