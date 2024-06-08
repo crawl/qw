@@ -34,9 +34,9 @@ function dsay(x, do_note)
     -- and note() so we can catch errors.
     local str
     if type(x) == "table" then
-        str = stringify_table(x)
+        str = qw.stringify_table(x)
     else
-        str = tostring(x)
+        str = qw.stringify(x)
     end
 
     str = you.turns() .. " ||| " .. str
@@ -56,34 +56,6 @@ function test_radius_iter()
     dsay("Testing const.origin with radius 3")
     for pos in radius_iter(const.origin, 3) do
         dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
-    end
-end
-
---------------------------------
--- a function to test various things conveniently
-function ttt()
-    for i = -qw.los_radius, qw.los_radius do
-        for j = -qw.los_radius, qw.los_radius do
-            m = monster.get_monster_at(i, j)
-            if m then
-                crawl.mpr("(" .. i .. "," .. j .. "): name = " .. m:name()
-                    .. ", desc = " .. m:desc() .. ".")
-            end
-        end
-    end
-    --for it in inventory() do
-    --    crawl.mpr("name = " .. it.name() .. ", ego = " ..
-    --        (it.ego() or "none") .. ", subtype = " ..
-    --        (it.subtype() or "none") .. ", slot = " .. slot(it) .. ".")
-    --end
-    for it in at_feet() do
-        local val1, val2 = equip_value(it)
-        local val3, val4 = equip_value(it, true)
-        crawl.mpr("name = " .. it.name() .. ", ego = " ..
-            (it.ego() or "none") .. it.ego_type .. ", subtype = " ..
-            (it.subtype() or "none") .. ", slot = " .. (slot(it) or -1) ..
-            ", values = " .. val1 .. " " .. val2 .. " " .. val3 .. " " ..
-            val4 .. ".")
     end
 end
 
@@ -332,4 +304,48 @@ function toggle_single_step()
     qw.single_step = not qw.single_step
     dsay((qw.single_step and "Enabling" or "Disabling")
       .. " single action steps.")
+end
+
+function qw.stringify(x)
+    local t = type(x)
+    if t == "nil" then
+        return "nil"
+    elseif t == "number" then
+        return tostring(x)
+    elseif t == "string" then
+        return x
+    elseif t == "boolean" then
+        return x and "true" or "false"
+    elseif x.name then
+        return item_string(x)
+    end
+end
+
+function qw.stringify_table(tab, indent_level)
+    if not indent_level then
+        indent_level = 0
+    end
+
+    local spaces = ""
+    for i = 1, 2 * indent_level + 1 do
+        spaces = spaces .. " "
+    end
+
+    if type(tab.pos) == "function" then
+        return spaces .. "{ " .. cell_string_from_position(tab:pos()) .. " }"
+    end
+
+    local res = spaces .. "{\n"
+    for key, val in pairs(tab) do
+        res = res .. spaces .. " [" .. qw.stringify(key) .. "] ="
+        if type(val) ~= "table" then
+            res = res .. " " .. qw.stringify(val) .. ",\n"
+        elseif next(val) == nil then -- table is empty
+            res = res .. " { },\n"
+        else
+            res = res .. "\n" .. qw.stringify_table(val, indent_level + 1) .. ",\n"
+        end
+    end
+    res = res .. spaces .. "}"
+    return res
 end
