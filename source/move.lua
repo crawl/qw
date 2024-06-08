@@ -219,33 +219,64 @@ function move_search_result(center, target, square_func, min_dist)
     end
 end
 
-function best_move_towards(map_pos, ignore_exclusions)
-    local dist_map = get_distance_map(map_pos)
-    local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-    local current_dist = map[qw.map_pos.x][qw.map_pos.y]
-    if current_dist == 0 then
+--[[
+Get the best move towards the given map position
+@table                 dest_pos      The destination map position.
+@table[opt=qw.map_pos] from_pos      The starting map position. Defaults to
+                                     qw's current position.
+@boolean               allow_unsafe  If true, allow movements to squares that
+                                     are unsafe due to clouds, traps, etc. or
+                                     that contain hostile monsters.
+@boolean               flee_monsters If true, assume we are attempting to flee.
+                                     Don't attempt moves where we either move
+                                     closer to monsters or would not be able to
+                                     outrun a monster given considerations of
+                                     move speed and the distance needed to
+                                     reach the flee destination.
+--]]
+function best_move_towards(dest_pos, from_pos, allow_unsafe, flee_monsters)
+    if not from_pos then
+        from_pos = qw.map_pos
+    end
+
+    local dist_map = get_distance_map(dest_pos)
+    local current_dist
+    if allow_unsafe then
+        current_dist = dist_map.map[from_pos.x][from_pos.y]
+    end
+
+    local current_safe_dist = dist_map.excluded_map[from_pos.x][from_pos.y]
+    if current_safe_dist == 0
+            or not current_safe_dist and not current_dist then
         return
     end
 
     local result
     local safe_result
-    for pos in adjacent_iter(qw.map_pos) do
-        local los_pos = position_difference(pos, qw.map_pos)
-        local dist = map[pos.x][pos.y]
-        local better_dist = dist and (not current_dist or dist < current_dist)
-        if better_dist
+    for pos in adjacent_iter(from_pos) do
+        local los_pos = position_difference(pos, from_pos)
+        local safe_dist = dist_map.excluded_map[pos.x][pos.y]
+        if safe_dist
+                and (not current_safe_dist or safe_dist < current_safe_dist)
                 and can_move_to(los_pos)
-                and is_safe_at(pos)
-                and (not safe_result or dist < safe_result.dist) then
-            safe_result = { move = los_pos, dest = map_pos, dist = dist,
+                and is_safe_at(los_pos)
+                and (not flee_monsters or can_flee_to(los_pos, safe_dist + 1))
+                and (not safe_result or safe_dist < safe_result.dist) then
+            safe_result = { move = los_pos, dest = dest_pos, dist = safe_dist,
                 safe = true }
         end
 
-        if better_dist
-                and not safe_result
+        local dist
+        if allow_unsafe then
+            dist = dist_map.map[pos.x][pos.y]
+        end
+        if not safe_result
+                and dist
+                and dist < current_dist
                 and can_move_to(los_pos, true)
+                and (not flee_monsters or can_flee_to(los_pos, dist + 1))
                 and (not result or dist < result.dist) then
-            result = { move = los_pos, dest = map_pos, dist = dist }
+            result = { move = los_pos, dest = dest_pos, dist = dist }
         end
     end
 
@@ -256,14 +287,16 @@ function best_move_towards(map_pos, ignore_exclusions)
     end
 end
 
-function best_move_towards_positions(map_positions, ignore_exclusions)
+function best_move_towards_positions(map_positions, allow_unsafe,
+        flee_monsters)
     local best_result
     for _, pos in ipairs(map_positions) do
         if positions_equal(qw.map_pos, pos) then
             return
         end
 
-        local result = best_move_towards(pos, ignore_exclusions)
+        local result = best_move_towards(pos, qw.map_pos, allow_unsafe,
+            flee_monsters)
         if result and (not best_result
                 or result.safe and not best_result.safe
                 or result.dist < best_result.dist) then
@@ -276,18 +309,18 @@ end
 function update_reachable_position()
     for _, dist_map in pairs(distance_maps) do
         if dist_map.excluded_map[qw.map_pos.x][qw.map_pos.y] then
-            reachable_position = dist_map.pos
+            qw.reachable_position = dist_map.pos
             return
         end
     end
 
-    reachable_position = qw.map_pos
+    qw.reachable_position = qw.map_pos
 end
 
 --[[ Check any feature types flagged in check_reachable_features during the map
---update. These have been seen but not are not currently reachable LOS-wise, so
---check whether our reachable_position distance map indicates they are in fact
---reachable, and update their los state if so. ]]--
+update. These have been seen but not are not currently reachable LOS-wise, so
+check whether our reachable position distance map indicates they are in fact
+reachable, and if so, update their los state.]]--
 function update_reachable_features()
     local check_feats = {}
     for feat, _ in pairs(check_reachable_features) do
@@ -313,22 +346,22 @@ function update_reachable_features()
 end
 
 function map_is_reachable_at(pos, ignore_exclusions)
-    local dist_map = get_distance_map(reachable_position)
+    local dist_map = get_distance_map(qw.reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
     return map[pos.x][pos.y]
 end
 
-function best_move_towards_features(feats, ignore_exclusions)
+function best_move_towards_features(feats, allow_unsafe)
     local positions = get_feature_map_positions(feats)
     if positions then
-        return best_move_towards_positions(positions, ignore_exclusions)
+        return best_move_towards_positions(positions, allow_unsafe)
     end
 end
 
-function best_move_towards_items(item_names, ignore_exclusions)
+function best_move_towards_items(item_names, allow_unsafe)
     local positions = get_item_map_positions(item_names)
     if positions then
-        return best_move_towards_positions(positions, ignore_exclusions)
+        return best_move_towards_positions(positions, allow_unsafe)
     end
 end
 
@@ -368,11 +401,10 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
         end
 
         if supdist(pos) <= const.gxm
-                and (allow_unsafe or map_is_unexcluded_at(pos))
-                and map_is_reachable_at(pos, true)
+                and map_is_reachable_at(pos, allow_unsafe)
                 and (open_runed_doors and map_has_adjacent_runed_doors_at(pos)
                     or map_has_adjacent_unseen_at(pos)) then
-            return best_move_towards(pos, true)
+            return best_move_towards(pos, qw.map_pos, allow_unsafe)
         end
 
         i = i + 1
@@ -409,11 +441,11 @@ function best_move_towards_safety()
         end
 
         local los_pos = position_difference(pos, qw.map_pos)
-        if supdist(pos) <= const.gxm
+        if false and supdist(pos) <= const.gxm
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
                 and can_move_to(los_pos, true) then
-            return best_move_towards(pos, true)
+            return best_move_towards(pos, qw.map_pos, true)
         end
 
         i = i + 1

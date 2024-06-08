@@ -175,10 +175,11 @@ function turn_update()
         or not map_is_unexcluded_at(qw.map_pos)
     qw.immediate_danger = check_immediate_danger()
 
-    update_move_destination()
-    update_flee_positions()
     update_reachable_position()
     update_reachable_features()
+
+    update_move_destination()
+    update_flee_positions()
 
     if qw.want_goal_update then
         update_goal()
@@ -197,6 +198,7 @@ function turn_update()
     if qw.enemy_memory and qw.enemy_memory_turns_left > 0 then
         qw.enemy_memory_turns_left = qw.enemy_memory_turns_left - 1
     end
+
     choose_tactical_step()
 
     map_mode_search_attempts = 0

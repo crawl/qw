@@ -106,24 +106,18 @@ function plan_flee()
         return false
     end
 
-    local result = best_move_towards_positions(qw.flee_positions)
-
-    if not result and in_bad_form() then
-        result = best_move_towards_unexplored(true)
-        if result then
-            qw.last_flee_turn = you.turns()
-            say("FLEEEEING to unexplored (badform).")
-            return move_to(result.move)
-        end
+    local result = get_flee_move()
+    if not result then
+        return false
     end
 
-    if result then
-        if not qw.danger_in_los then
-            qw.last_flee_turn = you.turns()
-        end
+    if not qw.danger_in_los then
+        qw.last_flee_turn = you.turns()
+    end
 
+    if move_to(result.move) then
         say("FLEEEEING.")
-        return move_to(result.move)
+        return true
     end
 
     return false
@@ -645,7 +639,7 @@ function want_to_teleport()
         return true
     end
 
-    if qw.have_orb and hp_is_low(33) and sense_danger(2) then
+    if qw.have_orb and hp_is_low(33) and check_enemies(2) then
         return true
     end
 
@@ -672,7 +666,7 @@ function want_to_teleport()
     end
 
     if enemies.threat >= const.extreme_threat then
-        return not will_fight_or_retreat()
+        return not will_fight_extreme_threat()
     end
 
     return false
@@ -999,25 +993,6 @@ function plan_dig_grate()
     return false
 end
 
-function plan_retreat()
-    if not want_to_retreat() or unable_to_move() or dangerous_to_move() then
-        return false
-    end
-
-    local pos = best_retreat_position()
-    if not pos then
-        return false
-    end
-
-    local result = best_move_towards(pos)
-    if result then
-        say("RETREEEEATING.")
-        return move_to(result.move)
-    end
-
-    return false
-end
-
 function set_plan_emergency()
     plans.emergency = cascade {
         {plan_stairdance_up, "stairdance_up"},
@@ -1036,7 +1011,6 @@ function set_plan_emergency()
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
         {plan_flee, "flee"},
-        {plan_retreat, "retreat"},
         {plan_tactical_step, "tactical_step"},
         {plan_tomb2_arrival, "tomb2_arrival"},
         {plan_tomb3_arrival, "tomb3_arrival"},

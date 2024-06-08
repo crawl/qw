@@ -236,7 +236,7 @@ function plan_move_towards_destination()
         return move_to(result.move)
     end
 
-    result = best_move_towards(qw.move_destination, true)
+    result = best_move_towards(qw.move_destination, qw.map_pos, true)
     if result then
         return move_to(result.move)
     end

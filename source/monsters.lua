@@ -284,41 +284,53 @@ function update_invis_monsters(closest_invis_pos)
     invis_monster_turns = invis_monster_turns + 1
 end
 
-function monster_speed_number(mons)
-    local desc = mons:speed_description()
-    local num
-    if desc == "extremely fast" then
-        num = 6
-    elseif desc == "very fast" then
-        num = 5
-    elseif desc == "fast" then
-        num = 4
-    elseif desc == "normal" then
-        num = 3
-    elseif desc == "slow" then
-        num = 2
-    elseif desc == "very slow" then
-        num = 1
+-- This returns a value for monster movement energy that's on the aut scale,
+-- so that reasoning about the difference between player and monster move
+-- delay is easier.
+function monster_move_delay(mons)
+    if not mons:can_seek() then
+        return const.inf_turns
     end
 
-    if mons:status("fast") then
-        num = num + 1
-    end
-    if mons:status("slow") then
-        num = num - 1
-    end
-
-    local name = mons:name()
-    if name:find("boulder beetle") then
-        num = num + 3
-    end
-    if name:find("spriggan") or name == "the Enchantress" then
-        num = num + 1
-    elseif name:find("naga") or name == "Vashnia" then
-        num = num - 1
+    local desc = mons.minfo:speed_description()
+    local delay = 10
+    if desc:find("travel:") then
+        -- We only want to pass the first return value of gsub() to
+        -- tonumber().
+        delay = desc:gsub(".*travel: (%d+)%%.*", "%1")
+        -- We're converting a percentage that's based on monsters delay/energy
+        -- to aut, since this is easier to compare to player actions.
+        delay = 10 * 100 / tonumber(delay)
+    elseif desc:find("Speed:") then
+        delay = desc:gsub(".*Speed: (%d+)%%.*", "%1")
+        delay = 10 * 100 / tonumber(delay)
     end
 
-    return num
+    -- Assume these move at their roll delay so we won't try to kite.
+    if mons:name():find("boulder beetle") then
+        delay = delay - 5
+    end
+
+    local feat = view.feature_at(mons:x_pos(), mons:y_pos())
+    if (feat == "shallow_water" or feat == "deep_water" or feat == "lava")
+            and not mons:is("airborne") then
+        if desc:find("swim:") then
+            delay = desc:gsub(".*swim: (%d+)%%.*", "%1")
+            delay = 10 * 100 / tonumber(delay)
+        else
+            delay = 1.6 * delay
+        end
+    end
+
+    if mons:is("hasted") or mons:is("berserk") then
+        delay = 2 / 3 * delay
+    end
+
+    if mons:is("slowed") then
+        delay = 1.5 * delay
+    end
+
+    return delay
 end
 
 function initialize_monster_map()
@@ -399,7 +411,7 @@ function assess_enemies_func(duration_level, radius, filter)
         radius = qw.los_radius
     end
 
-    local result = { threat = 0, ranged_threat = 0, count = 0 }
+    local result = { count = 0, threat = 0, ranged_threat = 0, move_delay = 0 }
     for _, enemy in ipairs(qw.enemy_list) do
         if enemy:distance() > radius then
             break
@@ -418,9 +430,11 @@ function assess_enemies_func(duration_level, radius, filter)
                 result.scary_enemy = enemy
             end
 
+            result.move_delay = result.move_delay + enemy:move_delay() * threat
             result.count = result.count + 1
         end
     end
+    result.move_delay = result.move_delay / result.threat
 
     return result
 end

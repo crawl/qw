@@ -415,32 +415,53 @@ function can_use_mp(mp)
     end
 end
 
-function player_speed()
-    local num = 3
+function player_move_delay_func()
+    local delay = 10
+
     local form = you.transform()
-    if you.god() == "Cheibriados" then
-        num = 1
-    elseif form ~= "" then
-        if form == "bat" or form == "pig" then
-            num = 4
-        elseif form == "statue" then
-            num = 2
-        end
+    if form == "tree" then
+        return const.inf_turns
+    elseif form == "bat" then
+        delay = 6
+    elseif form == "pig" then
+        delay = 7
     elseif you.race() == "Spriggan" then
-        num = 4
+        delay = 6
+    elseif you.race() == "Barachi" then
+        delay = 12
     elseif you.race() == "Naga" then
-        num = 2
+        delay = 14
+    end
+
+    if you.god() == "Cheibriados" then
+        delay = delay + 10
+    end
+
+    if form == "statue" then
+        delay = 1.5 * delay
     end
 
     if you.hasted() or you.berserk() then
-        num = num + 1
+        delay = 2 / 3 * delay
     end
 
     if you.slowed() then
-        num = num - 1
+        delay = 1.5 * delay
     end
 
-    return num
+    if view.feature_at(0, 0) == "shallow_water"
+            and not (you.flying()
+                or you.god() == "Beogh"
+                    and you.piety_rank() >= 5)
+            and not intrinsic_amphibious() then
+        delay = 8 / 5 * delay
+    end
+
+    return delay
+end
+
+function player_move_delay()
+    return turn_memo("player_move_delay", player_move_delay_func)
 end
 
 function base_mutation(str)
@@ -590,7 +611,7 @@ function want_to_be_surrounded()
         function()
             local have_vamp_cleave = false
             for weapon in equipped_slot_iter("weapon") do
-                if weapon.weap_skill == "Axe"
+                if weapon.weap_skill == "Axes"
                         and weapon:ego() == "vampirism" then
                     have_vamp_cleave = true
                     break

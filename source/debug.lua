@@ -280,6 +280,20 @@ function cell_string_from_map_position(pos)
     return cell_string_from_position(position_difference(pos, qw.map_pos))
 end
 
+function monster_string(mons, props)
+    if not props then
+        props = { move_delay = "move delay", reach_range = "reach",
+            is_ranged = "ranged" }
+    end
+
+    local vals = {}
+    for prop, name in pairs(props) do
+        table.insert(vals, name .. ":" .. tostring(mons[prop](mons)))
+    end
+    return mons:name() .. " (" .. table.concat(vals, "/") .. ") at "
+        .. pos_string(mons:pos())
+end
+
 function toggle_throttle()
     qw.coroutine_throttle = not qw.coroutine_throttle
     dsay((qw.coroutine_throttle and "Enabling" or "Disabling")

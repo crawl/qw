@@ -1,37 +1,6 @@
 ----------------------
 -- Assessment of fleeing positions
 
-function distance_map_minimum_enemy_distance(dist_map, pspeed)
-    -- We ignore enemy distance in bad forms, since fleeing is always one of
-    -- our best options regardless of how close monsters are.
-    if in_bad_form() then
-        return
-    end
-
-    local min_dist
-    for _, enemy in ipairs(qw.enemy_list) do
-        local map_pos = enemy:map_pos()
-        local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
-        if dist then
-            local speed_diff = enemy:speed() - pspeed
-            if speed_diff > 1 then
-                dist = dist / 2
-            elseif speed_diff > 0 then
-                dist = dist / 1.5
-            end
-
-            if enemy:is_ranged() then
-                dist = dist - 4
-            end
-
-            if not min_dist or dist < min_dist then
-                min_dist = dist
-            end
-        end
-    end
-    return min_dist
-end
-
 function update_flee_positions()
     qw.flee_positions = {}
 
@@ -58,23 +27,13 @@ function update_flee_positions()
         return
     end
 
-    local safe_positions = {}
     for i, pos in ipairs(positions) do
         local state
         if feats[i] == "escape_hatch_up" then
             state = get_map_escape_hatch(where_branch, where_depth, pos)
         end
-        if not state or state.safe then
-            table.insert(safe_positions, pos)
-        end
-    end
-
-    local pspeed = player_speed()
-    for _, pos in ipairs(safe_positions) do
-        local dist_map = get_distance_map(pos, true)
-        local pdist = dist_map.excluded_map[qw.map_pos.x][qw.map_pos.y]
-        local edist = distance_map_minimum_enemy_distance(dist_map, pspeed)
-        if pdist and (not edist or pdist < edist) then
+        if (not state or state.safe)
+                and map_is_reachable_at(pos) then
             if debug_channel("flee") then
                 dsay("Adding flee position #"
                     .. tostring(#qw.flee_positions + 1) .. " at "
@@ -86,20 +45,68 @@ function update_flee_positions()
     end
 end
 
-function check_following_enemies(radius)
-    return check_enemies(radius, function(mons) return mons:can_seek() end)
+function check_following_melee_enemies(radius)
+    return check_enemies(radius,
+        function(mons)
+            return mons:can_melee_player() and mons:can_seek()
+        end)
 end
 
-function going_to_flee()
-    if unable_to_move() or dangerous_to_move() or not want_to_flee() then
-        return false
+function can_flee_to(pos, flee_dist)
+    local move_delay = player_move_delay()
+    if debug_channel("flee") then
+        dsay("Evaluating move to " .. pos_string(pos) .. " with move delay "
+            .. tostring(move_delay) .. " and total flee distance of "
+            .. tostring(flee_dist))
     end
 
-    local result = best_move_towards_positions(qw.flee_positions)
-    if not result and in_bad_form() then
-        result = best_move_towards_unexplored(true)
+    local enemies = assess_enemies()
+    local extreme_threat = enemies.threat >= const.extreme_threat
+    local flee_attackers = 0
+    for _, enemy in ipairs(qw.enemy_list) do
+        local closing_distance = enemy:distance() - enemy:reach_range()
+            - (enemy:is_ranged(true) and 4 or 0)
+        local distance_gain = flee_dist * (move_delay - enemy:move_delay())
+            / enemy:move_delay()
+        if debug_channel("flee") then
+            dsay("Evaluating "
+                .. enemy:name() .. " at " .. pos_string(enemy:pos())
+                .. " (delay/reach/ranged: "
+                .. tostring(enemy:move_delay()) .. "/"
+                .. tostring(enemy:reach_range()) .. "/"
+                .. tostring(enemy:is_ranged(true)) .. ")"
+                .. " with a closing distance of "
+                .. tostring(closing_distance)
+                .. " compared to a distance gain of "
+                .. tostring(distance_gain))
+        end
+
+        if enemy:has_path_to_melee_player() then
+            if position_distance(enemy:pos(), pos) <= enemy:distance() then
+                if debug_channel("flee") then
+                    dsay("Not fleeing to this position due to closer enemy")
+                end
+
+                return false
+            end
+
+            if distance_gain >= closing_distance then
+                flee_attackers = flee_attackers + 1
+                if flee_attackers > 2
+                        or not extreme_threat and flee_attackers > 0 then
+                    if debug_channel("flee") then
+                        dsay("Not fleeing to this position due to "
+                            .. tostring(flee_attackers)
+                            .. " attacker(s) gaining distance")
+                    end
+
+                    return false
+                end
+            end
+        end
     end
-    return result
+
+    return true
 end
 
 function want_to_flee()
@@ -128,7 +135,7 @@ function want_to_flee()
 
     -- Don't flee from a place were we'll be opportunity attacked, and don't
     -- flee when we have allies close by.
-    if check_following_enemies(1) or check_allies(3) then
+    if check_following_melee_enemies(2) or check_allies(3) then
         return false
     end
 
@@ -152,7 +159,7 @@ function want_to_flee()
     end
 
     if enemies.threat >= const.extreme_threat then
-        return not will_fight_or_retreat()
+        return not will_fight_extreme_threat()
     end
 
     return not buffed()
@@ -160,15 +167,23 @@ function want_to_flee()
         and qw.starting_spell ~= "Summon Small Mammal"
 end
 
+function get_flee_move()
+    local result = best_move_towards_positions(qw.flee_positions, false, true)
+    if not result and in_bad_form() then
+        result = best_move_towards_positions(qw.flee_positions, true)
+
+        if not result then
+            result = best_move_towards_unexplored(true)
+        end
+    end
+
+    return result
+end
+
 function will_flee()
     if not want_to_flee() or unable_to_move() or dangerous_to_move() then
         return false
     end
 
-    local result = best_move_towards_positions(qw.flee_positions)
-    if not result and in_bad_form() then
-        result = best_move_towards_unexplored(true)
-    end
-
-    return result
+    return get_flee_move()
 end

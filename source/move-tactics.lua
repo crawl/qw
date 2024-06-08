@@ -2,6 +2,7 @@
 -- Tactical steps
 
 function assess_square_enemies(a, pos)
+    local move_delay = player_move_delay()
     local best_dist = 10
     a.enemy_distance = 0
     a.followers = false
@@ -11,7 +12,7 @@ function assess_square_enemies(a, pos)
     a.unalert = 0
     a.longranged = 0
     for _, enemy in ipairs(qw.enemy_list) do
-        local dist = enemy:distance()
+        local dist = position_distance(pos, enemy:pos())
         local see_cell = cell_see_cell(pos, enemy:pos())
         local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
@@ -29,14 +30,17 @@ function assess_square_enemies(a, pos)
 
             if (player_reach_range() > 1 or using_ranged_weapon())
                     and not ranged
-                    and enemy:speed() < player_speed() then
+                    and move_delay < enemy:move_delay() then
                 a.kite_adjacent = a.kite_adjacent + 1
             end
         end
 
         if dist > 1
                 and see_cell
-                and (ranged or dist == 2 and enemy:is_fast()) then
+                and enemy:can_seek()
+                and (ranged
+                    or dist == 2
+                        and enemy:move_delay() < move_delay) then
             a.ranged = a.ranged + 1
         end
 
@@ -73,8 +77,6 @@ function assess_square(pos)
         return a
     end
 
-    -- Count various classes of monsters from the enemy list.
-    assess_square_enemies(a, pos)
     local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
         and not (you.flying()
             or you.god() == "Beogh" and you.piety_rank() >= 5)
@@ -102,6 +104,11 @@ function assess_square(pos)
     -- weak clouds if monsters are around.
     a.cloud_safe = is_cloud_safe_at(pos, a.safe)
 
+    a.retreat_distance = retreat_distance_at(pos)
+
+    -- Count various classes of monsters from the enemy list.
+    assess_square_enemies(a, pos)
+
     return a
 end
 
@@ -111,11 +118,11 @@ end
 --   cloud       - stepping out of harmful cloud
 --   wall        - stepping away from a slimy wall
 --   water       - stepping out of shallow water when it would cause fumbling
---   kiting      - kiting slower monsters with reaching or a ranged weapon
+--   kiting      - kiting slower monsters with a reaching or ranged weapon
+--   retreating  - retreating to a better defensive position
 --   hiding      - moving out of sight of alert ranged enemies at distance >= 4
 --   stealth     - moving out of sight of sleeping or wandering monsters
---   outnumbered - stepping away from a square adjacent to multiple monsters
---                 (when not cleaving)
+--   outnumbered - stepping away from adjacent and/or ranged monsters
 function step_reason(a1, a2)
     local bad_form = in_bad_form()
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
@@ -154,6 +161,10 @@ function step_reason(a1, a2)
         end
     elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
         return "kiting"
+    elseif a2.retreat_distance < a1.retreat_distance then
+        return "retreating"
+    elseif a1.retreat_distance == 0 then
+        return
     elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
             and not a1.near_ally
@@ -172,7 +183,7 @@ function step_reason(a1, a2)
             and a2.adjacent == 0
             and a2.unalert < a1.unalert then
         return "stealth"
-    elseif not want_to_be_surrounded()
+    elseif not using_cleave()
             and a1.adjacent > 1
             and a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
             and qw.incoming_monsters_turn == you.turns() then
@@ -207,6 +218,14 @@ function step_improvement(best_reason, reason, a1, a2)
     elseif reason == "water" and best_reason ~= "water" then
         return true
     elseif best_reason == "water" and reason ~= "water" then
+        return false
+    elseif reason == "retreating"
+            and (best_reason ~= "retreating"
+                or a2.retreat_distance < a1.retreat_distance) then
+        return true
+    elseif best_reason == "retreating"
+            and (reason ~= "retreating"
+                or a2.retreat_distance > a1.retreat_distance) then
         return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true
@@ -253,6 +272,7 @@ function choose_tactical_step()
             and not (a0.fumble and danger)
             and not (a0.bad_walls > 0 and danger)
             and a0.kite_adjacent == 0
+            and a0.retreat_distance == 0
             and (a0.near_ally or a0.enemy_distance == 10) then
         return
     end

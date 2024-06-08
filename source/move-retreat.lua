@@ -184,11 +184,7 @@ function reverse_retreat_move_to(to_pos, dist_map)
     return best_pos, best_has_mons
 end
 
-function assess_retreat_position(map_pos, max_distance, attacking_limit)
-    if not attacking_limit then
-        attacking_limit = 4
-    end
-
+function assess_retreat_position(map_pos, attacking_limit, max_distance)
     -- Any unsafe location is not a valid retreat position, unless its our
     -- current position and the clouds there are safe enough.
     local pos = position_difference(map_pos, qw.map_pos)
@@ -202,17 +198,14 @@ function assess_retreat_position(map_pos, max_distance, attacking_limit)
     local result = { pos = pos, map_pos = map_pos, num_blocking = 0 }
     result.num_attacking = attacking_monster_count_at(result.pos)
 
-    -- We want to return a result for our current position so we can compare
-    -- attacking monster counts to it.
+    if attacking_limit and result.num_attacking > attacking_limit then
+        return
+    end
+
+    -- Further calculations not necessary for our current position.
     if is_origin then
         result.distance = 0
         return result
-    end
-
-    -- Don't bother continuing calculations since we'll never accept this
-    -- position.
-    if result.num_attacking > attacking_limit then
-        return
     end
 
     local dist_map = get_distance_map(qw.map_pos)
@@ -256,17 +249,17 @@ function best_retreat_position_func(attacking_limit)
     end
 
     local cur_result = assess_retreat_position(qw.map_pos)
-    -- Our current location can't improve.
+    -- Our current location can't significantly improve.
     if cur_result and cur_result.num_attacking <= 1 then
-        return
+        return qw.map_pos
     end
 
     -- We never retreat further than our closest flee position, if one is
     -- available.
     local radius
-    local flee_result = best_move_towards_positions(qw.flee_positions)
-    if flee_result then
-        radius = max(qw.los_radius, flee_result.dist)
+    local flee_move = best_move_towards_positions(qw.flee_positions)
+    if flee_move then
+        radius = max(qw.los_radius, flee_move.dist + 1)
     else
         radius = const.gxm
     end
@@ -291,7 +284,7 @@ function best_retreat_position_func(attacking_limit)
                 and map_is_reachable_at(pos)
                 and adjacent_floor_map[pos.x][pos.y] < 6
                 and not map_has_adjacent_unseen_at(pos) then
-            local result = assess_retreat_position(pos, radius, attacking_limit)
+            local result = assess_retreat_position(pos, attacking_limit, radius)
             if result_improves_retreat(retreat, result, best_result) then
                 best_result = result
             end
@@ -307,6 +300,8 @@ function best_retreat_position_func(attacking_limit)
                     <= position_distance(pos, qw.map_pos) then
             break
         end
+
+        i = i + 1
     end
 
     -- We have no viable retreating position or our current one is rated best.
@@ -314,17 +309,19 @@ function best_retreat_position_func(attacking_limit)
         return
     end
 
-    -- Don't try to retreat if we have multiple monsters in the way. Don't try
-    -- to retreat too far if our position doesn't improve enough. If our
-    -- current position is unsafe such that it is not a valid retreat position,
-    -- allow retreating as far as we need to, although in that case, other
-    -- plans like cloud tactical step might have acted.
     local enemies = assess_enemies()
     local cutoff
     if cur_result then
         cutoff = (cur_result.num_attacking - best_result.num_attacking)
             * (enemies.threat - enemies.ranged_threat / 2)
+            * (10 + enemies.move_delay - player_move_delay()) / 10
     end
+
+    -- Don't try to retreat if we have multiple monsters in the way. Don't try
+    -- to retreat too far if our position doesn't improve enough. If our
+    -- current position is unsafe such that it is not a valid retreat position,
+    -- allow retreating as far as we need to, although in that case, other
+    -- plans like cloud tactical step might have acted.
     if best_result.num_blocking > 1
             or cutoff and best_result.distance > cutoff then
         return
@@ -350,37 +347,9 @@ function best_retreat_position(attacking_limit)
         end, attacking_limit)
 end
 
-function want_to_retreat()
-    if not qw.danger_in_los
-            or you.berserk()
-            or you.confused()
-            or using_ranged_weapon()
-            or want_to_be_surrounded() then
-        return false
-    end
-
-    local cur_result = assess_retreat_position(qw.map_pos)
-    if cur_result and cur_result.num_attacking <= 1 then
-        return false
-    end
-
-    local enemies = assess_enemies()
-    if enemies.threat - enemies.ranged_threat / 2 >= 5 then
-        return true
-    end
-
-    return false
-end
-
-function will_fight_or_retreat()
-    local cur_result = assess_retreat_position(qw.map_pos)
-    if cur_result and cur_result.num_attacking <= 1 then
-        return true
-    end
-
-    local enemies = assess_enemies()
-    if enemies.threat - enemies.ranged_threat / 2 < 5 then
-        return true
+function will_fight_extreme_threat()
+    if not using_ranged_weapon() then
+        return want_to_be_surrounded()
     end
 
     local pos = best_retreat_position(2)
@@ -388,5 +357,49 @@ function will_fight_or_retreat()
         return false
     end
 
-    return best_move_towards(pos)
+    return positions_equal(qw.map_pos, pos) or best_move_towards(pos)
+end
+
+function retreat_distance_at(pos)
+    if not using_ranged_weapon() then
+        return const.inf_dist
+    end
+
+    local map_pos = position_sum(qw.map_pos, pos)
+
+    local enemies = assess_enemies(const.duration.available)
+    if enemies.threat >= const.extreme_threat then
+        local retreat_pos = best_retreat_position(2)
+        if not retreat_pos then
+            return const.inf_dist
+        elseif positions_equal(retreat_pos, map_pos) then
+            return 0
+        end
+
+        local move = best_move_towards(retreat_pos, map_pos)
+        if move then
+            return move.dist + 1
+        else
+            return const.inf_dist
+        end
+    end
+
+    local enemies = assess_enemies()
+    if enemies.threat - enemies.ranged_threat / 2 < const.moderate_threat then
+        return const.inf_dist
+    end
+
+    local retreat_pos = best_retreat_position(4)
+    if not retreat_pos then
+        return const.inf_dist
+    elseif positions_equal(retreat_pos, map_pos) then
+        return 0
+    end
+
+    local move = best_move_towards(retreat_pos, map_pos)
+    if move then
+        return move.dist + 1
+    end
+
+    return const.inf_dist
 end

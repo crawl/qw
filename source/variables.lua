@@ -88,8 +88,6 @@ local transp_zone
 local transp_orient
 local transp_search
 
-local reachable_position
-
 local disable_autoexplore
 local last_wait = 0
 local wait_count = 0

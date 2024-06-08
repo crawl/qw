@@ -141,7 +141,7 @@ function plan_move_towards_abyssal_rune()
         return false
     end
 
-    local result = best_move_towards(rune_pos, true)
+    local result = best_move_towards(rune_pos, qw.map_pos, true)
     if result then
         return move_towards_destination(result.move, result.rune_pos, "goal")
     end

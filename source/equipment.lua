@@ -116,6 +116,17 @@ function using_two_one_handed_weapons(allow_melded)
         end, allow_melded)
 end
 
+function using_cleave(allow_melded)
+    return turn_memo_args("using_cleave",
+        function()
+            for weapon in equipped_slot_iter("weapon", allow_melded) do
+                if weapon.weap_skill == "Axes" then
+                    return true
+                end
+            end
+        end, allow_melded)
+end
+
 -- Would we ever want to use a two-handed weapon? This returns true when we
 -- prefer 1h weapons if we haven't yet found a shield.
 function want_two_handed_weapon()

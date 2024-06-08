@@ -134,17 +134,19 @@ function Monster:desc()
     return self:property_memo("desc")
 end
 
-function Monster:speed()
-    return self:property_memo("speed",
+function Monster:is_real_hydra()
+    return self:property_memo("is_real_hydra",
         function()
-            return monster_speed_number(self.minfo)
+            local name = self:name()
+            return name:find("hydra")
+                and not contains_string_in(name,
+                    { "skeleton", "zombie", "simulacrum", "spectral" })
         end)
 end
-
-function Monster:is_fast()
-    return self:property_memo("is_fast",
+function Monster:move_delay()
+    return self:property_memo("move_delay",
         function()
-            return self:speed() > player_speed()
+            return monster_move_delay(self)
         end)
 end
 

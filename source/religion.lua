@@ -523,27 +523,27 @@ function update_altar(god, level, hash, state, force)
 end
 
 function estimate_slouch_damage()
-    local count = 0
+    local total = 0
     for _, enemy in ipairs(qw.enemy_list) do
-        local speed = enemy:speed()
+        local delay = enemy:move_delay()
         local val = 0
-        if speed >= 6 then
+        if delay < 5 then
             val = 3
-        elseif speed == 5 then
+        elseif delay < 8 then
             val = 2.5
-        elseif speed == 4 then
+        elseif delay < 10 then
             val = 1.5
-        elseif speed == 3 then
+        elseif delay == 10 then
             val = 1
         end
-        if enemy:name() == "orb of fire" then
-            val = val + 1
-        elseif v > 0 and enemy:threat() <= 1 then
+
+        if val > 0 and enemy:threat() <= 1 then
             val = 0.5
         end
-        count = count + val
+
+        total = total + val
     end
-    return count
+    return total
 end
 
 function update_permanent_flight()
