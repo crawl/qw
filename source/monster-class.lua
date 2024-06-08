@@ -265,14 +265,21 @@ function Monster:is_orc_priest_wizard()
         end)
 end
 
+-- Monsters here will be target with ranged attacks even if they're not the
+-- closest monster.
 function Monster:los_danger()
     return self:property_memo("los_danger",
         function()
             local name = self:name()
-            return name == "moth of wrath"
+            return name == "doom hound" and self:is("ready_to_howl")
+                or name == "draconian shifter"
+                or name == "dream sheep"
+                or name == "entropy weaver"
                 or name == "glass eye"
+                or name == "guardian serpent"
                 or name == "hellion"
-                or name == "doom hound" and self:is("ready_to_howl")
+                or name == "moth of wrath"
+                or name == "torpor snail"
         end)
 end
 

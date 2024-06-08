@@ -96,11 +96,15 @@ end
 local scary_monsters = {
     ["ice beast"] = { xl = 7, resists = { rC = 0.75 } },
 
+    ["fire crab"] = { xl = 14, resists = { rF = 0.65} },
     ["wolf spider"] = { xl = 14 },
     ["ice statue"] = { xl = 14, resists = { rC = 1 } },
 
     ["white ugly thing"] = { xl = 15, resists = { rC = 0.75 } },
     ["freezing wraith"] = { xl = 15, resists = { rC = 0.75 } },
+    ["skeletal warrior"] = { xl = 15 },
+    ["fire dragon"] = { xl = 15, resists = {rF = 0.5 } },
+    ["ice dragon"] = { xl = 15, resists = {rC = 0.5 } },
 
     ["hydra"] = { xl = 17, check = hydra_is_scary },
     ["entropy weaver"] = { xl = 17, resists = { rCorr = 0.75 } },
@@ -178,6 +182,8 @@ local hand_monsters = {
 -- Potion of resistance these.
 local fire_resistance_monsters = {
     ["*"] = {},
+
+    ["fire crab"] = check_resist(14, "rF", 1),
 
     ["hellephant"] = check_resist(100, "rF", 2),
     ["orb of fire"] = 100,
