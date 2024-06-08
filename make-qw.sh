@@ -39,7 +39,7 @@ shift $(($OPTIND - 1))
 
 set -e
 
-lua_text=$(cat $lua_dir/$first_lua_file)
+lua_text=$(cat ${lua_dir}/${first_lua_file})
 lua_text+=$'\n'
 lua_text+=$(find source -iname '*.lua' -not -name "$first_lua_file" | sort | xargs cat)
 lua_text="${lua_text/\%VERSION\%/$version}"
@@ -49,11 +49,13 @@ if [ -n "$rc_file" ]; then
         out_file="$rc_out_file"
     fi
 
-    rc_text=$(cat $rc_file)
+    rc_text=$(cat "$rc_file")
     lua_text=$(printf "<\n%s\n>" "$lua_text")
-    printf "%s\n" "${rc_text/$rc_marker/$lua_text}" > "$out_file"
+    # Quotes needed around $lua_text to prevent expansion of & characters for
+    # bash 5.2 and later.
+    printf "%s\n" "${rc_text/$rc_marker/"$lua_text"}" > "$out_file"
     rc_nlines=$(echo "$rc_text" | wc -l)
-    echo "Added $rc_nlines lines from $rc_file to $out_file"
+    echo Added $rc_nlines lines from $rc_file to $out_file
 else
     if [ -z "$out_file" ]; then
         out_file="$lua_out_file"
@@ -63,4 +65,4 @@ else
 fi
 
 lua_nlines=$(echo "$lua_text" | wc -l)
-echo "Added $lua_nlines lines from $lua_dir to $out_file"
+echo Added $lua_nlines lines from $lua_dir to $out_file
