@@ -95,6 +95,10 @@ function Monster:distance()
         end)
 end
 
+function Monster:can_use_doors()
+    return self:property_memo("can_use_doors")
+end
+
 function Monster:can_traverse(pos)
     if not self.props.traversal_map then
         self.props.traversal_map = {}
@@ -104,7 +108,7 @@ function Monster:can_traverse(pos)
     end
     if self.props.traversal_map[pos.x][pos.y] == nil then
         local val = self.minfo:can_traverse(pos.x, pos.y)
-        if not val then
+        if not val and self:can_use_doors() then
             local feat = view.feature_at(pos.x, pos.y)
             val = feat == "closed_door" or feat == "closed_clear_door"
         end
