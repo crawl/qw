@@ -211,69 +211,6 @@ function travel_destination_search(dest_branch, dest_depth, start_branch,
     return result
 end
 
-function finalize_depth_dir(result, dir)
-    assert(type(dir) == "number" and abs(dir) == 1,
-        "Invalid stair direction: " .. tostring(dir))
-
-    -- We can already reach all required stairs in the given direction on the
-    -- target level, so there's nothing to do in that direction.
-    if count_stairs(result.branch, result.depth, dir,
-                const.explore.reachable)
-            == num_required_stairs(result.branch, depth, dir) then
-        return false
-    end
-
-    local dir_depth = result.depth + dir
-    local dir_depth_stairs = count_stairs(result.branch, dir_depth, -dir,
-            const.explore.explored)
-        < count_stairs(result.branch, dir_depth, -dir,
-            const.explore.reachable)
-    -- The level in the given direction isn't autoexplored, so we start there.
-    if not autoexplored_level(result.branch, dir_depth) then
-        result.depth = dir_depth
-
-        -- If we haven't fully explored explored this level but we already see
-        -- there are unexplored stairs, take those before finishing
-        -- autoexplore.
-        if dir_depth_stairs then
-            result.stairs_dir = -dir
-        end
-
-        if not result.first_dir and not result.first_branch then
-            result.first_dir = dir
-        end
-
-        return true
-    end
-
-    -- Both the target level and the level in the given direction are
-    -- autoexplored, so we try any unexplored stairs on the target level in
-    -- that direction.
-    if count_stairs(result.branch, result.depth, dir,
-                const.explore.explored)
-            < count_stairs(result.branch, result.depth, dir,
-                const.explore.reachable) then
-        result.stairs_dir = dir
-        return true
-    end
-
-    -- No unexplored stairs in the given direction on our target level, but on
-    -- the level in that direction we have some stairs in the opposite
-    -- direction, so we try those.
-    if dir_depth_stairs then
-        result.depth = dir_depth
-        result.stairs_dir = -dir
-
-        if not result.first_dir and not result.first_branch then
-            result.first_dir = dir
-        end
-
-        return true
-    end
-
-    return false
-end
-
 function travel_opens_runed_doors(result)
     if result.stop_branch == "Pan"
                 and not branch_found("Pan", const.explore.reachable)
@@ -387,6 +324,74 @@ function travel_safe_stairs(result)
     result.depth = result.depth - 1
 end
 
+function finalize_first_dir(result)
+    if where_branch == result.branch then
+        if where_depth == result.depth then
+            result.first_dir = nil
+        else
+            result.first_dir = abs(result.depth - where_depth)
+        end
+    end
+end
+
+function finalize_depth_dir(result, dir)
+    assert(type(dir) == "number" and abs(dir) == 1,
+        "Invalid stair direction: " .. tostring(dir))
+
+    -- We can already reach all required stairs in the given direction on the
+    -- target level, so there's nothing to do in that direction.
+    if count_stairs(result.branch, result.depth, dir,
+                const.explore.reachable)
+            == num_required_stairs(result.branch, depth, dir) then
+        return false
+    end
+
+    local dir_depth = result.depth + dir
+    local dir_depth_stairs = count_stairs(result.branch, dir_depth, -dir,
+            const.explore.explored)
+        < count_stairs(result.branch, dir_depth, -dir,
+            const.explore.reachable)
+    -- The level in the given direction isn't autoexplored, so we start there.
+    if not autoexplored_level(result.branch, dir_depth) then
+        result.depth = dir_depth
+
+        -- If we haven't fully explored explored this level but we already see
+        -- there are unexplored stairs, take those before finishing
+        -- autoexplore.
+        if dir_depth_stairs then
+            result.stairs_dir = -dir
+        end
+
+        finalize_first_dir(result)
+        return true
+    end
+
+    -- Both the target level and the level in the given direction are
+    -- autoexplored, so we try any unexplored stairs on the target level in
+    -- that direction.
+    if count_stairs(result.branch, result.depth, dir,
+                const.explore.explored)
+            < count_stairs(result.branch, result.depth, dir,
+                const.explore.reachable) then
+        result.stairs_dir = dir
+        return true
+    end
+
+    -- No unexplored stairs in the given direction on our target level, but on
+    -- the level in that direction we have some stairs in the opposite
+    -- direction, so we try those.
+    if dir_depth_stairs then
+        result.depth = dir_depth
+        result.stairs_dir = -dir
+
+        finalize_first_dir(result)
+
+        return true
+    end
+
+    return false
+end
+
 -- Try to get a "final" depth and any needed stair search direction.
 function finalize_travel_depth(result)
     if travel_opens_runed_doors(result) then
@@ -430,9 +435,7 @@ function finalize_travel_depth(result)
         reset_stone_stairs(result.branch, result.depth, const.dir.up)
         reset_stone_stairs(result.branch, result.depth - 1, const.dir.down)
         result.depth = result.depth - 1
-        if not result.first_dir and not result.first_branch then
-            result.first_dir = const.dir.up
-        end
+        finalize_first_dir(result)
         result.stairs_dir = const.dir.down
         finished = true
     end
@@ -444,9 +447,7 @@ function finalize_travel_depth(result)
         -- first search destination.
         if not finished then
             result.depth = result.depth + 1
-            if not result.first_dir and not result.first_branch then
-                result.first_dir = const.dir.down
-            end
+            finalize_first_dir(result)
             result.stairs_dir = const.dir.up
         end
     end
@@ -563,7 +564,10 @@ function update_goal_travel()
                 or goal_travel.branch and not goal_travel.want_go))
 
     if debug_channel("explore") then
-        dsay("Travel destination: " .. make_level(goal_travel.branch, goal_travel.depth))
+        if goal_travel.branch then
+            dsay("Travel destination: "
+                .. make_level(goal_travel.branch, goal_travel.depth))
+        end
 
         if goal_travel.stairs_dir then
             dsay("Stairs search dir: " .. tostring(goal_travel.stairs_dir))
@@ -581,7 +585,7 @@ function update_goal_travel()
             dsay("First branch: " .. tostring(goal_travel.first_branch))
         end
 
-        dsay("Want stash travel: " .. bool_string(want_stash))
+        dsay("Want stash travel: " .. bool_string(goal_travel.want_stash))
         dsay("Want go travel: " .. bool_string(goal_travel.want_go))
         dsay("Disable autoexplore: " .. bool_string(disable_autoexplore))
     end
