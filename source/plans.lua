@@ -88,7 +88,8 @@ function cascade(plans)
                 plan_turns[plan] = you.turns()
                 plan_result[plan] = result
 
-                if debug_channel("plans") then
+                if debug_channel("plans") and result ~= false
+                        or debug_channel("plans-all") then
                     dsay("Ran " .. plandata[2] .. ": " .. tostring(result))
                 end
 
