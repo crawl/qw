@@ -52,7 +52,6 @@ local where
 local where_branch
 local where_depth
 
-local base_corrosion
 local permanent_flight
 local gained_permanent_flight
 local temporary_flight

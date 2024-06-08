@@ -13,7 +13,7 @@ end
 function buffed()
     if hp_is_low(50)
             or transformed()
-            or you.corrosion() >= 2 + base_corrosion then
+            or you.corrosion() >= 8 + qw.base_corrosion then
         return false
     end
 
@@ -252,8 +252,8 @@ function plan_cancellation()
     end
 
     if you.petrifying()
-            or you.corrosion() >= 4 + base_corrosion
-            or you.corrosion() >= 3 + base_corrosion and hp_is_low(70)
+            or you.corrosion() >= 16 + qw.base_corrosion
+            or you.corrosion() >= 12 + qw.base_corrosion and hp_is_low(70)
             or in_bad_form() then
         return drink_by_name("cancellation")
     end
@@ -627,13 +627,13 @@ function want_to_apocalypse()
 end
 
 function bad_corrosion()
-    if you.corrosion() == base_corrosion then
+    if you.corrosion() == qw.base_corrosion then
         return false
     elseif in_branch("Slime") then
-        return you.corrosion() >= 6 + base_corrosion and hp_is_low(70)
+        return you.corrosion() >= 24 + qw.base_corrosion and hp_is_low(70)
     else
-        return you.corrosion() >= 3 + base_corrosion and hp_is_low(50)
-            or you.corrosion() >= 4 + base_corrosion and hp_is_low(70)
+        return you.corrosion() >= 12 + qw.base_corrosion and hp_is_low(50)
+            or you.corrosion() >= 16 + qw.base_corrosion and hp_is_low(70)
     end
 end
 

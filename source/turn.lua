@@ -115,7 +115,7 @@ function turn_update()
             or in_branch("Pan")
             or in_branch("Tomb") and where_depth > 1
             or in_hell_branch(where_branch))
-        base_corrosion = in_branch("Dis") and 2 or 0
+        qw.base_corrosion = in_branch("Dis") and 8 or 0
 
         transp_zone = 0
         stuck_turns = 0
@@ -135,8 +135,8 @@ function turn_update()
         qw.ignore_traps = false
     end
 
-    base_corrosion = base_corrosion
-        + count_adjacent_slimy_walls_at(const.origin)
+    qw.base_corrosion = qw.base_corrosion
+        + 4 * count_adjacent_slimy_walls_at(const.origin)
 
     if you.flying() then
         gained_permanent_flight = permanent_flight == false
