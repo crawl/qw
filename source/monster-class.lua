@@ -432,18 +432,34 @@ function Monster:player_can_melee()
         end)
 end
 
-function Monster:can_seek()
-    return self:property_memo("can_seek",
+function Monster:is_unalert()
+    return self:property_memo("is_unalert",
         function()
-            local name = self:name()
-            return not (self:is_stationary()
-                or name == "wandering mushroom"
-                or name:find("vortex")
-                or self:is("fleeing")
+            return self:is("sleeping")
+                or self:is("dormant")
+                or self:is("wandering")
+        end)
+end
+
+function Monster:can_seek(ignore_temporary)
+    return self:property_memo_args("can_seek",
+        function()
+            if self:is_stationary()
+                    or self:is_unalert()
+                    or self:name() == "wandering mushroom"
+                    or self:name():find("vortex") then
+                return false
+            end
+
+            if ignore_temporary then
+                return true
+            end
+
+            return not (self:is("fleeing")
                 or self:status("paralysed")
                 or self:status("confused")
                 or self:status("petrified"))
-        end)
+        end, ignore_temporary)
 end
 
 function Monster:can_melee_player()
@@ -469,7 +485,7 @@ function Monster:has_path_to_melee_player()
                 return true
             end
 
-            if not self:can_seek() then
+            if not self:can_seek(true) then
                 return false
             end
 

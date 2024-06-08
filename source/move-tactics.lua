@@ -40,23 +40,14 @@ function assess_square_enemies(a, pos)
             a.ranged = a.ranged + 1
         end
 
-        if dist > 1
-                and see_cell
-                and (enemy:is("wandering")
-                    or enemy:is("sleeping")
-                    or enemy:is("dormant")) then
+        if dist > 1 and see_cell and enemy:is_unalert() then
             a.unalert = a.unalert + 1
         end
 
         if dist >= 4
                 and see_cell
+                and enemy:can_seek()
                 and ranged
-                and not (enemy:is("wandering")
-                    or enemy:is("sleeping")
-                    or enemy:is("dormant")
-                    or enemy:is("dumb")
-                    or liquid_bound
-                    or enemy:is_stationary())
                 and enemy:has_path_to_player() then
             a.longranged = a.longranged + 1
         end
