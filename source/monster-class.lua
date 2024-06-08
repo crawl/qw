@@ -191,7 +191,7 @@ function Monster:is_immune_vampirism()
             return self:is_summoned()
                 or self:is_harmless()
                 or holiness ~= "natural" and holiness ~= "plant"
-                or res_draining() >= 3
+                or self:res_draining() >= 3
         end)
 end
 
@@ -199,7 +199,7 @@ function Monster:res_holy()
     return self:property_memo("res_holy",
         function()
             local holiness = self:holiness()
-            return holiness ~= "undead" and holiness ~= "demonic"
+            return (holiness ~= "undead" and holiness ~= "demonic") and 1 or 0
         end)
 end
 

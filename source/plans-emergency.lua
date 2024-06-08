@@ -556,7 +556,8 @@ function want_to_cleansing_flame()
         return false
     end
 
-    local result = assess_enemies(const.duration.active, 2, mons_holy_check)
+    local result = assess_enemies(const.duration.active, 2,
+        function(mons) return mons:res_holy() <= 0 end)
     if result.scary_enemy and not result.scary_enemy:player_can_attack(1)
             or result.threat >= const.high_threat and result.count >= 3 then
         return true

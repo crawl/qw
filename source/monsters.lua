@@ -426,12 +426,12 @@ function assess_enemies(duration_level, radius, filter)
         end, duration_level, radius, filter)
 end
 
-function mons_holy_check(mons)
-    return not mons:res_holy()
+function mons_res_holy_check(mons)
+    return mons:res_holy() <= 0
 end
 
 function mons_tso_heal_check(mons)
-    return not mons:res_holy() and not mons:is_summoned()
+    return mons:res_holy() <= 0 and not mons:is_summoned()
 end
 
 function assess_hell_enemies(radius)
@@ -450,7 +450,7 @@ function assess_hell_enemies(radius)
     end
 
     local filter = function(mons)
-        return not have_holy_wrath or mons:res_holy()
+        return not have_holy_wrath or mons:res_holy() > 0
     end
     return assess_enemies(radius, const.duration.active, filter)
 end
