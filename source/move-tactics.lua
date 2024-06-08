@@ -75,18 +75,22 @@ function assess_square(pos)
 
     -- Count various classes of monsters from the enemy list.
     assess_square_enemies(a, pos)
+    local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
+        and not (you.flying()
+            or you.god() == "Beogh" and you.piety_rank() >= 5)
+    a.sticky_fire_danger = 0
+    if not in_water and you.status("on fire") and you.res_fire() < 2 then
+        a.sticky_fire_danger = 2 - a.supdist
+    end
 
     -- Avoid corners if possible.
     a.cornerish = is_cornerish_at(pos)
 
     -- Is the wall next to us dangerous?
-    a.bad_wall = count_adjacent_slimy_walls_at(pos) > 0
+    a.bad_walls = count_adjacent_slimy_walls_at(pos)
 
     -- Will we fumble if we try to attack from this square?
-    local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
-        and not (you.flying()
-            or you.god() == "Beogh" and you.piety_rank() >= 5)
-    a.fumble = in_water and not using_ranged_weapon() and intrinsic_fumble()
+    a.fumble = not using_ranged_weapon() and in_water and intrinsic_fumble()
 
     -- Will we be slow if we move into this square?
     a.slow = in_water and not intrinsic_amphibious()
@@ -103,7 +107,9 @@ end
 
 -- returns a string explaining why moving a1->a2 is preferable to not moving
 -- possibilities are:
+--   sticky fire - moving to put out sticky fire
 --   cloud       - stepping out of harmful cloud
+--   wall        - stepping away from a slimy wall
 --   water       - stepping out of shallow water when it would cause fumbling
 --   kiting      - kiting slower monsters with reaching or a ranged weapon
 --   hiding      - moving out of sight of alert ranged enemies at distance >= 4
@@ -113,23 +119,12 @@ end
 function step_reason(a1, a2)
     local bad_form = in_bad_form()
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
-        return false
-    elseif (a2.fumble or a2.slow or a2.bad_wall) and a1.cloud_safe then
-        return false
-    elseif not using_ranged_weapon()
-            and not want_to_move_to_abyss_objective()
-            and not a1.near_ally
-            and a2.ranged == 0
-            and a2.adjacent == 0
-            and a1.longranged > 0 then
-        return "hiding"
-    elseif not using_ranged_weapon()
-            and not want_to_move_to_abyss_objective()
-            and not a1.near_ally
-            and a2.ranged == 0
-            and a2.adjacent == 0
-            and a2.unalert < a1.unalert then
-        return "stealth"
+        return
+    elseif a2.sticky_fire_danger < a1.sticky_fire_danger then
+        return "sticky fire"
+    elseif (a2.fumble or a2.slow or a2.bad_walls > 0) and a1.cloud_safe then
+        return
+    -- We've already required that a2 is safe.
     elseif not a1.cloud_safe then
         return "cloud"
     elseif a1.fumble then
@@ -142,49 +137,76 @@ function step_reason(a1, a2)
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "water"
         else
-            return false
+            return
         end
-    elseif a1.bad_wall then
-        -- Same conditions for dangerous walls as for water.
-        if (get_ranged_target() or a1.followers)
+    elseif a1.bad_walls > 0 then
+        -- We move away from bad walls if we're using an attack affected by
+        -- the walls. We also use the same additional consideration or ranged
+        -- threat and distance as used for water.
+        local target = get_ranged_target()
+        if (not (target and target.attack.type == const.attack.evoke)
+                and a1.followers)
                 and (a2.ranged <= a1.ranged
                     or a2.enemy_distance <= a1.enemy_distance) then
             return "wall"
         else
-            return false
+            return
         end
     elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
         return "kiting"
-    elseif want_to_be_surrounded() then
-        return false
-    elseif a1.adjacent == 1 then
-        return false
-    elseif a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
+    elseif not using_ranged_weapon()
+            and not want_to_move_to_abyss_objective()
+            and not a1.near_ally
+            and a2.ranged == 0
+            and a2.adjacent == 0
+            and a1.longranged > 0
             -- We also need to be sure that any monsters we're stepping away
-            -- from can eventually reach us, otherwise we'll be stuck in a loop
-            -- constantly stepping away and then towards them.
-            and incoming_melee_turn == you.turns() then
+            -- from can eventually reach us, otherwise we'll be stuck in a
+            -- loop constantly stepping away and then towards them.
+            and qw.incoming_monsters_turn == you.turns() then
+        return "hiding"
+    elseif not using_ranged_weapon()
+            and not want_to_move_to_abyss_objective()
+            and not a1.near_ally
+            and a2.ranged == 0
+            and a2.adjacent == 0
+            and a2.unalert < a1.unalert then
+        return "stealth"
+    elseif not want_to_be_surrounded()
+            and a1.adjacent > 1
+            and a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
+            and qw.incoming_monsters_turn == you.turns() then
         return "outnumbered"
-    else
-        return false
     end
 end
 
--- determines whether moving a0->a2 is an improvement over a0->a1
--- assumes that these two moves have already been determined to be better
--- than not moving, with given reasons
+-- Determines whether moving a0->a2 is an improvement over a0->a1 assumes that
+-- these two moves have already been determined to be better than not moving,
+-- with given reasons
 function step_improvement(best_reason, reason, a1, a2)
-    if reason == "water" and best_reason == "water"
-         and a2.enemy_distance < a1.enemy_distance then
+    if reason == "sticky fire"
+            and (best_reason ~= "sticky fire"
+                or a2.sticky_fire_danger < a1.sticky_fire_danger) then
         return true
-    elseif reason == "water" and best_reason == "water"
-         and a2.enemy_distance > a1.enemy_distance then
+    elseif best_reason == "sticky fire"
+            and (reason ~= "sticky fire"
+                or a2.sticky_fire_danger > a1.sticky_fire_danger) then
         return false
-    elseif reason == "wall" and best_reason == "wall"
-         and a2.enemy_distance < a1.enemy_distance then
+    elseif reason == "cloud" and best_reason ~= "cloud" then
         return true
-    elseif reason == "wall" and best_reason == "wall"
-         and a2.enemy_distance > a1.enemy_distance then
+    elseif best_reason == "cloud" and reason ~= "cloud" then
+        return false
+    elseif reason == "wall"
+            and (best_reason ~= "wall"
+                or a2.bad_walls < a1.bad_walls) then
+        return true
+    elseif best_reason == "wall"
+            and (reason ~= "wall"
+                or a2.bad_walls > a1.bad_walls) then
+        return false
+    elseif reason == "water" and best_reason ~= "water" then
+        return true
+    elseif best_reason == "water" and reason ~= "water" then
         return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true
@@ -215,8 +237,11 @@ function choose_tactical_step()
 
     if unable_to_move()
             or dangerous_to_move()
-            or you.confused()
-            or you.berserk()
+            -- For cloud and sticky fire steps, we'd like to be able to try
+            -- these even while confused, so long as we're not also dealing
+            -- with monsters.
+            or you.confused() and qw.danger_in_los
+            or you.berserk() and qw.danger_in_los
             or you.constricted() then
         return
     end
@@ -224,8 +249,9 @@ function choose_tactical_step()
     local a0 = assess_square(const.origin)
     local danger = check_enemies(3)
     if a0.cloud_safe
+            and a0.sticky_fire_danger == 0
             and not (a0.fumble and danger)
-            and not (a0.bad_wall and danger)
+            and not (a0.bad_walls > 0 and danger)
             and a0.kite_adjacent == 0
             and (a0.near_ally or a0.enemy_distance == 10) then
         return

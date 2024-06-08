@@ -92,10 +92,9 @@ function plan_tactical_step()
     return move_to(qw.tactical_step)
 end
 
--- This needs higher priority than other step types to get us out of harm's
--- way.
-function plan_cloud_step()
-    if qw.tactical_reason == "cloud" then
+function plan_priority_tactical_step()
+    if qw.tactical_reason == "cloud"
+            or qw.tactical_reason == "sticky flame" then
         return plan_tactical_step()
     end
 
@@ -880,7 +879,9 @@ end
 function plan_cure_confusion()
     if not you.confused()
             or not can_drink()
-            or not (qw.danger_in_los or options.autopick_on)
+            or not (qw.danger_in_los
+                or options.autopick_on
+                or qw.position_is_cloudy)
             or view.cloud_at(0, 0) == "noxious fumes"
                 and not meph_immune() then
         return false
@@ -1030,8 +1031,8 @@ function set_plan_emergency()
         {plan_drain_life, "drain_life"},
         {plan_heal_wounds, "heal_wounds"},
         {plan_trogs_hand, "trogs_hand"},
-        {plan_cloud_step, "cloud_step"},
         {plan_escape_net, "escape_net"},
+        {plan_priority_tactical_step, "priority_tactical_step"},
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
         {plan_flee, "flee"},
