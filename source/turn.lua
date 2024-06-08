@@ -130,9 +130,9 @@ function turn_update()
     end
 
     if qw.have_orb and where == zot_end then
-        ignore_traps = true
+        qw.ignore_traps = true
     else
-        ignore_traps = false
+        qw.ignore_traps = false
     end
 
     base_corrosion = base_corrosion

@@ -900,7 +900,7 @@ function set_goal(status, goal)
         if goal == zot_end and not goal_depth then
             goal_depth = branch_depth("Zot")
             if where == zot_end then
-                ignore_traps = true
+                qw.ignore_traps = true
                 c_persist.autoexplore[zot_end] = const.autoexplore.needed
             end
         end

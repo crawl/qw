@@ -218,7 +218,7 @@ function c_message(text, channel)
         transp_orient = true
     elseif text:find("You enter a dispersal trap")
             or text:find("You enter a permanent teleport trap") then
-        ignore_traps = false
+        qw.ignore_traps = false
     elseif text:find("You feel very bouyant") then
         temporary_flight = true
     elseif text:find("You pick up the Orb of Zot") then

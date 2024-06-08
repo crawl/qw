@@ -202,13 +202,13 @@ end
 
 -- Hook to determine which traps are safe to move over without requiring an
 -- answer to a yesno prompt. This can be conditionally disabled with
--- ignore_traps, e.g. as we do on Zot:5.
+-- qw.ignore_traps, e.g. as we do on Zot:5.
 --
 -- XXX: We have to mark Zot traps as safe so we don't get the prompt, as
 -- c_answer_prompt isn't called in that case. Should have the crawl
 -- yes_or_no() function call c_answer_prompt to fix this.
 function c_trap_is_safe(trap)
-    return ignore_traps
+    return qw.ignore_traps
         or trap == "Zot"
         or you.race() == "Formicid"
             and (trap == "permanent teleport" or trap == "dispersal")

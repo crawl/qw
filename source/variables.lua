@@ -99,7 +99,6 @@ local hiding_turn_count = -100
 local prev_hatch_dist = 1000
 local prev_hatch
 
-local ignore_traps
 local stairs_travel
 
 local next_delay = 100
