@@ -75,6 +75,10 @@ function want_wand(item)
     end
 
     local subtype = item.subtype()
+    if subtype == nil then
+        return true
+    end
+
     if not util.contains(const.wand_types, subtype) then
         return false
     end
