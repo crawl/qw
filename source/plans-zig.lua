@@ -78,7 +78,7 @@ function plan_zig_dig()
             or goal_branch ~= "Zig"
             or view.feature_at(3, 1) ~= branch_entrance("Zig")
             or not wand
-            or not can_zap() then
+            or not can_evoke() then
         return false
     end
 

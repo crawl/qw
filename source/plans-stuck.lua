@@ -75,7 +75,7 @@ end
 
 function plan_stuck_dig_grate()
     local wand = find_item("wand", "digging")
-    if not wand or not can_zap() then
+    if not wand or not can_evoke() then
         return false
     end
 
