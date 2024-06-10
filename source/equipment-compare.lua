@@ -314,14 +314,16 @@ function armour_base_value(item, cur)
             return -1, -1
         end
 
-        if item.name():find("Mad Mage's Maulers") then
-            if you.race() == "Djinni" or god_uses_mp() then
+        if you.race() ~= "Djinni" and item.name():find("Mad Mage's Maulers") then
+            if you.god() ~= "No God" and qw.always_need_mp_for_gods then
+                return -1, -1
+            elseif god_uses_mp() then
                 if cur then
                     return -1, -1
                 else
                     min_val = -10000
                 end
-            elseif not cur and future_gods_use_mp then
+            elseif not cur and qw.future_gods_use_mp then
                 min_val = -10000
             end
 
@@ -480,7 +482,7 @@ function weapon_base_value(item, cur, sit)
         -- This is much less good when it can't make friendly demons.
         if you.mutation("hated by all") or you.god() == "Okawaru" then
             value = value - 200
-        elseif future_okawaru then
+        elseif qw.future_okawaru then
             min_val = min_val + (cur and 200 or -200)
             max_val = max_val + 200
         else
@@ -598,7 +600,7 @@ function weapon_base_value(item, cur, sit)
                 else
                     min_val = -10000
                 end
-            elseif not cur and planning_slime then
+            elseif not cur and qw.planning_slime then
                 min_val = -10000
             end
 
@@ -754,7 +756,7 @@ function equip_is_dominated(item)
             or slot == "weapon"
                 and (you.god() == "the Shining One"
                         and not you.one_time_ability_used()
-                    or future_tso)
+                    or qw.future_tso)
                 and not weapon_is_sit_dominated(item, "bless")
             or slot == "gizmo" then
         return false

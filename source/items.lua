@@ -75,7 +75,7 @@ function want_wand(item)
     end
 
     local subtype = item.subtype()
-    if subtype == nil then
+    if not subtype then
         return true
     end
 
@@ -93,8 +93,8 @@ function want_wand(item)
 end
 
 function want_potion(item)
-    local sub = item.subtype()
-    if sub == nil then
+    local subtype = item.subtype()
+    if not subtype then
         return true
     end
 
@@ -102,28 +102,28 @@ function want_potion(item)
         "heal wounds", "haste", "resistance", "might", "mutation",
         "cancellation" }
 
-    if god_uses_mp() or future_gods_use_mp then
+    if god_uses_mp() or qw.future_gods_use_mp then
         table.insert(wanted, "magic")
     end
 
-    if planning_tomb then
+    if qw.planning_tomb then
         table.insert(wanted, "lignification")
         table.insert(wanted, "attraction")
     end
 
-    return util.contains(wanted, sub)
+    return util.contains(wanted, subtype)
 end
 
 function want_scroll(item)
     local subtype = item.subtype()
-    if subtype == nil then
+    if not subtype then
         return true
     end
 
     local wanted = { "acquirement", "brand weapon", "enchant armour",
         "enchant weapon", "identify", "teleportation"}
 
-    if planning_zig then
+    if qw.planning_zig then
         table.insert(wanted, "blinking")
         table.insert(wanted, "fog")
     end
@@ -141,9 +141,9 @@ function want_missile(item)
 end
 
 function want_miscellaneous(item)
-    local st = item.subtype()
-    if st == "figurine of a ziggurat" then
-        return planning_zig
+    local subtype = item.subtype()
+    if subtype == "figurine of a ziggurat" then
+        return qw.planning_zig
     end
 
     return false

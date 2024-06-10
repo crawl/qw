@@ -289,9 +289,9 @@ function max_property_value(prop, level)
         if prop == "rF" then
             value = value * 2.5
         elseif prop == "rC" then
-            if planning_cocytus then
+            if qw.planning_cocytus then
                 value = value * 2.5
-            elseif planning_slime then
+            elseif qw.planning_slime then
                 value = value * 1.5
             end
         end
@@ -303,10 +303,10 @@ function max_property_value(prop, level)
     elseif prop == "rN" then
         return ires < 3 and 25 * level or 0
     elseif prop == "Will" then
-        local branch_factor = planning_vaults and 1.5 or 1
+        local branch_factor = qw.planning_vaults and 1.5 or 1
         return min(100 * branch_factor * level, 300 * branch_factor)
     elseif prop == "rCorr" then
-        return ires < 1 and (planning_slime and 1200 or 50) or 0
+        return ires < 1 and (qw.planning_slime and 1200 or 50) or 0
     elseif prop == "SInv" then
         return ires < 1 and 200 or 0
     elseif prop == "Fly" then
@@ -325,7 +325,7 @@ function max_property_value(prop, level)
     elseif prop == "Spirit" then
         if ires >= 1
                 or you.race() == "Djinni"
-                or god_uses_mp() and future_gods_use_mp then
+                or god_uses_mp() and qw.future_gods_use_mp then
             return 0
         else
             return 100
@@ -358,9 +358,9 @@ function min_property_value(prop, level)
         if prop == "rF" then
             return -450
         elseif prop == "rC" then
-            if planning_cocytus then
+            if qw.planning_cocytus then
                 return -450
-            elseif planning_slime then
+            elseif qw.planning_slime then
                 return -225
             end
 

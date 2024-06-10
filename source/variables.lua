@@ -16,7 +16,6 @@ local hell_branches
 local portal_data = {}
 local god_data = {}
 local good_gods
-local mp_using_gods = {}
 
 local goal_list
 local which_goal = 1
@@ -34,17 +33,6 @@ local early_vaults
 local vaults_end
 local early_zot
 local zot_end
-
-local future_gods = {}
-local future_gods_use_mp
-local future_tso
-local future_okawaru
-
-local planning_vaults
-local planning_slime
-local planning_tomb
-local planning_cocytus
-local planning_zig
 
 local previous_god
 local previous_where

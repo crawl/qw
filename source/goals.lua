@@ -484,7 +484,7 @@ end
 
 function planning_convert_to_gods(gods)
     for _, god in ipairs(gods) do
-        if util.contains(future_gods, god) then
+        if util.contains(qw.future_gods, god) then
             return true
         end
     end
@@ -501,7 +501,21 @@ function planning_convert_to_mp_using_gods()
         return false
     end
 
-    return planning_convert_to_gods(mp_using_gods)
+    return planning_convert_to_gods(const.mp_using_gods)
+end
+
+function planned_gods_all_use_mp()
+    if not util.contains(const.mp_using_gods, you.god()) then
+        return false
+    end
+
+    for _, god in ipairs(qw.future_gods) do
+        if not util.contains(const.mp_using_gods, god) then
+            return false
+        end
+    end
+
+    return true
 end
 
 function update_planning()
@@ -509,17 +523,19 @@ function update_planning()
         return
     end
 
-    planning_zig = goals_visit_branch("Zig")
+    qw.planning_zig = goals_visit_branch("Zig")
 
-    planning_vaults = goals_visit_branch("Vaults")
-    planning_slime = goals_visit_branch("Slime")
-    planning_tomb = goals_visit_branch("Tomb")
-    planning_cocytus = goals_visit_branch("Coc")
+    qw.planning_vaults = goals_visit_branch("Vaults")
+    qw.planning_slime = goals_visit_branch("Slime")
+    qw.planning_tomb = goals_visit_branch("Tomb")
+    qw.planning_cocytus = goals_visit_branch("Coc")
 
-    future_gods = goals_future_gods()
-    future_gods_use_mp = planning_convert_to_mp_using_gods()
-    future_tso = planning_convert_to_god("the Shining One")
-    future_okawaru = planning_convert_to_god("Okawaru")
+    qw.future_gods = goals_future_gods()
+    qw.future_gods_use_mp = planning_convert_to_mp_using_gods()
+    qw.future_tso = planning_convert_to_god("the Shining One")
+    qw.future_okawaru = planning_convert_to_god("Okawaru")
+
+    qw.always_need_mp_for_gods = planned_gods_all_use_mp()
 end
 
 -- Make a level range for the given branch and ranges, e.g. D:1-11. The

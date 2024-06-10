@@ -49,13 +49,15 @@ end
 local god_data = {}
 local god_lookups = {}
 function initialize_god_data()
+    const.mp_using_gods = {}
+
     for _, entry in ipairs(god_data_values) do
         local god = entry[1]
         god_data[god] = {}
         god_data[god]["uses_invocations"] = entry[2]
         god_data[god]["uses_mp"] = entry[3]
         if entry[3] then
-            table.insert(mp_using_gods, god)
+            table.insert(const.mp_using_gods, god)
         end
 
         god_lookups[god:upper()] = god
@@ -121,7 +123,7 @@ function future_gods_enough_max_mp(max_mp)
         return true
     end
 
-    for _, god in ipairs(future_gods) do
+    for _, god in ipairs(qw.future_gods) do
         if not enough_max_mp_for_god(max_mp, god) then
             return false
         end
@@ -196,7 +198,7 @@ function god_hates_item(god, it)
 end
 
 function future_gods_hate_item(it)
-    for _, god in ipairs(future_gods) do
+    for _, god in ipairs(qw.future_gods) do
         if god_hates_item(god, it) then
             return true
         end
