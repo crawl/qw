@@ -325,7 +325,7 @@ function max_property_value(prop, level)
     elseif prop == "Spirit" then
         if ires >= 1
                 or you.race() == "Djinni"
-                or god_uses_mp() and qw.future_gods_use_mp then
+                or qw.planned_gods_all_use_mp then
             return 0
         else
             return 100

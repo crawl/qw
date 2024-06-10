@@ -535,7 +535,7 @@ function update_planning()
     qw.future_tso = planning_convert_to_god("the Shining One")
     qw.future_okawaru = planning_convert_to_god("Okawaru")
 
-    qw.always_need_mp_for_gods = planned_gods_all_use_mp()
+    qw.planned_gods_all_use_mp = planned_gods_all_use_mp()
 end
 
 -- Make a level range for the given branch and ranges, e.g. D:1-11. The

@@ -315,7 +315,7 @@ function armour_base_value(item, cur)
         end
 
         if you.race() ~= "Djinni" and item.name():find("Mad Mage's Maulers") then
-            if you.god() ~= "No God" and qw.always_need_mp_for_gods then
+            if you.god() ~= "No God" and qw.planned_gods_all_use_mp then
                 return -1, -1
             elseif god_uses_mp() then
                 if cur then
