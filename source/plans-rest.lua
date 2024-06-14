@@ -25,7 +25,7 @@ function plan_cure_poison()
 end
 
 function should_rest()
-    if qw.danger_in_los and not qw.all_enemies_safe then
+    if qw.danger_in_los and not qw.all_enemies_safe or qw.position_is_cloudy then
         return false
     end
 
@@ -121,6 +121,7 @@ function plan_long_rest()
         long_rest()
         return true
     end
+
     return false
 end
 
@@ -129,6 +130,7 @@ function plan_rest_one_turn()
         wait_one_turn(true)
         return true
     end
+
     return false
 end
 

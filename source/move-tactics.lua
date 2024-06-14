@@ -100,9 +100,9 @@ function assess_square(pos)
     -- Is the square safe to step in? (checks traps & clouds)
     a.safe = is_safe_at(pos)
 
-    -- Would we want to move out of a cloud? note that we don't worry about
-    -- weak clouds if monsters are around.
-    a.cloud_safe = is_cloud_safe_at(pos, a.safe)
+    -- Would we want to move out of a cloud? We don't worry about weak clouds
+    -- if monsters are around.
+    a.cloud_dangerous = cloud_is_dangerous_at(pos)
 
     a.retreat_distance = retreat_distance_at(pos)
 
@@ -129,10 +129,10 @@ function step_reason(a1, a2)
         return
     elseif a2.sticky_fire_danger < a1.sticky_fire_danger then
         return "sticky fire"
-    elseif (a2.fumble or a2.slow or a2.bad_walls > 0) and a1.cloud_safe then
+    elseif (a2.fumble or a2.slow or a2.bad_walls > 0) and not a1.cloud_dangerous then
         return
     -- We've already required that a2 is safe.
-    elseif not a1.cloud_safe then
+    elseif a1.cloud_dangerous then
         return "cloud"
     elseif a1.fumble then
         -- We require that we have some close threats we want to melee that
@@ -267,7 +267,7 @@ function choose_tactical_step()
 
     local a0 = assess_square(const.origin)
     local danger = check_enemies(3)
-    if a0.cloud_safe
+    if not a0.cloud_dangerous
             and a0.sticky_fire_danger == 0
             and not (a0.fumble and danger)
             and not (a0.bad_walls > 0 and danger)

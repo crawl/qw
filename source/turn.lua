@@ -101,8 +101,6 @@ function turn_update()
     if hp_is_full() then
         qw.full_hp_turn = qw.turn_count
     end
-    qw.position_is_safe = is_safe_at(const.origin)
-    qw.position_is_cloudy = not qw.position_is_safe and view.cloud_at(0, 0) ~= nil
 
     if you.god() ~= previous_god then
         previous_god = you.god()
@@ -170,6 +168,10 @@ function turn_update()
     update_monsters()
 
     update_map(new_level, full_map_clear)
+
+    qw.position_is_safe = is_safe_at(const.origin)
+    qw.position_is_cloudy = not qw.position_is_safe
+        and not cloud_is_safe(view.cloud_at(0, 0))
 
     qw.danger_in_los = #qw.enemy_list > 0
         or not map_is_unexcluded_at(qw.map_pos)

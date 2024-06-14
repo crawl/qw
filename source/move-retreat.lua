@@ -189,9 +189,7 @@ function assess_retreat_position(map_pos, attacking_limit, max_distance)
     -- current position and the clouds there are safe enough.
     local pos = position_difference(map_pos, qw.map_pos)
     local is_origin = position_is_origin(pos)
-    if not map_is_unexcluded_at(map_pos)
-            or not is_safe_at(pos)
-                and (not is_origin or not is_cloud_safe_at(pos, false)) then
+    if cloud_is_dangerous_at(pos) or not trap_is_safe_at(pos) then
         return
     end
 

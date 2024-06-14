@@ -477,6 +477,10 @@ function map_is_unexcluded_at(pos)
     return exclusion_map[pos.x][pos.y]
 end
 
+function unexcluded_at(pos)
+    return map_is_unexcluded_at(position_sum(qw.map_pos, pos))
+end
+
 function update_feature(branch, depth, feat, hash, state)
     local dir, num = stone_stairs_type(feat)
     if dir then

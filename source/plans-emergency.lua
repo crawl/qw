@@ -144,7 +144,7 @@ function plan_grand_finale()
     for _, enemy in ipairs(qw.enemy_list) do
         local pos = enemy:pos()
         if is_traversable_at(pos)
-                and not cloud_is_dangerous(view.cloud_at(pos.x, pos.y)) then
+                and not cloud_is_dangerous_at(pos) then
             if new_info.safe == 0
                     and (not best_info
                         or compare_melee_targets(enemy, best_enemy, props, reversed)) then
@@ -910,7 +910,9 @@ function plan_escape_net()
 end
 
 function plan_wait_confusion()
-    if not you.confused() or not (qw.danger_in_los or options.autopick_on) then
+    if not you.confused()
+            or not (qw.danger_in_los or options.autopick_on)
+            or qw.position_is_cloudy then
         return false
     end
 
@@ -996,6 +998,7 @@ end
 function set_plan_emergency()
     plans.emergency = cascade {
         {plan_stairdance_up, "stairdance_up"},
+        {plan_pick_up_rune, "pick_up_rune"},
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
         {plan_cancellation, "cancellation"},

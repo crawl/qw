@@ -453,7 +453,7 @@ function best_move_towards_safety()
         end
 
         local los_pos = position_difference(pos, qw.map_pos)
-        if false and supdist(pos) <= const.gxm
+        if supdist(pos) <= const.gxm
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true)
                 and can_move_to(los_pos, true) then
@@ -501,7 +501,19 @@ function update_move_destination()
     end
 end
 
-function move_to(pos)
+function move_to(pos, cloud_waiting)
+    if cloud_waiting == nil then
+        cloud_waiting = true
+    end
+
+    if cloud_waiting
+            and not qw.position_is_cloudy
+            and unexcluded_at(pos)
+            and cloud_is_dangerous_at(pos) then
+        wait_one_turn()
+        return true
+    end
+
     if monster_in_way(pos, true) then
         if get_monster_at(pos):player_can_attack(1) then
             return shoot_launcher(pos)

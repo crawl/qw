@@ -143,8 +143,32 @@ function plan_exit_portal()
     return true
 end
 
+function want_rune_on_current_level()
+    return not have_branch_runes(where_branch)
+            and where_branch == goal_branch
+            and where_depth == goal_depth
+            and goal_depth == branch_rune_depth(goal_branch)
+end
+
+function plan_pick_up_rune()
+    if not want_rune_on_current_level() then
+        return false
+    end
+
+    local runes = branch_runes(where_branch, true)
+    local rune_positions = get_item_map_positions(runes)
+    if not rune_positions
+            or not positions_equal(qw.map_pos, rune_positions[1]) then
+        return false
+    end
+
+    magic(",")
+    return true
+end
+
 function plan_move_towards_rune()
-    if have_branch_runes(where_branch)
+    if not want_rune_on_current_level()
+            or you.confused()
             or unable_to_move()
             or dangerous_to_move() then
         return false
@@ -157,11 +181,6 @@ function plan_move_towards_rune()
     end
 
     local result = best_move_towards_positions(rune_positions, true)
-    if result then
-        return move_towards_destination(result.move, result.rune_pos, "goal")
-    end
-
-    result = best_move_towards_unexplored_near_positions(rune_positions, true)
     if result then
         return move_towards_destination(result.move, result.dest, "goal")
     end
@@ -193,12 +212,7 @@ function plan_move_towards_travel_feature()
         return false
     end
 
-    local result = best_move_towards_features(feats)
-    if result then
-        return move_towards_destination(result.move, result.dest, "goal")
-    end
-
-    result = best_move_towards_features(feats, true)
+    local result = best_move_towards_features(feats, true)
     if result then
         return move_towards_destination(result.move, result.dest, "goal")
     end
@@ -301,69 +315,6 @@ function plan_move_towards_unexplored()
         end
 
         return move_towards_destination(result.move, result.dest, "unexplored")
-    end
-
-    return false
-end
-
-function plan_swamp_clear_exclusions()
-    if not at_branch_end("Swamp") then
-        return false
-    end
-
-    magic("X" .. control('e'))
-    return true
-end
-
-function plan_swamp_go_to_rune()
-    if not at_branch_end("Swamp") or have_branch_runes("Swamp") then
-        return false
-    end
-
-    if last_swamp_fail_count
-            == c_persist.plan_fail_count.try_swamp_go_to_rune then
-        swamp_rune_reachable = true
-    end
-
-    last_swamp_fail_count = c_persist.plan_fail_count.try_swamp_go_to_rune
-    magicfind("@" .. branch_runes("Swamp")[1] .. " rune")
-    return true
-end
-
-function is_swamp_end_cloud(pos)
-    return (view.cloud_at(pos.x, pos.y) == "freezing vapour"
-            or view.cloud_at(pos.x, pos.y) == "foul pestilence")
-        and not is_safe_at(pos)
-end
-
-function plan_swamp_move_towards_clouds()
-    if not at_branch_end("Swamp") or have_branch_runes("Swamp") then
-        return false
-    end
-
-    if swamp_rune_reachable then
-        say("Waiting for clouds to move.")
-        wait_one_turn()
-        return true
-    end
-
-    local best_pos
-    local best_dist = 11
-    for pos in adjacent_iter(const.origin) do
-        if can_move_to(pos) and is_safe_at(pos) then
-            for dpos in radius_iter(pos) do
-                local dist = position_distance(dpos, pos)
-                if is_swamp_end_cloud(dpos) and dist < best_dist then
-                    best_pos = pos
-                    best_dist = dist
-                end
-            end
-        end
-    end
-
-    if best_pos then
-        move_to(best_pos)
-        return true
     end
 
     return false
@@ -532,9 +483,6 @@ function set_plan_explore2()
         {plan_exit_portal, "exit_portal"},
         {plan_go_to_portal_exit, "try_go_to_portal_exit"},
         {plan_shopping_spree, "try_shopping_spree"},
-        {plan_swamp_clear_exclusions, "try_swamp_clear_exclusions"},
-        {plan_swamp_go_to_rune, "try_swamp_go_to_rune"},
-        {plan_swamp_move_towards_clouds, "try_swamp_move_towards_clouds"},
         {plan_tomb_go_to_final_hatch, "try_tomb_go_to_final_hatch"},
         {plan_tomb_go_to_hatch, "try_tomb_go_to_hatch"},
         {plan_tomb_use_hatch, "tomb_use_hatch"},
@@ -554,9 +502,9 @@ function set_plan_explore2()
         {plan_zig_go_to_stairs, "try_zig_go_to_stairs"},
         {plan_take_unexplored_stairs, "take_unexplored_stairs"},
         {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
+        {plan_move_towards_rune, "move_towards_rune"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},
-        {plan_move_towards_rune, "move_towards_rune"},
         {plan_teleport_dangerous_stairs, "teleport_dangerous_stairs"},
         {plan_use_travel_stairs, "use_travel_stairs"},
         {plan_move_towards_travel_feature, "move_towards_travel_feature"},

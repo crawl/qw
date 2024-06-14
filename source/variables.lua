@@ -100,6 +100,3 @@ local clear_exclusion_count = {}
 local vaults_end_entry_turn
 local tomb2_entry_turn
 local tomb3_entry_turn
-
-local last_swamp_fail_count = -1
-local swamp_rune_reachable = false

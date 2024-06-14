@@ -170,6 +170,12 @@ function count_stair_followers(radius)
 end
 
 function want_to_stairdance_up()
+    -- Assume we'd rather follow through with our teleport rather than take
+    -- stairs.
+    if you.teleporting() then
+        return false
+    end
+
     local feat = view.feature_at(0, 0)
     if not qw.can_flee_upstairs or not feature_is_upstairs(feat) then
         return false
@@ -221,9 +227,6 @@ end
 function plan_stairdance_up()
     if unable_to_use_stairs()
             or dangerous_to_move(true)
-            -- Assume we'd rather follow through with our teleport rather than
-            -- take stairs.
-            or you.teleporting()
             or not want_to_stairdance_up() then
         return false
     end
