@@ -6,12 +6,12 @@ function plan_random_step()
         return false
     end
 
-    stuck_turns = stuck_turns + 1
+    qw.stuck_turns = qw.stuck_turns + 1
     return random_step("stuck")
 end
 
 function plan_stuck_initial()
-    if stuck_turns <= 50 then
+    if qw.stuck_turns <= 50 then
         return plan_random_step()
     end
 

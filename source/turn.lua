@@ -134,7 +134,7 @@ function turn_update()
         qw.base_corrosion = in_branch("Dis") and 8 or 0
 
         transp_zone = 0
-        stuck_turns = 0
+        qw.stuck_turns = 0
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
             vaults_end_entry_turn = qw.turn_count

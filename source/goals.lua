@@ -280,7 +280,7 @@ function determine_goal()
         return
     end
 
-    if qw.quit_turns and stuck_turns > qw.quit_turns
+    if qw.quit_turns and qw.stuck_turns > qw.quit_turns
             or select(2, you.hp()) == 1 then
         status = "Quit"
     end
