@@ -998,6 +998,9 @@ end
 function set_plan_emergency()
     plans.emergency = cascade {
         {plan_stairdance_up, "stairdance_up"},
+        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
+        {plan_exit_abyss, "exit_abyss"},
+        {plan_go_down_abyss, "go_down_abyss"},
         {plan_pick_up_rune, "pick_up_rune"},
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
@@ -1010,6 +1013,9 @@ function set_plan_emergency()
         {plan_heal_wounds, "heal_wounds"},
         {plan_trogs_hand, "trogs_hand"},
         {plan_escape_net, "escape_net"},
+        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
+        {plan_move_towards_abyssal_feature, "move_towards_abyssal_feature"},
+        {plan_explore_near_runelights, "explore_near_runelights"},
         {plan_priority_tactical_step, "priority_tactical_step"},
         {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},

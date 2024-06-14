@@ -124,7 +124,6 @@ function cascade(plans)
 end
 
 function initialize_plan_cascades()
-    set_plan_abyss()
     set_plan_emergency()
     set_plan_attack()
     set_plan_rest()
@@ -145,7 +144,6 @@ function set_plan_turn()
         {plan_ancestor_identity, "try_ancestor_identity"},
         {plan_join_beogh, "join_beogh"},
         {plan_shop, "shop"},
-        {plans.abyss, "abyss"},
         {plans.emergency, "emergency"},
         {plans.attack, "attack"},
         {plans.rest, "rest"},

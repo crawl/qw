@@ -80,25 +80,20 @@ function plan_move_towards_abyssal_feature()
 
     local feats = goal_travel_features()
     if feats then
-        local result = best_move_towards_features(feats)
+        local result = best_move_towards_features(feats, true)
         if result then
             return move_towards_destination(result.move, result.dest, "goal")
         end
-    end
-
-    result = best_move_towards_features(feats, true)
-    if result then
-        return move_towards_destination(result.move, result.dest, "goal")
     end
 
     return false
 end
 
 function plan_go_down_abyss()
-    if view.feature_at(0, 0) == "abyssal_stair"
-            and want_to_move_to_abyss_objective()
+    if in_branch("Abyss")
             and goal_branch == "Abyss"
             and where_depth < goal_depth
+            and view.feature_at(0, 0) == "abyssal_stair"
             and not unable_to_use_stairs() then
         go_downstairs()
         return true
@@ -172,16 +167,4 @@ function plan_explore_near_runelights()
     end
 
     return false
-end
-
-function set_plan_abyss()
-    plans.abyss = cascade {
-        {plan_pick_up_abyssal_rune, "pick_up_abyssal_rune"},
-        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
-        {plan_exit_abyss, "exit_abyss"},
-        {plan_go_down_abyss, "go_down_abyss"},
-        {plan_move_towards_abyssal_feature, "move_towards_abyssal_feature"},
-        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
-        {plan_explore_near_runelights, "explore_near_runelights"},
-    }
 end
