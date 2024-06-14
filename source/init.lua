@@ -81,6 +81,7 @@ function initialize_rc_variables()
     qw.combo_cycle_list = COMBO_CYCLE_LIST
     qw.goals = GOALS
     qw.default_goal = DEFAULT_GOAL
+    qw.future_gods = {}
 
     qw.god_list = GOD_LIST
     qw.faded_altar = FADED_ALTAR
