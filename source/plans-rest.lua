@@ -17,7 +17,7 @@ function plan_cure_poison()
     end
 
     if can_purification() then
-        purification()
+        use_purification()
         return true
     end
 
