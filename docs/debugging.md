@@ -20,13 +20,15 @@ This variables should be configured in the qw rc file.
   debug mode is enabled. The available channels are:
 
   + "combat": Melee targeting and combat.
-  + "explore": Map exploration and feature discovery.
-  + "flee": Updates to the flee position.
+  + "flee": Fleeing evaluation.
+  + "goals": Current goal and travel destination.
   + "items": Item evaluation.
-  + "map": Updates to the map data cache and distance maps.
-  + "plans": Plan execution results. This generates a lot of output.
+  + "map": Updates to the map data and distance maps.
+  + "move": Movement evaluation.
+  + "plans": The last successfully executed plan.
+  + "plans-all": The results of every plan in the cascade. Generates a lot of output.
   + "ranged": Ranged targeting and combat.
-  + "retreat": Retreat position selection.
+  + "retreat": Retreat position evaluation.
   + "skills": Skill selection.
   + "throttle": Throttling and memory usage.
 

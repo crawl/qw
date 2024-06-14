@@ -55,9 +55,9 @@ end
 function can_flee_to(pos, flee_dist)
     local move_delay = player_move_delay()
     if debug_channel("flee") then
-        dsay("Evaluating move to " .. pos_string(pos) .. " with move delay "
-            .. tostring(move_delay) .. " and total flee distance of "
-            .. tostring(flee_dist))
+        dsay("Evaluating flee move to " .. pos_string(pos)
+            .. " with move delay " .. tostring(move_delay)
+            .. " and destination distance of " .. tostring(flee_dist))
     end
 
     local enemies = assess_enemies()

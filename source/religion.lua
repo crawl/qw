@@ -507,7 +507,7 @@ function update_altar(god, level, hash, state, force)
         return false
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating altar on " .. level .. " at "
             .. cell_string_from_map_position(unhash_position(hash))
             .. " from " .. stairs_state_string(current)

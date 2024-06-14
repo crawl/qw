@@ -246,6 +246,18 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe, flee_monsters)
     end
 
     local current_safe_dist = dist_map.excluded_map[from_pos.x][from_pos.y]
+
+    if debug_channel("move") then
+        dsay("Determining move to "
+            .. cell_string_from_map_position(dest_pos)
+            .. " from " ..  cell_string_from_map_position(from_pos))
+        dsay("Safe distance to dest: " .. tostring(current_safe_dist))
+
+        if allow_unsafe then
+            dsay("Unsafe distance to dest: " .. tostring(current_dist))
+        end
+    end
+
     if current_safe_dist == 0
             or not current_safe_dist and not current_dist then
         return
@@ -474,7 +486,7 @@ function update_move_destination()
     end
 
     if clear then
-        if debug_channel("explore") then
+        if debug_channel("move") then
             dsay("Clearing move destination "
                 .. cell_string_from_map_position(qw.move_destination))
         end

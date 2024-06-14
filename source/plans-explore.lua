@@ -13,7 +13,7 @@ function plan_move_towards_safety()
 
     local result = best_move_towards_safety()
     if result then
-        if debug_channel("explore") then
+        if debug_channel("move") then
             dsay("Moving to safe position at "
                 .. cell_string_from_map_position(result.dest))
         end
@@ -269,7 +269,7 @@ function plan_move_towards_monster()
 
     local result = best_move_towards_positions(mons_targets)
     if result then
-        if debug_channel("explore") then
+        if debug_channel("move") then
             dsay("Moving to enemy at "
                 .. cell_string_from_map_position(result.dest))
         end
@@ -286,7 +286,7 @@ function plan_move_towards_unexplored()
 
     local result = best_move_towards_unexplored()
     if result then
-        if debug_channel("explore") then
+        if debug_channel("move") then
             dsay("Moving to explore near safe position at "
                 .. cell_string_from_map_position(result.dest))
         end
@@ -295,7 +295,7 @@ function plan_move_towards_unexplored()
 
     local result = best_move_towards_unexplored(true)
     if result then
-        if debug_channel("explore") then
+        if debug_channel("move") then
             dsay("Moving to explore near unsafe position at "
                 .. cell_string_from_map_position(result.dest))
         end

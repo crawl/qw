@@ -929,7 +929,7 @@ function set_goal(status, goal)
         end
     end
 
-    if debug_channel("explore") then
+    if debug_channel("goals") then
         dsay("Goal status: " .. goal_status)
         if goal_branch then
             dsay("Goal branch: " .. tostring(goal_branch)
@@ -943,7 +943,7 @@ function reset_autoexplore(level)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("goals") then
         dsay("Resetting autoexplore of " .. level)
     end
 

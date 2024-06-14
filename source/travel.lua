@@ -563,7 +563,7 @@ function update_goal_travel()
                 or goal_status == "Escape" and qw.have_orb
                 or goal_travel.branch and not goal_travel.want_go))
 
-    if debug_channel("explore") then
+    if debug_channel("goals") then
         if goal_travel.branch then
             dsay("Travel destination: "
                 .. make_level(goal_travel.branch, goal_travel.depth))

@@ -113,7 +113,7 @@ function update_stone_stairs(branch, depth, dir, num, state, force)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating stone " .. (dir == const.dir.up and "up" or "down")
             .. "stairs " .. num .. " on " .. level
             .. " from " .. stairs_state_string(current) .. " to "
@@ -270,7 +270,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating " .. dest_branch .. " branch "
             .. (dir == const.dir.up and "exit" or "entrance") .. " stairs "
             .. " on " .. level .. " from " .. stairs_state_string(current)
@@ -342,7 +342,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating escape hatch " .. " on " .. level .. " at "
             .. cell_string_from_map_position(unhash_position(hash))
             .. " from " .. stairs_state_string(current) .. " to "
@@ -395,7 +395,7 @@ function update_pan_transit(hash, state, force)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating Pan transit at "
             .. los_pos_string(unhash_position(hash)) .. " from "
             .. stairs_state_string(current) .. " to "
@@ -441,7 +441,7 @@ function update_abyssal_stairs(hash, state, force)
         return
     end
 
-    if debug_channel("explore") then
+    if debug_channel("map") then
         dsay("Updating Abyssal stairs at "
             .. los_pos_string(unhash_position(hash)) .. " from "
             .. stairs_state_string(current) .. " to "
