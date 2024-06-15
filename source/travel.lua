@@ -329,7 +329,7 @@ function finalize_first_dir(result)
         if where_depth == result.depth then
             result.first_dir = nil
         else
-            result.first_dir = abs(result.depth - where_depth)
+            result.first_dir = sign(result.depth - where_depth)
         end
     end
 end
