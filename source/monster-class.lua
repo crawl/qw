@@ -531,9 +531,9 @@ function Monster:player_can_wait_for_melee()
         function()
             return not self:player_can_melee()
                 and self:has_path_to_melee_player()
-                and (self:reach_range() == 1
-                    or player_reach_range() > 1
-                    or get_move_closer(self:pos()))
+                and (self:reach_range() <= player_reach_range()
+                        or get_move_closer(self:pos()))
+                and self:distance() > self:reach_range()
         end)
 end
 
