@@ -39,8 +39,8 @@ function teleport()
     return read_scroll_by_name("teleportation")
 end
 
-function dangerous_hydra_distance()
-    if you.xl() >= 18 or hydra_melee_value() > 0 then
+function dangerous_hydra_distance(ignore_weapon)
+    if you.xl() >= 18 and (ignore_weapon or hydra_melee_value() > 0) then
         return
     end
 
@@ -71,7 +71,7 @@ function plan_wield_weapon()
         return false
     end
 
-    local hydra_dist = dangerous_hydra_distance()
+    local hydra_dist = dangerous_hydra_distance(true)
     if hydra_dist and hydra_dist <= 2 then
         return equip_item(best_hydra_swap_weapon(), "weapon")
     end

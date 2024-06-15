@@ -699,7 +699,10 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
         return
     end
 
-    if not cur_equip[slot] or #cur_equip[slot] < slot_max_items(slot) then
+    local max_items = slot_max_items(slot)
+    if max_items == 1
+            or not cur_equip[slot]
+            or #cur_equip[slot] < max_items then
         return ""
     end
 
@@ -725,6 +728,7 @@ function equip_item(item, slot, keep_items)
         verb = "WIELDING"
         key = "w"
     end
+
     say(verb .. " " .. item.name())
     magic(key .. item_letter(item) .. dest_letter)
     return true
