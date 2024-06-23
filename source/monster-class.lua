@@ -644,8 +644,8 @@ function Monster:weapon_accuracy(item)
     return self:property_memo_args("weapon_accuracy",
         function()
             local str = self.minfo:target_weapon(item)
-            str = str:gsub(".-(%d+)%% to evade.*", "%1")
-            return (100 - tonumber(str)) / 100
+            str = str:gsub(".-(%d+)%% to hit.*", "%1")
+            return tonumber(str) / 100
         end, item)
 end
 
