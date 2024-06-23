@@ -389,6 +389,12 @@ function get_monster_at(pos)
     end
 end
 
+function get_closest_enemy()
+    if #qw.enemy_list > 0 then
+        return qw.enemy_list[1]
+    end
+end
+
 function monster_in_list(mons, mons_list)
     local entry = mons_list[mons:name()]
     if type(entry) == "number" and you.xl() < entry then
