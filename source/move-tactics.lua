@@ -221,11 +221,15 @@ function step_improvement(best_reason, reason, a1, a2)
         return false
     elseif reason == "retreating"
             and (best_reason ~= "retreating"
-                or a2.retreat_distance < a1.retreat_distance) then
+                or a2.retreat_distance < a1.retreat_distance
+                or a2.retreat_distance == a1.retreat_distance
+                    and a2.enemy_distance > a1.enemy_distance) then
         return true
     elseif best_reason == "retreating"
             and (reason ~= "retreating"
-                or a2.retreat_distance > a1.retreat_distance) then
+                or a2.retreat_distance > a1.retreat_distance
+                or a2.retreat_distance == a1.retreat_distance
+                    and a2.enemy_distance < a1.enemy_distance) then
         return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true

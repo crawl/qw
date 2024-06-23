@@ -156,10 +156,10 @@ function can_retreat_from(from_pos, to_pos)
 end
 
 function reverse_retreat_move_to(to_pos, dist_map)
-    local to_los_pos = position_difference(to_pos, qw.map_pos)
     local map = dist_map.excluded_map
-    local best_pos, best_has_mons
     local to_dist = map[to_pos.x][to_pos.y]
+    local to_los_pos = position_difference(to_pos, qw.map_pos)
+    local best_pos
     for from_pos in adjacent_iter(to_pos) do
         local from_los_pos = position_difference(from_pos, qw.map_pos)
         -- Moving from from_pos to to_pos must make us closer to the player's
@@ -171,25 +171,23 @@ function reverse_retreat_move_to(to_pos, dist_map)
                 and from_dist < to_dist
                 and can_retreat_from(from_los_pos, to_los_pos) then
             local mons = get_monster_at(from_los_pos)
-            local has_mons = mons
-                and mons:attitude() < const.attitude.peaceful
             -- We prefer a move that doesn't force dealing with a hostile
             -- monster, if one is available.
-            if not best_pos or not has_mons and best_has_mons then
+            if not mons then
+                return from_pos, false
+            end
+
+            if not best_pos and mons:attitude() < const.attitude.peaceful then
                 best_pos = from_pos
-                best_has_mons = has_mons
             end
         end
     end
-    return best_pos, best_has_mons
+    return best_pos, true
 end
 
 function assess_retreat_position(map_pos, attacking_limit, max_distance)
-    -- Any unsafe location is not a valid retreat position, unless its our
-    -- current position and the clouds there are safe enough.
     local pos = position_difference(map_pos, qw.map_pos)
-    local is_origin = position_is_origin(pos)
-    if cloud_is_dangerous_at(pos) or not trap_is_safe_at(pos) then
+    if not is_safe_at(pos) then
         return
     end
 
@@ -201,7 +199,7 @@ function assess_retreat_position(map_pos, attacking_limit, max_distance)
     end
 
     -- Further calculations not necessary for our current position.
-    if is_origin then
+    if position_is_origin(pos) then
         result.distance = 0
         return result
     end
@@ -246,10 +244,20 @@ function best_retreat_position_func(attacking_limit)
         return
     end
 
+    if debug_channel("retreat") then
+        dsay("Calculating best retreat position with attacking limit "
+            .. tostring(attacking_limit))
+    end
+
     local cur_result = assess_retreat_position(qw.map_pos)
     -- Our current location can't significantly improve.
     if cur_result and cur_result.num_attacking <= 1 then
-        return qw.map_pos
+        if debug_channel("retreat") then
+            dsay("Can't improve retreat position over current location with "
+                .. tostring(cur_result.num_attacking) .. " attacking monster(s)")
+        end
+
+        return cur_result
     end
 
     -- We never retreat further than our closest flee position, if one is
@@ -271,7 +279,7 @@ function best_retreat_position_func(attacking_limit)
         if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
                 dsay("Searched block " .. tostring(i / 1000)
-                    .. " of map positions")
+                    .. " of potential retreat positions")
             end
 
             qw.throttle = true
@@ -302,9 +310,29 @@ function best_retreat_position_func(attacking_limit)
         i = i + 1
     end
 
+    if debug_channel("retreat") then
+        if best_result then
+            dsay("Found best retreat position at "
+                .. cell_string_from_map_position(best_result.map_pos)
+                .. " with distance " .. tostring(best_result.distance)
+                .. " and " .. tostring(best_result.num_blocking)
+                .. " blocking monsters"
+                .. " and " .. tostring(best_result.num_attacking)
+                .. " monsters attacking at destination")
+        else
+            dsay("No valid retreat position found")
+        end
+    end
+
     -- We have no viable retreating position or our current one is rated best.
-    if not best_result or best_result.distance == 0 then
+    if not best_result then
         return
+    elseif best_result.distance == 0 then
+        if debug_channel("retreat") then
+            dsay("Already at best retreat position")
+        end
+
+        return best_result
     end
 
     local enemies = assess_enemies()
@@ -322,20 +350,18 @@ function best_retreat_position_func(attacking_limit)
     -- plans like cloud tactical step might have acted.
     if best_result.num_blocking > 1
             or cutoff and best_result.distance > cutoff then
+        if debug_channel("retreat") then
+            if best_result.num_blocking > 1 then
+                dsay("Too many monsters blocking retreat")
+            else
+                dsay("Retreat distance is over cutoff of " .. tostring(cutoff))
+            end
+        end
+
         return
     end
 
-    if debug_channel("retreat") then
-        dsay("Found retreat position at "
-            .. cell_string_from_map_position(best_result.map_pos)
-            .. " with " .. tostring(best_result.num_blocking)
-            .. " blocking monsters"
-            .. " and " .. tostring(best_result.num_attacking)
-            .. " monsters attacking at destination at distance "
-            .. best_result.distance)
-    end
-
-    return best_result.map_pos
+    return best_result
 end
 
 function best_retreat_position(attacking_limit)
@@ -350,16 +376,16 @@ function will_fight_extreme_threat()
         return want_to_be_surrounded()
     end
 
-    local pos = best_retreat_position(2)
-    if not pos then
+    local result = best_retreat_position(2)
+    if not result then
         return false
     end
 
-    return positions_equal(qw.map_pos, pos) or best_move_towards(pos)
+    return result.distance == 0 or best_move_towards(result.map_pos)
 end
 
 function retreat_distance_at(pos)
-    if not using_ranged_weapon() then
+    if not qw.danger_in_los or not using_ranged_weapon() then
         return const.inf_dist
     end
 
@@ -367,14 +393,14 @@ function retreat_distance_at(pos)
 
     local enemies = assess_enemies(const.duration.available)
     if enemies.threat >= const.extreme_threat then
-        local retreat_pos = best_retreat_position(2)
-        if not retreat_pos then
+        local result = best_retreat_position(2)
+        if not result then
             return const.inf_dist
-        elseif positions_equal(retreat_pos, map_pos) then
+        elseif positions_equal(map_pos, result.map_pos) then
             return 0
         end
 
-        local move = best_move_towards(retreat_pos, map_pos)
+        local move = best_move_towards(result.map_pos, map_pos)
         if move then
             return move.dist + 1
         else
@@ -383,18 +409,26 @@ function retreat_distance_at(pos)
     end
 
     local enemies = assess_enemies()
-    if enemies.threat - enemies.ranged_threat / 2 < const.moderate_threat then
+    local adjusted_threat = enemies.threat - enemies.ranged_threat / 2
+    if adjusted_threat < const.moderate_threat then
+        if debug_channel("retreat") then
+            dsay("No retreat position needed for low adjusted threat of "
+                .. tostring(adjusted_threat)
+                .. " (total/ranged threat: " .. tostring(enemies.threat)
+                .. "/" .. tostring(enemies.ranged_threat) .. ")")
+        end
+
         return const.inf_dist
     end
 
-    local retreat_pos = best_retreat_position(4)
-    if not retreat_pos then
+    local result = best_retreat_position(4)
+    if not result then
         return const.inf_dist
-    elseif positions_equal(retreat_pos, map_pos) then
+    elseif positions_equal(map_pos, result.map_pos) then
         return 0
     end
 
-    local move = best_move_towards(retreat_pos, map_pos)
+    local move = best_move_towards(result.map_pos, map_pos)
     if move then
         return move.dist + 1
     end
