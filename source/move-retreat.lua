@@ -80,9 +80,9 @@ function player_last_position_towards(dest_pos)
     local dist_map = get_distance_map(qw.map_pos)
     local best_dist, best_pos
     for pos in adjacent_iter(dest_pos) do
-        local map_pos = position_sum(pos, qw.map_pos)
+        local map_pos = position_sum(qw.map_pos, pos)
         local dist = dist_map.excluded_map[map_pos.x][map_pos.y]
-        if dist and can_move_to(pos)
+        if dist and can_move_to(dest_pos, pos)
                 and is_safe_at(pos)
                 and (not best_dist or dist < best_dist) then
             best_dist = dist
@@ -101,7 +101,7 @@ function monster_last_position_towards(mons, pos)
     local traversal_func = function(tpos)
         return mons:can_traverse(tpos)
     end
-    local result = move_search_result(mons:pos(), pos, traversal_func,
+    local result = move_search(mons:pos(), pos, traversal_func,
         mons:reach_range())
     if result then
         return result.last_pos
@@ -141,18 +141,7 @@ function can_retreat_from(from_pos, to_pos)
         return true
     end
 
-    if positions_equal(from_pos, const.origin) then
-        return not monster_in_way(to_pos, true)
-    end
-
-    local mons = get_monster_at(to_pos)
-    if not mons then
-        return true
-    end
-
-    return mons:attitude() > const.attitude.neutral
-            and friendly_can_swap_to(mons, from_pos)
-        or not mons:attacking_causes_penance()
+    return not monster_in_way_at(to_pos, from_pos, true)
 end
 
 function reverse_retreat_move_to(to_pos, dist_map)

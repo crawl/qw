@@ -1,7 +1,7 @@
 ----------------------
 -- Tactical steps
 
-function assess_square_enemies(a, pos)
+function assess_square_enemies(a)
     local move_delay = player_move_delay()
     local best_dist = 10
     a.enemy_distance = 0
@@ -12,8 +12,8 @@ function assess_square_enemies(a, pos)
     a.unalert = 0
     a.longranged = 0
     for _, enemy in ipairs(qw.enemy_list) do
-        local dist = position_distance(pos, enemy:pos())
-        local see_cell = cell_see_cell(pos, enemy:pos())
+        local dist = enemy:melee_move_distance(a.pos)
+        local see_cell = cell_see_cell(a.pos, enemy:pos())
         local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
 
@@ -37,7 +37,7 @@ function assess_square_enemies(a, pos)
 
         if dist > 1
                 and see_cell
-                and enemy:can_seek()
+                and enemy:has_path_to_player()
                 and (ranged
                     or dist == 2
                         and enemy:move_delay() < move_delay) then
@@ -50,7 +50,6 @@ function assess_square_enemies(a, pos)
 
         if dist >= 4
                 and see_cell
-                and enemy:can_seek()
                 and ranged
                 and enemy:has_path_to_player() then
             a.longranged = a.longranged + 1
@@ -61,7 +60,7 @@ function assess_square_enemies(a, pos)
 end
 
 function assess_square(pos)
-    a = {}
+    a = { pos = pos }
 
     -- Distance to current square
     a.supdist = supdist(pos)
@@ -72,7 +71,7 @@ function assess_square(pos)
     end
 
     -- Can we move there?
-    a.can_move = a.supdist == 0 or can_move_to(pos)
+    a.can_move = a.supdist == 0 or can_move_to(pos, const.origin)
     if not a.can_move then
         return a
     end
@@ -170,11 +169,7 @@ function step_reason(a1, a2)
             and not a1.near_ally
             and a2.ranged == 0
             and a2.adjacent == 0
-            and a1.longranged > 0
-            -- We also need to be sure that any monsters we're stepping away
-            -- from can eventually reach us, otherwise we'll be stuck in a
-            -- loop constantly stepping away and then towards them.
-            and qw.incoming_monsters_turn == you.turns() then
+            and a1.longranged > 0 then
         return "hiding"
     elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
@@ -186,6 +181,9 @@ function step_reason(a1, a2)
     elseif not using_cleave()
             and a1.adjacent > 1
             and a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
+            -- We also need to be sure that any monsters we're stepping away
+            -- from can eventually reach us, otherwise we'll be stuck in a loop
+            -- constantly stepping away and then towards them.
             and qw.incoming_monsters_turn == you.turns() then
         return "outnumbered"
     end

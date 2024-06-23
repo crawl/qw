@@ -27,7 +27,7 @@ function plan_move_to_zigfig_location()
     for pos in adjacent_iter(const.origin) do
         if is_traversable_at(pos)
                 and not is_solid_at(pos)
-                and not monster_in_way(pos)
+                and not monster_in_way_at(pos, const.origin)
                 and is_safe_at(pos)
                 and not feature_is_critical(view.feature_at(pos.x, pos.y)) then
             return move_to(pos)

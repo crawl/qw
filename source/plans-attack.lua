@@ -216,7 +216,8 @@ function plan_melee_wait_for_enemy()
         wait_count = 0
     end
 
-    -- Hack to wait when we enter the Vaults end, so we don't move off stairs.
+    -- Hack to wait when we enter the Vaults end, so we don't move off
+    -- stairs.
     if vaults_end_entry_turn and you.turns() <= vaults_end_entry_turn + 2 then
         wait_combat()
         return true
@@ -226,9 +227,9 @@ function plan_melee_wait_for_enemy()
     local want_wait = false
     for _, enemy in ipairs(qw.enemy_list) do
         -- We prefer to wait for a target monster to reach us over moving
-        -- towards it. However if there exists monsters with ranged attacks, we
-        -- prefer to move closer to our target over waiting. This way we are
-        -- hit with fewer ranged attacks over time.
+        -- towards it. However if there exists monsters with ranged attacks,
+        -- we prefer to move closer to our target over waiting. This way we
+        -- are hit with fewer ranged attacks over time.
         if target and enemy:is_ranged() then
             wait_count = 0
             return false
@@ -237,8 +238,8 @@ function plan_melee_wait_for_enemy()
         if not want_wait and enemy:player_can_wait_for_melee() then
             want_wait = true
 
-            -- If we don't have a target, we'll never abort from waiting due to
-            -- ranged monsters, since we can't move towards one anyhow.
+            -- If we don't have a target, we'll never abort from waiting due
+            -- to ranged monsters, since we can't move towards one anyhow.
             if not target then
                 break
             end
@@ -329,7 +330,8 @@ function evoke_targeted_item(item, pos, aim_at_target)
     say("EVOKING " .. name .. " at " .. cell_string_from_position(pos) .. ".")
     magic("fr" .. vector_move(pos) .. (aim_at_target and "." or "\r"))
     -- Currently broken when no monsters are available for autotargeting.
-    -- return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y, aim_at_target)
+    -- return crawl.do_targeted_command("CMD_FIRE", pos.x, pos.y,
+    -- aim_at_target)
 end
 
 function plan_targeted_evoke()
@@ -439,7 +441,7 @@ function plan_continue_move_towards_enemy()
     end
 
     if qw.enemy_memory_turns_left > 0 then
-        local result = move_search_result(const.origin, qw.enemy_memory,
+        local result = move_search(const.origin, qw.enemy_memory,
             tab_function(), player_reach_range())
         if not result then
             return false
@@ -482,7 +484,7 @@ function random_step(reason)
     local new_pos
     local count = 0
     for pos in adjacent_iter(const.origin) do
-        if can_move_to(pos) then
+        if can_move_to(pos, const.origin) then
             count = count + 1
             if crawl.one_chance_in(count) then
                 new_pos = pos

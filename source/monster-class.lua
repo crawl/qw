@@ -46,9 +46,9 @@ function Monster:property_memo_args(name, func, ...)
         parent = parent[key]
 
         key = arg[j]
-        -- We turn any nil argument into false so we can pass on a valid set of
-        -- args to the function. This might cause unexpected behaviour for an
-        -- arbitrary function.
+        -- We turn any nil argument into false so we can pass on a valid set
+        -- of args to the function. This might cause unexpected behaviour for
+        -- an arbitrary function.
         if key == nil then
             key = false
             arg[j] = false
@@ -217,14 +217,18 @@ function Monster:is_friendly()
 end
 
 function player_can_attack_monster(mons, attack_index)
-    local attack = get_attack(attack_index)
-    if attack.type == const.attack.melee then
-        return mons:player_can_melee()
-    end
-
     if mons:name() == "orb of destruction"
             or mons:attacking_causes_penance() then
         return false
+    end
+
+    if not attack_index then
+        return true
+    end
+
+    local attack = get_attack(attack_index)
+    if attack.type == const.attack.melee then
+        return mons:player_can_melee()
     end
 
     if attack.type == const.attack.launcher then
@@ -464,10 +468,13 @@ function Monster:can_seek(ignore_temporary)
                 return true
             end
 
-            return not (self:is("fleeing")
+            return not (self:is_caught()
+                or self:is_constricted()
+                or self:is("fleeing")
                 or self:status("paralysed")
                 or self:status("confused")
-                or self:status("petrified"))
+                or self:status("petrified")
+                or self:status("constricted by roots"))
         end, ignore_temporary)
 end
 
@@ -479,6 +486,45 @@ function Monster:can_melee_player()
                     and (melee_range ~= 2
                         or view.can_reach(self:x_pos(), self:y_pos()))
         end)
+end
+
+function Monster:melee_move_search(pos)
+    if not self.props.melee_move_search then
+        self.props.melee_move_search = {}
+    end
+    if not self.props.melee_move_search[pos.x] then
+        self.props.melee_move_search[pos.x] = {}
+    end
+
+    if self.props.melee_move_search[pos.x][pos.y] ~= nil then
+        return self.props.melee_move_search[pos.x][pos.y]
+    end
+
+    if not self:can_seek(true) then
+        self.props.melee_move_search[pos.x][pos.y] = false
+        return false
+    end
+
+    local square_func = function(pos)
+        return self:can_traverse(pos)
+    end
+    local result = move_search(self:pos(), pos, square_func,
+        self:reach_range())
+    self.props.melee_move_search[pos.x][pos.y] = result
+    return result
+end
+
+function Monster:melee_move_distance(pos)
+    if position_distance(self:pos(), pos) <= self:reach_range() then
+        return 0
+    end
+
+    local result = self:melee_move_search(pos)
+    if result then
+        return result.distance
+    else
+        return const.inf_dist
+    end
 end
 
 --[[
@@ -494,21 +540,13 @@ function Monster:has_path_to_melee_player()
                 return true
             end
 
-            if not self:can_seek(true) then
-                return false
-            end
-
-            local tab_func = function(pos)
-                return self:can_traverse(pos)
-            end
-            return move_search_result(self:pos(), const.origin, tab_func,
-                    self:reach_range())
+            return self:melee_move_search(const.origin)
         end)
 end
 
 --[[
-Whether this monster has a path it can take to get adjacent to the player. This
-includes the case where the monster is already adjacent.
+Whether this monster has a path it can take to get adjacent to the player.
+This includes the case where the monster is already adjacent.
 
 @treturn boolean True if the monster has such a path, false otherwise.
 ]]--
@@ -519,10 +557,14 @@ function Monster:has_path_to_player()
                 return false
             end
 
-            local tab_func = function(pos)
+            if position_distance(self:pos(), const.origin) == 1 then
+                return true
+            end
+
+            local square_func = function(pos)
                 return self:can_traverse(pos)
             end
-            return move_search_result(self:pos(), const.origin, tab_func, 0)
+            return move_search(self:pos(), const.origin, square_func, 1)
         end)
 end
 
@@ -584,7 +626,7 @@ function Monster:player_has_path_to_melee()
                 return true
             end
 
-            return move_search_result(const.origin, self:pos(),
+            return move_search(const.origin, self:pos(),
                 traversal_function(), player_reach_range())
         end)
 end
@@ -592,7 +634,7 @@ end
 function Monster:get_player_move_towards(assume_flight)
     return self:property_memo_args("get_player_move_towards",
         function()
-            local result = move_search_result(const.origin, self:pos(),
+            local result = move_search(const.origin, self:pos(),
                 tab_function(assume_flight), player_reach_range())
             return result and result.move or false
         end, assume_flight)
