@@ -791,7 +791,7 @@ function initialize_goals()
             plan = "God:" .. name
             processed = true
         elseif pl:lower():find("^rune:") then
-            local branch = capitalize(goal_rune_branch(pl))
+            local branch = capitalise(goal_rune_branch(pl))
             if not branch_data[branch] then
                 error("Unknown rune branch: " .. branch)
             elseif not branch_runes(branch) then
@@ -803,7 +803,7 @@ function initialize_goals()
         else
             -- Normalize the plan so we're always making accurate comparisons
             -- for special plans like Normal, Shopping, Orb, etc.
-            plan = capitalize(pl)
+            plan = capitalise(pl)
         end
 
         -- We turn Hells into a sequence of goals for each Hell branch rune

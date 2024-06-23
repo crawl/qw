@@ -40,7 +40,7 @@ function bool_string(x)
     return x and "true" or "false"
 end
 
-function capitalize(str)
+function capitalise(str)
     local lower = str:lower()
     return lower:sub(1, 1):upper() .. lower:sub(2)
 end
