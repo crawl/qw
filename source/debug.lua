@@ -324,7 +324,7 @@ function qw.stringify(x)
     local t = type(x)
     if t == "nil" then
         return "nil"
-    elseif t == "number" then
+    elseif t == "number" or t == "function" then
         return tostring(x)
     elseif t == "string" then
         return x
