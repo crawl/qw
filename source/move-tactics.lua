@@ -7,7 +7,6 @@ function assess_square_enemies(a)
     a.enemy_dist = 0
     a.followers = false
     a.adjacent = 0
-    a.kite_adjacent = 0
     a.ranged = 0
     a.unalert = 0
     a.longranged = 0
@@ -26,12 +25,6 @@ function assess_square_enemies(a)
 
             if not liquid_bound and not ranged then
                 a.followers = true
-            end
-
-            if (player_reach_range() > 1 or using_ranged_weapon())
-                    and not ranged
-                    and move_delay < enemy:move_delay() then
-                a.kite_adjacent = a.kite_adjacent + 1
             end
         end
 
@@ -158,11 +151,19 @@ function step_reason(a1, a2)
         else
             return
         end
-    elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
+    elseif is_kite_step(a2.pos) then
         return "kiting"
-    elseif a2.retreat_dist < a1.retreat_dist then
+    -- If we're either not kiting or we wanted to kite step but couldn't, it's
+    -- ok to retreat. We don't want to retreat if we should be doing a kiting
+    -- attack.
+    elseif (not want_to_kite() or want_to_kite_step())
+            and a2.retreat_dist < a1.retreat_dist then
         return "retreating"
-    elseif a1.retreat_dist == 0 then
+    -- If we have retreated to our retreat position or if we want to kite, we
+    -- shouldn't try the step types below. For kiting, it's ok to try the steps
+    -- below if we wanted to kite step but couldn't.
+    elseif a1.retreat_dist == 0
+            or want_to_kite() and not want_to_kite_step() then
         return
     elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
@@ -217,6 +218,10 @@ function step_improvement(best_reason, reason, a1, a2)
     elseif reason == "water" and best_reason ~= "water" then
         return true
     elseif best_reason == "water" and reason ~= "water" then
+        return false
+    elseif reason == "kiting" and best_reason ~= "kiting" then
+        return true
+    elseif best_reason == "kiting" and reason ~= "kiting" then
         return false
     elseif reason == "retreating"
             and (best_reason ~= "retreating"
@@ -278,7 +283,7 @@ function choose_tactical_step()
             and a0.sticky_fire_danger == 0
             and not (a0.fumble and danger)
             and not (a0.bad_walls > 0 and danger)
-            and a0.kite_adjacent == 0
+            and not want_to_kite()
             and a0.retreat_dist == 0
             and (a0.near_ally or a0.enemy_dist == const.inf_dist) then
         if debug_channel("move") then

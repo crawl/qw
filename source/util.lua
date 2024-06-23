@@ -106,7 +106,8 @@ function compare_table_keys(a, b, keys, reversed_keys)
     for _, key in ipairs(keys) do
         local val1 = a[key]
         local val2 = b[key]
-        local greater_val = not reversed_keys[key] and true or false
+        local reversed = reversed_keys and reversed_keys[key]
+        local greater_val = not reversed and true or false
         if val1 > val2 then
             return greater_val
         elseif val1 < val2 then

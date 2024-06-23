@@ -120,6 +120,10 @@ function want_to_flee()
         return not will_fight_extreme_threat()
     end
 
+    if will_kite() then
+        return false
+    end
+
     return not buffed()
         and reason_to_rest(90)
         and qw.starting_spell ~= "Summon Small Mammal"

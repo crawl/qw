@@ -62,6 +62,8 @@ function reset_cached_turn_data(force)
     qw.turn_memos = {}
     qw.best_equip = nil
     qw.attacks = nil
+    qw.want_to_kite = nil
+    qw.want_to_kite_step = nil
 
     qw.safe_stairs_failed = false
 

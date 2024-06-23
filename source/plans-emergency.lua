@@ -391,7 +391,8 @@ function want_to_might()
     if not danger
             or dangerous_to_attack()
             or you.mighty()
-            or you.teleporting() then
+            or you.teleporting()
+            or will_kite() then
         return false
     end
 
@@ -720,7 +721,8 @@ function want_to_haste()
     if not qw.danger_in_los
             or dangerous_to_attack()
             or you.hasted()
-            or you.teleporting() then
+            or you.teleporting()
+            or will_kite() then
         return false
     end
 
@@ -809,8 +811,9 @@ end
 function want_to_finesse()
     if not qw.danger_in_los
             or dangerous_to_attack()
+            or duration_active("finesse")
             or you.teleporting()
-            or duration_active("finesse") then
+            or will_kite() then
         return false
     end
 
@@ -829,7 +832,8 @@ function want_to_heroism()
     if not qw.danger_in_los
             or dangerous_to_attack()
             or duration_active("heroism")
-            or you.teleporting() then
+            or you.teleporting()
+            or will_kite() then
         return false
     end
 
