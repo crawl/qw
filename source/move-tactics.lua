@@ -264,6 +264,10 @@ function choose_tactical_step()
             or you.confused() and qw.danger_in_los
             or you.berserk() and qw.danger_in_los
             or you.constricted() then
+        if debug_channel("move") then
+            dsay("No tactical step chosen: not safe to take step")
+        end
+
         return
     end
 
@@ -275,7 +279,11 @@ function choose_tactical_step()
             and not (a0.bad_walls > 0 and danger)
             and a0.kite_adjacent == 0
             and a0.retreat_distance == 0
-            and (a0.near_ally or a0.enemy_distance == 10) then
+            and (a0.near_ally or a0.enemy_distance == const.inf_dist) then
+        if debug_channel("move") then
+            dsay("No tactical step chosen: current position is good enough")
+        end
+
         return
     end
 
@@ -295,5 +303,17 @@ function choose_tactical_step()
     if besta then
         qw.tactical_step = best_pos
         qw.tactical_reason = best_reason
+
+        if debug_channel("move") then
+            dsay("Chose tactical step to "
+                .. cell_string_from_position(qw.tactical_step)
+                .. " for reason: " .. qw.tactical_reason)
+        end
+
+        return
+    end
+
+    if debug_channel("move") then
+        dsay("No tactical step chosen: no valid step found")
     end
 end
