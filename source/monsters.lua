@@ -288,10 +288,6 @@ end
 -- so that reasoning about the difference between player and monster move
 -- delay is easier.
 function monster_move_delay(mons)
-    if not mons:can_seek() then
-        return const.inf_turns
-    end
-
     local desc = mons.minfo:speed_description()
     local delay = 10
     if desc:find("travel:") then
