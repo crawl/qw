@@ -3,8 +3,8 @@
 
 function assess_square_enemies(a)
     local move_delay = player_move_delay()
-    local best_dist = 10
-    a.enemy_distance = 0
+    local best_dist = const.inf_dist
+    a.enemy_dist = 0
     a.followers = false
     a.adjacent = 0
     a.kite_adjacent = 0
@@ -56,7 +56,7 @@ function assess_square_enemies(a)
         end
     end
 
-    a.enemy_distance = best_dist
+    a.enemy_dist = best_dist
 end
 
 function assess_square(pos)
@@ -103,7 +103,7 @@ function assess_square(pos)
     -- if monsters are around.
     a.cloud_dangerous = cloud_is_dangerous_at(pos)
 
-    a.retreat_distance = retreat_distance_at(pos)
+    a.retreat_dist = retreat_distance_at(pos)
 
     -- Count various classes of monsters from the enemy list.
     assess_square_enemies(a, pos)
@@ -140,7 +140,7 @@ function step_reason(a1, a2)
         -- threats or enemy distance at the new position.
         if (not get_ranged_target() and a1.followers)
                 and (a2.ranged <= a1.ranged
-                    or a2.enemy_distance <= a1.enemy_distance) then
+                    or a2.enemy_dist <= a1.enemy_dist) then
             return "water"
         else
             return
@@ -153,16 +153,16 @@ function step_reason(a1, a2)
         if (not (target and target.attack.type == const.attack.evoke)
                 and a1.followers)
                 and (a2.ranged <= a1.ranged
-                    or a2.enemy_distance <= a1.enemy_distance) then
+                    or a2.enemy_dist <= a1.enemy_dist) then
             return "wall"
         else
             return
         end
     elseif a1.kite_adjacent > 0 and a2.adjacent == 0 and a2.ranged == 0 then
         return "kiting"
-    elseif a2.retreat_distance < a1.retreat_distance then
+    elseif a2.retreat_dist < a1.retreat_dist then
         return "retreating"
-    elseif a1.retreat_distance == 0 then
+    elseif a1.retreat_dist == 0 then
         return
     elseif not using_ranged_weapon()
             and not want_to_move_to_abyss_objective()
@@ -219,15 +219,15 @@ function step_improvement(best_reason, reason, a1, a2)
         return false
     elseif reason == "retreating"
             and (best_reason ~= "retreating"
-                or a2.retreat_distance < a1.retreat_distance
-                or a2.retreat_distance == a1.retreat_distance
-                    and a2.enemy_distance > a1.enemy_distance) then
+                or a2.retreat_dist < a1.retreat_dist
+                or a2.retreat_dist == a1.retreat_dist
+                    and a2.enemy_dist > a1.enemy_dist) then
         return true
     elseif best_reason == "retreating"
             and (reason ~= "retreating"
-                or a2.retreat_distance > a1.retreat_distance
-                or a2.retreat_distance == a1.retreat_distance
-                    and a2.enemy_distance < a1.enemy_distance) then
+                or a2.retreat_dist > a1.retreat_dist
+                or a2.retreat_dist == a1.retreat_dist
+                    and a2.enemy_dist < a1.enemy_dist) then
         return false
     elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
         return true
@@ -241,9 +241,9 @@ function step_improvement(best_reason, reason, a1, a2)
         return true
     elseif a2.adjacent + a2.ranged == 0 and a2.unalert > a1.unalert then
         return false
-    elseif a2.enemy_distance < a1.enemy_distance then
+    elseif a2.enemy_dist < a1.enemy_dist then
         return true
-    elseif a2.enemy_distance > a1.enemy_distance then
+    elseif a2.enemy_dist > a1.enemy_dist then
         return false
     elseif a1.cornerish and not a2.cornerish then
         return true
@@ -278,8 +278,8 @@ function choose_tactical_step()
             and not (a0.fumble and danger)
             and not (a0.bad_walls > 0 and danger)
             and a0.kite_adjacent == 0
-            and a0.retreat_distance == 0
-            and (a0.near_ally or a0.enemy_distance == const.inf_dist) then
+            and a0.retreat_dist == 0
+            and (a0.near_ally or a0.enemy_dist == const.inf_dist) then
         if debug_channel("move") then
             dsay("No tactical step chosen: current position is good enough")
         end

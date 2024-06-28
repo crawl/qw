@@ -521,7 +521,7 @@ function Monster:melee_move_distance(pos)
 
     local result = self:melee_move_search(pos)
     if result then
-        return result.distance
+        return result.dist
     else
         return const.inf_dist
     end

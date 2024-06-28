@@ -131,9 +131,9 @@ function can_flee_enemy(enemy, flee_dist)
         return true
     end
 
-    local closing_distance = search.distance
+    local closing_dist = search.dist
         - (enemy:is_ranged(true) and 4 or 0)
-    local distance_gain = flee_dist
+    local dist_gain = flee_dist
         * (player_move_delay() - enemy:move_delay())
         / enemy:move_delay()
 
@@ -145,12 +145,12 @@ function can_flee_enemy(enemy, flee_dist)
             .. tostring(enemy:reach_range()) .. "/"
             .. tostring(enemy:is_ranged(true)) .. ")"
             .. " with a closing distance of "
-            .. tostring(closing_distance)
+            .. tostring(closing_dist)
             .. " compared to a distance gain of "
-            .. tostring(distance_gain))
+            .. tostring(dist_gain))
     end
 
-    return distance_gain < closing_distance
+    return dist_gain < closing_dist
 end
 
 function can_flee_to_destination(pos)

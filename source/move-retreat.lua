@@ -174,7 +174,7 @@ function reverse_retreat_move_to(to_pos, dist_map)
     return best_pos, true
 end
 
-function assess_retreat_position(map_pos, attacking_limit, max_distance)
+function assess_retreat_position(map_pos, attacking_limit, max_dist)
     local pos = position_difference(map_pos, qw.map_pos)
     if not is_safe_at(pos) then
         return
@@ -189,14 +189,14 @@ function assess_retreat_position(map_pos, attacking_limit, max_distance)
 
     -- Further calculations not necessary for our current position.
     if position_is_origin(pos) then
-        result.distance = 0
+        result.dist = 0
         return result
     end
 
     local dist_map = get_distance_map(qw.map_pos)
-    result.distance = dist_map.excluded_map[map_pos.x][map_pos.y]
-    if not result.distance
-            or max_distance and result.distance > max_distance then
+    result.dist = dist_map.excluded_map[map_pos.x][map_pos.y]
+    if not result.dist
+            or max_dist and result.dist > max_dist then
         return
     end
 
@@ -260,9 +260,9 @@ function best_retreat_position_func(attacking_limit)
     end
 
     local best_result = cur_result
-    local retreat = { keys = { "num_blocking", "num_attacking", "distance" },
+    local retreat = { keys = { "num_blocking", "num_attacking", "dist" },
                       reversed = { num_blocking = true, num_attacking = true,
-                          distance = true } }
+                          dist = true } }
     local i = 1
     for pos in radius_iter(qw.map_pos, radius) do
         if qw.coroutine_throttle and i % 1000 == 0 then
@@ -291,7 +291,7 @@ function best_retreat_position_func(attacking_limit)
         if best_result
                 and best_result.num_attacking <= 1
                 and best_result.num_blocking == 0
-                and best_result.distance
+                and best_result.dist
                     <= position_distance(pos, qw.map_pos) then
             break
         end
@@ -303,7 +303,7 @@ function best_retreat_position_func(attacking_limit)
         if best_result then
             dsay("Found best retreat position at "
                 .. cell_string_from_map_position(best_result.map_pos)
-                .. " with distance " .. tostring(best_result.distance)
+                .. " with distance " .. tostring(best_result.dist)
                 .. " and " .. tostring(best_result.num_blocking)
                 .. " blocking monsters"
                 .. " and " .. tostring(best_result.num_attacking)
@@ -316,7 +316,7 @@ function best_retreat_position_func(attacking_limit)
     -- We have no viable retreating position or our current one is rated best.
     if not best_result then
         return
-    elseif best_result.distance == 0 then
+    elseif best_result.dist == 0 then
         if debug_channel("retreat") then
             dsay("Already at best retreat position")
         end
@@ -338,7 +338,7 @@ function best_retreat_position_func(attacking_limit)
     -- allow retreating as far as we need to, although in that case, other
     -- plans like cloud tactical step might have acted.
     if best_result.num_blocking > 1
-            or cutoff and best_result.distance > cutoff then
+            or cutoff and best_result.dist > cutoff then
         if debug_channel("retreat") then
             if best_result.num_blocking > 1 then
                 dsay("Too many monsters blocking retreat")
@@ -370,7 +370,7 @@ function will_fight_extreme_threat()
         return false
     end
 
-    return result.distance == 0 or best_move_towards(result.map_pos)
+    return result.dist == 0 or best_move_towards(result.map_pos)
 end
 
 function retreat_distance_at(pos)

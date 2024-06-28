@@ -110,7 +110,7 @@ function search_from(search, pos, current, is_deviation)
     if positions_equal(current, search.center) then
         search.first_pos = nil
         search.last_pos = nil
-        search.distance = 0
+        search.dist = 0
         search.num_deviations = 0
     end
 
@@ -123,7 +123,7 @@ function search_from(search, pos, current, is_deviation)
         end
 
         search.last_pos = pos
-        search.distance = search.distance + 1
+        search.dist = search.dist + 1
         if is_deviation then
             search.num_deviations = search.num_deviations + 1
         end
@@ -135,7 +135,7 @@ function search_from(search, pos, current, is_deviation)
                 search.num_deviations = search.num_deviations - 1
             end
 
-            search.distance = search.distance - 1
+            search.dist = search.dist - 1
             return false
         end
     end
