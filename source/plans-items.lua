@@ -55,7 +55,7 @@ function best_hydra_swap_weapon()
     local best_weapon, best_value
     local cur_weapons = inventory_equip(const.inventory.equipped).weapon
     for weapon in inventory_slot_iter("weapon") do
-        if equip_letter_for_item(weapon, "weapon") then
+        if weapon.equipped or equip_letter_for_item(weapon, "weapon") then
             local value = equip_value(weapon, true, cur_weapons, "hydra")
             if value > 0 and (not best_value or value > best_value) then
                 best_weapon = weapon

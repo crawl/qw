@@ -339,13 +339,14 @@ function unable_to_swap_weapons()
         return true
     end
 
-    -- XXX: hack
+    -- XXX: If we haven't initialized this yet, assume it's unsafe for coglins
+    -- to swap weapons.
     if qw.danger_in_los == nil then
         return you.race() == "Coglin"
     end
 
-    return you.race() == "Coglin"
-            and (qw.danger_in_los or not qw.position_is_safe)
+    return (qw.danger_in_los or not qw.position_is_safe)
+        and you.race() == "Coglin"
 end
 
 function can_read()
