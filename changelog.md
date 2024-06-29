@@ -1,10 +1,64 @@
-# Changelog
+# Changelog (through 0.4-a-49-g22c4ca0)
 
 ## 0.4-a
 
-### Configuration and Performance
+This version supports DCSS 0.32-a0.
 
-* Use 96MB everywhere as the default clua memory limit.
+### Achievements
+* Coglin won with CoGl.
+
+### Backgrounds and Species
+* Support for Coglins and dual wielding.
+
+### Configuration and Performance
+* Use 96 MB as the default clua memory limit.
+
+### Debug
+* Improved debug message channels:
+  + The "plans" channel only shows the last executed plan. The "plans-all"
+    channel can be enabled to show all plan results.
+  + New "kite", "kite-all", and "move-all" debug channels.
+* `dsay()` can print Monster and clua item tables.
+
+### Exploration and Map
+* Plan for movement towards and to pick up runes. These can handle moving
+  through clouds and picking up the rune. They also handle cases where the rune
+  is blocked by firewood.
+
+### Items and Equipment
+* Evaluation of equipment sets:
+  + We evaluate all possible sets of equipment, choosing the set with the best
+    total value.
+  + An item is removed from the chosen set if it contributes negative value.
+* Support for use of one-handed ranged weapons and shields.
+  + We consider both two-handed and one-handed weapons, including a possible
+    shield. The weapon set used is the one that's part of our best equipment
+    set.
+  + When using ranged, we always carry the best possible shield, in case we
+    want to switch to a one-handed weapon.
+* Better logic for MP using gods with amulet of gSpirit and Mad Mage's Maulers.
+
+### Strategy and Tactics
+* Throwing usage rework:
+  + Throwing damage can be properly assessed.
+  + A throwing attack using the most damaging available missile is considered
+    for use against scary monsters and compared to other available attacks.
+  + At moderate threat levels, try to use a throwing attack with the missile
+    that has the most ammo available.
+* A kiting algorithm for situations where we would use a ranged attack and have
+  a speed advantage over nearby monsters.
+* If damaging clouds would dissipate, we wait for this before making any
+  movement to those locations.
+* A tactical step to put out sticky fire.
+* Retreating is re-integrated into tactical steps so that it can work better
+  with other step types.
+* Unarmed attack damage and delay is properly considered in terms of attack
+  selection when in bad forms.
+* Fleeing under extreme threat allows up to two monsters to opportunity attack
+  us as we flee.
+* The "outnumbered" tactical step is disabled for ranged weapon users.
+* More accurate information and calculation for monsters with respect to move
+  speed, search, and distance.
 
 ## 0.3.0 (2024-02-11)
 
@@ -15,6 +69,11 @@ This version supports DCSS 0.31.
 * Retreating tactics for characters using launchers.
 * Greatly improved threat assessment.
 * Attack comparison that lets qw use throwing or wands for nasty monsters.
+
+### Achievements
+* Demigod won with DgHu
+* Djinni won with DjHu
+* Other combos won: GrHs, MiHu, NaHu
 
 ### Backgrounds and Species
 * Support for Djinni and using HP as MP.
