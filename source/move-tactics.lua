@@ -179,6 +179,7 @@ function step_reason(a1, a2)
             and a2.unalert < a1.unalert then
         return "stealth"
     elseif not using_cleave()
+            and not using_ranged_weapon()
             and a1.adjacent > 1
             and a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
             -- We also need to be sure that any monsters we're stepping away
