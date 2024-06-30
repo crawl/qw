@@ -379,8 +379,7 @@ function retreat_distance_at(pos)
 
     local map_pos = position_sum(qw.map_pos, pos)
 
-    local enemies = assess_enemies(const.duration.available)
-    if enemies.threat >= const.extreme_threat then
+    if have_extreme_threat(const.duration.available) then
         local result = best_retreat_position(2)
         if not result then
             return const.inf_dist
@@ -398,7 +397,7 @@ function retreat_distance_at(pos)
 
     local enemies = assess_enemies()
     local adjusted_threat = enemies.threat - enemies.ranged_threat / 2
-    if adjusted_threat < const.moderate_threat then
+    if adjusted_threat < moderate_threat_level() then
         if debug_channel("retreat") then
             dsay("No retreat position needed for low adjusted threat of "
                 .. tostring(adjusted_threat)

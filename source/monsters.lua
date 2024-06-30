@@ -15,6 +15,18 @@ const.moderate_threat = 5
 const.high_threat = 10
 const.extreme_threat = 20
 
+function moderate_threat_level()
+    return const.moderate_threat - max(0, min(3, 10 - you.xl()))
+end
+
+function high_threat_level()
+    return const.high_threat - max(0, min(5, 2 * (10 - you.xl())))
+end
+
+function extreme_threat_level()
+    return const.extreme_threat - max(0, min(10, 2 * (10 - you.xl())))
+end
+
 -- functions for use in the monster lists below
 function in_desc(lev, str)
     return function (mons)
@@ -446,6 +458,26 @@ function assess_enemies(duration_level, radius, filter)
         function()
             return assess_enemies_func(duration_level, radius, filter)
         end, duration_level, radius, filter)
+end
+
+function have_moderate_threat(duration_level)
+    local enemies = assess_enemies(duration_level)
+    return enemies.threat >= moderate_threat_level()
+end
+
+function have_high_threat(duration_level)
+    local enemies = assess_enemies(duration_level)
+    return enemies.threat >= high_threat_level()
+end
+
+function have_extreme_threat(duration_level)
+    local enemies = assess_enemies(duration_level)
+    return enemies.threat >= extreme_threat_level()
+end
+
+function get_scary_enemy(duration_level)
+    local enemies = assess_enemies(duration_level)
+    return enemies.scary_enemy
 end
 
 function mons_res_holy_check(mons)

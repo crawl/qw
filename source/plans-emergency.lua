@@ -397,7 +397,7 @@ function want_to_might()
     end
 
     local result = assess_enemies()
-    if result.threat >= const.high_threat then
+    if result.threat >= high_threat_level() then
         return true
     elseif result.scary_enemy then
         attack = result.scary_enemy:best_player_attack()
@@ -545,7 +545,7 @@ function want_to_cleansing_flame()
     local result = assess_enemies(const.duration.active, 2,
         function(mons) return mons:res_holy() <= 0 end)
     if result.scary_enemy and not result.scary_enemy:player_can_attack(1)
-            or result.threat >= const.high_threat and result.count >= 3 then
+            or result.threat >= high_threat_level() and result.count >= 3 then
         return true
     end
 
@@ -589,7 +589,7 @@ function want_to_fiery_armour()
     end
 
     local result = assess_enemies()
-    if result.scary_enemy or result.threat >= const.high_threat then
+    if result.scary_enemy or result.threat >= high_threat_level() then
         return true
     end
 
@@ -604,7 +604,8 @@ function want_to_apocalypse()
     local dlevel = drain_level()
     local result = assess_enemies()
     if dlevel == 0
-                and (result.scary_enemy or result.threat >= const.high_threat)
+                and (result.scary_enemy
+                    or result.threat >= high_threat_level())
             or dlevel <= 2 and hp_is_low(50) then
         return true
     end
@@ -658,7 +659,7 @@ function want_to_teleport()
         return true
     end
 
-    if enemies.threat >= const.extreme_threat then
+    if enemies.threat >= extreme_threat_level() then
         return not will_fight_extreme_threat()
     end
 
@@ -719,7 +720,7 @@ function want_to_haste()
     end
 
     local result = assess_enemies()
-    if result.threat >= const.high_threat then
+    if result.threat >= high_threat_level() then
         return not duration_active("finesse") or you.slowed()
     elseif result.scary_enemy then
         local attack = result.scary_enemy:best_player_attack()
@@ -793,7 +794,7 @@ function want_to_berserk()
         end
     end
 
-    if result.threat >= const.high_threat then
+    if result.threat >= high_threat_level() then
         return true
     end
 
@@ -810,7 +811,7 @@ function want_to_finesse()
     end
 
     local result = assess_enemies()
-    if result.threat >= const.high_threat then
+    if result.threat >= high_threat_level() then
         return true
     elseif result.scary_enemy then
         attack = result.scary_enemy:best_player_attack()
@@ -830,7 +831,7 @@ function want_to_heroism()
     end
 
     local result = assess_enemies()
-    if result.threat >= const.high_threat then
+    if result.threat >= high_threat_level() then
         return true
     elseif result.scary_enemy then
         local attack = result.scary_enemy:best_player_attack()

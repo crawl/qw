@@ -75,7 +75,8 @@ function want_to_kite()
     end
 
     local enemies = assess_enemies(const.duration.ignore_buffs)
-    if enemies.threat < const.moderate_threat and not enemies.scary_enemy then
+    if enemies.threat < moderate_threat_level()
+            and not enemies.scary_enemy then
         return false
     end
 

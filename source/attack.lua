@@ -453,17 +453,17 @@ function get_secondary_throwing_attack()
 end
 
 function get_high_threat_target()
-    local result = assess_enemies(const.duration.ignore_buffs)
-    if not result.scary_enemy then
+    local enemy = get_scary_enemy()
+    if not enemy then
         return
     end
 
-    local attack = result.scary_enemy:best_player_attack()
+    local attack = enemy:best_player_attack()
     if not attack then
         return
     end
 
-    local pos = result.scary_enemy:pos()
+    local pos = enemy:pos()
     local primary_target = get_primary_target()
     if attack.type == const.attack.melee then
         if positions_equal(primary_target.pos, pos) then
@@ -491,8 +491,7 @@ function get_throwing_target_func()
         return target
     end
 
-    local result = assess_enemies()
-    if result.threat < const.moderate_threat
+    if have_moderate_threat()
             and qw.incoming_monsters_turn == you.turns() then
         return
     end

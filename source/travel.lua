@@ -258,7 +258,7 @@ function travel_safe_stairs(result)
         -- We prefer taking stairs that have a known but low threat over taking
         -- unknown ones. So assume unknown stairs have high threat.
         else
-            threat = const.high_threat
+            threat = high_threat_level()
         end
 
         if not worst_threat or threat > worst_threat then
@@ -283,19 +283,19 @@ function travel_safe_stairs(result)
 
     -- If no stair has enough threat that we need to buff, we don't need to
     -- take safe stairs.
-    if worst_threat < const.high_threat
+    if worst_threat < high_threat_level()
             -- If all stairs have equally bad threat and we don't need to
             -- teleport, don't use safe stairs. This will most commonly happen
             -- when all stairs at the destination are unknown.
             or (best_threat == worst_threat
-                and best_threat < const.extreme_threat) then
+                and best_threat < extreme_threat_level()) then
         return
     end
 
     -- If the best destination stair threat is high enough, we try to use down
     -- hatches to reach the level.
     local hatches, best_hash
-    if best_threat >= const.extreme_threat and result.depth > 1 then
+    if best_threat >= extreme_threat_level() and result.depth > 1 then
         local prev_level = make_level(result.branch, result.depth - 1)
         hatches = c_persist.down_hatches[prev_level]
     end

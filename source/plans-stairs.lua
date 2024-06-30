@@ -304,7 +304,7 @@ function teleporting_before_dangerous_stairs()
             and where_depth == branch_depth("Vaults") - 1 then
         threat = 25
     end
-    return threat >= const.extreme_threat
+    return threat >= extreme_threat_level()
 end
 
 function plan_teleport_dangerous_stairs()

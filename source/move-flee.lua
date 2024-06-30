@@ -61,7 +61,7 @@ function can_flee_to(pos, flee_dist)
     end
 
     local enemies = assess_enemies()
-    local extreme_threat = enemies.threat >= const.extreme_threat
+    local extreme_threat = enemies.threat >= extreme_threat_level()
     local flee_attackers = 0
 
     return true
@@ -108,15 +108,14 @@ function want_to_flee()
         return true
     end
 
-    local enemies = assess_enemies(const.duration.available)
-    if enemies.scary_enemy
-            and enemies.scary_enemy:threat(const.duration.available) >= 5
-            and enemies.scary_enemy:name():find("slime creature")
-            and enemies.scary_enemy:name() ~= "slime creature" then
+    local enemy = get_scary_enemy(const.duration.available)
+    if enemy and enemy:threat(const.duration.available) >= 5
+            and enemy:name():find("slime creature")
+            and enemy:name() ~= "slime creature" then
         return true
     end
 
-    if enemies.threat >= const.extreme_threat then
+    if have_extreme_threat() then
         return not will_fight_extreme_threat()
     end
 
@@ -170,8 +169,7 @@ function can_flee_to_destination(pos)
             .. tostring(flee_dist))
     end
 
-    local enemies = assess_enemies()
-    local extreme_threat = enemies.threat >= const.extreme_threat
+    local extreme_threat = have_extreme_threat()
     local flee_attackers = 0
     for _, enemy in ipairs(qw.enemy_list) do
         if not can_flee_enemy(enemy, flee_dist) then
