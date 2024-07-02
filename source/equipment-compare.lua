@@ -671,7 +671,7 @@ function amulet_base_value(item, cur)
         min_val = -10000
     end
 
-    if name:find("of the Air.*Innac") then
+    if name:find("of the Air.*Inacc") then
         min_val = min_val - 200
         max_val = max_val - 200
     end
