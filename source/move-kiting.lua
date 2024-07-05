@@ -206,7 +206,7 @@ function assess_kiting_enemy_at(pos, enemy, player_search)
     local avoid_score = position_distance(last_pos, player_search.first_pos)
     if enemy:can_melee_player()
             and enemy:reach_range() > 1
-            and not positions_can_reach(player_search.first_pos, last_pos) then
+            and not enemy:can_melee_at(player_search.first_pos, last_pos) then
         avoid_score = avoid_score + 0.5
     end
 

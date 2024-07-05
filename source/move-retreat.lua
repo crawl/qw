@@ -55,8 +55,7 @@ function register_destination_enemy(enemy, center, dest_pos, occupied_positions)
     local positions = {}
     for pos in radius_iter(center, enemy:reach_range()) do
         if enemy:can_traverse(pos)
-            and (enemy:reach_range() == 1
-                or positions_can_reach(pos, center)) then
+                and positions_can_melee(center, pos, enemy:reach_range()) then
             table.insert(positions, pos)
         end
     end

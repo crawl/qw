@@ -478,14 +478,25 @@ function Monster:can_seek(ignore_temporary)
         end, ignore_temporary)
 end
 
+function Monster:can_melee_at(pos)
+    if not self.props.can_melee_at then
+        self.props.can_melee_at = {}
+    end
+    if not self.props.can_melee_at[pos.x] then
+        self.props.can_melee_at[pos.x] = {}
+    end
+
+    if self.props.can_melee_at[pos.x][pos.y] ~= nil then
+        return self.props.can_melee_at[pos.x][pos.y]
+    end
+
+    local can_melee = positions_can_melee(self:pos(), pos, self:reach_range())
+    self.props.can_melee_at[pos.x][pos.y] = can_melee
+    return can_melee
+end
+
 function Monster:can_melee_player()
-    return self:property_memo("can_melee_player",
-        function()
-            local melee_range = self:reach_range()
-            return self:distance() <= melee_range
-                    and (melee_range ~= 2
-                        or view.can_reach(self:x_pos(), self:y_pos()))
-        end)
+    return self:can_melee_at(const.origin)
 end
 
 function Monster:melee_move_search(pos)
