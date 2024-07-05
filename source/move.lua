@@ -118,15 +118,16 @@ function search_from(search, pos, current, is_deviation)
         + (is_deviation and 1 or 0)
 
     if search.square_func(pos) then
-        if not search.first_pos then
-            search.first_pos = pos
-        end
-
-        search.last_pos = pos
-        search.dist = search.dist + 1
         if is_deviation then
             search.num_deviations = search.num_deviations + 1
         end
+        search.dist = search.dist + 1
+
+        local set_first_pos = not search.first_pos
+        if set_first_pos then
+            search.first_pos = pos
+        end
+        search.last_pos = pos
 
         if do_move_search(search, pos) then
             return true
@@ -134,8 +135,12 @@ function search_from(search, pos, current, is_deviation)
             if is_deviation then
                 search.num_deviations = search.num_deviations - 1
             end
-
             search.dist = search.dist - 1
+
+            if set_first_pos then
+                search.first_pos = nil
+            end
+
             return false
         end
     end
@@ -258,7 +263,7 @@ function move_search(center, target, square_func, min_dist)
     end
 
     search = { center = center, target = target, square_func = square_func,
-        min_dist = min_dist, distance = 0, num_deviations = 0 }
+        min_dist = min_dist, dist = 0, num_deviations = 0 }
     search.attempted = { [center.x] = { [center.y] = 0 } }
 
     if do_move_search(search, center) then
