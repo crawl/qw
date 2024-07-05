@@ -116,7 +116,7 @@ function plan_flee()
     end
 
     if move_to(result.move) then
-        say("FLEEEEING.")
+        say("FLEEEEING towards " .. cell_string_from_map_position(result.dest))
         return true
     end
 
