@@ -141,10 +141,10 @@ function will_kite()
 end
 
 function kiting_function(pos)
-    return is_safe_at(pos)
-        and not get_monster_at(pos)
+    return not get_monster_at(pos)
         and not view.withheld(pos.x, pos.y)
-        and view.feature_at(pos.x, pos.y) ~= "unseen"
+        and is_safe_at(pos)
+        and (intrinsic_amphibious() or not in_water_at(pos))
 end
 
 function assess_kiting_enemy_at(pos, enemy, player_search)

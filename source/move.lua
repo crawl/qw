@@ -28,8 +28,7 @@ function tab_function(assume_flight)
             return false
         end
 
-        return view.feature_at(pos.x, pos.y) ~= "unseen"
-            and is_safe_at(pos, assume_flight)
+        return is_safe_at(pos, assume_flight)
             and not view.withheld(pos.x, pos.y)
     end
 end
