@@ -652,3 +652,130 @@ function move_towards_destination(pos, dest, reason)
 
     return false
 end
+
+function distance_map_search_from(search, pos, current)
+    if positions_equal(pos, current) then
+        return false
+    end
+
+    if debug_channel("move-all") then
+        dsay("Checking distance map move from "
+            .. cell_string_from_map_position(current)
+            .. " to " .. cell_string_from_map_position(pos))
+    end
+
+    if not search.cache[pos.x] then
+        search.cache[pos.x] = {}
+    end
+
+    local cache_result = search.cache[pos.x][pos.y]
+    if cache ~= nil then
+        if debug_channel("move-all") then
+            dsay("Returning cached result for search")
+        end
+
+        if cache_result then
+            if not search.first_pos then
+                search.first_pos = pos
+            end
+
+            search.last_pos = cache_result
+        end
+
+        return cache_result
+    end
+
+    if positions_equal(current, search.center) then
+        search.first_pos = nil
+        search.last_pos = nil
+    end
+
+    if search.square_func(pos) then
+        search.last_pos = pos
+
+        local set_first_pos = not search.first_pos
+        if set_first_pos then
+            search.first_pos = pos
+        end
+
+        if do_distance_map_search(search, pos) then
+            search.cache[pos.x][pos.y] = pos
+            return true
+        else
+            if set_first_pos then
+                search.first_pos = nil
+            end
+
+            search.cache[pos.x][pos.y] = false
+            return false
+        end
+    end
+
+    if debug_channel("move-all") then
+        dsay("Square function failed")
+    end
+
+    search.cache[pos.x][pos.y] = false
+    return false
+end
+
+function do_distance_map_search(search, current)
+    if position_distance(search.target, current) <= search.min_dist then
+        search.move = position_difference(search.first_pos, search.center)
+        return true
+    end
+
+    local current_dist = search.map[current.x][current.y]
+    if not current_dist then
+        return false
+    end
+
+    for pos in adjacent_iter(current) do
+        local dist = search.map[pos.x][pos.y]
+        if dist and dist < current_dist then
+            if distance_map_search_from(search, pos, current) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+function distance_map_search(center, target, square_func, min_dist,
+        allow_unsafe, cache)
+    if not min_dist then
+        min_dist = 0
+    end
+
+    if position_distance(center, target) <= min_dist then
+        return
+    end
+
+    if debug_channel("move-all") then
+        dsay("Distance map move search from "
+            .. cell_string_from_map_position(center)
+            .. " to " .. cell_string_from_map_position(target))
+    end
+
+    local dist_map = get_distance_map(target)
+    local map  = allow_unsafe and dist_map.map or dist_map.excluded_map
+    local dist = map[center.x][center.y]
+    if not dist then
+        return
+    end
+
+    search = { center = center, target = target, square_func = square_func,
+        min_dist = min_dist, allow_unsafe = allow_unsafe, map = map,
+        dist = dist }
+
+    if cache then
+        search.cache = cache
+    else
+        search.cache = { }
+    end
+
+    if do_distance_map_search(search, center) then
+        return search
+    end
+end
