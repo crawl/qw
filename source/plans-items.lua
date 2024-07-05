@@ -460,7 +460,7 @@ function body_armour_is_great_to_enchant(armour)
     local name = armour.name("base")
     local ap = armour_plan()
     if ap == "heavy" then
-        return name == "gold dragon scales"
+        return name == "golden dragon scales"
             or name == "crystal plate armour"
             or name == "plate armour" and item_property("rF", armour) > 0
             or name == "pearl dragon scales"

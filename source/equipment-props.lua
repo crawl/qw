@@ -49,7 +49,7 @@ function item_property(prop, item)
             elseif ego == "fire resistance"
                     or ego == "resistance"
                     or subtype == "ring of protection from fire"
-                    or name:find("gold dragon")
+                    or name:find("golden dragon")
                     or subtype == "ring of fire" then
                 return 1
             elseif name:find("ice dragon") or subtype == "ring of ice" then
@@ -62,7 +62,7 @@ function item_property(prop, item)
                 return 2
             elseif ego == "cold resistance" or ego == "resistance"
                      or subtype == "ring of protection from cold"
-                     or name:find("gold dragon")
+                     or name:find("golden dragon")
                      or subtype == "ring of ice" then
                 return 1
             elseif name:find("fire dragon") or subtype == "ring of fire" then
@@ -76,7 +76,7 @@ function item_property(prop, item)
             return (ego == "poison resistance"
                 or subtype == "ring of poison resistance"
                 or name:find("swamp dragon")
-                or name:find("gold dragon")) and 1 or 0
+                or name:find("golden dragon")) and 1 or 0
         elseif prop == "rN" then
             return (ego == "positive energy"
                 or subtype == "ring of positive energy"
