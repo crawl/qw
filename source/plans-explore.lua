@@ -394,42 +394,6 @@ function plan_tomb_go_to_hatch()
     return false
 end
 
-function plan_tomb2_arrival()
-    if not tomb2_entry_turn
-            or you.turns() >= tomb2_entry_turn + 5
-            or c_persist.did_tomb2_buff then
-        return false
-    end
-
-    if not you.hasted() then
-        return haste()
-    elseif not you.status("attractive") then
-        if attraction() then
-            c_persist.did_tomb2_buff = true
-            return true
-        end
-        return false
-    end
-end
-
-function plan_tomb3_arrival()
-    if not tomb3_entry_turn
-            or you.turns() >= tomb3_entry_turn + 5
-            or c_persist.did_tomb3_buff then
-        return false
-    end
-
-    if not you.hasted() then
-        return haste()
-    elseif not you.status("attractive") then
-        if attraction() then
-            c_persist.did_tomb3_buff = true
-            return true
-        end
-        return false
-    end
-end
-
 
 function set_plan_pre_explore()
     plans.pre_explore = cascade {

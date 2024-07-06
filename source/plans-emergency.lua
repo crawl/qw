@@ -415,14 +415,6 @@ function plan_might()
     return false
 end
 
-function attraction()
-    if you.status("attractive") then
-        return false
-    end
-
-    return drink_by_name("attraction")
-end
-
 function plan_berserk()
     if can_berserk() and want_to_berserk() then
         return use_ability("Berserk")
@@ -981,6 +973,44 @@ function can_dig_to(pos)
         end
     end
     return false
+end
+
+function plan_tomb2_arrival()
+    if not tomb2_entry_turn
+            or you.turns() >= tomb2_entry_turn + 5
+            or c_persist.did_tomb2_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if drink_by_name("attraction") then
+            c_persist.did_tomb2_buff = true
+            return true
+        end
+
+        return false
+    end
+end
+
+function plan_tomb3_arrival()
+    if not tomb3_entry_turn
+            or you.turns() >= tomb3_entry_turn + 5
+            or c_persist.did_tomb3_buff then
+        return false
+    end
+
+    if not you.hasted() then
+        return haste()
+    elseif not you.status("attractive") then
+        if drink_by_name("attraction") then
+            c_persist.did_tomb3_buff = true
+            return true
+        end
+
+        return false
+    end
 end
 
 function plan_dig_grate()
