@@ -1061,7 +1061,9 @@ function update_exclusions(new_waypoint)
     -- that can reach us and some that can't, we'll deal with the monsters that
     -- can't only after finishing off the monsters that can and then resting to
     -- full HP.
-    if qw.full_hp_turn >= qw.incoming_monsters_turn and hp_is_low(50) then
+    if qw.full_hp_turn > 0
+            and qw.full_hp_turn >= qw.incoming_monsters_turn
+            and hp_is_low(50) then
         for _, enemy in ipairs(qw.enemy_list) do
             if not enemy:is_summoned() then
                 exclude_position(enemy:pos())
