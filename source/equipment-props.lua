@@ -416,11 +416,15 @@ function property_value(prop, item, cur, ignore_equip)
     end
 end
 
-function linear_property_value(prop)
+function weapon_skill_uses_dex()
     local skill = weapon_skill()
-    dex_weapon = skill == "Long Blades"
+    return skill == "Long Blades"
         or skill == "Short Blades"
         or skill == "Ranged Weapons"
+end
+
+function linear_property_value(prop)
+    local dex_weapon = weapon_skill_uses_dex()
     if prop == "Regen" then
         return 200
     elseif prop == "Slay" or prop == "AC" or prop == "EV" then

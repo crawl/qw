@@ -333,14 +333,36 @@ function armour_base_value(item, cur)
         end
     end
 
-    value = value + 50 * expected_armour_multiplier() * item.ac
-    if item.plus then
-        value = value + 50 * item.plus
-    end
-
     local slot = equip_slot(item)
-    if slot == "shield" and not want_shield() then
-        return -1, -1
+    if slot == "shield" then
+        if not want_shield() then
+            return -1, -1
+        end
+
+        if weapon_skill_uses_dex() then
+            -- High Dex builds typically won't have enough Str to mitigate the
+            -- tower shield attack delay penalty.
+            value = value + (item.encumbrance >= 15 and 50 or 200)
+        else
+            -- Here 'ac' is actually the base shield rating, which along with
+            -- enchantment, shield skill and Str ultimately determines the SH
+            -- granted. For Str builds, we're have large amounts of Str and are
+            -- fine with training large amounts of shield skill. Hence for
+            -- simplicity we only consider the base shield rating. The values
+            -- added for buckler/kite/tower shields are 450/750/1050.
+            value = value + 270 + 60 * item.ac
+        end
+
+        if item.plus then
+            value = value + linear_property_value("SH") * item.plus
+        end
+    else
+        local ac_value = linear_property_value("AC")
+        value = value + ac_value * expected_armour_multiplier() * item.ac
+
+        if item.plus then
+            value = value + ac_value * item.plus
+        end
     end
 
     if slot == "boots" then
