@@ -270,10 +270,17 @@ function move_search(center, target, square_func, min_dist)
     end
 end
 
+local move_keys = { "trap", "cloud", "blocked", "unexcluded",
+    "melee_count", "slow", "enemy_dist" }
+local reversed_move_keys = { trap = true, cloud = true, blocked = true,
+    melee_count = true, slow = true }
+
 function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
-    local los_pos = position_difference(to_pos, qw.map_pos)
-    local result = { move = los_pos, dest = dist_map.pos,
-        safe = not use_unsafe }
+    local to_los_pos = position_difference(to_pos, qw.map_pos)
+    local result = { move = to_los_pos, dest = dist_map.pos,
+        safe = not use_unsafe, trap = 0, cloud = 0, blocked = 0,
+        unexcluded = 0, melee_count = 0, slow = 0,
+        enemy_dist = const.inf_dist }
 
     if debug_channel("move-all") and map_is_traversable_at(to_pos) then
         dsay("Checking " .. (use_unsafe and "unsafe" or "safe")
@@ -301,18 +308,18 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    if best_result and result.dist >= best_result.dist then
+    if best_result and result.dist > best_result.dist then
         if debug_channel("move-all") then
             dsay("Distance of " .. tostring(result.dist)
-                .. " does not the improve the current best distance of "
+                .. " is worse than the current best distance of "
                 .. tostring(best_result.dist))
         end
 
-        return false
+        return
     end
 
     local from_los_pos = position_difference(from_pos, qw.map_pos)
-    if not can_move_to(los_pos, from_los_pos, use_unsafe) then
+    if not can_move_to(to_los_pos, from_los_pos, use_unsafe) then
         if debug_channel("move-all") then
             dsay("Can't move to position")
         end
@@ -320,7 +327,32 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    if not use_unsafe and not is_safe_at(los_pos) then
+    if use_unsafe then
+        local feat = view.feature_at(to_los_pos.x, to_los_pos.y)
+        local trap
+        if feat:find("^trap_") then
+            trap = feat:gsub("trap_", "")
+        end
+        if trap == "zot" then
+            result.trap = 2
+        elseif not c_trap_is_safe(trap) then
+            result.trap = 1
+        end
+
+        local cloud = view.cloud_at(to_los_pos.x, to_los_pos.y)
+        if cloud_is_dangerous(cloud) then
+            result.cloud = 2
+        elseif not cloud_is_safe(cloud) then
+            result.cloud = 1
+        end
+
+        local mons = get_monster_at(to_los_pos)
+        if mons and not mons:is_friendly() then
+            result.blocked = mons:is_harmless() and 1 or 2
+        end
+
+        result.unexcluded = map_is_unexcluded_at(to_pos) and 1 or 0
+    elseif not is_safe_at(to_los_pos) then
         if debug_channel("move-all") then
             dsay("Position is not safe")
         end
@@ -328,7 +360,26 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    return result
+    if in_water_at(to_los_pos) and not intrinsic_amphibious() then
+        result.slow = 1
+    end
+
+    for _, enemy in ipairs(qw.enemy_list) do
+        if enemy:can_melee_at(to_los_pos) then
+            result.melee_count = result.melee_count + 1
+        end
+
+        local dist = enemy:melee_move_distance(to_los_pos)
+        if dist < result.enemy_dist then
+            result.enemy_dist = dist
+        end
+    end
+
+    if not best_result
+            or compare_table_keys(result, best_result, move_keys,
+                reversed_move_keys) then
+        return result
+    end
 end
 
 --[[
@@ -366,12 +417,11 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe)
             .. " to " ..  cell_string_from_map_position(dest_pos)
 
         if allow_unsafe then
-            msg = msg .. " safe/unsafe distances " .. tostring(current_safe_dist)
-                .. "/" .. tostring(current_dist)
+            msg = msg .. " with safe/unsafe distances "
+                .. tostring(current_safe_dist) .. "/" .. tostring(current_dist)
         else
             msg = msg .. " safe distance " .. tostring(current_safe_dist)
         end
-
         dsay(msg)
     end
 

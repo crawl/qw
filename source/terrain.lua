@@ -64,8 +64,7 @@ function cloud_is_safe(cloud)
     return true
 end
 
-function cloud_is_dangerous_at(pos)
-    local cloud = view.cloud_at(pos.x, pos.y)
+function cloud_is_dangerous(cloud)
     if not cloud then
         return false
     end
@@ -86,6 +85,10 @@ function cloud_is_dangerous_at(pos)
     end
 
     return not cloud_is_safe(cloud)
+end
+
+function cloud_is_dangerous_at(pos)
+    return cloud_is_dangerous(view.cloud_at(pos.x, pos.y))
 end
 
 -- Hook to determine which traps are safe to move over without requiring an
@@ -273,4 +276,10 @@ function escape_hatch_type(feat)
     elseif feat == "escape_hatch_down" then
         return const.dir.down
     end
+end
+
+function in_water_at(pos)
+    return not (you.flying()
+            or you.god() == "Beogh" and you.piety_rank() >= 5)
+        and view.feature_at(pos.x, pos.y) == "shallow_water"
 end

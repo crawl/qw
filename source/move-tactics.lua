@@ -69,9 +69,7 @@ function assess_square(pos)
         return a
     end
 
-    local in_water = view.feature_at(pos.x, pos.y) == "shallow_water"
-        and not (you.flying()
-            or you.god() == "Beogh" and you.piety_rank() >= 5)
+    local in_water = in_water_at(pos)
     a.sticky_fire_danger = 0
     if not in_water and you.status("on fire") and you.res_fire() < 2 then
         a.sticky_fire_danger = 2 - a.supdist

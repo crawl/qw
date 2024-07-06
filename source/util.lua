@@ -96,8 +96,8 @@ there's a tie with the current key.
 @table a             A table to compare.
 @table b             A table to compare.
 @table keys          A list of keys to compare values in tables a and b.
-@table reversed_keys A table of keys where the values should be compared in
-                     reverse.
+@table reversed_keys A table of keys set to true for a key where the values
+                     should be compared in reverse.
 @treturn boolean True if a has a key with a higher value (or lower value if the
                  key is reversed) than b, false otherwise.
 
