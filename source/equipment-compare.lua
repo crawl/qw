@@ -642,7 +642,8 @@ function weapon_base_value(item, cur, sit)
 end
 
 function weapon_damage_value(item, delay)
-    -- We might be delayed by a shield or not yet at min delay, so add a little.
+    -- We might be delayed by a shield or not yet at min delay, so add a
+    -- little.
     return 1200 * item.damage / (delay + 1)
 end
 
@@ -657,7 +658,8 @@ function weapon_value(item, cur, ignore_equip, sit, only_linear)
     min_val = min_val + damage_value
     max_val = max_val + damage_value
 
-    -- The utility from damage is worth much less without training in the skill.
+    -- The utility from damage is worth much less without training in the
+    -- skill.
     if item.weap_skill ~= weapon_skill() then
         if min_val > 0 then
             min_val = min_val / 10
@@ -792,7 +794,8 @@ function equip_is_dominated(item)
     local slots_free = slot_max_items(slot)
     for item2 in inventory_slot_iter(slot) do
         if item2.slot ~= item.slot
-                and not (want_shield()
+                and not (slot == "weapon"
+                    and want_shield()
                     and weapon_allows_shield(item)
                     and not weapon_allows_shield(item2)) then
             local min_val2, max_val2 = equip_value(item2)
