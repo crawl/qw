@@ -270,7 +270,6 @@ function best_retreat_position_func(attacking_limit)
                     .. " of potential retreat positions")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 

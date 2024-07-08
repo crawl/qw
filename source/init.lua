@@ -68,6 +68,7 @@ function initialize_rc_variables()
 
     qw.delayed = DELAYED
     qw.delay_time = DELAY_TIME
+    qw.next_delay = qw.delay_time
 
     qw.single_step = SINGLE_STEP
     if AUTO_START then

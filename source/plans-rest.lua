@@ -110,7 +110,7 @@ end
 function wait_one_turn(short_delay)
     magic("s")
     if short_delay then
-        next_delay = 5
+        qw.next_delay = 5
     end
 end
 

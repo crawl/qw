@@ -106,7 +106,7 @@ function run_qw()
     end
 
     local memory_count = collectgarbage("count")
-    if debug_channel("throttle") and qw.throttle then
+    if debug_channel("throttle") then
         dsay("Memory count is " .. tostring(memory_count))
     end
 
@@ -120,7 +120,11 @@ function run_qw()
             return
         end
     end
-    qw.throttle = false
+
+    if qw.throttle_delay then
+        crawl.delay(qw.throttle_delay)
+        qw.throttle_delay = nil
+    end
 
     if qw.do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))

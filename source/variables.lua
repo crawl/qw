@@ -86,8 +86,6 @@ local prev_hatch
 
 local stairs_travel
 
-local next_delay = 100
-
 local invis_monster = false
 local invis_monster_pos
 local invis_monster_turns = 0

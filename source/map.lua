@@ -136,7 +136,6 @@ function find_features(feats, radius)
                     .. " of map positions")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
@@ -181,7 +180,6 @@ function find_map_items(item_names, radius)
                     .. " of map positions")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
@@ -366,7 +364,6 @@ function distance_map_propagate(dist_map)
                     .. " positions remaining")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
@@ -652,7 +649,6 @@ function update_map_cells()
                     .. " with " .. tostring(#queue - ind) .. " cells remaining")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
@@ -679,7 +675,6 @@ function update_distance_maps_at_cells(queue, map_select)
                     .. " with " .. tostring(#queue - i) .. " cells remaining")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 

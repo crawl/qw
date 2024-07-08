@@ -138,12 +138,21 @@ function best_inventory_equip(extra_item)
     end
 
     local best_equip
-    local iter_count = 1
+    local i = 1
     for equip in equip_combo_iter(inventory, extra_item) do
         equip.value = equip_set_value(equip)
 
-        if debug_channel("items") then
-            dsay("Iteration #" .. tostring(iter_count) .. ": "
+        if qw.coroutine_throttle and i % 100 == 0 then
+            if debug_channel("throttle") then
+                dsay("Searched equipment sets in block " .. tostring(i / 100))
+            end
+
+            qw.throttle_delay = qw.delay_time
+            coroutine.yield()
+        end
+
+        if debug_channel("items-all") then
+            dsay("Iteration #" .. tostring(i) .. ": "
                 .. equip_set_string(equip) .. "; value: "
                 .. tostring(equip.value))
         end
@@ -153,7 +162,7 @@ function best_inventory_equip(extra_item)
             best_equip = equip
         end
 
-        iter_count = iter_count + 1
+        i = i + 1
     end
 
     if debug_channel("items") then

@@ -571,7 +571,6 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
                     .. cell_string_from_map_position(map_pos))
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
@@ -615,7 +614,6 @@ function best_move_towards_safety()
                     .. " of map positions")
             end
 
-            qw.throttle = true
             coroutine.yield()
         end
 
