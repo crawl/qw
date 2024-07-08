@@ -81,6 +81,13 @@ function turn_update(force)
     qw.have_orb = you.have_orb()
     qw.turns = turns
 
+    -- This is not normally reset during a turn updated, but when forcing,
+    -- which is often used in Wizard Mode, we want to reset it.
+    if force then
+        qw.retreat_result = nil
+        qw.retreat_turns = nil
+    end
+
     reset_cached_turn_data(true)
 
     update_equip_tracking()

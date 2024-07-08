@@ -133,6 +133,13 @@ function plan_rest_one_turn()
         return true
     end
 
+    if qw.retreat_result
+            and positions_equal(qw.map_pos, qw.retreat_result.map_pos)
+            and (not qw.danger_in_los or qw.incoming_monsters) then
+        wait_one_turn(true)
+        return true
+    end
+
     return false
 end
 

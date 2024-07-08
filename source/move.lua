@@ -1,6 +1,8 @@
 ----------------------
 -- General movement calculations
 
+const.max_search_radius = 14
+
 function can_move_to(to_pos, from_pos, allow_hostiles)
     return is_traversable_at(to_pos)
         and not view.withheld(to_pos.x, to_pos.y)
@@ -107,9 +109,10 @@ function search_from(search, pos, current, is_deviation)
         end
     end
 
-    if position_distance(search.center, pos) > 2 * qw.los_radius then
+    if position_distance(search.center, pos) > const.max_search_radius then
         if debug_channel("move-all") then
-            dsay("Search traveled too far")
+            dsay("Search traveled past max search radius of "
+                .. const.max_search_radius)
         end
 
         search.cache[hash] = false
@@ -286,7 +289,7 @@ function move_search(center, target, square_func, min_dist, cache)
     if cache then
         search.cache = cache
     else
-        search.cache = { }
+        search.cache = {}
     end
 
     if do_move_search(search, center) then

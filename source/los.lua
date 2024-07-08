@@ -195,6 +195,31 @@ function position_is_origin(a)
 end
 
 function cell_see_cell(a, b)
-    return position_distance(a, b) <= qw.los_radius
-        and view.cell_see_cell(a.x, a.y, b.x, b.y)
+    local main_memo = qw.turn_memos.cell_see_cell
+    if not main_memo then
+        main_memo = {}
+        qw.turn_memos.cell_see_cell = main_memo
+    end
+
+    local hasha = hash_position(a)
+    local memo = main_memo[hasha]
+    if not memo then
+        memo = {}
+        main_memo[hasha] = memo
+    end
+
+    local hashb = hash_position(b)
+    local value = memo[hashb]
+    if value ~= nil then
+        return value
+    end
+
+    value = view.cell_see_cell(a.x, a.y, b.x, b.y)
+    memo[hashb] = value
+    return value
+end
+
+function map_cell_see_cell(a, b)
+    return cell_see_cell(position_difference(a, qw.map_pos),
+        position_difference(b, qw.map_pos))
 end

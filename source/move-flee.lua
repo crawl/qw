@@ -155,9 +155,9 @@ function enemy_can_flee_attack(enemy, flee_dist)
     return closing_dist < dist_gain
 end
 
-function flee_function(map_pos)
+function flee_move_check(map_pos)
     local pos = position_difference(map_pos, qw.map_pos)
-    if view.withheld(pos.x, pos.y) or not is_safe_at(pos) then
+    if not is_safe_at(pos) then
         return false
     end
 
@@ -180,7 +180,7 @@ function flee_function(map_pos)
 end
 
 function can_flee_to_destination(pos)
-    local search = distance_map_search(qw.map_pos, pos, flee_function, 0)
+    local search = distance_map_search(qw.map_pos, pos, flee_move_check, 0)
     if not search then
         if debug_channel("flee") then
             dsay("Unable to find move to flee position at "

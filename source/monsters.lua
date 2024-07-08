@@ -11,19 +11,16 @@ const.attitude = {
     "friendly"
 }
 
-const.high_threat = 10
-const.extreme_threat = 20
-
 function moderate_threat_level()
     return 2
 end
 
 function high_threat_level()
-    return const.high_threat - max(0, min(5, 2 * (10 - you.xl())))
+    return 10 - max(0, min(5, 2 * (10 - you.xl())))
 end
 
 function extreme_threat_level()
-    return const.extreme_threat - max(0, min(10, 2 * (10 - you.xl())))
+    return 20 - max(0, min(10, 2 * (10 - you.xl())))
 end
 
 -- functions for use in the monster lists below
@@ -775,4 +772,64 @@ function monster_threat(mons, duration_level, consider_hp)
     end
 
     return threat
+end
+
+function monster_has_line_of_fire_at(mons, target_pos)
+    if not cell_see_cell(mons:pos(), target_pos) then
+        return false
+    end
+
+    if mons:can_attack_los()
+            or mons:has_spell("Creeping Frost")
+                and is_adjacent_solid_wall_at(target_pos) then
+        return true
+    end
+
+    -- Creeping Frost is their only significant ranged attack.
+    if mons:name() == "ironbound frostheart" then
+        return false
+    end
+
+    local positions = spells.path("Quicksilver Bolt", target_pos.x,
+        target_pos.y, mons:x_pos(), mons:y_pos(), true)
+    for i, coords in ipairs(positions) do
+        local pos = { x = coords[1], y = coords[2] }
+        if positions_equal(pos, target_pos) then
+            return true
+        end
+
+        local hit_mons = get_monster_at(pos)
+        if hit_mons and (not hit_mons:is_enemy()
+                or hit_mons:name() ~= "briar patch") then
+            return false
+        end
+    end
+
+    return false
+end
+
+function monster_choose_firing_pos(mons, target_pos)
+    local cur_dist = position_distance(mons:pos(), target_pos)
+    local ideal_dist = 3
+    local max_dist = max(ideal_dist, cur_dist)
+
+    local best_pos, best_dist, best_diff_ideal
+    for pos in radius_iter(mons:pos(), qw.los_radius) do
+        local dist = position_distance(pos, target_pos)
+
+        if supdist(pos) < const.gxm
+                and dist < max_dist
+                and cell_see_cell(pos, target_pos)
+                and mons:can_traverse(pos) then
+            if not best_dist
+                    or dist < best_dist
+                    or abs(dist - ideal_dist) < best_diff_ideal then
+                best_pos = pos
+                best_dist = dist
+                best_diff_ideal = abs(dist - ideal_dist)
+            end
+        end
+    end
+
+    return best_pos
 end

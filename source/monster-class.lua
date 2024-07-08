@@ -108,23 +108,26 @@ function Monster:can_use_doors()
 end
 
 function Monster:can_traverse(pos)
-    if not self.props.traversal_map then
-        self.props.traversal_map = {}
-    end
-    if not self.props.traversal_map[pos.x] then
-        self.props.traversal_map[pos.x] = {}
-    end
-    if self.props.traversal_map[pos.x][pos.y] == nil then
-        local val = self.minfo:can_traverse(pos.x, pos.y)
-        if not val and self:can_use_doors() then
-            local feat = view.feature_at(pos.x, pos.y)
-            val = feat == "closed_door" or feat == "closed_clear_door"
-        end
-
-        self.props.traversal_map[pos.x][pos.y] = val
+    local prop = self.props.traversal_map
+    if not prop then
+        prop = {}
+        self.props.traversal_map = prop
     end
 
-    return self.props.traversal_map[pos.x][pos.y]
+    local hash = hash_position(pos)
+    local value = prop[hash]
+    if value ~= nil then
+        return value
+    end
+
+    value = self.minfo:can_traverse(pos.x, pos.y)
+    if not value and self:can_use_doors() then
+        local feat = view.feature_at(pos.x, pos.y)
+        value = feat == "closed_door" or feat == "closed_clear_door"
+    end
+
+    prop[hash] = value
+    return value
 end
 
 function Monster:name()
@@ -357,7 +360,8 @@ function Monster:ignores_player_projectiles()
             return self:name() == "bush"
                 or self:name() == "orb of destruction"
                 or self:holiness() == "plant" and you.god() == "Fedhas"
-                or self:name():find("^elliptic") and you.god() == "Hepliaklqana"
+                or self:name():find("^elliptic")
+                    and you.god() == "Hepliaklqana"
         end)
 end
 
@@ -468,12 +472,93 @@ function Monster:stabbability()
     return self:property_memo("stabbability")
 end
 
+local polearm_ranged_monsters = util.set({
+    "Ilsuiw", "merfolk javelineer", "Sigmund", "Urug"
+})
 function Monster:is_ranged(ignore_reach)
     return self:property_memo_args("is_ranged",
         function()
+            if self:los_danger() or self:can_attack_los()  then
+                return true
+            end
+
+            if polearm_ranged_monsters[self:name()] then
+                return true
+            end
+
             return self.minfo:has_known_ranged_attack()
                 and not (ignore_reach and self:reach_range() > 1)
         end, ignore_reach)
+end
+
+local fighter_monsters = util.set({
+    "Agnes", "Asmodeus", "Antaeus", "ancient champion", "angel",
+    "antique champion", "Asmodeus", "balrug", "centaur warrior", "Cerebov",
+    "cherub", "daeva", "death knight", "deep elf blademaster",
+    "deep elf knight", "demonspawn warmonger", "Dispater", "Donald", "Duvessa",
+    "Edmund", "entropy weaver", "Executioner", "fire giant", "Frederick",
+    "frost giant", "Geryon", "Gloorx Vloq", "gnoll sergeant", "guardian mummy",
+    "Harold", "Head Instructor", "hell knight", "Ignacio", "iron giant",
+    "jiangshi", "Jory", "Joseph", "juggernaut", "Lom Lobon", "Mennas",
+    "minotaur", "Mnoleg", "naga warrior", "nagaraja", "nargun", "norris",
+    "Orb Guardian", "orc knight", "orc warlord", "orc warrior",
+    "phantasmal warrior", "profane servitor", "reaper", "red devil",
+    "Saint Roka", "salamander", "seraph", "sin beast", "skeletal warrior",
+    "Sojobo", "spriggan berserker", "spriggan defender", "spriggan rider",
+    "tainted leviathan", "tengu reaver", "tengu warrior", "titan",
+    "undying armoury", "Urug", "ushabti", "vampire knight", "vault guard",
+    "vault sentinel", "vault warden", "war gargoyle", "Wiglaf",
+    "yaktaur captain"
+})
+function Monster:is_fighter()
+    return self:property_memo("is_fighter",
+        function()
+            if self:type() == const.pan_lord_type then
+                return true
+            end
+
+            local name = self:name()
+            if name:find("draconian knight") or name:find("draconian monk") then
+                return true
+            end
+
+            return fighter_monsters[name]
+        end)
+end
+function Monster:intelligence()
+    return self:property_memo("intelligence")
+end
+
+function Monster:regains_los()
+    return self:property_memo("regains_los",
+        function()
+            if not self:is_ranged(true) or self:intelligence() ~= "Human" then
+                return false
+            end
+
+            local name = self:name()
+            return name == "centaur warrior"
+                or name == "yaktaur captain"
+                or not self:is_fighter()
+        end)
+end
+
+function Monster:choose_firing_pos(pos)
+    local prop = self.props.firing_pos
+    if not prop then
+        prop = {}
+        self.props.firing_pos = {}
+    end
+
+    local hash = hash_position(pos)
+    local value = prop[hash]
+    if value ~= nil then
+        return value
+    end
+
+    value = monster_choose_firing_pos(self, pos)
+    prop[hash] = value
+    return value
 end
 
 function Monster:is_harmless()
@@ -544,27 +629,30 @@ function Monster:can_seek(ignore_temporary)
 end
 
 function Monster:can_melee_at(pos)
-    if not self.props.can_melee_at then
-        self.props.can_melee_at = {}
+    local prop = self.props.can_melee_at
+    if not prop then
+        prop = {}
+        self.props.can_melee_at = prop
     end
 
     local hash = hash_position(pos)
-    if self.props.can_melee_at[hash] ~= nil then
-        return self.props.can_melee_at[hash]
+    local value = prop[hash]
+    if value ~= nil then
+        return value
     end
 
-    local result = positions_can_melee(self:pos(), pos, self:reach_range())
-    self.props.can_melee_at[hash] = result
-    return result
+    value = positions_can_melee(self:pos(), pos, self:reach_range())
+    prop[hash] = value
+    return value
 end
 
 function Monster:can_melee_player()
     return self:can_melee_at(const.origin)
 end
 
-function Monster:melee_move_search(pos)
-    if not self.props.melee_move_search then
-        self.props.melee_move_search = {}
+function Monster:melee_move_search(dest_pos, start_pos)
+    if not start_pos then
+        start_pos = self:pos()
     end
 
     local search_memo = self.props.move_search
@@ -624,6 +712,24 @@ function Monster:melee_move_distance(pos)
     else
         return const.inf_dist
     end
+end
+
+function Monster:has_line_of_fire(pos)
+    local prop = self.props.has_line_of_fire
+    if not prop then
+        prop = {}
+        self.props.has_line_of_fire = prop
+    end
+
+    local hash = hash_position(pos)
+    local value = prop[hash]
+    if value ~= nil then
+        return value
+    end
+
+    value = monster_has_line_of_fire_at(self, pos)
+    prop[hash] = value
+    return value
 end
 
 --[[
