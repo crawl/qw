@@ -773,6 +773,12 @@ end
 
 function equip_is_dominated(item)
     local slot = equip_slot(item)
+
+    -- We don't want orbs.
+    if slot == "shield" and item.ac == 0 then
+        return true
+    end
+
     if you.race() ~= "Coglin"
                 and slot == "weapon"
                 and you.xl() < 18
