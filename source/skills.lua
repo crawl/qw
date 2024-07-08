@@ -236,7 +236,6 @@ function update_skill_tracking()
         if base_skill > 0
                 and (not qw.base_skills[sk]
                     or base_skill - qw.base_skills[sk] >= 1) then
-            reset_best_equip()
             qw.base_skills[sk] = base_skill
         end
     end
