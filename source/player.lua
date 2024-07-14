@@ -560,10 +560,10 @@ function unable_to_throw()
         or form == "lich")
 end
 
-function player_can_melee_mons(mons)
+function player_can_melee_mons(mons, ignore_temp)
     if mons:name() == "orb of destruction"
             or mons:attacking_causes_penance()
-            or unable_to_melee() then
+            or not ignore_temp and unable_to_melee() then
         return false
     end
 

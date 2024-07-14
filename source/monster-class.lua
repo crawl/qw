@@ -438,11 +438,11 @@ function Monster:is_enemy()
 end
 
 -- Whether the player can melee this monster right now.
-function Monster:player_can_melee()
-    return self:property_memo("player_can_melee",
+function Monster:player_can_melee(ignore_temp)
+    return self:property_memo_args("player_can_melee",
         function()
-            return player_can_melee_mons(self)
-        end)
+            return player_can_melee_mons(self, ignore_temp)
+        end, ignore_temp)
 end
 
 function Monster:is_unalert()
@@ -582,7 +582,7 @@ end
 function Monster:player_can_wait_for_melee()
     return self:property_memo("player_can_wait_for_melee",
         function()
-            return not self:player_can_melee()
+            return not self:player_can_melee(true)
                 and self:has_path_to_melee_player()
                 and (self:reach_range() <= player_reach_range()
                         or get_move_closer(self:pos()))
@@ -633,7 +633,7 @@ end
 function Monster:player_has_path_to_melee()
     return self:property_memo("player_has_path_to_melee",
         function()
-            if self:player_can_melee() then
+            if self:player_can_melee(true) then
                 return true
             end
 
