@@ -58,10 +58,12 @@ function positions_can_melee(from_pos, to_pos, range)
     local dist = position_distance(from_pos, to_pos)
     if dist == 0 then
         return false
+    elseif dist == 1 then
+        return true
     end
 
     if range == 1 then
-        return dist == 1
+        return false
     end
 
     if range == 3 then
@@ -83,12 +85,11 @@ function positions_can_melee(from_pos, to_pos, range)
                     y = from_pos.y }, true)
                 -- We know that sign(y_diff) == y_diff.
                 or not is_solid_at({ x = from_pos.x + sign_diff,
-                    y = from_pos.y - y_diff }, true)
+                    y = from_pos.y + y_diff }, true)
         else
             return not is_solid_at({ x = from_pos.x + sign_diff,
                 y = from_pos.y }, true)
         end
-
     elseif abs_x_diff < abs_y_diff then
         local sign_diff = sign(y_diff)
         if abs_x_diff > 0 then
