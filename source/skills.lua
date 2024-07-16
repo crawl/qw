@@ -40,14 +40,14 @@ end
 
 function shield_skill_utility()
     local shield = get_shield()
-    if not shield then
+    if not shield or shield.encumbrance == 0 then
         return 0
     end
-
-    local shield_penalty = 2 * shield.encumbrance * shield.encumbrance
-        * (27 - you.base_skill("Shields"))
+    local sh_gain = 0.19 + shield.ac/40
+    local delay_reduction = 2 * shield.encumbrance * shield.encumbrance
         / (25 + 5 * max_strength()) / 27
-    return 0.25 + 0.5 * shield_penalty
+    local ev_gain = delay_reduction
+    return 0.8 * sh_gain + ev_gain + 2.4 * delay_reduction
 end
 
 function skill_value(sk)
@@ -67,8 +67,9 @@ function skill_value(sk)
         if you.race() == "Tengu" and intrinsic_flight() then
             penalty_factor = penalty_factor * 1.2 -- flying EV mult
         end
-        return 18 * math.log(1 + you.dexterity() / 18)
+        local ev_gain = 0.8 * max(you.dexterity(), 1)
             / (20 + 2 * body_size()) * penalty_factor
+        return ev_gain
     elseif sk == "Armour" then
         local str = max_strength()
         if str < 0 then
