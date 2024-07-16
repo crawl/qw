@@ -10,6 +10,11 @@ const.skill_list = {
     "Earth Magic", "Invocations", "Evocations", "Shapeshifting",
 }
 
+const.ev_value = 0.8
+const.ac_value = 1.0
+const.sh_value = 0.75
+const.delay_value = 2.4
+
 function weapon_skill()
     -- Cache in case we unwield a weapon somehow.
     if c_persist.weapon_skill then
@@ -47,7 +52,8 @@ function shield_skill_utility()
     local delay_reduction = 2 * shield.encumbrance * shield.encumbrance
         / (25 + 5 * max_strength()) / 27
     local ev_gain = delay_reduction
-    return 0.8 * sh_gain + ev_gain + 2.4 * delay_reduction
+    return const.sh_value * sh_gain + const.ev_value * ev_gain
+        + const.delay_value * delay_reduction
 end
 
 function skill_value(sk)
@@ -69,14 +75,15 @@ function skill_value(sk)
         end
         local ev_gain = 0.8 * max(you.dexterity(), 1)
             / (20 + 2 * body_size()) * penalty_factor
-        return ev_gain
+        return const.ev_value * ev_gain
     elseif sk == "Armour" then
         local str = max_strength()
         if str < 0 then
             str = 0
         end
-
-        return base_ac() / 22 + 2 / 225 * armour_evp() ^ 2 / (3 + str)
+        local ac_gain = base_ac() / 22
+        local ev_gain = 2 / 225 * armour_evp() ^ 2 / (3 + str)
+        return const.ac_value * ac_gain + const.ev_value * ev_gain
     elseif sk == "Fighting" then
         return 0.75
     elseif sk == "Shields" then
@@ -99,7 +106,7 @@ function skill_value(sk)
             return 0
         end
     elseif sk == weapon_skill() then
-        return at_min_delay() and 0.5 or 1.5
+        return at_min_delay() and 0.3 or 1.5
     end
 end
 
