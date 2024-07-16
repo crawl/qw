@@ -106,7 +106,7 @@ function intrinsic_fumble()
         or sp == "Armataur"
         or sp == "Naga"
         or sp == "Troll"
-        or sp == "Ogre")
+        or sp == "Oni")
 end
 
 function intrinsic_evil()
@@ -229,7 +229,7 @@ end
 --        7 encumbrance
 function armour_plan()
     local sp = you.race()
-    if sp == "Ogre" or sp == "Troll" then
+    if sp == "Oni" or sp == "Troll" then
         return "large"
     elseif sp == "Deep Elf" or sp == "Kobold" or sp == "Merfolk" then
         return "dodgy"
@@ -487,7 +487,7 @@ function body_size()
     elseif you.race() == "Spriggan" or you.race() == "Felid" then
         return -2
     elseif you.race() == "Troll"
-            or you.race() == "Ogre"
+            or you.race() == "Oni"
             or you.race() == "Naga"
             or you.race() == "Armataur" then
         return 1
