@@ -15,6 +15,14 @@ const.ac_value = 1.0
 const.sh_value = 0.75
 const.delay_value = 2.4
 
+-- start diminishing utility of a defensive stat once you have 25 of it
+function diminish(delta, base)
+  if base <= 25 then
+    return delta
+  end
+  return delta * 25 / base
+end
+
 function weapon_skill()
     -- Cache in case we unwield a weapon somehow.
     if c_persist.weapon_skill then
@@ -52,7 +60,8 @@ function shield_skill_utility()
     local delay_reduction = 2 * shield.encumbrance * shield.encumbrance
         / (25 + 5 * max_strength()) / 27
     local ev_gain = delay_reduction
-    return const.sh_value * sh_gain + const.ev_value * ev_gain
+    return const.sh_value * diminish(sh_gain, you.sh())
+        + const.ev_value * diminish(ev_gain, you.ev())
         + const.delay_value * delay_reduction
 end
 
@@ -75,7 +84,7 @@ function skill_value(sk)
         end
         local ev_gain = 0.8 * max(you.dexterity(), 1)
             / (20 + 2 * body_size()) * penalty_factor
-        return const.ev_value * ev_gain
+        return const.ev_value * diminish(ev_gain, you.ev())
     elseif sk == "Armour" then
         local str = max_strength()
         if str < 0 then
@@ -83,7 +92,8 @@ function skill_value(sk)
         end
         local ac_gain = base_ac() / 22
         local ev_gain = 2 / 225 * armour_evp() ^ 2 / (3 + str)
-        return const.ac_value * ac_gain + const.ev_value * ev_gain
+        return const.ac_value * diminish(ac_gain, you.ac())
+            + const.ev_value * diminish(ev_gain, you.ev())
     elseif sk == "Fighting" then
         return 0.75
     elseif sk == "Shields" then
@@ -106,7 +116,14 @@ function skill_value(sk)
             return 0
         end
     elseif sk == weapon_skill() then
-        return at_min_delay() and 0.3 or 1.5
+        local val = at_min_delay() and 0.3 or 1.5
+        if weapon_skill() == "Unarmed Combat" then
+            sklev = you.skill("Unarmed Combat")
+            if sklev > 18 then
+                val = val * 18 / sklev
+            end
+        end
+        return val
     end
 end
 
