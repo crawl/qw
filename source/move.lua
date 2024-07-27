@@ -67,22 +67,44 @@ function get_move_closer(pos)
 end
 
 function search_from(search, pos, current, is_deviation)
-    if positions_equal(pos, current) then
+    local hash = hash_position(pos)
+    if search.seen[hash] then
         return false
     end
 
+    local cur_deviations = search.num_deviations + (is_deviation and 1 or 0)
+
     if debug_channel("move-all") then
-        dsay("Checking " .. (is_deviation and "deviation " or "")
+        dsay("Checking "
+            .. (is_deviation and "deviation(" .. cur_deviations .. ") " or "")
             .. "move from " .. cell_string_from_position(current)
             .. " to " .. cell_string_from_position(pos))
     end
 
-    if is_deviation and search.num_deviations >= 2 then
-        if debug_channel("move-all") then
-            dsay("Too many deviation movements")
+    local cache = search.cache[hash]
+    if cache then
+        local result
+        if cache and cache.path then
+            for _, ppos in ipairs(cache.path) do
+                table.insert(search.path, ppos)
+                search.dist = search.dist + 1
+            end
+
+            result = true
+        elseif not cache
+                or cache.deviations_failed
+                    and cache.deviations_failed <= cur_deviations then
+            result = false
         end
 
-        return false
+        if result ~= nil then
+            if debug_channel("move-all") then
+                dsay("Cached move search result: "
+                    .. (result and "success" or "failure"))
+            end
+
+            return result
+        end
     end
 
     if position_distance(search.center, pos) > 2 * qw.los_radius then
@@ -90,56 +112,44 @@ function search_from(search, pos, current, is_deviation)
             dsay("Search traveled too far")
         end
 
+        search.cache[hash] = false
         return false
     end
 
-    if not search.attempted[pos.x] then
-        search.attempted[pos.x] = {}
-    end
-
-    if search.attempted[pos.x][pos.y]
-            and search.attempted[pos.x][pos.y] <= search.num_deviations then
+    if cur_deviations > 2 then
         if debug_channel("move-all") then
-            dsay("Not attempting previously failed search")
+            dsay("Too many deviation movements")
         end
 
+        search.cache[hash] = { deviations_failed = cur_deviations }
         return false
     end
-
-    if positions_equal(current, search.center) then
-        search.first_pos = nil
-        search.last_pos = nil
-        search.dist = 0
-        search.num_deviations = 0
-    end
-
-    search.attempted[pos.x][pos.y] = search.num_deviations
-        + (is_deviation and 1 or 0)
 
     if search.square_func(pos) then
-        if is_deviation then
-            search.num_deviations = search.num_deviations + 1
-        end
         search.dist = search.dist + 1
+        search.num_deviations = cur_deviations
 
-        local set_first_pos = not search.first_pos
-        if set_first_pos then
-            search.first_pos = pos
-        end
-        search.last_pos = pos
+        table.insert(search.path, pos)
+        search.seen[hash] = true
+        local cur_i = #search.path
 
         if do_move_search(search, pos) then
+            cache = { path = {} }
+            for i = cur_i, #search.path do
+                table.insert(cache.path, search.path[i])
+            end
+            search.cache[hash] = cache
             return true
         else
+            search.path[#search.path] = nil
+            search.seen[hash] = nil
+
+            search.dist = search.dist - 1
             if is_deviation then
                 search.num_deviations = search.num_deviations - 1
             end
-            search.dist = search.dist - 1
 
-            if set_first_pos then
-                search.first_pos = nil
-            end
-
+            search.cache[hash] = { deviations_failed = cur_deviations }
             return false
         end
     end
@@ -148,13 +158,14 @@ function search_from(search, pos, current, is_deviation)
         dsay("Square function failed")
     end
 
+    search.cache[hash] = { deviations_failed = cur_deviations }
     return false
 end
 
 function do_move_search(search, current)
     local diff = position_difference(search.target, current)
     if supdist(diff) <= search.min_dist then
-        search.move = position_difference(search.first_pos, search.center)
+        search.move = position_difference(search.path[2], search.center)
         return true
     end
 
@@ -171,7 +182,7 @@ function do_move_search(search, current)
         return true
     end
 
-    pos = { x = current.x, y = current.y + sign_diff_y}
+    pos = { x = current.x, y = current.y + sign_diff_y }
     if search_from(search, pos, current) then
         return true
     end
@@ -247,7 +258,7 @@ function do_move_search(search, current)
     return false
 end
 
-function move_search(center, target, square_func, min_dist)
+function move_search(center, target, square_func, min_dist, cache)
     if not min_dist then
         min_dist = 0
     end
@@ -262,8 +273,14 @@ function move_search(center, target, square_func, min_dist)
     end
 
     search = { center = center, target = target, square_func = square_func,
-        min_dist = min_dist, dist = 0, num_deviations = 0 }
-    search.attempted = { [center.x] = { [center.y] = 0 } }
+        min_dist = min_dist, dist = 0, path = { center },
+        seen = { [hash_position(center)] = true }, num_deviations = 0 }
+
+    if cache then
+        search.cache = cache
+    else
+        search.cache = { }
+    end
 
     if do_move_search(search, center) then
         return search
@@ -702,7 +719,8 @@ function move_towards_destination(pos, dest, reason)
 end
 
 function distance_map_search_from(search, pos, current)
-    if positions_equal(pos, current) then
+    local hash = hash_position(pos)
+    if search.seen[hash] then
         return false
     end
 
@@ -712,49 +730,41 @@ function distance_map_search_from(search, pos, current)
             .. " to " .. cell_string_from_map_position(pos))
     end
 
-    if not search.cache[pos.x] then
-        search.cache[pos.x] = {}
-    end
-
-    local cache_result = search.cache[pos.x][pos.y]
+    local cache = search.cache[hash]
     if cache ~= nil then
         if debug_channel("move-all") then
             dsay("Returning cached result for search")
         end
 
-        if cache_result then
-            if not search.first_pos then
-                search.first_pos = pos
+        if cache then
+            for _, ppos in ipairs(cache) do
+                table.insert(search.path, ppos)
             end
 
-            search.last_pos = cache_result
+            return true
+        else
+            return false
         end
-
-        return cache_result
-    end
-
-    if positions_equal(current, search.center) then
-        search.first_pos = nil
-        search.last_pos = nil
     end
 
     if search.square_func(pos) then
-        search.last_pos = pos
-
-        local set_first_pos = not search.first_pos
-        if set_first_pos then
-            search.first_pos = pos
-        end
+        table.insert(search.path, pos)
+        search.seen[hash] = true
+        local cur_i = #search.path
 
         if do_distance_map_search(search, pos) then
-            search.cache[pos.x][pos.y] = pos
+            local cache = { }
+            for i = cur_i, #search.path do
+                table.insert(cache, search.path[i])
+            end
+            search.cache[hash] = cache
+
             return true
         else
-            if set_first_pos then
-                search.first_pos = nil
-            end
+            search.path[#search.path] = nil
+            search.seen[hash] = nil
 
-            search.cache[pos.x][pos.y] = false
+            search.cache[hash] = false
             return false
         end
     end
@@ -763,13 +773,13 @@ function distance_map_search_from(search, pos, current)
         dsay("Square function failed")
     end
 
-    search.cache[pos.x][pos.y] = false
+    search.cache[hash] = false
     return false
 end
 
 function do_distance_map_search(search, current)
     if position_distance(search.target, current) <= search.min_dist then
-        search.move = position_difference(search.first_pos, search.center)
+        search.move = position_difference(search.path[2], search.center)
         return true
     end
 
@@ -815,7 +825,8 @@ function distance_map_search(center, target, square_func, min_dist,
 
     search = { center = center, target = target, square_func = square_func,
         min_dist = min_dist, allow_unsafe = allow_unsafe, map = map,
-        dist = dist }
+        dist = dist, path = { center },
+        seen = { [hash_position(center)] = true } }
 
     if cache then
         search.cache = cache

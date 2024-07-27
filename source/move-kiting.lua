@@ -201,20 +201,22 @@ function assess_kiting_enemy_at(pos, enemy, player_search)
     if enemy:can_melee_player() then
         last_pos = enemy:pos()
     else
-        last_pos = enemy:melee_move_search(const.origin).last_pos
+        local search = enemy:melee_move_search(const.origin)
+        last_pos = search.path[#search.path]
     end
 
-    local avoid_score = position_distance(last_pos, player_search.first_pos)
+    local first_pos = player_search.path[2]
+    local avoid_score = position_distance(last_pos, first_pos)
     if enemy:can_melee_player()
             and enemy:reach_range() > 1
-            and not enemy:can_melee_at(player_search.first_pos, last_pos) then
+            and not enemy:can_melee_at(first_pos, last_pos) then
         avoid_score = avoid_score + 0.5
     end
 
     local threat = enemy:threat(const.duration.ignore_buffs)
     result.avoid_score = result.avoid_score + threat * avoid_score
     result.see_score = result.see_score
-        + threat * (cell_see_cell(player_search.first_pos, enemy:pos()) and 1 or 0)
+        + threat * (cell_see_cell(first_pos, enemy:pos()) and 1 or 0)
     result.dist_score = result.dist_score + threat * gained_dist
 
     return result
@@ -246,7 +248,7 @@ function assess_kiting_destination(pos)
     end
 
     local result = { pos = pos, map_pos = map_pos, dist = search.dist,
-        kite_step = search.first_pos, avoid_score = 0, see_score = 0,
+        kite_step = search.path[2], avoid_score = 0, see_score = 0,
         dist_score = 0 }
     for _, enemy in ipairs(qw.enemy_list) do
         local eresult = assess_kiting_enemy_at(pos, enemy, search)
