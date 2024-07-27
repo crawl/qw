@@ -94,8 +94,9 @@ function run_qw()
 
     local okay, err = coroutine.resume(qw.update_coroutine)
     if not okay then
-        error("Error in coroutine: " .. err)
         qw.abort = true
+        error("Error in coroutine: " .. err .. "\nStack trace: \n"
+            .. crawl.stack(qw.update_coroutine):sub(1, 5000))
     end
 
     if coroutine.status(qw.update_coroutine) == "dead" then
