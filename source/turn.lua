@@ -70,38 +70,37 @@ function reset_cached_turn_data(force)
     qw.last_turn_reset = turns
 end
 
--- We want to call this exactly once each turn.
-function turn_update()
+-- We call this exactly once each turn, unless force is true.
+function turn_update(force)
     if not qw.initialized then
         initialize()
     end
 
     local turns = you.turns()
-    if turns == qw.turn_count then
-        qw.time_passed = false
+    qw.time_passed = qw.turns and turns ~= qw.turns
+    if qw.turns and not qw.time_passed and not force then
         return
     end
 
     qw.have_orb = you.have_orb()
-    qw.time_passed = true
-    qw.turn_count = turns
+    qw.turns = turns
 
     reset_cached_turn_data(true)
 
     update_equip_tracking()
 
-    if you.turns() >= qw.dump_count then
+    if turns >= qw.dump_count then
         dump_count = qw.dump_count + 100
         crawl.dump_char()
     end
 
-    if qw.turn_count >= qw.skill_count then
+    if turns >= qw.skill_count then
         qw.skill_count = qw.skill_count + 5
         handle_skills()
     end
 
     if hp_is_full() then
-        qw.full_hp_turn = qw.turn_count
+        qw.full_hp_turn = turns
     end
 
     if you.god() ~= previous_god then
@@ -137,11 +136,11 @@ function turn_update()
         qw.stuck_turns = 0
 
         if at_branch_end("Vaults") and not vaults_end_entry_turn then
-            vaults_end_entry_turn = qw.turn_count
+            vaults_end_entry_turn = turns
         elseif where == "Tomb:2" and not tomb2_entry_turn then
-            tomb2_entry_turn = qw.turn_count
+            tomb2_entry_turn = turns
         elseif where == "Tomb:3" and not tomb3_entry_turn then
-            tomb3_entry_turn = qw.turn_count
+            tomb3_entry_turn = turns
         end
     end
 
