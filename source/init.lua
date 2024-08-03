@@ -177,21 +177,21 @@ function initialize()
 end
 
 function note_qw_data()
-    note("qw: Version: " .. qw.version)
-    note("qw: Game counter: " .. c_persist.record.counter)
-    note("qw: Melee chars always use a shield: " .. bool_string(qw.shield_crazy))
+    note("Version: " .. qw.version)
+    note("Game counter: " .. c_persist.record.counter)
+    note("Melee chars always use a shield: " .. bool_string(qw.shield_crazy))
 
     if not util.contains(god_options(), you.god()) then
-        note("qw: God list: " .. table.concat(god_options(), ", "))
-        note("qw: Allow faded altars: " .. bool_string(qw.faded_altar))
+        note("God list: " .. table.concat(god_options(), ", "))
+        note("Allow faded altars: " .. bool_string(qw.faded_altar))
     end
 
-    note("qw: Do Orc after clearing Dungeon:" .. branch_depth("D") .. " "
+    note("Do Orc after clearing D:" .. branch_depth("D") .. ": "
         .. bool_string(qw.late_orc))
-    note("qw: Do second Lair branch before Depths: " ..
+    note("Do second Lair branch before Depths: " ..
         bool_string(qw.early_second_rune))
-    note("qw: Lair rune preference: " .. qw.rune_preference)
-    note("qw: Goals: " .. goal_options())
+    note("Lair rune preference: " .. qw.rune_preference)
+    note("Goals: " .. goal_options())
 end
 
 function first_turn_initialize()

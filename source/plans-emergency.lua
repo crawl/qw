@@ -88,7 +88,7 @@ function plan_tactical_step()
         return false
     end
 
-    say("Stepping ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
+    say("STEPPING ~*~*~tactically~*~*~ (" .. qw.tactical_reason .. ").")
     return move_to(qw.tactical_step)
 end
 

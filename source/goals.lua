@@ -401,12 +401,14 @@ function determine_goal()
     if old_status ~= status then
         if not desc then
             if status == "Shopping" then
-                desc = "shopping spree"
+                desc = "Shopping Spree"
+            elseif status == "Orb" then
+                desc = "The ORB of Zot!"
             else
                 desc = status
             end
         end
-        say("PLANNING " .. desc:upper())
+        say("PLANNING " .. desc)
     end
 
     set_goal(status, goal)

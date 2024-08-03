@@ -3,11 +3,19 @@
 -- parsing.
 
 function note(x)
-    crawl.take_note(you.turns() .. " ||| " .. x)
+    crawl.take_note(qw_message(x))
+end
+
+function qw_message(x, turns)
+    if turns then
+        return " QW(" .. you.turns() .. "): " .. x
+    else
+        return " QW: " .. x
+    end
 end
 
 function say(x)
-    crawl.mpr(you.turns() .. " ||| " .. x)
+    crawl.mpr(qw_message(x, true))
     note(x)
 end
 

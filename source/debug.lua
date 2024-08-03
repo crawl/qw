@@ -39,8 +39,7 @@ function dsay(x, do_note)
         str = qw.stringify(x)
     end
 
-    str = you.turns() .. " ||| " .. str
-    crawl.mpr(str)
+    crawl.mpr(qw_message(str, true))
 
     if do_note then
         note(str)
