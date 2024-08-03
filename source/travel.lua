@@ -335,9 +335,6 @@ function finalize_first_dir(result)
 end
 
 function finalize_depth_dir(result, dir)
-    assert(type(dir) == "number" and abs(dir) == 1,
-        "Invalid stair direction: " .. tostring(dir))
-
     -- We can already reach all required stairs in the given direction on the
     -- target level, so there's nothing to do in that direction.
     if count_stairs(result.branch, result.depth, dir,
@@ -570,7 +567,7 @@ function update_goal_travel()
         end
 
         if goal_travel.stairs_dir then
-            dsay("Stairs search dir: " .. tostring(goal_travel.stairs_dir))
+            dsay("Stairs search dir: " .. goal_travel.stairs_dir)
         elseif goal_travel.safe_stairs then
             dsay("Taking specific stairs for safety: "
                 .. goal_travel.safe_stairs)
@@ -580,9 +577,9 @@ function update_goal_travel()
         end
 
         if goal_travel.first_dir then
-            dsay("First dir: " .. tostring(goal_travel.first_dir))
+            dsay("First dir: " .. goal_travel.first_dir)
         elseif goal_travel.first_branch then
-            dsay("First branch: " .. tostring(goal_travel.first_branch))
+            dsay("First branch: " .. goal_travel.first_branch)
         end
 
         dsay("Want stash travel: " .. bool_string(goal_travel.want_stash))

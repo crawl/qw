@@ -317,9 +317,8 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
     local current_dist = map[from_pos.x][from_pos.y]
     if current_dist and result.dist >= current_dist then
         if debug_channel("move-all") then
-            dsay("Distance of " .. tostring(result.dist)
-                .. " does not improve the starting position distance of "
-                .. tostring(current_dist))
+            dsay("Distance of " .. result.dist .. " does not improve the"
+                .. " starting position distance of " .. current_dist)
         end
 
         return
@@ -327,9 +326,8 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
 
     if best_result and result.dist > best_result.dist then
         if debug_channel("move-all") then
-            dsay("Distance of " .. tostring(result.dist)
-                .. " is worse than the current best distance of "
-                .. tostring(best_result.dist))
+            dsay("Distance of " .. result.dist .. " is worse than the current"
+                .. " best distance of " .. best_result.dist)
         end
 
         return
@@ -435,9 +433,9 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe)
 
         if allow_unsafe then
             msg = msg .. " with safe/unsafe distances "
-                .. tostring(current_safe_dist) .. "/" .. tostring(current_dist)
+                .. current_safe_dist .. "/" .. current_dist
         else
-            msg = msg .. " safe distance " .. tostring(current_safe_dist)
+            msg = msg .. " safe distance " .. current_safe_dist
         end
         dsay(msg)
     end
@@ -583,7 +581,7 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
     for pos in radius_iter(map_pos, const.gxm) do
         if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
-                dsay("Searched for unexplored in block " .. tostring(i / 1000)
+                dsay("Searched for unexplored in block " .. i / 1000
                     .. " of map positions near "
                     .. cell_string_from_map_position(map_pos))
             end
@@ -627,7 +625,7 @@ function best_move_towards_safety()
     for pos in radius_iter(qw.map_pos, const.gxm) do
         if qw.coroutine_throttle and i % 1000 == 0 then
             if debug_channel("throttle") then
-                dsay("Searched for safety in block " .. tostring(i / 1000)
+                dsay("Searched for safety in block " .. i / 1000
                     .. " of map positions")
             end
 

@@ -807,7 +807,7 @@ function choose_acquirement(acquire_type)
     for _, item in ipairs(acq_items) do
         local min_val, max_val = equip_value(item)
         say("Offered " .. item.name() .. " with min/max values "
-            .. tostring(min_val) .. "/" .. tostring(max_val))
+            .. min_val .. "/" .. max_val)
     end
 
     local index = best_acquirement_index(acq_items)

@@ -331,7 +331,7 @@ function equip_set_string(equip)
 
         table.insert(slots, slot)
         table.insert(item_letters, item.slot and item_letter(item) or "?")
-        table.insert(item_counts, tostring(item_counts[slot]))
+        table.insert(item_counts, item_counts[slot])
     end
 
     local entries = {}
@@ -481,8 +481,7 @@ function EquipmentCombinationIterator:new(inventory, extra_item)
     if debug_channel("items") then
         local inv_counts = {}
         for _, slot in ipairs(iter.inventory_slots) do
-            table.insert(inv_counts, slot .. ":"
-                .. tostring(#iter.inventory[slot]))
+            table.insert(inv_counts, slot .. ":" .. #iter.inventory[slot])
         end
         dsay("Item counts for slots: " .. table.concat(inv_counts, ", "))
 

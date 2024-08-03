@@ -144,7 +144,7 @@ function best_inventory_equip(extra_item)
 
         if qw.coroutine_throttle and i % 100 == 0 then
             if debug_channel("throttle") then
-                dsay("Searched equipment sets in block " .. tostring(i / 100))
+                dsay("Searched equipment sets in block " .. i / 100)
             end
 
             qw.throttle_delay = qw.delay_time
@@ -152,9 +152,9 @@ function best_inventory_equip(extra_item)
         end
 
         if debug_channel("items-all") then
-            dsay("Iteration #" .. tostring(i) .. ": "
+            dsay("Iteration #" .. i .. ": "
                 .. equip_set_string(equip) .. "; value: "
-                .. tostring(equip.value))
+                .. equip.value)
         end
 
         if equip.value > 0
@@ -168,7 +168,7 @@ function best_inventory_equip(extra_item)
     if debug_channel("items") then
         if best_equip then
             dsay("Best equip set: " .. equip_set_string(best_equip)
-                .. "; value: " .. tostring(best_equip.value))
+                .. "; value: " .. best_equip.value)
         else
             dsay("No best equip set found")
         end
@@ -259,7 +259,7 @@ function best_equip_set()
         if worst_value and worst_value <= 0 then
             if debug_channel("items") then
                 dsay("Removing best equip set item " .. worst_item.name()
-                    .. " with value " .. tostring(worst_value))
+                    .. " with value " .. worst_value)
             end
 
             remove_equip_set_item(worst_item, equip)
@@ -270,7 +270,7 @@ function best_equip_set()
 
     if debug_channel("items") then
         dsay("Final best equip set: " .. equip_set_string(qw.best_equip)
-            .. "; value: " .. tostring(qw.best_equip.value))
+            .. "; value: " .. qw.best_equip.value)
     end
 
     c_persist.best_equip = {}

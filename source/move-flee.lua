@@ -35,9 +35,8 @@ function update_flee_positions()
         if (not state or state.safe)
                 and map_is_reachable_at(pos) then
             if debug_channel("flee") then
-                dsay("Adding flee position #"
-                    .. tostring(#qw.flee_positions + 1) .. " at "
-                    .. cell_string_from_map_position(pos))
+                dsay("Adding flee position #" .. #qw.flee_positions + 1
+                    .. " at " .. cell_string_from_map_position(pos))
             end
 
             table.insert(qw.flee_positions, pos)
@@ -136,10 +135,8 @@ function enemy_can_flee_attack(enemy, flee_dist)
         local props = { is_ranged = "ranged", reach_range = "reach",
             move_delay = "move delay" }
         dsay("Evaluating " .. monster_string(enemy, props)
-            .. " with a closing distance of "
-            .. tostring(closing_dist)
-            .. " compared to a distance gain of "
-            .. tostring(dist_gain))
+            .. " with a closing distance of " .. closing_dist
+            .. " compared to a distance gain of " .. dist_gain)
     end
 
     return closing_dist < dist_gain
@@ -183,7 +180,7 @@ function can_flee_to_destination(pos)
     if debug_channel("flee") then
         dsay("Evaluating flee position at "
             .. cell_string_from_map_position(pos) .. " with distance "
-            .. tostring(search.dist))
+            .. search.dist)
     end
 
     local extreme_threat = have_extreme_threat()
@@ -196,7 +193,7 @@ function can_flee_to_destination(pos)
         if flee_attackers > 2 or not extreme_threat and flee_attackers > 0 then
             if debug_channel("flee") then
                 dsay("Not fleeing to " .. cell_string_from_map_position(pos)
-                    .. " due to "  .. tostring(flee_attackers)
+                    .. " due to "  .. flee_attackers
                     .. " or more attackers gaining distance")
             end
 

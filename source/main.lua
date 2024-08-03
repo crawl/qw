@@ -108,7 +108,7 @@ function run_qw()
 
     local memory_count = collectgarbage("count")
     if debug_channel("throttle") then
-        dsay("Memory count is " .. tostring(memory_count))
+        dsay("Memory count is " .. memory_count)
     end
 
     if qw.max_memory and memory_count > qw.max_memory then
@@ -116,7 +116,7 @@ function run_qw()
 
         if collectgarbage("count") > qw.max_memory then
             qw.abort = true
-            dsay("Memory usage above " .. tostring(qw.max_memory))
+            dsay("Memory usage above " .. qw.max_memory)
             dsay("Aborting...")
             return
         end

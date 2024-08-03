@@ -68,7 +68,7 @@ end
 function stairs_state_string(state)
     return enum_string(state.feat, const.explore) .. "/"
         .. (state.safe and "safe" or "unsafe") .. "/"
-        .. "threat:" .. tostring(state.threat)
+        .. "threat:" .. state.threat
 end
 
 function update_stone_stairs(branch, depth, dir, num, state, force)

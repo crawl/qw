@@ -562,8 +562,8 @@ function make_level_range(branch, first, last)
             or last < 1
             or last > max_depth
             or first > last then
-        error("Invalid level range for " .. tostring(branch)
-            ..": " .. tostring(first) .. ", " .. tostring(last))
+        error("Invalid level range for " .. branch ..": " .. first .. ", "
+            .. last)
     end
 
     if first == 1 and last == max_depth then
@@ -835,7 +835,7 @@ function initialize_goals()
                 or plan == "Zig"
                 or plan == "Orb"
                 or plan == "Win") then
-            error("Invalid goal '" .. tostring(plan) .. "'.")
+            error("Invalid goal: " .. plan)
         end
 
         table.insert(goal_list, plan)
@@ -934,8 +934,7 @@ function set_goal(status, goal)
     if debug_channel("goals") then
         dsay("Goal status: " .. goal_status)
         if goal_branch then
-            dsay("Goal branch: " .. tostring(goal_branch)
-                .. ", depth: " .. tostring(goal_depth))
+            dsay("Goal branch: " .. goal_branch .. ", Depth: " .. goal_depth)
         end
     end
 end

@@ -49,12 +49,12 @@ end
 function test_radius_iter()
     dsay("Testing 3, 3 with radius 1")
     for pos in radius_iter({ x = 3, y = 3 }, 1) do
-        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
+        dsay("x: " .. pos.x .. ", y: " .. pos.y)
     end
 
     dsay("Testing const.origin with radius 3")
     for pos in radius_iter(const.origin, 3) do
-        dsay("x: " .. tostring(pos.x) .. ", y: " .. tostring(pos.y))
+        dsay("x: " .. pos.x .. ", y: " .. pos.y)
     end
 end
 
@@ -252,7 +252,7 @@ function get_vars()
 end
 
 function pos_string(pos)
-    return tostring(pos.x) .. "," .. tostring(pos.y)
+    return pos.x .. "," .. pos.y
 end
 
 function los_pos_string(map_pos)
@@ -287,7 +287,7 @@ function monster_string(mons, props)
 
     local vals = {}
     for prop, name in pairs(props) do
-        table.insert(vals, name .. ":" .. tostring(mons[prop](mons)))
+        table.insert(vals, name .. ":" .. mons[prop](mons))
     end
     return mons:name() .. " (" .. table.concat(vals, "/") .. ") at "
         .. pos_string(mons:pos())
