@@ -116,7 +116,7 @@ function search_from(search, pos, current, is_deviation)
         return false
     end
 
-    if cur_deviations > 2 then
+    if cur_deviations > 4 then
         if debug_channel("move-all") then
             dsay("Too many deviation movements")
         end
@@ -164,7 +164,11 @@ end
 
 function do_move_search(search, current)
     local diff = position_difference(search.target, current)
-    if supdist(diff) <= search.min_dist then
+    local dist = supdist(diff)
+    if dist == 0
+            or search.min_dist > 0
+                and positions_can_melee(current, search.target,
+                    search.min_dist) then
         search.move = position_difference(search.path[2], search.center)
         return true
     end
@@ -263,13 +267,16 @@ function move_search(center, target, square_func, min_dist, cache)
         min_dist = 0
     end
 
-    if position_distance(center, target) <= min_dist then
+    if positions_equal(center, target)
+            or min_dist > 0
+                and positions_can_melee(center, target, min_dist) then
         return
     end
 
     if debug_channel("move-all") then
         dsay("Move search from " .. cell_string_from_position(center)
-            .. " to " .. cell_string_from_position(target))
+            .. " to " .. cell_string_from_position(target)
+            .. " with min distance " .. min_dist)
     end
 
     search = { center = center, target = target, square_func = square_func,
@@ -776,7 +783,11 @@ function distance_map_search_from(search, pos, current)
 end
 
 function do_distance_map_search(search, current)
-    if position_distance(search.target, current) <= search.min_dist then
+    local dist = position_distance(search.target, current)
+    if dist == 0
+            or search.min_dist > 0
+                and positions_can_melee(current, search.target,
+                    search.min_dist) then
         search.move = position_difference(search.path[2], search.center)
         return true
     end
@@ -804,7 +815,9 @@ function distance_map_search(center, target, square_func, min_dist,
         min_dist = 0
     end
 
-    if position_distance(center, target) <= min_dist then
+    if positions_equal(center, target)
+            or min_dist > 0
+                and positions_can_melee(center, target, min_dist) then
         return
     end
 

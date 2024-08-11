@@ -526,7 +526,7 @@ function Monster:melee_move_search(pos)
 end
 
 function Monster:melee_move_distance(pos)
-    if position_distance(self:pos(), pos) <= self:reach_range() then
+    if self:can_melee_at(pos) then
         return 0
     end
 
