@@ -448,3 +448,7 @@ function qw.stringify_table(tab, indent_level)
     res = res .. spaces .. "}"
     return res
 end
+
+function map_position(pos)
+    return position_sum(qw.map_pos, pos)
+end
