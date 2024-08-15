@@ -11,7 +11,7 @@ end
 
 function toggle_debug()
     qw.debug_mode = not qw.debug_mode
-    dsay((qw.debug_mode and "Enabling" or "Disabling") .. " debug mode")
+    dsay((qw.debug_mode and "Enabling" or "Disabling") .. " debug mode", false)
 end
 
 function debug_channel(channel)
@@ -21,22 +21,108 @@ end
 function toggle_debug_channel(channel)
     qw.debug_channels[channel] = not qw.debug_channels[channel]
     dsay((qw.debug_channels[channel] and "Enabling " or "Disabling ")
-      .. channel .. " debug channel")
+      .. channel .. " debug channel", false)
 end
 
 function disable_all_debug_channels()
-    dsay("Disabling all debug channels")
+    dsay("Disabling all debug channels", false)
     qw.debug_channels = {}
 end
 
-function dsay(x, do_note)
-    -- Convert x to string to make debugging easier. We don't do this for say()
-    -- and note() so we can catch errors.
+function enable_debug_log()
+    if not qw.debug_log then
+        qw.debug_log = {}
+        dsay("Debug log enabled.", false)
+    else
+        dsay("Debug log already enabled.", false)
+    end
+
+    return
+end
+
+function disable_debug_log()
+    if qw.debug_log then
+        qw.debug_log = {}
+        dsay("Debug log disabled.")
+    else
+        dsay("Debug log already disabled.", false)
+    end
+
+    return
+end
+
+function print_debug_log(start, num)
+    if not qw.debug_log then
+        dsay("Debug log not enabled")
+        return
+    end
+
+    if not start then
+        start = 1
+    end
+
+    if not num then
+        num = 100
+    end
+
+    for i, msg in ipairs(qw.debug_log) do
+        if i > num then
+            return
+        end
+
+        dsay(msg, false)
+    end
+end
+
+function write_debug_log(file, overwrite)
+    if not io then
+        error("No os library available. Crawl must be built with the make "
+            .. "option 'EXTERNAL_FLAGS_L=-DCLUA_UNRESTRICTED_LIBS' in order "
+            .. "to use this function")
+    end
+
+    if not qw.debug_log then
+        dsay("Debug log not enabled")
+        return
+    end
+
+    if not file then
+        file = "qw-log.txt"
+    end
+
+    local fh, err, code = io.open(file, overwrite and "w" or "a")
+    if not fh then
+        error("Unable to open file '" .. file .. "': " .. err)
+        return
+    end
+
+    local line_count = 0
+    for _, msg in ipairs(qw.debug_log) do
+        fh:write(msg .. "\n")
+        line_count = line_count + 1
+    end
+
+    fh:close()
+    dsay("Wrote " .. line_count .. " lines to " .. file, false)
+end
+
+function dsay(x, debug_log, do_note)
+    if debug_log == nil then
+        debug_log = true
+    end
+
+    -- Convert x to string to make debugging easier. We don't do this for
+    -- say() and note() so we can catch errors.
     local str
     if type(x) == "table" then
         str = qw.stringify_table(x)
     else
         str = qw.stringify(x)
+    end
+
+    if debug_log and qw.debug_log then
+        table.insert(qw.debug_log, str)
+        return
     end
 
     crawl.mpr(qw_message(str, true))
@@ -296,12 +382,12 @@ end
 function toggle_throttle()
     qw.coroutine_throttle = not qw.coroutine_throttle
     dsay((qw.coroutine_throttle and "Enabling" or "Disabling")
-      .. " coroutine throttle")
+      .. " coroutine throttle", false)
 end
 
 function toggle_delay()
     qw.delayed = not qw.delayed
-    dsay((qw.delayed and "Enabling" or "Disabling") .. " action delay")
+    dsay((qw.delayed and "Enabling" or "Disabling") .. " action delay", false)
 end
 
 function reset_coroutine()
@@ -316,7 +402,7 @@ end
 function toggle_single_step()
     qw.single_step = not qw.single_step
     dsay((qw.single_step and "Enabling" or "Disabling")
-      .. " single action steps.")
+      .. " single action steps.", false)
 end
 
 function qw.stringify(x)
