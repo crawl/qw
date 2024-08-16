@@ -482,17 +482,15 @@ function Monster:can_melee_at(pos)
     if not self.props.can_melee_at then
         self.props.can_melee_at = {}
     end
-    if not self.props.can_melee_at[pos.x] then
-        self.props.can_melee_at[pos.x] = {}
+
+    local hash = hash_position(pos)
+    if self.props.can_melee_at[hash] ~= nil then
+        return self.props.can_melee_at[hash]
     end
 
-    if self.props.can_melee_at[pos.x][pos.y] ~= nil then
-        return self.props.can_melee_at[pos.x][pos.y]
-    end
-
-    local can_melee = positions_can_melee(self:pos(), pos, self:reach_range())
-    self.props.can_melee_at[pos.x][pos.y] = can_melee
-    return can_melee
+    local result = positions_can_melee(self:pos(), pos, self:reach_range())
+    self.props.can_melee_at[hash] = result
+    return result
 end
 
 function Monster:can_melee_player()
@@ -503,16 +501,14 @@ function Monster:melee_move_search(pos)
     if not self.props.melee_move_search then
         self.props.melee_move_search = {}
     end
-    if not self.props.melee_move_search[pos.x] then
-        self.props.melee_move_search[pos.x] = {}
-    end
 
-    if self.props.melee_move_search[pos.x][pos.y] ~= nil then
-        return self.props.melee_move_search[pos.x][pos.y]
+    local hash = hash_position(pos)
+    if self.props.melee_move_search[hash] ~= nil then
+        return self.props.melee_move_search[hash]
     end
 
     if not self:can_seek(true) then
-        self.props.melee_move_search[pos.x][pos.y] = false
+        self.props.melee_move_search[hash] = false
         return false
     end
 
@@ -521,7 +517,10 @@ function Monster:melee_move_search(pos)
     end
     local result = move_search(self:pos(), pos, square_func,
         self:reach_range())
-    self.props.melee_move_search[pos.x][pos.y] = result
+    if result == nil then
+        result = false
+    end
+    self.props.melee_move_search[hash] = result
     return result
 end
 
