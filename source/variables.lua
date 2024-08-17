@@ -19,7 +19,6 @@ local good_gods
 
 local goal_list
 local which_goal = 1
-local debug_goal
 local goal_status
 local goal_branch
 local goal_depth

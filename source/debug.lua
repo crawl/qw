@@ -329,7 +329,7 @@ function set_counter()
 end
 
 function override_goal(goal)
-    debug_goal = goal
+    qw.debug_goal = goal
     update_goal()
 end
 

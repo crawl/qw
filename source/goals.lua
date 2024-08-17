@@ -156,20 +156,20 @@ end
 function choose_goal()
     local next_goal, chosen_goal, normal_goal, last_completed
 
-    if debug_goal then
-        if debug_goal == "Normal" then
+    if qw.debug_goal then
+        if qw.debug_goal == "Normal" then
             normal_goal = goal_normal_next(false)
             if normal_goal then
-                chosen_goal = debug_goal
+                chosen_goal = qw.debug_goal
             else
-                last_completed = debug_goal
-                debug_goal = nil
+                last_completed = qw.debug_goal
+                qw.debug_goal = nil
             end
-        elseif goal_complete(debug_goal) then
-            last_completed = debug_goal
-            debug_goal = nil
+        elseif goal_complete(qw.debug_goal) then
+            last_completed = qw.debug_goal
+            qw.debug_goal = nil
         else
-            chosen_goal = debug_goal
+            chosen_goal = qw.debug_goal
         end
     end
 
