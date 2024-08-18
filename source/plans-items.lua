@@ -377,11 +377,7 @@ function want_cure_mutations()
                 or you.res_cold() < 3 and branch_soon("Coc"))
 end
 
-function get_enchantable_weapon(unknown)
-    if unknown == nil then
-        unknown = true
-    end
-
+function get_enchantable_weapon(known_scroll)
     local best_equip = best_equip_set()
     local slay_value = linear_property_value("Slay")
     local enchantable_weapon
@@ -394,14 +390,16 @@ function get_enchantable_weapon(unknown)
                 best_equip = equip
             end
 
-            if unknown then
-                enchantable_weapon = weapon
-            end
+            enchantable_weapon = weapon
         end
     end
 
     if not best_equip then
-        return enchantable_weapon
+        if known_scroll then
+            return
+        else
+            return enchantable_weapon
+        end
     end
 
     -- Because of Coglins, we want to find the best of what may be two
@@ -412,11 +410,7 @@ function get_enchantable_weapon(unknown)
         end)
 end
 
-function get_brandable_weapon(unknown)
-    if unknown == nil then
-        unknown = true
-    end
-
+function get_brandable_weapon(known_scroll)
     local best_equip = best_equip_set()
     if not best_equip or not best_equip.weapon then
         return
@@ -428,7 +422,7 @@ function get_brandable_weapon(unknown)
                 and not item.artefact
                 and not weapon_brand_is_great(item)
         end)
-    if not unknown then
+    if known_scroll then
         return best_weapon
     end
 
@@ -490,11 +484,7 @@ function body_armour_is_good_to_enchant(armour)
     end
 end
 
-function get_enchantable_armour(scroll_unknown)
-    if scroll_unknown == nil then
-        scroll_unknown = true
-    end
-
+function get_enchantable_armour(known_scroll)
     local best_equip = best_equip_set()
     local ac_value = linear_property_value("AC")
     local fallback_armour, body_armour
@@ -531,7 +521,7 @@ function get_enchantable_armour(scroll_unknown)
         return shield
     end
 
-    if not unknown then
+    if known_scroll then
         return
     end
 
@@ -555,18 +545,24 @@ function plan_use_good_consumables()
                     and not destroys_items_at(const.origin) then
                 read_scroll(item)
                 return true
-            elseif item.name():find("enchant weapon")
-                    and get_enchantable_weapon(false) then
-                read_scroll(item)
-                return true
-            elseif item.name():find("brand weapon")
-                    and get_brandable_weapon(false) then
-                read_scroll(item)
-                return true
-            elseif item.name():find("enchant armour")
-                    and get_enchantable_armour(false) then
-                read_scroll(item)
-                return true
+            elseif item.name():find("enchant weapon") then
+                qw.enchant_weapon = get_enchantable_weapon(true)
+                if qw.enchant_weapon then
+                    read_scroll(item)
+                    return true
+                end
+            elseif item.name():find("brand weapon") then
+                qw.brand_weapon = get_brandable_weapon(true)
+                if qw.brand_weapon then
+                    read_scroll(item)
+                    return true
+                end
+            elseif item.name():find("enchant armour") then
+                qw.enchant_armour = get_enchantable_armour(true)
+                if qw.enchant_armour then
+                    read_scroll(item)
+                    return true
+                end
             end
         elseif drink_ok and item.class(true) == "potion" then
             if item.name():find("experience") then
@@ -871,7 +867,14 @@ function c_choose_identify()
 end
 
 function c_choose_brand_weapon()
-    local weapon = get_brandable_weapon()
+    local weapon
+    if qw.brand_weapon then
+        weapon = qw.brand_weapon
+        qw.brand_weapon = nil
+    else
+        weapon = get_brandable_weapon()
+    end
+
     if weapon then
         say("BRANDING " .. weapon:name() .. ".")
         return item_letter(weapon)
@@ -879,7 +882,14 @@ function c_choose_brand_weapon()
 end
 
 function c_choose_enchant_weapon()
-    local weapon = get_enchantable_weapon()
+    local weapon
+    if qw.enchant_weapon then
+        weapon = qw.enchant_weapon
+        qw.enchant_weapon = nil
+    else
+        weapon = get_enchantable_weapon()
+    end
+
     if weapon then
         say("ENCHANTING " .. weapon:name() .. ".")
         return item_letter(weapon)
@@ -887,7 +897,14 @@ function c_choose_enchant_weapon()
 end
 
 function c_choose_enchant_armour()
-    local armour = get_enchantable_armour()
+    local armour
+    if qw.enchant_armour then
+        armour = qw.enchant_armour
+        qw.enchant_armour = nil
+    else
+        armour = get_enchantable_armour()
+    end
+
     if armour then
         say("ENCHANTING " .. armour:name() .. ".")
         return item_letter(armour)
