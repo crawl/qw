@@ -315,10 +315,8 @@ function plan_blinking()
     return false
 end
 
-function can_drink_heal_wounds()
-    if not can_drink()
-            or not find_item("potion", "heal wounds")
-            or you.mutation("no potion heal") > 1 then
+function can_drink_heal_potions()
+    if not can_drink() or you.mutation("no potion heal") > 1 then
         return false
     end
 
@@ -339,10 +337,15 @@ function heal_general()
         return use_ely_healing()
     end
 
-    if can_drink_heal_wounds() then
+    if can_drink_heal_potions() then
         if drink_by_name("heal wounds") then
             return true
+        elseif you.race() == "Oni" and drink_by_name("curing") then
+            return true
         elseif not item_type_is_ided("potion", "heal wounds")
+                and quaff_unided_potion() then
+            return true
+        elseif you.race() == "Oni" and not item_type_is_ided("potion", "curing")
                 and quaff_unided_potion() then
             return true
         end
