@@ -331,7 +331,8 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    if best_result and result.dist > best_result.dist then
+    local best_ok = best_result and (use_unsafe or best_result.safe)
+    if best_ok and result.dist > best_result.dist then
         if debug_channel("move-all") then
             dsay("Distance of " .. result.dist .. " is worse than the current"
                 .. " best distance of " .. best_result.dist)
@@ -397,7 +398,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         end
     end
 
-    if not best_result
+    if not best_ok
             or compare_table_keys(result, best_result, move_keys,
                 reversed_move_keys) then
         return result
