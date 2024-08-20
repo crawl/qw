@@ -9,42 +9,6 @@ function go_downstairs(confirm)
     magic(">" .. (confirm and "Y" or ""))
 end
 
-function plan_go_to_unexplored_stairs()
-    if unable_to_travel()
-            or goal_travel.want_go
-            or not goal_travel.stairs_dir then
-        return false
-    end
-
-    if map_mode_search_attempts == 1 then
-        map_mode_search_attempts = 0
-        disable_autoexplore = false
-        return false
-    end
-
-    local key = dir_key(goal_travel.stairs_dir)
-    local hash = hash_position(qw.map_pos)
-    local searches = map_mode_searches[key]
-    local count = 1
-    while searches and searches[hash] and searches[hash][count] do
-        -- Trying to go one past this count lands us at the same destination as
-        -- the count, so there are no more accessible unexplored stairs to be
-        -- found from where we are, and we stop the search. The backtrack plan
-        -- can take over from here.
-        if searches[hash][count] == searches[hash][count + 1] then
-            return false
-        end
-
-        count = count + 1
-    end
-
-    map_mode_search_key = key
-    map_mode_search_hash = hash
-    map_mode_search_count = count
-    map_mode_search_attempts = 1
-    magic("X" .. key:rep(count) .. "\r")
-end
-
 function plan_go_to_transporter()
     if unable_to_travel()
             or not want_to_use_transporters()
@@ -54,11 +18,11 @@ function plan_go_to_transporter()
 
     local search_count
     if in_branch("Gauntlet") then
-        -- Maps can have functionally different types of transporter routes and
-        -- always start the player closest to a route of one type, so randomize
-        -- which of the starting transporters we choose. No Gauntlet map has
-        -- more than 3 starting transporters, and most have two, so use '>' 1
-        -- to 4 times to reduce bias.
+        -- Maps can have functionally different types of transporter routes
+        -- and always start the player closest to a route of one type, so
+        -- randomize which of the starting transporters we choose. No Gauntlet
+        -- map has more than 3 starting transporters, and most have two, so
+        -- use '>' 1 to 4 times to reduce bias.
         if transp_zone == 0 then
             search_count = crawl.roll_dice(1, 4)
         -- After the first transporter, always take the closest one. This is
@@ -150,11 +114,6 @@ function plan_unexplored_stairs_backtrack()
     reset_stone_stairs(where_branch, where_depth, goal_travel.stairs_dir)
     reset_stone_stairs(where_branch, next_depth, -goal_travel.stairs_dir)
     send_travel(where_branch, next_depth)
-    return true
-end
-
-function plan_go_to_upstairs()
-    magic("X<\r")
     return true
 end
 

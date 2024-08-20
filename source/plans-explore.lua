@@ -460,7 +460,6 @@ function set_plan_explore2()
         {plan_zig_leave_level, "zig_leave_level"},
         {plan_zig_go_to_stairs, "try_zig_go_to_stairs"},
         {plan_take_unexplored_stairs, "take_unexplored_stairs"},
-        {plan_go_to_unexplored_stairs, "try_go_to_unexplored_stairs"},
         {plan_move_towards_rune, "move_towards_rune"},
         {plan_go_to_orb, "try_go_to_orb"},
         {plan_go_command, "try_go_command"},

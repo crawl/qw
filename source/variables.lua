@@ -59,14 +59,6 @@ local exclusion_map
 local distance_maps_cache
 local distance_maps
 
-local level_map_mode_searches
-local map_mode_searches
-local map_mode_search_key
-local map_mode_search_hash
-local map_mode_search_zone
-local map_mode_search_count
-local map_mode_search_attempts = 0
-
 local transp_map = {}
 local transp_search_zone
 local transp_search_count

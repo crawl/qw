@@ -74,26 +74,10 @@ function update_waypoint(new_level)
     return new_waypoint
 end
 
-function record_map_mode_search(key, start_hash, count, end_hash)
-    if not map_mode_searches[key] then
-        map_mode_searches[key] = {}
-    end
-
-    if not map_mode_searches[key][start_hash] then
-        map_mode_searches[key][start_hash]  = {}
-    end
-
-    map_mode_searches[key][start_hash][count] = end_hash
-end
-
 function clear_map_cache(parity, full_clear)
     if debug_channel("map") then
         dsay((full_clear and "Full clearing" or "Clearing")
             .. " map cache for slot " .. parity)
-    end
-
-    if full_clear then
-        map_mode_searches_cache[parity] = {}
     end
 
     feature_map_positions_cache[parity] = {}
@@ -738,7 +722,6 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
         distance_maps = distance_maps_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_map_positions = item_map_positions_cache[cache_parity]
-        map_mode_searches = map_mode_searches_cache[cache_parity]
     end
 end
 
@@ -825,23 +808,6 @@ function update_seen_items()
     c_persist.seen_items[where] = seen_items
 end
 
-function update_map_mode_search()
-    if not map_mode_search_key then
-        return
-    end
-
-    local feat = view.feature_at(0, 0)
-    -- We assume we've landed on the next feature in our current "X<key>"
-    -- cycle because the feature at our position uses that key.
-    if feature_uses_map_key(map_mode_search_key, feat) then
-        record_map_mode_search(map_mode_search_key, map_mode_search_hash,
-            map_mode_search_count, hash_position(qw.map_pos))
-    end
-    map_mode_search_key = nil
-    map_mode_search_hash = nil
-    map_mode_search_count = nil
-end
-
 function update_adjacent_floor(queue)
     for _, cell in ipairs(queue) do
         if map_is_traversable_at(cell.pos) then
@@ -876,7 +842,6 @@ function update_map(new_level, full_clear)
 
     update_distance_maps(cell_queue, map_reset)
 
-    update_map_mode_search()
     update_transporters()
 end
 

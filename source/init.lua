@@ -134,7 +134,6 @@ function initialize()
         distance_maps_cache = {}
         feature_map_positions_cache = {}
         item_map_positions_cache = {}
-        map_mode_searches_cache = {}
 
         clear_map_cache(1, true)
         clear_map_cache(2, true)

@@ -143,14 +143,7 @@ function reset_stone_stairs(branch, depth, dir)
     update_all_stone_stairs(branch, depth, dir,
         { feat = const.explore.reachable }, true)
 
-    local level = make_level(branch, depth)
-    if level == where then
-        map_mode_searches[dir_key(dir)] = nil
-    elseif level == previous_where then
-        map_mode_searches_cache[3 - cache_parity][dir_key(dir)] = nil
-    end
-
-    if where ~= level then
+    if where ~= make_level(branch, depth) then
         reset_autoexplore(branch, depth)
     end
 end

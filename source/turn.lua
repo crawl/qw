@@ -203,6 +203,4 @@ function turn_update(force)
     end
 
     choose_tactical_step()
-
-    map_mode_search_attempts = 0
 end
