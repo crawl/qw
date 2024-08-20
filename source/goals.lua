@@ -852,7 +852,7 @@ function update_goal()
     update_planning()
     update_goal_travel()
 
-    open_runed_doors = branch_is_temporary(where_branch)
+    qw.open_runed_doors = branch_is_temporary(where_branch)
         or goal_travel.open_runed_doors
 
     -- The branch we're planning to visit can affect equipment decisions.

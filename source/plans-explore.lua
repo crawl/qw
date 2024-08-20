@@ -103,7 +103,7 @@ end
 -- Open runed doors in Pan to get to the pan lord vault and open them on levels
 -- that are known to contain entrances to Pan if we intend to visit Pan.
 function plan_open_runed_doors()
-    if not open_runed_doors then
+    if not qw.open_runed_doors then
         return false
     end
 

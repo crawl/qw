@@ -599,7 +599,8 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
 
         if supdist(pos) <= const.gxm
                 and map_is_reachable_at(pos, allow_unsafe)
-                and (open_runed_doors and map_has_adjacent_runed_doors_at(pos)
+                and (qw.open_runed_doors
+                        and map_has_adjacent_runed_doors_at(pos)
                     or map_has_adjacent_unseen_at(pos)) then
             return best_move_towards(pos, qw.map_pos, allow_unsafe)
         end

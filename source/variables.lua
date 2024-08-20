@@ -42,7 +42,6 @@ local where_depth
 local permanent_flight
 local gained_permanent_flight
 local temporary_flight
-local open_runed_doors
 local permanent_bazaar
 local dislike_pan_level = false
 
