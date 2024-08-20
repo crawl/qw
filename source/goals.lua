@@ -887,7 +887,6 @@ function next_exploration_depth(branch, min_depth, max_depth)
 
     -- The earliest depth that either lacks autoexplore or doesn't have all
     -- stairs reachable.
-    local branch_max = branch_depth(branch)
     for d = min_depth, max_depth do
         if not autoexplored_level(branch, d) then
             return d
@@ -901,6 +900,14 @@ function next_exploration_depth(branch, min_depth, max_depth)
 
     if max_depth == branch_depth(branch) and not have_branch_runes(branch) then
         return max_depth
+    end
+end
+
+function next_exclusion_depth(branch, min_depth, max_depth)
+    for d = min_depth, max_depth do
+        if level_has_exclusions(branch, d) then
+            return d
+        end
     end
 end
 
@@ -939,7 +946,8 @@ function set_goal(status, goal)
     end
 end
 
-function reset_autoexplore(level)
+function reset_autoexplore(branch, depth)
+    local level = make_level(branch, depth)
     if c_persist.autoexplore[level] == const.autoexplore.needed then
         return
     end

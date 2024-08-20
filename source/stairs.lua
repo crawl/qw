@@ -151,7 +151,7 @@ function reset_stone_stairs(branch, depth, dir)
     end
 
     if where ~= level then
-        reset_autoexplore(level)
+        reset_autoexplore(branch, depth)
     end
 end
 

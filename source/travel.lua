@@ -218,7 +218,6 @@ function travel_opens_runed_doors(result)
                 and branch_found("Slime")
                 and not branch_found("Slime", const.explore.reachable) then
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
-        local level = make_level(result.branch, result.depth)
         return result.branch == parent
             and result.depth >= min_depth
             and result.depth <= max_depth
@@ -405,7 +404,6 @@ function finalize_travel_depth(result)
     local up_reachable = result.depth > 1
         and count_stairs(result.branch, result.depth, const.dir.up,
             const.explore.reachable) > 0
-    local finished
     if up_reachable then
         if finalize_depth_dir(result, const.dir.up) then
             return
@@ -425,8 +423,8 @@ function finalize_travel_depth(result)
     -- states for stairs going up and stairs on the level above going down.
     local finished
     if up_reachable
-            -- Don't reset up stairs if we still need the branch rune, since we
-            -- have specific plans for branch ends we may need to follow.
+            -- Don't reset up stairs if we still need the branch rune, since
+            -- we have specific plans for branch ends we may need to follow.
             and (have_branch_runes(result.branch)
                 or result.depth < branch_rune_depth(result.branch)) then
         reset_stone_stairs(result.branch, result.depth, const.dir.up)
@@ -456,15 +454,32 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
     end
 
     local result = travel_destination_search(dest_branch, dest_depth)
-    -- We were unable enter the branch in result.stop_branch, so figure out the
-    -- next best travel location in the branch's parent.
+    -- We were unable enter the branch in result.stop_branch, so figure out
+    -- the next best travel location in the branch's parent.
     if result.stop_branch
-            and not branch_found(result.stop_branch, const.explore.reachable) then
+            and not branch_found(result.stop_branch,
+                const.explore.reachable) then
         local parent, min_depth, max_depth = parent_branch(result.stop_branch)
         result.branch = parent
         result.depth = next_exploration_depth(parent, min_depth, max_depth)
         if not result.depth then
-            result.depth = min_depth
+            local depth = next_exclusion_depth(parent, min_depth, max_depth)
+            if depth then
+                -- We must wait until we've actually arrived at the target
+                -- level with an exclusions before we remove the exclusion and
+                -- re-trigger autoexplore. Otherwise a subsequent goal update
+                -- (e.g. after we arrive at the target level) may have us think
+                -- we don't need to do anything with the target level.
+                if where_branch == parent and where_depth == depth then
+                    remove_exclusions()
+                    reset_autoexplore(where_branch, where_depth)
+                end
+
+                result.depth = depth
+                return result
+            else
+                result.depth = min_depth
+            end
         end
     end
 

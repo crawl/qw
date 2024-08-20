@@ -667,7 +667,7 @@ function update_move_destination()
         if qw.move_reason == "unexplored"
                 and autoexplored_level(where_branch, where_depth)
                 and qw.position_is_safe then
-            reset_autoexplore(where)
+            reset_autoexplore(where_branch, where_depth)
         end
 
         clear = true

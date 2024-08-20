@@ -122,9 +122,9 @@ function plan_take_unexplored_stairs()
     end
 
     -- Ensure that we autoexplore any new area we arrive in, otherwise, if we
-    -- have completed autoexplore at least once, we may immediately leave once
-    -- we see we've found the last missing staircase.
-    reset_autoexplore(make_level(where_branch, where_depth + dir))
+    -- have completed autoexplore at least once, we may immediately leave
+    -- once we see we've found the last missing staircase.
+    reset_autoexplore(where_branch, where_depth + dir)
 
     if dir == const.dir.up then
         go_upstairs()
@@ -136,11 +136,11 @@ end
 
 -- Backtrack to the previous level if we're trying to explore stairs on a
 -- destination level yet have no further accessible unexplored stairs. We
--- require a travel stairs search direction to know whether to attempt this and
--- what direction we should backtrack. Stairs are reset in the relevant
+-- require a travel stairs search direction to know whether to attempt this
+-- and what direction we should backtrack. Stairs are reset in the relevant
 -- directions on both levels so after we explore the pair of stairs used to
--- return to the previous level, we'll take a different set of stairs from that
--- level via a new travel stairs search direction.
+-- return to the previous level, we'll take a different set of stairs from
+-- that level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
     if unable_to_travel() or goal_travel.want_go or not goal_travel.stairs_dir then
         return false

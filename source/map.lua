@@ -950,8 +950,11 @@ function get_item_map_positions(item_names, radius)
 end
 
 function remove_exclusions(record_only)
-    if record_only or not c_persist.exclusions[where] then
+    if record_only then
         c_persist.exclusions[where] = nil
+    end
+
+    if not c_persist.exclusions[where] then
         return
     end
 
