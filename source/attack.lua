@@ -491,7 +491,7 @@ function get_throwing_target_func()
         return target
     end
 
-    if have_moderate_threat()
+    if not have_moderate_threat()
             and qw.incoming_monsters_turn == you.turns() then
         return
     end

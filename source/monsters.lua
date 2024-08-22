@@ -11,12 +11,11 @@ const.attitude = {
     "friendly"
 }
 
-const.moderate_threat = 5
 const.high_threat = 10
 const.extreme_threat = 20
 
 function moderate_threat_level()
-    return const.moderate_threat - max(0, min(3, 10 - you.xl()))
+    return 2
 end
 
 function high_threat_level()
