@@ -115,8 +115,9 @@ function plan_flee()
         qw.last_flee_turn = you.turns()
     end
 
+    local cell_string = cell_string_from_map_position(result.dest)
     if move_to(result.move) then
-        say("FLEEEEING towards " .. cell_string_from_map_position(result.dest))
+        say("FLEEEEING towards " .. cell_string)
         return true
     end
 
