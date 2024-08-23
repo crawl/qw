@@ -403,11 +403,7 @@ function Monster:is_ranged(ignore_reach)
     return self:property_memo_args("is_ranged",
         function()
             return self.minfo:has_known_ranged_attack()
-                    and not (ignore_reach and self:reach_range() > 1
-                        or self:name():find("kraken")
-                        or self:name() == "lost soul")
-                -- We want to treat these as ranged.
-                or self:name() == "obsidian statue"
+                and not (ignore_reach and self:reach_range() > 1)
         end, ignore_reach)
 end
 
