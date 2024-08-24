@@ -52,8 +52,13 @@ function dangerous_hydra_distance(ignore_weapon)
 end
 
 function best_hydra_swap_weapon()
+    local cur_equip = inventory_equip(const.inventory.equipped)
+    local cur_weapons
+    if cur_equip and cur_equip.weapon then
+        cur_weapons = { weapon = cur_equip.weapon }
+    end
+
     local best_weapon, best_value
-    local cur_weapons = inventory_equip(const.inventory.equipped).weapon
     for weapon in inventory_slot_iter("weapon") do
         if weapon.equipped or equip_letter_for_item(weapon, "weapon") then
             local value = equip_value(weapon, true, cur_weapons, "hydra")
