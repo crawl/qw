@@ -72,13 +72,19 @@ function want_to_flee()
             return false
         end
 
-        return not buffed() and reason_to_rest(90)
+        return qw.have_orb or not buffed() and reason_to_rest(90)
     end
 
     -- Don't flee from a place were we'll be opportunity attacked, and don't
     -- flee when we have allies close by.
-    if check_following_melee_enemies(2) or check_allies(3) then
+    if check_following_melee_enemies(2)
+            or check_allies(3) and not qw.have_orb then
         return false
+    end
+
+    -- We generally prefer fleeing over fighting on the orb run.
+    if qw.have_orb then
+        return true
     end
 
     -- When we're at low XL and trying to go up, we want to flee to known
