@@ -419,7 +419,7 @@ function monster_in_list(mons, mons_list)
     return false
 end
 
-function assess_enemies_func(duration_level, radius, filter)
+function assess_enemies_func(duration_level, radius, filter, ignore_hp)
     if not radius then
         radius = qw.los_radius
     end
@@ -433,7 +433,7 @@ function assess_enemies_func(duration_level, radius, filter)
         local ranged = enemy:is_ranged(true)
         if (not filter or filter(enemy))
                 and (ranged or enemy:has_path_to_melee_player()) then
-            local threat = enemy:threat(duration_level)
+            local threat = enemy:threat(duration_level, not ignore_hp)
             result.threat = result.threat + threat
             if ranged then
                 result.ranged_threat = result.ranged_threat + threat
@@ -443,40 +443,29 @@ function assess_enemies_func(duration_level, radius, filter)
                 result.scary_enemy = enemy
             end
 
-            result.move_delay = result.move_delay + enemy:move_delay() * threat
             result.count = result.count + 1
         end
     end
-    result.move_delay = result.move_delay / result.threat
 
     return result
 end
 
-function assess_enemies(duration_level, radius, filter)
+function assess_enemies(duration_level, radius, filter, ignore_hp)
     return turn_memo_args("assess_enemies",
         function()
-            return assess_enemies_func(duration_level, radius, filter)
-        end, duration_level, radius, filter)
+            return assess_enemies_func(duration_level, radius,
+                filter, ignore_hp)
+        end, duration_level, radius, filter, ignore_hp)
 end
 
-function have_moderate_threat(duration_level)
-    local enemies = assess_enemies(duration_level)
+function have_moderate_threat(duration_level, ignore_hp)
+    local enemies = assess_enemies(duration_level, nil, nil, ignore_hp)
     return enemies.threat >= moderate_threat_level()
 end
 
-function have_high_threat(duration_level)
-    local enemies = assess_enemies(duration_level)
-    return enemies.threat >= high_threat_level()
-end
-
-function have_extreme_threat(duration_level)
-    local enemies = assess_enemies(duration_level)
+function have_extreme_threat(duration_level, ignore_hp)
+    local enemies = assess_enemies(duration_level, nil, nil, ignore_hp)
     return enemies.threat >= extreme_threat_level()
-end
-
-function get_scary_enemy(duration_level)
-    local enemies = assess_enemies(duration_level)
-    return enemies.scary_enemy
 end
 
 function mons_res_holy_check(mons)
@@ -489,7 +478,7 @@ end
 
 function assess_hell_enemies(radius)
     if not in_hell_branch() then
-        return { threat = 0, ranged_threat, count = 0 }
+        return { threat = 0, ranged_threat = 0, count = 0 }
     end
 
     -- We're most concerned with hell monsters that aren't vulnerable to any
@@ -505,7 +494,7 @@ function assess_hell_enemies(radius)
     local filter = function(mons)
         return not have_holy_wrath or mons:res_holy() > 0
     end
-    return assess_enemies(radius, const.duration.active, filter)
+    return assess_enemies(const.duration.active, radius, filter)
 end
 
 function check_enemies_func(radius, filter)
@@ -674,12 +663,16 @@ const.monster_resist_props = {
     ["rHoly"] = "res_holy",
 }
 
-function monster_threat(mons, duration_level)
+function monster_threat(mons, duration_level, consider_hp)
     if not duration_level then
         duration_level = const.duration.active
     end
 
-    local threat = mons.minfo:threat()
+    local threat = max(0.3, mons.minfo:threat())
+    if consider_hp then
+        threat = threat * mons:hp_fraction()
+    end
+
     local entry = scary_monsters[mons:short_name()]
     local player_xl = you.xl()
     if entry and player_xl < entry.xl
@@ -698,13 +691,27 @@ function monster_threat(mons, duration_level)
     end
 
     if duration_level >= const.duration.active then
+        -- (3/2)^3 for +50% speed & +50% damage & +50% HP.
+        local berserk_mult = 3.375
+        local haste_mult = 1.5
+        local might_mult = 1.5
+        local slow_mult = 2 / 3
+        -- If we have chaos, trust that chaos will also do some debuffing
+        -- eventually. Lower these multipliers so we don't use
+        -- abilities/consumables too much.
+        if primary_attack_has_chaos() then
+            berserk_mult = 4 / 3
+            haste_mult = 1.1
+            might_mult = 1.1
+            slow_mult = 0.9
+        end
+
         local mons_berserk = mons:is("berserk")
         threat = threat
-            -- (3/2)^3 for +50% speed & +50% damage & +50% HP.
-            * (mons_berserk and 3.375 or 1)
-            * (not mons_berserk and mons:is("strong") and 1.5 or 1)
-            * (not mons_berserk and mons:is("hasted") and 1.5 or 1)
-            * (mons:is("slowed") and 2 / 3 or 1)
+            * (mons_berserk and berserk_mult or 1)
+            * (not mons_berserk and mons:is("strong") and might_mult or 1)
+            * (not mons_berserk and mons:is("hasted") and haste_mult or 1)
+            * (mons:is("slowed") and slow_mult or 1)
     end
 
     local attack = get_attack(1)
@@ -730,7 +737,7 @@ function monster_threat(mons, duration_level)
 
     -- Another optimization: don't bother with this set of damage calculations
     -- if the durations don't apply.
-    if get_attack(1).uses_might
+    if attack.uses_might
             and (have_duration("berserk", duration_level)
                 or have_duration("might", duration_level)
                 or have_duration("weak", duration_level)) then

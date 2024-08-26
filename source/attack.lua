@@ -491,9 +491,12 @@ function get_throwing_target_func()
         return target
     end
 
-    if not have_moderate_threat()
-            and qw.incoming_monsters_turn == you.turns() then
-        return
+    if have_moderate_threat(const.duration.active, true)
+            or not qw.incoming_monsters then
+        local attack = get_secondary_throwing_attack()
+        if attack then
+            return best_ranged_attack_target(attack)
+        end
     end
 
     local attack = get_secondary_throwing_attack()
@@ -663,6 +666,23 @@ function initialize_ego_damage()
         ["vampirism"] = make_damage_func("rN", 0.6, 0, 0),
         ["holy wrath"] = make_damage_func("rHoly", 1, 0, 0.75),
     }
+end
+
+function primary_attack_has_chaos()
+    return turn_memo("primary_attack_has_chaos",
+        function()
+            local attack = get_attack(1)
+            if not attack.items then
+                return false
+            end
+
+            for _, item in ipairs(attack.items) do
+                if item.ego() == "chaos" then
+                    return true
+                end
+            end
+            return false
+        end)
 end
 
 function rated_attack_average_damage(mons, attack, duration_level)

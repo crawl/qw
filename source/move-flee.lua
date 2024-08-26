@@ -51,6 +51,16 @@ function check_following_melee_enemies(radius)
         end)
 end
 
+function want_to_flee_scary_enemy(duration)
+    local enemies = assess_enemies(duration, nil, nil, true)
+    local enemy = enemies.scary_enemy
+    if enemy and enemy:threat() >= 5
+            and enemy:name():find("slime creature")
+            and enemy:name() ~= "slime creature" then
+        return true
+    end
+end
+
 function want_to_flee()
     if not qw.can_flee_upstairs then
         return false
@@ -98,10 +108,7 @@ function want_to_flee()
         return true
     end
 
-    local enemy = get_scary_enemy(const.duration.available)
-    if enemy and enemy:threat(const.duration.available) >= 5
-            and enemy:name():find("slime creature")
-            and enemy:name() ~= "slime creature" then
+    if want_to_flee_scary_enemy(const.duration.ignore_buffs) then
         return true
     end
 

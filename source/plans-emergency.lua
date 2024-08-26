@@ -547,8 +547,8 @@ function want_to_cleansing_flame()
     end
 
     local result = assess_enemies(const.duration.active, 2,
-        function(mons) return mons:res_holy() <= 0 end)
-    if result.scary_enemy and not result.scary_enemy:player_can_attack(1)
+        function(mons) return mons:res_holy() <= 0 end, true)
+    if result.scary_enemy and not result.scary_enemy:player_attack_can_hit(1)
             or result.threat >= high_threat_level() and result.count >= 3 then
         return true
     end
@@ -592,12 +592,8 @@ function want_to_fiery_armour()
         return true
     end
 
-    local result = assess_enemies()
-    if result.scary_enemy or result.threat >= high_threat_level() then
-        return true
-    end
-
-    return false
+    local enemies = assess_enemies()
+    return enemies.scary_enemy or enemies.threat >= high_threat_level()
 end
 
 function want_to_apocalypse()
@@ -655,15 +651,11 @@ function want_to_teleport()
         return false
     end
 
-    local enemies = assess_enemies(const.duration.available)
-    if enemies.scary_enemy
-            and enemies.scary_enemy:threat(const.duration.available) >= 5
-            and enemies.scary_enemy:name():find("slime creature")
-            and enemies.scary_enemy:name() ~= "slime creature" then
+    if want_to_flee_scary_enemy(const.duration.available) then
         return true
     end
 
-    if enemies.threat >= extreme_threat_level() then
+    if have_extreme_threat() then
         return not will_fight_extreme_threat()
     end
 

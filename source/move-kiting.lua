@@ -70,13 +70,10 @@ function want_to_kite()
     qw.want_to_kite = false
     qw.want_to_kite_step = false
 
-    if hp_is_low(50) or you.confused() or in_branch("Abyss") then
-        return false
-    end
-
-    local enemies = assess_enemies(const.duration.ignore_buffs)
-    if enemies.threat < moderate_threat_level()
-            and not enemies.scary_enemy then
+    if hp_is_low(50)
+            or you.confused()
+            or in_branch("Abyss")
+            or not have_moderate_threat(const.duration.ignore_buffs) then
         return false
     end
 

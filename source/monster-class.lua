@@ -295,21 +295,28 @@ function Monster:ignores_player_projectiles()
         end)
 end
 
-function Monster:threat(duration_level)
+function Monster:threat(duration_level, consider_hp)
     return self:property_memo_args("threat",
         function()
-            return monster_threat(self, duration_level)
-        end, duration_level)
+            return monster_threat(self, duration_level, consider_hp)
+        end, consider_hp)
+end
+
+function Monster:hp_fraction()
+    return self:property_memo("hp_fraction",
+        function()
+            -- The scaling factor takes the midpoint hitpoint value for the
+            -- damage level.
+            return min(1,
+                max(0, (10 - 2 * self.minfo:damage_level() + 1) / 10))
+        end)
 end
 
 function Monster:hp()
     return self:property_memo("hp",
         function()
             local hp = self.minfo:max_hp():gsub(".-(%d+).*", "%1")
-            return tonumber(hp)
-                -- The scaling factor takes the midpoint hitpoint value for the
-                -- damage level.
-                * min(1, max(0, (10 - 2 * self.minfo:damage_level() + 1) / 10))
+            return tonumber(hp) * self:hp_fraction()
         end)
 end
 
