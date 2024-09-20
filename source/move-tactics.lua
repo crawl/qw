@@ -4,52 +4,47 @@
 function assess_square_enemies(a)
     local move_delay = player_move_delay()
     local best_dist = const.inf_dist
-    a.enemy_dist = 0
     a.followers = false
-    a.adjacent = 0
+    a.melee_count = 0
     a.ranged = 0
     a.unalert = 0
     a.longranged = 0
     for _, enemy in ipairs(qw.enemy_list) do
         local dist = enemy:melee_move_distance(a.pos)
-        local see_cell = cell_see_cell(a.pos, enemy:pos())
-        local ranged = enemy:is_ranged()
+        local see_cell = cell_see_cell(enemy:pos(), a.pos)
+        local ranged = enemy:is_ranged(true)
         local liquid_bound = enemy:is_liquid_bound()
 
         if dist < best_dist then
             best_dist = dist
         end
 
-        if dist == 1 then
-            a.adjacent = a.adjacent + 1
-
-            if not liquid_bound and not ranged then
-                a.followers = true
-            end
+        if dist == 0 then
+            a.melee_count = a.melee_count + 1
         end
 
-        if dist > 1
+        if dist > 0
                 and see_cell
-                and enemy:has_path_to_player()
                 and (ranged
-                    or dist == 2
+                    or dist == 1
+                        and enemy:has_path_to_melee_player()
                         and enemy:move_delay() < move_delay) then
             a.ranged = a.ranged + 1
         end
 
-        if dist > 1 and see_cell and enemy:is_unalert() then
+        if dist > 0 and see_cell and enemy:is_unalert() then
             a.unalert = a.unalert + 1
         end
 
-        if dist >= 4
+        if dist >= 3
                 and see_cell
                 and ranged
-                and enemy:has_path_to_player() then
+                and enemy:has_path_to_melee_player() then
             a.longranged = a.longranged + 1
         end
     end
 
-    a.enemy_dist = best_dist
+    a.enemy_move_dist = best_dist
 end
 
 function assess_square(pos)
@@ -69,24 +64,6 @@ function assess_square(pos)
         return a
     end
 
-    local in_water = in_water_at(pos)
-    a.sticky_fire_danger = 0
-    if not in_water and you.status("on fire") and you.res_fire() < 2 then
-        a.sticky_fire_danger = 2 - a.supdist
-    end
-
-    -- Avoid corners if possible.
-    a.cornerish = is_cornerish_at(pos)
-
-    -- Is the wall next to us dangerous?
-    a.bad_walls = count_adjacent_slimy_walls_at(pos)
-
-    -- Will we fumble if we try to attack from this square?
-    a.fumble = not using_ranged_weapon() and in_water and intrinsic_fumble()
-
-    -- Will we be slow if we move into this square?
-    a.slow = in_water and not intrinsic_amphibious()
-
     -- Is the square safe to step in? (checks traps & clouds)
     a.safe = is_safe_at(pos)
 
@@ -94,62 +71,58 @@ function assess_square(pos)
     -- if monsters are around.
     a.cloud_dangerous = cloud_is_dangerous_at(pos)
 
+    a.dangerous_tree_count = qw.awaken_forest and count_trees_at(pos) or 0
+
     a.retreat_dist = retreat_distance_at(pos)
+
+    a.kite = is_kite_step(a.pos)
+
+    local in_water = in_water_at(pos)
+    a.sticky_fire_danger = 0
+    if not in_water and you.status("on fire") and you.res_fire() < 2 then
+        a.sticky_fire_danger = 2 - a.supdist
+    end
+
+    a.frost_wall = qw.creeping_frost_count > 0
+        and is_adjacent_solid_wall_at(pos)
+
+    a.slimy_wall_count = count_slimy_walls_at(pos)
+
+    -- Will we fumble if we try to attack from this square?
+    a.fumble = not using_ranged_weapon() and in_water and intrinsic_fumble()
+
+    -- Will we be slow if we move into this square?
+    a.slow = in_water and not intrinsic_amphibious()
 
     -- Count various classes of monsters from the enemy list.
     assess_square_enemies(a, pos)
+
+    -- Avoid corners if possible.
+    a.cornerish = is_cornerish_at(pos)
 
     return a
 end
 
 -- returns a string explaining why moving a1->a2 is preferable to not moving
 -- possibilities are:
---   sticky fire - moving to put out sticky fire
---   cloud       - stepping out of harmful cloud
---   wall        - stepping away from a slimy wall
---   water       - stepping out of shallow water when it would cause fumbling
---   kiting      - kiting slower monsters with a reaching or ranged weapon
---   retreating  - retreating to a better defensive position
---   hiding      - moving out of sight of alert ranged enemies at distance >= 4
---   stealth     - moving out of sight of sleeping or wandering monsters
---   outnumbered - stepping away from adjacent and/or ranged monsters
+--   sticky fire    - moving to put out sticky fire
+--   cloud          - stepping out of harmful cloud
+--   kiting         - kiting slower monsters with a reaching or ranged weapon
+--   retreating     - retreating to a better defensive position
 function step_reason(a1, a2)
-    local bad_form = in_bad_form()
+    -- If we step away from dangerous things that don't go away fairly quickly
+    -- (or at all), we want to be guaranteed to have a monster follow us so
+    -- that we can attack directly at the new position.
+    local can_step_away = qw.incoming_monsters
+        and (a1.melee_count > 0 or best_ranged_target())
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
         return
     elseif a2.sticky_fire_danger < a1.sticky_fire_danger then
         return "sticky fire"
-    elseif (a2.fumble or a2.slow or a2.bad_walls > 0) and not a1.cloud_dangerous then
-        return
     -- We've already required that a2 is safe.
     elseif a1.cloud_dangerous then
         return "cloud"
-    elseif a1.fumble then
-        -- We require that we have some close threats we want to melee that
-        -- try to stay adjacent to us before we'll try to move out of water.
-        -- We also require that we are no worse in at least one of ranged
-        -- threats or enemy distance at the new position.
-        if (not get_ranged_target() and a1.followers)
-                and (a2.ranged <= a1.ranged
-                    or a2.enemy_dist <= a1.enemy_dist) then
-            return "water"
-        else
-            return
-        end
-    elseif a1.bad_walls > 0 then
-        -- We move away from bad walls if we're using an attack affected by
-        -- the walls. We also use the same additional consideration or ranged
-        -- threat and distance as used for water.
-        local target = get_ranged_target()
-        if (not (target and target.attack.type == const.attack.evoke)
-                and a1.followers)
-                and (a2.ranged <= a1.ranged
-                    or a2.enemy_dist <= a1.enemy_dist) then
-            return "wall"
-        else
-            return
-        end
-    elseif is_kite_step(a2.pos) then
+    elseif a2.kite then
         return "kiting"
     -- If we're either not kiting or we wanted to kite step but couldn't, it's
     -- ok to retreat. We don't want to retreat if we should be doing a kiting
@@ -157,105 +130,17 @@ function step_reason(a1, a2)
     elseif (not want_to_kite() or want_to_kite_step())
             and a2.retreat_dist < a1.retreat_dist then
         return "retreating"
-    -- If we have retreated to our retreat position or if we want to kite, we
-    -- shouldn't try the step types below. For kiting, it's ok to try the steps
-    -- below if we wanted to kite step but couldn't.
-    elseif a1.retreat_dist == 0
-            or want_to_kite() and not want_to_kite_step() then
-        return
-    elseif not using_ranged_weapon()
-            and not want_to_move_to_abyss_objective()
-            and not a1.near_ally
-            and a2.ranged == 0
-            and a2.adjacent == 0
-            and a1.longranged > 0 then
-        return "hiding"
-    elseif not using_ranged_weapon()
-            and not want_to_move_to_abyss_objective()
-            and not a1.near_ally
-            and a2.ranged == 0
-            and a2.adjacent == 0
-            and a2.unalert < a1.unalert then
-        return "stealth"
-    elseif not using_cleave()
-            and not using_ranged_weapon()
-            and a1.adjacent > 1
-            and a2.adjacent + a2.ranged <= a1.adjacent + a1.ranged - 2
-            -- We also need to be sure that any monsters we're stepping away
-            -- from can eventually reach us, otherwise we'll be stuck in a loop
-            -- constantly stepping away and then towards them.
-            and qw.incoming_monsters_turn == you.turns() then
-        return "outnumbered"
     end
 end
 
--- Determines whether moving a0->a2 is an improvement over a0->a1 assumes that
--- these two moves have already been determined to be better than not moving,
--- with given reasons
-function step_improvement(best_reason, reason, a1, a2)
-    if reason == "sticky fire"
-            and (best_reason ~= "sticky fire"
-                or a2.sticky_fire_danger < a1.sticky_fire_danger) then
-        return true
-    elseif best_reason == "sticky fire"
-            and (reason ~= "sticky fire"
-                or a2.sticky_fire_danger > a1.sticky_fire_danger) then
-        return false
-    elseif reason == "cloud" and best_reason ~= "cloud" then
-        return true
-    elseif best_reason == "cloud" and reason ~= "cloud" then
-        return false
-    elseif reason == "wall"
-            and (best_reason ~= "wall"
-                or a2.bad_walls < a1.bad_walls) then
-        return true
-    elseif best_reason == "wall"
-            and (reason ~= "wall"
-                or a2.bad_walls > a1.bad_walls) then
-        return false
-    elseif reason == "water" and best_reason ~= "water" then
-        return true
-    elseif best_reason == "water" and reason ~= "water" then
-        return false
-    elseif reason == "kiting" and best_reason ~= "kiting" then
-        return true
-    elseif best_reason == "kiting" and reason ~= "kiting" then
-        return false
-    elseif reason == "retreating"
-            and (best_reason ~= "retreating"
-                or a2.retreat_dist < a1.retreat_dist
-                or a2.retreat_dist == a1.retreat_dist
-                    and a2.enemy_dist > a1.enemy_dist) then
-        return true
-    elseif best_reason == "retreating"
-            and (reason ~= "retreating"
-                or a2.retreat_dist > a1.retreat_dist
-                or a2.retreat_dist == a1.retreat_dist
-                    and a2.enemy_dist < a1.enemy_dist) then
-        return false
-    elseif a2.adjacent + a2.ranged < a1.adjacent + a1.ranged then
-        return true
-    elseif a2.adjacent + a2.ranged > a1.adjacent + a1.ranged then
-        return false
-    elseif want_to_be_surrounded() and a2.ranged < a1.ranged then
-        return true
-    elseif want_to_be_surrounded() and a2.ranged > a1.ranged then
-        return false
-    elseif a2.adjacent + a2.ranged == 0 and a2.unalert < a1.unalert then
-        return true
-    elseif a2.adjacent + a2.ranged == 0 and a2.unalert > a1.unalert then
-        return false
-    elseif a2.enemy_dist < a1.enemy_dist then
-        return true
-    elseif a2.enemy_dist > a1.enemy_dist then
-        return false
-    elseif a1.cornerish and not a2.cornerish then
-        return true
-    else
-        return false
-    end
-end
-
+local step_keys = { "sticky_fire_danger", "cloud_dangerous",
+    "dangerous_tree_count", "kite", "retreat_dist", "fumble", "frost_wall",
+    "slimy_wall_count", "slow", "near_ally", "adjacent", "ranged", "unalert",
+    "enemy_move_dist", "cornerish" }
+local rev_step_keys = { "sticky_fire_danger", "cloud_dangerous",
+    "dangerous_tree_count", "retreat_dist", "fumble", "frost_wall",
+    "slimy_wall_count", "slow", "near_ally", "adjacent", "ranged", "unalert",
+    "cornerish" }
 function choose_tactical_step()
     qw.tactical_step = nil
     qw.tactical_reason = nil
@@ -277,13 +162,10 @@ function choose_tactical_step()
 
     local a0 = assess_square(const.origin)
     local danger = check_enemies(3)
-    if not a0.cloud_dangerous
-            and a0.sticky_fire_danger == 0
-            and not (a0.fumble and danger)
-            and not (a0.bad_walls > 0 and danger)
+    if a0.sticky_fire_danger == 0
+            and not a0.cloud_dangerous
             and not want_to_kite()
-            and a0.retreat_dist == 0
-            and (a0.near_ally or a0.enemy_dist == const.inf_dist) then
+            and a0.retreat_dist == 0 then
         if debug_channel("move") then
             dsay("No tactical step chosen: current position is good enough")
         end
@@ -295,15 +177,15 @@ function choose_tactical_step()
     for pos in adjacent_iter(const.origin) do
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
-        if reason then
-            if besta == nil
-                    or step_improvement(best_reason, reason, besta, a) then
-                best_pos = pos
-                besta = a
-                best_reason = reason
-            end
+        -- If reason is defined, we have sufficient reason to move from a0->a.
+        if reason and (not besta
+                or compare_table_keys(a, besta, step_keys, rev_step_keys)) then
+            best_pos = pos
+            besta = a
+            best_reason = reason
         end
     end
+
     if besta then
         qw.tactical_step = best_pos
         qw.tactical_reason = best_reason

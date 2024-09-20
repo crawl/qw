@@ -147,7 +147,7 @@ function turn_update(force)
     end
 
     qw.base_corrosion = qw.base_corrosion
-        + 4 * count_adjacent_slimy_walls_at(const.origin)
+        + 4 * count_slimy_walls_at(const.origin)
 
     if you.flying() then
         gained_permanent_flight = permanent_flight == false

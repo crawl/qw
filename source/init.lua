@@ -155,7 +155,6 @@ function initialize()
     note_qw_data()
 
     calc_los_radius()
-    initialize_monster_map()
 
     initialize_goals()
     qw.starting_spell = get_starting_spell()

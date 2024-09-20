@@ -268,19 +268,74 @@ end
 
 -- Monsters here will be target with ranged attacks even if they're not the
 -- closest monster.
+--
+function Monster:has_spell(spell)
+    if self.props.spells then
+        return self.props.spells[spell]
+    end
+
+    local spells = {}
+    for _, sp in ipairs(self.minfo:spells()) do
+        spells[sp] = true
+    end
+
+    self.props.spells = spells
+    return spells[spell]
+end
+
+-- Monsters with these spells will be target with ranged attacks even if
+-- they're not the closest monster.
+local los_danger_spells = {
+    "Berserk Other", "Confusion Gaze", "Doom Howl", "Dream Dust",
+    "Entropic Weave", "Vitrifying Gaze", "Weakening Gaze", "Word of Recall"
+}
 function Monster:los_danger()
     return self:property_memo("los_danger",
         function()
-            local name = self:name()
-            return name == "doom hound" and self:is("ready_to_howl")
-                or name == "draconian shifter"
-                or name == "dream sheep"
-                or name == "entropy weaver"
-                or name == "glass eye"
-                or name == "guardian serpent"
-                or name == "hellion"
-                or name == "moth of wrath"
-                or name == "torpor snail"
+            if self:name() == "torpor snail" then
+                return true
+            end
+
+            for _, spell in ipairs(los_danger_spells) do
+                if self:has_spell(spell)
+                        and not (spell == "Weakening Gaze"
+                            and using_ranged_weapon())
+                        and not (spell == "Doom Howl"
+                            and not self:is("ready_to_howl")) then
+                    return true
+                end
+            end
+
+            return false
+        end)
+end
+
+local los_spells = {
+    "Airstrike", "Blink Allies Encircling", "Call Down Damnation",
+    "Call Down Lightning", "Drain Life", "Eruption", "Fire Storm", "Glaciate",
+    "Grasping Roots", "Lee's Rapid Deconstruction", "Ozocubu's Refrigeration",
+    "Polar Vortex", "Portal Projectile", "Pyroclastic Surge", "Smiting",
+    "Symbol of Torment", "Upheaval"
+}
+-- Monsters with a gaze or smite-targeted attack.
+function Monster:can_attack_los()
+    return self:property_memo("can_attack_los",
+        function()
+            if self:los_danger() then
+                return true
+            end
+
+            for _, spell in ipairs(los_spells) do
+                if self:has_spell(spell)
+                        and (spell ~= "Lee's Rapid Deconstruction"
+                            or you.race() == "Gargoyle")
+                        and (spell ~= "Drain Life"
+                            or you.res_draining() < 3) then
+                    return true
+                end
+            end
+
+            return false
         end)
 end
 
@@ -456,7 +511,6 @@ function Monster:can_seek(ignore_temporary)
     return self:property_memo_args("can_seek",
         function()
             if self:is_stationary()
-                    or self:is_unalert()
                     or self:name() == "wandering mushroom"
                     or self:name():find("vortex") then
                 return false
@@ -466,7 +520,8 @@ function Monster:can_seek(ignore_temporary)
                 return true
             end
 
-            return not (self:is_caught()
+            return not (self:is_unalert()
+                or self:is_caught()
                 or self:is_constricted()
                 or self:is("fleeing")
                 or self:status("paralysed")
@@ -553,26 +608,20 @@ function Monster:has_path_to_melee_player()
 end
 
 --[[
-Whether this monster has a path it can take to get adjacent to the player.
-This includes the case where the monster is already adjacent.
-
+Whether this monster has a path it can take to get to the player's.
 @treturn boolean True if the monster has such a path, false otherwise.
 ]]--
 function Monster:has_path_to_player()
     return self:property_memo("has_path_to_player",
         function()
-            if not self:can_seek() then
+            if not self:can_seek(true) then
                 return false
-            end
-
-            if position_distance(self:pos(), const.origin) == 1 then
-                return true
             end
 
             local square_func = function(pos)
                 return self:can_traverse(pos)
             end
-            return move_search(self:pos(), const.origin, square_func, 1)
+            return move_search(self:pos(), const.origin, square_func, 0)
         end)
 end
 

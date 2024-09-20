@@ -343,41 +343,71 @@ function monster_move_delay(mons)
     return delay
 end
 
-function initialize_monster_map()
-    qw.monster_map = {}
-    for x = -qw.los_radius, qw.los_radius do
-        qw.monster_map[x] = {}
+function check_enemy_spells(enemy)
+    if not qw.slow_aura and enemy:name() == "torpor snail" then
+        qw.slow_aura = true
+        return
+    end
+
+    if not qw.awaken_forest and enemy:has_spell("Awaken Forest") then
+        qw.awaken_forest = true
+    end
+
+    if enemy:has_spell("Creeping Frost") then
+        qw.creeping_frost_count = qw.creeping_frost_count + 1
+    end
+
+    if not qw.woodweal_enemy and enemy:has_spell("Woodweal") then
+        qw.woodweal_enemy = enemy
     end
 end
 
+function register_monster_at(pos)
+    local mon_info = monster.get_monster_at(pos.x, pos.y)
+    if not mon_info then
+        return
+    end
+
+    local mons = Monster:new(mon_info)
+    if mons:is_enemy() then
+        if not mons:is_safe() then
+            qw.all_enemies_safe = false
+        end
+
+        -- Whether a monster can reach our exact position, which means we're
+        -- guaranteed to be able to melee it if we move one square away.
+        if not qw.incoming_monsters
+                and not mons:is_summoned()
+                and mons:has_path_to_player() then
+            qw.incoming_monsters_turn = you.turns()
+            qw.incoming_monsters = true
+        end
+
+        check_enemy_spells(mons)
+
+        table.insert(qw.enemy_list, mons)
+    end
+
+    qw.monster_map[hash_position(pos)] = mons
+end
+
 function update_monsters()
+    qw.monster_map = {}
     qw.enemy_list = {}
-    qw.slow_aura = false
     qw.all_enemies_safe = true
+    qw.incoming_monsters = false
+
+    qw.slow_aura = false
+    qw.awaken_forest = false
+    qw.creeping_frost_count = 0
+    qw.woodweal_enemy = nil
 
     local closest_invis_pos
     local sinv = you.see_invisible()
 
     for pos in radius_iter(const.origin) do
         if you.see_cell_no_trans(pos.x, pos.y) then
-            local mon_info = monster.get_monster_at(pos.x, pos.y)
-            if mon_info then
-                local mons = Monster:new(mon_info)
-                qw.monster_map[pos.x][pos.y] = mons
-                if mons:is_enemy() then
-                    if not mons:is_safe() then
-                        qw.all_enemies_safe = false
-                    end
-
-                    if mons:name() == "torpor snail" then
-                        qw.slow_aura = true
-                    end
-
-                    table.insert(qw.enemy_list, mons)
-                end
-            else
-                qw.monster_map[pos.x][pos.y] = nil
-            end
+            register_monster_at(pos)
 
             if not sinv
                     and not closest_invis_pos
@@ -385,8 +415,6 @@ function update_monsters()
                     and you.see_cell_solid_see(pos.x, pos.y) then
                 closest_invis_pos = pos
             end
-        else
-            qw.monster_map[pos.x][pos.y] = nil
         end
     end
 
@@ -394,9 +422,7 @@ function update_monsters()
 end
 
 function get_monster_at(pos)
-    if supdist(pos) <= qw.los_radius then
-        return qw.monster_map[pos.x][pos.y]
-    end
+    return qw.monster_map[hash_position(pos)]
 end
 
 function get_closest_enemy()

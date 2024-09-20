@@ -516,8 +516,8 @@ end
 function update_cell_feature(cell)
     if cell.feat == "expired_portal" then
         expire_cell_portal(cell)
-    elseif not qw.have_slimy_walls and cell.feat == "slimy_wall" then
-        qw.have_slimy_walls = true
+    elseif not qw.slimy_walls and cell.feat == "slimy_wall" then
+        qw.slimy_walls = true
     end
 
     local has_state = feature_has_map_state(cell.feat)
@@ -802,7 +802,7 @@ function update_map(new_level, full_clear)
     update_exclusions(new_waypoint)
 
     if new_level then
-        qw.have_slimy_walls = false
+        qw.slimy_walls = false
     end
 
     local cell_queue, map_reset = update_map_cells()
@@ -971,17 +971,8 @@ function update_exclusions(new_waypoint)
         for _, pos in ipairs(auto_exclude) do
             exclude_position(pos)
         end
-        return
-    end
 
-    -- We potentially exclude monsters that can't reach our position when we've
-    -- tried to fight them from full HP. To make this assessment, we track the
-    -- last turn a monster could reach us.
-    for _, enemy in ipairs(qw.enemy_list) do
-        if not enemy:is_summoned() and enemy:has_path_to_player() then
-            qw.incoming_monsters_turn = you.turns()
-            return
-        end
+        return
     end
 
     -- If we've been trying to attack monsters that can't reach our position

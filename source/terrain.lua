@@ -162,9 +162,30 @@ function is_cornerish_at(pos)
             or is_traversable_at({ x = pos.x, y = pos.y - 1 }))
 end
 
-function count_adjacent_slimy_walls_at(pos)
-    -- No need to count if we've never spotted a wall on the level during a map update.
-    if not qw.have_slimy_walls then
+function is_adjacent_solid_wall_at(pos)
+    for apos in adjacent_iter(pos) do
+        if is_solid_at(apos) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function count_trees_at(pos)
+    local count = 0
+    for apos in adjacent_iter(pos) do
+        local feat = view.feature_at(apos.x, apos.y)
+        if feat == "mangrove" or feat == "tree" then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
+function count_slimy_walls_at(pos)
+    if not qw.slimy_walls then
         return 0
     end
 

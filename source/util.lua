@@ -88,29 +88,47 @@ function empty_string(s)
     return not s or s == ''
 end
 
+function bool_to_number(x)
+    if x == true then
+        return 1
+    elseif x == false then
+        return 0
+    else
+        return x
+    end
+end
+
 --[[
-Compare the numeric values of tables for the given keys. The keys are compared
-in the order given in `keys`, with the comparison moving to the next key when
-there's a tie with the current key.
+Compare the values of tables numerically for the given keys. The keys are
+compared in the order given in `keys`, with the comparison moving to the next
+key when there's a tie with the current key. If either table has a nil value
+for a given key, their values for that key are considered tied. Boolean values
+are converted to 1 for true and 0 for false. All other values types are
+invalid.
 @table a             A table to compare.
 @table b             A table to compare.
 @table keys          A list of keys to compare values in tables a and b.
 @table reversed_keys A table of keys set to true for a key where the values
                      should be compared in reverse.
-@treturn boolean True if a has a key with a higher value (or lower value if the
-                 key is reversed) than b, false otherwise.
-
+@treturn boolean True if, for some key k in the given key order, a has a better
+                 value than b for k, and for all keys before k, a and b are
+                 either equal or one of the two tables has a nil value. False
+                 otherwise.
 --]]
 function compare_table_keys(a, b, keys, reversed_keys)
     for _, key in ipairs(keys) do
         local val1 = a[key]
         local val2 = b[key]
-        local reversed = reversed_keys and reversed_keys[key]
-        local greater_val = not reversed and true or false
-        if val1 > val2 then
-            return greater_val
-        elseif val1 < val2 then
-            return not greater_val
+        if val1 ~= nil and val2 ~= nil then
+            val1 = bool_to_number(val1)
+            val2 = bool_to_number(val2)
+
+            local greater_val = not (reversed_keys and reversed_keys[key])
+            if val1 > val2 then
+                return greater_val
+            elseif val1 < val2 then
+                return not greater_val
+            end
         end
     end
     return false
