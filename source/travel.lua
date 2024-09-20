@@ -238,7 +238,7 @@ function travel_safe_stairs(result)
         return
     end
 
-    local best_stairs, best_threat, best_safe, worst_threat
+    local best_stairs, best_threat, best_safe, worst_threat, worst_safe
     local stairs = level_stairs_features(result.branch, result.depth, const.dir.up)
     local level = make_level(result.branch, result.depth)
     for _, feat in ipairs(stairs) do
@@ -260,10 +260,6 @@ function travel_safe_stairs(result)
             threat = high_threat_level()
         end
 
-        if not worst_threat or threat > worst_threat then
-            worst_threat = threat
-        end
-
         local dest_feat = feat
         if result.depth > 1 then
             dest_feat = dest_feat:gsub("_up_", "_down_", 1)
@@ -272,21 +268,44 @@ function travel_safe_stairs(result)
         end
         local dest_state = get_destination_stairs(result.branch, result.depth, feat)
         safe = safe and dest_state and dest_state.safe
-        if (not best_safe or safe)
-                and (not best_threat or threat < best_threat) then
-            best_stairs = dest_feat
-            best_threat = threat
-            best_safe = safe
+
+        -- We can only check reachability when we're on the same level as the
+        -- stairs.
+        local reachable = true
+        if where_branch == result.branch
+                and where_depth == result.depth - 1 then
+            local pos = get_feature_map_positions({ dest_feat })
+            if pos then
+                reachable = map_is_reachable_at(pos[1])
+            else
+                reachable = false
+            end
+        end
+
+        if reachable and (safe or not best_safe) then
+            if safe and not worst_safe
+                    or (not worst_threat or threat > worst_threat) then
+                worst_threat = threat
+                worst_safe = safe
+            end
+
+            if safe and not best_safe
+                    or (not best_threat or threat < best_threat) then
+                best_stairs = dest_feat
+                best_threat = threat
+                best_safe = safe
+            end
         end
     end
 
     -- If no stair has enough threat that we need to buff, we don't need to
     -- take safe stairs.
-    if worst_threat < high_threat_level()
+    if worst_threat and worst_threat < high_threat_level()
             -- If all stairs have equally bad threat and we don't need to
             -- teleport, don't use safe stairs. This will most commonly happen
             -- when all stairs at the destination are unknown.
-            or (best_threat == worst_threat
+            or (best_threat
+                and best_threat == worst_threat
                 and best_threat < extreme_threat_level()) then
         return
     end
@@ -294,7 +313,9 @@ function travel_safe_stairs(result)
     -- If the best destination stair threat is high enough, we try to use down
     -- hatches to reach the level.
     local hatches, best_hash
-    if best_threat >= extreme_threat_level() and result.depth > 1 then
+    if best_threat
+            and best_threat >= extreme_threat_level()
+            and result.depth > 1 then
         local prev_level = make_level(result.branch, result.depth - 1)
         hatches = c_persist.down_hatches[prev_level]
     end
