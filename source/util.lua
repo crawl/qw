@@ -77,12 +77,11 @@ function min(x, y)
 end
 
 function table_is_empty(t)
-    local empty = true
     for _, v in pairs(t) do
-        empty = false
-        break
+        return false
     end
-    return empty
+
+    return true
 end
 
 function empty_string(s)
