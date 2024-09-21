@@ -312,7 +312,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
     end
 
     local map = use_unsafe and dist_map.map or dist_map.excluded_map
-    result.dist = map[to_pos.x][to_pos.y]
+    result.dist = map[hash_position(to_pos)]
     if not result.dist then
         if debug_channel("move-all") and map_is_traversable_at(to_pos) then
             dsay("No path to destination")
@@ -321,7 +321,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    local current_dist = map[from_pos.x][from_pos.y]
+    local current_dist = map[hash_position(from_pos)]
     if current_dist and result.dist >= current_dist then
         if debug_channel("move-all") then
             dsay("Distance of " .. result.dist .. " does not improve the"
@@ -429,10 +429,11 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe)
 
     local dist_map = get_distance_map(dest_pos)
     local current_dist
+    local from_hash = hash_position(from_pos)
     if allow_unsafe then
-        current_dist = dist_map.map[from_pos.x][from_pos.y]
+        current_dist = dist_map.map[from_hash]
     end
-    local current_safe_dist = dist_map.excluded_map[from_pos.x][from_pos.y]
+    local current_safe_dist = dist_map.excluded_map[from_hash]
 
     if debug_channel("move-all") then
         local msg = "Determining move from "
@@ -489,7 +490,7 @@ end
 
 function update_reachable_position()
     for _, dist_map in pairs(distance_maps) do
-        if dist_map.excluded_map[qw.map_pos.x][qw.map_pos.y] then
+        if dist_map.excluded_map[hash_position(qw.map_pos)] then
             qw.reachable_position = dist_map.pos
             return
         end
@@ -531,7 +532,7 @@ end
 function map_is_reachable_at(pos, ignore_exclusions)
     local dist_map = get_distance_map(qw.reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-    return map[pos.x][pos.y]
+    return map[hash_position(pos)]
 end
 
 function best_move_towards_features(feats, allow_unsafe)
@@ -560,7 +561,7 @@ end
 
 function map_has_adjacent_unseen_at(pos)
     for apos in adjacent_iter(pos) do
-        if traversal_map[apos.x][apos.y] == nil then
+        if map_is_unseen_at(apos) then
             return true
         end
     end
@@ -794,13 +795,13 @@ function do_distance_map_search(search, current)
         return true
     end
 
-    local current_dist = search.map[current.x][current.y]
+    local current_dist = search.map[hash_position(current)]
     if not current_dist then
         return false
     end
 
     for pos in adjacent_iter(current) do
-        local dist = search.map[pos.x][pos.y]
+        local dist = search.map[hash_position(pos)]
         if dist and dist < current_dist then
             if distance_map_search_from(search, pos, current) then
                 return true
@@ -831,7 +832,7 @@ function distance_map_search(center, target, square_func, min_dist,
 
     local dist_map = get_distance_map(target)
     local map  = allow_unsafe and dist_map.map or dist_map.excluded_map
-    local dist = map[center.x][center.y]
+    local dist = map[hash_position(center)]
     if not dist then
         return
     end

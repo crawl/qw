@@ -233,9 +233,7 @@ function assess_kiting_destination(pos)
 
     local map_pos = position_sum(qw.map_pos, pos)
     for lpos in square_iter(pos, qw.los_radius) do
-        local map_lpos = position_sum(qw.map_pos, lpos)
-        if supdist(map_lpos) <= const.gxm
-                and traversal_map[map_lpos.x][map_lpos.y] == nil
+        if map_is_unseen_at(position_sum(qw.map_pos, lpos))
                 and cell_see_cell(pos, lpos) then
             return false
         end

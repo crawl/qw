@@ -85,19 +85,7 @@ function clear_map_cache(parity, full_clear)
     distance_maps_cache[parity] = {}
 
     traversal_maps_cache[parity] = {}
-    for x = -const.gxm, const.gxm do
-        traversal_maps_cache[parity][x] = {}
-    end
-
     exclusion_maps_cache[parity] = {}
-    for x = -const.gxm, const.gxm do
-        exclusion_maps_cache[parity][x] = {}
-    end
-
-    adjacent_floor_maps_cache[parity] = {}
-    for x = -const.gxm, const.gxm do
-        adjacent_floor_maps_cache[parity][x] = {}
-    end
 end
 
 function find_features(feats, radius)
@@ -204,20 +192,15 @@ function distance_map_remove(dist_map)
 end
 
 function distance_map_initialize_maps(dist_map, excluded_only)
+    local pos_hash = hash_position(dist_map.pos)
     if not excluded_only then
         dist_map.map = {}
-        for x = -const.gxm, const.gxm do
-            dist_map.map[x] = {}
-        end
-        dist_map.map[dist_map.pos.x][dist_map.pos.y] = 0
+        dist_map.map[pos_hash] = 0
     end
 
     dist_map.excluded_map = {}
-    for x = -const.gxm, const.gxm do
-        dist_map.excluded_map[x] = {}
-    end
-    dist_map.excluded_map[dist_map.pos.x][dist_map.pos.y] =
-        map_is_unexcluded_at(dist_map.pos) and 0 or nil
+    dist_map.excluded_map[pos_hash] = map_is_unexcluded_at(dist_map.pos) and 0
+        or nil
 end
 
 function distance_map_initialize(pos, permanent, radius)
@@ -245,16 +228,15 @@ function distance_map_initialize(pos, permanent, radius)
 end
 
 function is_traversable_at(pos)
-    local gpos = position_sum(qw.map_pos, pos)
-    return traversal_map[gpos.x][gpos.y]
+    return traversal_map[hash_position(position_sum(qw.map_pos, pos))]
 end
 
 function map_is_traversable_at(pos)
-    return traversal_map[pos.x][pos.y]
+    return traversal_map[hash_position(pos)]
 end
 
 function map_is_unseen_at(pos)
-    return traversal_map[pos.x][pos.y] == nil
+    return traversal_map[hash_position(pos)] == nil
 end
 
 function distance_map_adjacent_dist(pos, dist_map, map_select)
@@ -263,16 +245,17 @@ function distance_map_adjacent_dist(pos, dist_map, map_select)
     local excluded_selected = excluded_map_selected(map_select)
     for pos in adjacent_iter(pos) do
         if map_is_traversable_at(pos) then
+            local pos_hash = hash_position(pos)
             local dist
             if main_selected then
-                dist = dist_map.map[pos.x][pos.y]
+                dist = dist_map.map[pos_hash]
                 if dist and (not best_dist or best_dist > dist) then
                     best_dist = dist
                 end
             end
 
             if excluded_selected then
-                dist = dist_map.excluded_map[pos.x][pos.y]
+                dist = dist_map.excluded_map[pos_hash]
                 if map_is_unexcluded_at(pos)
                         and dist
                         and (not best_excluded_dist
@@ -299,22 +282,23 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
     end
 
     local update_pos
-    local center_dist = dist_map.map[center.x][center.y]
-    local dist = dist_map.map[pos.x][pos.y]
+    local center_dist = dist_map.map[hash_position(center)]
+    local pos_hash = hash_position(pos)
+    local dist = dist_map.map[pos_hash]
     if not center.excluded_only
             and center_dist
             and (not dist or dist > center_dist + 1) then
-        dist_map.map[pos.x][pos.y] = center_dist + 1
+        dist_map.map[pos_hash] = center_dist + 1
 
         update_pos = new_update_position(pos)
     end
 
-    center_dist = dist_map.excluded_map[center.x][center.y]
-    dist = dist_map.excluded_map[pos.x][pos.y]
+    center_dist = dist_map.excluded_map[hash_position(center)]
+    dist = dist_map.excluded_map[pos_hash]
     if map_is_unexcluded_at(pos)
             and center_dist
             and (not dist or dist > center_dist + 1) then
-        dist_map.excluded_map[pos.x][pos.y] = center_dist + 1
+        dist_map.excluded_map[pos_hash] = center_dist + 1
 
         if not update_pos then
             update_pos = new_update_position(pos)
@@ -406,16 +390,17 @@ function distance_map_update_position(pos, dist_map, map_select)
     local traversable = map_is_traversable_at(pos)
     local dist, excluded_dist, update_pos
     local have_adjacent = false
+    local pos_hash = hash_position(pos)
     -- If we're traversable and don't have a map distance, we just became
     -- traversable, so update the map distance from adjacent squares.
     if main_map_selected(map_select)
             and traversable
-            and not dist_map.map[pos.x][pos.y] then
+            and not dist_map.map[pos_hash] then
         dist, excluded_dist = distance_map_adjacent_dist(pos, dist_map,
             map_select)
         have_adjacent = true
         if dist then
-            dist_map.map[pos.x][pos.y] = dist + 1
+            dist_map.map[pos_hash] = dist + 1
             update_pos = new_update_position(pos)
         end
     end
@@ -424,14 +409,14 @@ function distance_map_update_position(pos, dist_map, map_select)
     if excluded_map_selected(map_select)
             and traversable
             and map_is_unexcluded_at(pos)
-            and not dist_map.excluded_map[pos.x][pos.y] then
+            and not dist_map.excluded_map[pos_hash] then
         if not have_adjacent then
             excluded_dist = distance_map_adjacent_dist(pos, dist_map,
                 const.map_select.excluded)
         end
 
         if excluded_dist then
-            dist_map.excluded_map[pos.x][pos.y] = excluded_dist + 1
+            dist_map.excluded_map[pos_hash] = excluded_dist + 1
             if not update_pos then
                 update_pos = new_update_position(pos)
                 update_pos.excluded_only = true
@@ -455,7 +440,7 @@ Are the given map coordinates unexcluded according to the exclusion map cache?
 @treturn boolean True if coordinates are unexcluded, false otherwise.
 --]]
 function map_is_unexcluded_at(pos)
-    return exclusion_map[pos.x][pos.y]
+    return exclusion_map[hash_position(pos)]
 end
 
 function unexcluded_at(pos)
@@ -552,7 +537,7 @@ function update_cell_feature(cell)
     local enemies = assess_enemies(const.duration.ignore)
     local feat_state = feature_state(cell.los_pos)
     update_feature(where_branch, where_depth, cell.feat, cell.hash,
-        { safe = exclusion_map[cell.pos.x][cell.pos.y], feat = feat_state,
+        { safe = exclusion_map[cell.hash], feat = feat_state,
             threat = enemies.threat })
 
     if feat_state < const.explore.reachable then
@@ -568,10 +553,10 @@ function update_map_at_cell(cell, queue, seen)
     end
 
     local map_updated = false
-    local old_traversable = traversal_map[cell.pos.x][cell.pos.y]
+    local old_traversable = traversal_map[cell.hash]
     local cur_traversable = feature_is_traversable(cell.feat)
     if old_traversable ~= cur_traversable then
-        traversal_map[cell.pos.x][cell.pos.y] = cur_traversable
+        traversal_map[cell.hash] = cur_traversable
         -- A cell went from traversable to untraversable, so any distance maps
         -- need a full reset.
         if old_traversable and not cur_traversable then
@@ -580,12 +565,12 @@ function update_map_at_cell(cell, queue, seen)
         map_updated = true
     end
 
-    local old_unexcluded = exclusion_map[cell.pos.x][cell.pos.y]
+    local old_unexcluded = exclusion_map[cell.hash]
     local cur_unexcluded =
         not (view.in_known_map_bounds(cell.los_pos.x, cell.los_pos.y)
             and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
     if cur_traversable and old_unexcluded ~= cur_unexcluded then
-        exclusion_map[cell.pos.x][cell.pos.y] = cur_unexcluded
+        exclusion_map[cell.hash] = cur_unexcluded
         -- A traversable cell went from unexcluded to excluded, so the excluded
         -- maps of all distance maps need a reset.
         if old_unexcluded
@@ -718,7 +703,6 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
     if not previous_where or new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
-        adjacent_floor_map = adjacent_floor_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_map_positions = item_map_positions_cache[cache_parity]
@@ -808,20 +792,6 @@ function update_seen_items()
     c_persist.seen_items[where] = seen_items
 end
 
-function update_adjacent_floor(queue)
-    for _, cell in ipairs(queue) do
-        if map_is_traversable_at(cell.pos) then
-            local floor_count = 0
-            for pos in adjacent_iter(cell.los_pos) do
-                if not is_solid_at(pos, true) then
-                    floor_count = floor_count + 1
-                end
-            end
-            adjacent_floor_map[cell.pos.x][cell.pos.y] = floor_count
-        end
-    end
-end
-
 function update_map(new_level, full_clear)
     local new_waypoint = update_waypoint(new_level)
 
@@ -836,7 +806,6 @@ function update_map(new_level, full_clear)
     end
 
     local cell_queue, map_reset = update_map_cells()
-    update_adjacent_floor(cell_queue)
 
     update_seen_items()
 
