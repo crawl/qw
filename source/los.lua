@@ -58,22 +58,20 @@ function positions_can_melee(from_pos, to_pos, range)
     local dist = position_distance(from_pos, to_pos)
     if dist == 0 then
         return false
+    end
+
+    assert(range > 0 and range <= 3)
+
+    if dist > range then
+        return false
     elseif dist == 1 then
         return true
+    -- Rift is smite-targeted.
+    elseif range == 3 then
+        return cell_see_cell(from_pos, to_pos)
     end
 
-    if range == 1 then
-        return false
-    end
-
-    if range == 3 then
-        return dist <= 3 and cell_see_cell(from_pos, to_pos)
-    end
-
-    if range ~= 2 then
-        return false
-    end
-
+    -- At this point we know that dist = range = 2.
     local x_diff = to_pos.x - from_pos.x
     local abs_x_diff = abs(x_diff)
     local y_diff = to_pos.y - from_pos.y
