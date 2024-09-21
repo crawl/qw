@@ -376,7 +376,7 @@ function record_portal(level, portal, permanent)
     if permanent then
         table.insert(c_persist.portals[level][portal], 1, const.inf_turns)
     else
-        table.insert(c_persist.portals[level][portal], you.turns())
+        table.insert(c_persist.portals[level][portal], qw.turns)
     end
 
     if portal_allowed(portal) then
@@ -419,7 +419,7 @@ function update_expired_portals()
                 if where_branch ~= portal
                         and timeout
                         and turns ~= const.inf_turns
-                        and you.turns() - turns > timeout then
+                        and qw.turns - turns > timeout then
                     remove_portal(level, portal)
                 end
             end

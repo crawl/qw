@@ -112,7 +112,7 @@ function plan_flee()
     end
 
     if not qw.danger_in_los then
-        qw.last_flee_turn = you.turns()
+        qw.last_flee_turn = qw.turns
     end
 
     local cell_string = cell_string_from_map_position(result.dest)
@@ -642,7 +642,7 @@ function want_to_teleport()
     end
 
     if count_hostile_summons(qw.los_radius) > 0 and you.xl() < 21 then
-        hostile_summons_timer = you.turns()
+        hostile_summons_timer = qw.turns
         return true
     end
 
@@ -982,7 +982,7 @@ end
 
 function plan_tomb2_arrival()
     if not tomb2_entry_turn
-            or you.turns() >= tomb2_entry_turn + 5
+            or qw.turns >= tomb2_entry_turn + 5
             or c_persist.did_tomb2_buff then
         return false
     end
@@ -1001,7 +1001,7 @@ end
 
 function plan_tomb3_arrival()
     if not tomb3_entry_turn
-            or you.turns() >= tomb3_entry_turn + 5
+            or qw.turns >= tomb3_entry_turn + 5
             or c_persist.did_tomb3_buff then
         return false
     end

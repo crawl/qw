@@ -78,14 +78,14 @@ function cascade(plans)
             end
 
             if qw.restart_cascade
-                    or you.turns() ~= plan_turns[plan]
+                    or qw.turns ~= plan_turns[plan]
                     or plan_result[plan] == nil then
                 local result = plan()
                 if not qw.automatic then
                     return true
                 end
 
-                plan_turns[plan] = you.turns()
+                plan_turns[plan] = qw.turns
                 plan_result[plan] = result
 
                 if debug_channel("plans") and result ~= false

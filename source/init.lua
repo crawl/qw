@@ -140,7 +140,8 @@ function initialize()
         cache_parity = 1
     end
 
-    if you.turns() == 0 then
+    local turns = you.turns()
+    if turns == 0 then
         initialize_branch_data()
         initialize_god_data()
     end
@@ -164,10 +165,12 @@ function initialize()
     clear_autopickup_funcs()
     add_autopickup_func(autopickup)
 
-    qw.dump_count = you.turns() + 100 - (you.turns() % 100)
-    qw.skill_count = you.turns() - (you.turns() % 5)
+    qw.dump_count = turns + 100 - (turns % 100)
+    qw.skill_count = turns - (turns % 5)
     qw.read_message = true
 
+    qw.wait_count = 0
+    qw.last_wait = -100
     qw.incoming_monsters_turn = -1
     qw.full_hp_turn = -1
 

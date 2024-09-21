@@ -64,7 +64,7 @@ function want_to_flee()
     end
 
     if not qw.danger_in_los then
-        if qw.last_flee_turn and you.turns() >= qw.last_flee_turn + 10 then
+        if qw.last_flee_turn and qw.turns >= qw.last_flee_turn + 10 then
             qw.last_flee_turn = nil
         end
 

@@ -185,8 +185,8 @@ function plan_throw()
 end
 
 function wait_combat()
-    last_wait = you.turns()
-    wait_count = wait_count + 1
+    qw.last_wait = qw.turns
+    qw.wait_count = qw.wait_count + 1
     wait_one_turn()
 end
 
@@ -207,18 +207,18 @@ function plan_melee_wait_for_enemy()
                 and intrinsic_fumble()
                 and not you.flying()
             or in_branch("Abyss")
-            or wait_count >= 10 then
-        wait_count = 0
+            or qw.wait_count >= 10 then
+        qw.wait_count = 0
         return false
     end
 
-    if you.turns() >= last_wait + 10 then
-        wait_count = 0
+    if qw.turns >= qw.last_wait + 10 then
+        qw.wait_count = 0
     end
 
     -- Hack to wait when we enter the Vaults end, so we don't move off
     -- stairs.
-    if vaults_end_entry_turn and you.turns() <= vaults_end_entry_turn + 2 then
+    if vaults_end_entry_turn and qw.turns <= vaults_end_entry_turn + 2 then
         wait_combat()
         return true
     end
@@ -231,7 +231,7 @@ function plan_melee_wait_for_enemy()
         -- we prefer to move closer to our target over waiting. This way we
         -- are hit with fewer ranged attacks over time.
         if target and enemy:is_ranged() then
-            wait_count = 0
+            qw.wait_count = 0
             return false
         end
 
@@ -270,13 +270,13 @@ function plan_launcher_wait_for_enemy()
                 and intrinsic_fumble()
                 and not you.flying()
             or in_branch("Abyss")
-            or wait_count >= 10 then
-        wait_count = 0
+            or qw.wait_count >= 10 then
+        qw.wait_count = 0
         return false
     end
 
-    if you.turns() >= last_wait + 10 then
-        wait_count = 0
+    if qw.turns >= qw.last_wait + 10 then
+        qw.wait_count = 0
     end
 
     for _, enemy in ipairs(qw.enemy_list) do

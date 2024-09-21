@@ -67,8 +67,6 @@ local transp_orient
 local transp_search
 
 local disable_autoexplore
-local last_wait = 0
-local wait_count = 0
 local hiding_turn_count = -100
 
 local prev_hatch_dist = 1000
