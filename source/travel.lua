@@ -411,6 +411,11 @@ end
 
 -- Try to get a "final" depth and any needed stair search direction.
 function finalize_travel_depth(result)
+    if debug_channel("travel-all") then
+        dsay("Finalizing travel to "
+            .. make_level(result.branch, result.depth))
+    end
+
     if travel_opens_runed_doors(result) then
         result.open_runed_doors = true
         return
@@ -487,10 +492,11 @@ function travel_destination(dest_branch, dest_depth, finalize_dest)
             local depth = next_exclusion_depth(parent, min_depth, max_depth)
             if depth then
                 -- We must wait until we've actually arrived at the target
-                -- level with an exclusions before we remove the exclusion and
-                -- re-trigger autoexplore. Otherwise a subsequent goal update
-                -- (e.g. after we arrive at the target level) may have us think
-                -- we don't need to do anything with the target level.
+                -- level with an exclusions before we remove the exclusion
+                -- and re-trigger autoexplore. Otherwise a subsequent goal
+                -- update (e.g. after we arrive at the target level) may have
+                -- us think we don't need to do anything with the target
+                -- level.
                 if where_branch == parent and where_depth == depth then
                     remove_exclusions()
                     reset_autoexplore(where_branch, where_depth)
