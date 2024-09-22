@@ -15,45 +15,6 @@ function feature_state(pos)
     return const.explore.seen
 end
 
-function player_has_line_of_fire(target_pos, attack_id)
-    local attack
-    if attack_id then
-        attack = get_attack(attack_id)
-    else
-        attack = get_ranged_attack()
-    end
-
-    if position_distance(const.origin, target_pos) > attack.range then
-        return false
-    end
-
-    local positions = spells.path(attack.test_spell, target_pos.x,
-        target_pos.y, 0, 0, false)
-    for i, coords in ipairs(positions) do
-        local pos = { x = coords[1], y = coords[2] }
-        local hit_target = positions_equal(pos, target_pos)
-        local mons = get_monster_at(pos)
-        if not attack.is_penetrating
-                and not hit_target
-                and mons
-                and not mons:ignores_player_projectiles() then
-            return false
-        end
-
-        if mons and not mons:is_enemy()
-                and not mons:is_harmless()
-                and not mons:ignores_player_projectiles() then
-            return false
-        end
-
-        if hit_target then
-            return true
-        end
-    end
-
-    return false
-end
-
 function positions_can_melee(from_pos, to_pos, range)
     local dist = position_distance(from_pos, to_pos)
     if dist == 0 then

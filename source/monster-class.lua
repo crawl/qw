@@ -212,16 +212,15 @@ function Monster:is_friendly()
         end)
 end
 
-function player_can_attack_monster(mons, attack_index)
-    if mons:name() == "orb of destruction"
-            or mons:attacking_causes_penance() then
-        return false
-    end
+function Monster:player_can_attack()
+    return self:property_memo("player_can_attack",
+        function()
+            return self:name() ~= "orb of destruction"
+                and not self:attacking_causes_penance()
+        end)
+end
 
-    if not attack_index then
-        return true
-    end
-
+function player_attack_can_hit_monster(mons, attack_index)
     local attack = get_attack(attack_index)
     if attack.type == const.attack.melee then
         return mons:player_can_melee()
@@ -229,19 +228,19 @@ function player_can_attack_monster(mons, attack_index)
 
     if attack.type == const.attack.launcher then
         return not unable_to_shoot()
-            and mons:player_has_line_of_fire(attack_index)
+            and assess_ranged_attack_target(mons, attack)
     elseif attack.type == const.attack.throw then
         return not unable_to_throw()
-            and mons:player_has_line_of_fire(attack_index)
+            and assess_ranged_attack_target(mons, attack)
     elseif attack.type == const.attack.evoke then
-        return can_evoke() and mons:player_has_line_of_fire(attack_index)
+        return can_evoke() and assess_ranged_attack_target(mons, attack)
     end
 end
 
-function Monster:player_can_attack(attack_index)
-    return self:property_memo_args("player_can_attack",
+function Monster:player_attack_can_hit(attack_index)
+    return self:property_memo_args("player_attack_can_hit",
         function()
-            return player_can_attack_monster(self, attack_index)
+            return player_attack_can_hit_monster(self, attack_index)
         end, attack_index)
 end
 
@@ -586,13 +585,6 @@ function Monster:player_can_wait_for_melee()
                         or get_move_closer(self:pos()))
                 and self:distance() > self:reach_range()
         end)
-end
-
-function Monster:player_has_line_of_fire(attack_id)
-    return self:property_memo_args("player_has_line_of_fire",
-        function()
-            return player_has_line_of_fire(self:pos(), attack_id)
-        end, attack_id)
 end
 
 function Monster:adjacent_cells_known()

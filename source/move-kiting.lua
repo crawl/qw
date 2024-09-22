@@ -2,12 +2,20 @@
 -- Assessment of kiting positions
 
 function kiting_attack_delay()
-    local target = get_ranged_target()
-    if not target then
-        target = get_melee_target()
-        if not target then
+    local target = best_ranged_target()
+    -- Due to opportunity attack, Rift is the only polearm we could ever kite
+    -- with.
+    if not target and player_reach_range() > 2 then
+        target = best_melee_target()
+
+        local enemy = get_monster_at(target.pos)
+        if not enemy or enemy:reach_range() >= player_reach_range() - 1 then
             return
         end
+    end
+
+    if not target then
+        return
     end
 
     return player_attack_delay(target.attack.index)
@@ -70,27 +78,20 @@ function want_to_kite()
     qw.want_to_kite = false
     qw.want_to_kite_step = false
 
-    if hp_is_low(50)
-            or you.confused()
-            or in_branch("Abyss")
-            or not have_moderate_threat(const.duration.ignore_buffs) then
+    if hp_is_low(50) or you.confused() or in_branch("Abyss") then
         return false
     end
 
-    local target = get_ranged_target()
-    if not target then
-        target = get_melee_target()
-        if not target then
-            return false
-        end
-
-        local enemy = get_monster_at(target.pos)
-        if not enemy or enemy:reach_range() >= player_reach_range() then
-            return false
-        end
+    local enemies = assess_enemies(const.duration.ignore_buffs)
+    if enemies.threat < moderate_threat_level() then
+        return false
     end
 
     local attack_delay = kiting_attack_delay()
+    if not attack_delay then
+        return false
+    end
+
     local move_delay = player_move_delay()
 
     if debug_channel("kite") then
@@ -171,8 +172,8 @@ function assess_kiting_enemy_at(pos, enemy, player_search)
         return
     end
 
-    local move_delay = player_move_delay()
     local attack_delay = kiting_attack_delay()
+    local move_delay = player_move_delay()
     local gained_dist = enemy_move_dist
         - player_search.dist * move_delay / enemy:move_delay()
     local min_gain = math.ceil(attack_delay / enemy:move_delay())
@@ -280,7 +281,7 @@ end
 function best_kiting_destination_func()
     if debug_channel("kite") then
         dsay("Assessing kiting destinations with attack delay "
-            .. kiting_attack_delay() .. " and move delay "
+            .. attack_delay .. " and move delay "
             .. player_move_delay())
     end
 

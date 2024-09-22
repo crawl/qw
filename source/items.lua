@@ -253,6 +253,20 @@ function missile_damage(missile)
     return damage
 end
 
+function penetrating_missile_damage(missile)
+    if missile.class(true) ~= "missile"
+            or not item_is_penetrating(missile) then
+        return
+    end
+
+    local damage = missile.damage
+    if missile.ego() == "silver" then
+        damage = damage * 7 / 6
+    end
+
+    return damage
+end
+
 function missile_quantity(missile)
     if missile.class(true) ~= "missile"
             or missile:name():find("throwing net") then
@@ -261,6 +275,16 @@ function missile_quantity(missile)
 
     return missile.quantity
 end
+
+function boomerang_quantity(missile)
+    if missile.class(true) ~= "missile"
+            or not missile:name():find("boomerang") then
+        return
+    end
+
+    return missile.quantity
+end
+
 
 function best_missile(value_func)
     return turn_memo_args("best_missile",

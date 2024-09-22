@@ -112,7 +112,7 @@ function plan_melee()
         return false
     end
 
-    local target = get_melee_target()
+    local target = best_melee_target()
     if not target then
         return false
     end
@@ -139,7 +139,7 @@ function plan_launcher()
         return false
     end
 
-    local target = get_launcher_target()
+    local target = best_launcher_target()
     if not target then
         return false
     end
@@ -175,7 +175,7 @@ function plan_throw()
         return false
     end
 
-    local target = get_throwing_target()
+    local target = best_throwing_target()
     if not target then
         return false
     end
@@ -223,7 +223,7 @@ function plan_melee_wait_for_enemy()
         return true
     end
 
-    local target = get_melee_target()
+    local target = best_melee_target()
     local want_wait = false
     for _, enemy in ipairs(qw.enemy_list) do
         -- We prefer to wait for a target monster to reach us over moving
@@ -308,8 +308,7 @@ function plan_poison_spit()
         ability = "Breathe Poison Gas"
     end
 
-    local target = get_ranged_attack_target(poison_spit_attack(),
-        not using_ranged_weapon())
+    local target = best_ranged_attack_target(poison_spit_attack())
     if not target then
         return false
     end
@@ -339,7 +338,7 @@ function plan_targeted_evoke()
         return false
     end
 
-    local target = get_evoke_target()
+    local target = best_evoke_target()
     if not target then
         return false
     end
@@ -362,7 +361,7 @@ function plan_flight_move_towards_enemy()
         return false
     end
 
-    local target = get_melee_target(true)
+    local target = best_melee_target(true)
     if not target then
         return false
     end
@@ -389,7 +388,7 @@ function plan_move_towards_enemy()
         return false
     end
 
-    local target = get_melee_target()
+    local target = best_melee_target()
     if not target then
         return false
     end

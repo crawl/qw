@@ -947,7 +947,6 @@ function update_exclusions(new_waypoint)
     -- Monsters we can't reach via melee or ranged attack that also can't move
     -- to our melee range get excluded immediately.
     local auto_exclude = {}
-    local ranged_attack = get_ranged_attack()
     for _, enemy in ipairs(qw.enemy_list) do
         if not has_exclusion_center_at(enemy:pos())
                 -- No excluding safe monsters.
@@ -961,9 +960,8 @@ function update_exclusions(new_waypoint)
                 and not enemy:player_has_path_to_melee()
                 -- ... they can't move to where we could melee them
                 and not enemy:player_can_wait_for_melee()
-                -- ... and we can't target them with a ranged attack
-                and not (ranged_attack
-                    and enemy:player_has_line_of_fire(ranged_attack.index))
+                -- ... and we can't target them with any other attack
+                and not enemy:best_player_attack()
                 -- ... and we know that we don't want to dig them out.
                 and not enemy:should_dig_unreachable() then
             table.insert(auto_exclude, enemy:pos())
