@@ -392,7 +392,7 @@ function can_might()
 end
 
 function want_to_might()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.mighty()
             or you.teleporting()
@@ -765,36 +765,34 @@ function want_to_trogs_hand()
             and check_enemies_in_list(qw.los_radius, hand_monsters)
 end
 
-function check_berserkable_enemies()
-    local filter = function(enemy, moveable)
-        return enemy:player_has_path_to_melee()
-    end
-    return check_enemies(2, filter)
-end
-
 function want_to_berserk()
-    if not qw.danger_in_los or dangerous_to_melee() or you.berserk() then
+    if not qw.danger_in_los
+            or dangerous_to_melee()
+            or you.berserk()
+            or you.teleporting() then
         return false
     end
 
-    if hp_is_low(50) and check_berserkable_enemies()
+    local attack
+    if hp_is_low(50) and best_primary_target()
             or invis_monster and nasty_invis_caster then
-        return true
+        attack = get_attack(1)
     end
 
     local result = assess_enemies(const.duration.available, 2)
     if result.scary_enemy then
-        local attack = result.scary_enemy:best_player_attack()
-        if attack and attack.uses_berserk then
-            return true
+        attack = result.scary_enemy:best_player_attack()
+        if not attack and result.scary_enemy:player_has_path_to_melee() then
+            attack = get_attack(1)
+        end
+    elseif result.threat >= high_threat_level() then
+        local target = best_primary_target()
+        if target and supdist(target.pos) <= 2 then
+            attack = get_attack(1)
         end
     end
 
-    if result.threat >= high_threat_level() then
-        return true
-    end
-
-    return false
+    return attack and attack.uses_berserk
 end
 
 function want_to_finesse()
@@ -806,15 +804,18 @@ function want_to_finesse()
         return false
     end
 
+    local attack
     local result = assess_enemies()
-    if result.threat >= high_threat_level() then
-        return true
-    elseif result.scary_enemy then
+    if result.scary_enemy then
         attack = result.scary_enemy:best_player_attack()
-        return attack and attack.uses_finesse
+        if not attack and result.scary_enemy:player_has_path_to_melee() then
+            attack = get_attack(1)
+        end
+    elseif result.threat >= high_threat_level() and best_primary_target() then
+        attack = get_attack(1)
     end
 
-    return false
+    return attack and attack.uses_finesse
 end
 
 function heroism_improves_attack(attack)
