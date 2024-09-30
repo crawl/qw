@@ -817,6 +817,32 @@ function want_to_finesse()
     return false
 end
 
+function heroism_improves_attack(attack)
+    if not attack or not attack.uses_heroism then
+        return false
+    end
+
+    local skill
+    if not attack.items then
+        skill = "Unarmed Combat"
+    elseif attack.type == const.attack.throw then
+        skill = "Throwing"
+    end
+
+    local ratio = 1
+    if skill then
+        local level = you.skill(skill)
+        ratio = (level + min(27 - level, 5)) / level
+    end
+
+    ratio = ratio
+        * player_attack_delay(attack.index, const.duration.available,
+            "heroism")
+        / player_attack_delay(attack.index, const.duration.available)
+
+    return ratio >= 1.2
+end
+
 function want_to_heroism()
     if not qw.danger_in_los
             or dangerous_to_attack()
@@ -826,15 +852,18 @@ function want_to_heroism()
         return false
     end
 
+    local attack
     local result = assess_enemies()
-    if result.threat >= high_threat_level() then
-        return true
-    elseif result.scary_enemy then
-        local attack = result.scary_enemy:best_player_attack()
-        return attack and attack.uses_heroism
+    if result.scary_enemy then
+        attack = result.scary_enemy:best_player_attack()
+        if not attack and result.scary_enemy:player_has_path_to_melee() then
+            attack = get_attack(1)
+        end
+    elseif result.threat >= high_threat_level() and best_primary_target() then
+        attack = get_attack(1)
     end
 
-    return false
+    return heroism_improves_attack(attack)
 end
 
 function want_to_recall()

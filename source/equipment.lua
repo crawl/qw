@@ -198,28 +198,48 @@ function weapon_min_delay(weapon)
     return max(7, max_delay - 13.5)
 end
 
-function weapon_delay(weapon, duration_level)
-    if not durations then
-        durations = {}
+function weapon_delay(weapon, duration_level, ignored_duration)
+    local shield = get_shield()
+    local shield_skill
+    if shield then
+        shield_skill = you.skill("Shields")
     end
 
-    local skill = you.skill(weapon.weap_skill)
-    if not have_duration("heroism", duration_level)
-            and duration_active("heroism") then
-        skill = skill - min(27 - skill, 5)
-    elseif have_duration("heroism", duration_level)
-            and not duration_active("heroism") then
-        skill = skill + min(27 - skill, 5)
+    local weap_skill = you.skill(weapon.weap_skill)
+    local have_heroism = have_duration("heroism", duration_level,
+        ignored_duration)
+    local heroism_active = duration_active("heroism")
+    if have_heroism and not heroism_active then
+        weap_skill = weap_skill + min(27 - weap_skill, 5)
+
+        if shield then
+            shield_skill = shield_skill + min(27 - shield_skill, 5)
+        end
+    elseif not have_heroism and heroism_active then
+        weap_skill = weap_skill - min(27 - weap_skill, 5)
+
+        if shield then
+            shield_skill = shield_skill - min(27 - shield_skill, 5)
+        end
     end
 
+    local is_missile = weapon.class(true) == "missile"
     local delay
-    if weapon.delay then
-        delay = weapon.delay
-    elseif weapon.class(true) == "missile" then
+    if is_missile then
         delay = const.missile_delays[weapon.subtype()]
+    else
+        delay = weapon.delay
     end
 
-    delay = max(weapon_min_delay(weapon), delay - skill / 2)
+    delay = max(weapon_min_delay(weapon), delay - weap_skill / 2)
+
+    if shield and not is_missile then
+        delay = delay +
+            2 * shield.encumbrance * shield.encumbrance
+            * (27 - shield_skill)
+            / (25 + 5 * max_strength())
+            / 27
+    end
 
     local ego = weapon:ego()
     if ego == "speed" then
@@ -228,17 +248,17 @@ function weapon_delay(weapon, duration_level)
         delay = delay * 1.5
     end
 
-    if have_duration("finesse", duration_level) then
+    if have_duration("finesse", duration_level, ignored_duration) then
         delay = delay / 2
     elseif not weapon.is_ranged
             and not weapon.class(true) == "missile"
-            and have_duration("berserk", duration_level) then
+            and have_duration("berserk", duration_level, ignored_duration) then
         delay = delay * 2 / 3
-    elseif have_duration("haste", duration_level) then
+    elseif have_duration("haste", duration_level, ignored_duration) then
         delay = delay * 2 / 3
     end
 
-    if have_duration("slow", duration_level) then
+    if have_duration("slow", duration_level, ignored_duration) then
         delay = delay * 3 / 2
     end
 

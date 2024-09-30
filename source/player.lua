@@ -44,7 +44,11 @@ function duration_active(name)
     end
 end
 
-function have_duration(name, level)
+function have_duration(name, level, ignored_duration)
+    if name == ignored_duration then
+        return false
+    end
+
     if level == const.duration.ignore
             or level == const.duration.ignore_buffs
                 and const.player_durations[name].can_use_func then

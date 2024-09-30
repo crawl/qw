@@ -781,39 +781,39 @@ function player_attack_damage(mons, attack_index, duration_level)
     end
 end
 
-function unarmed_attack_delay(duration_level)
+function unarmed_attack_delay(duration_level, ignored_duration)
     if not duration_level then
         duration_level = const.duration.active
     end
 
     local skill = you.skill("Unarmed Combat")
 
-    if not have_duration("heroism", duration_level)
+    if not have_duration("heroism", duration_level, ignored_duration)
             and duration_active("heroism") then
         skill = skill - min(27 - skill, 5)
-    elseif have_duration("heroism", duration_level)
+    elseif have_duration("heroism", duration_level, ignored_duration)
             and not duration_active("heroism") then
         skill = skill + min(27 - skill, 5)
     end
 
     local delay = 10 - 10 * skill / 54
 
-    if have_duration("finesse", duration_level) then
+    if have_duration("finesse", duration_level, ignored_duration) then
         delay = delay / 2
-    elseif have_duration("berserk", duration_level) then
+    elseif have_duration("berserk", duration_level, ignored_duration) then
         delay = delay * 2 / 3
-    elseif have_duration("haste", duration_level) then
+    elseif have_duration("haste", duration_level, ignored_duration) then
         delay = delay * 2 / 3
     end
 
-    if have_duration("slow", duration_level) then
+    if have_duration("slow", duration_level, ignored_duration) then
         delay = delay * 3 / 2
     end
 
     return delay
 end
 
-function player_attack_delay_func(attack_index, duration_level)
+function player_attack_delay_func(attack_index, duration_level, ignored_duration)
     if not duration_level then
         duration_level = const.duration.active
     end
@@ -825,33 +825,35 @@ function player_attack_delay_func(attack_index, duration_level)
             local delay = 0
             for _, weapon in ipairs(attack.items) do
                 count = count + 1
-                delay = delay + weapon_delay(weapon, duration_level)
+                delay = delay
+                    + weapon_delay(weapon, duration_level, ignored_duration)
             end
             return delay / count
         -- Evocable items.
         else
             local delay = 10
 
-            if have_duration("haste", duration_level) then
+            if have_duration("haste", duration_level, ignored_duration) then
                 delay = delay * 2 / 3
             end
 
-            if have_duration("slow", duration_level) then
+            if have_duration("slow", duration_level, ignored_duration) then
                 delay = delay * 3 / 2
             end
 
             return delay
         end
     else
-        return unarmed_attack_delay(duration_level)
+        return unarmed_attack_delay(duration_level, ignored_duration)
     end
 end
 
-function player_attack_delay(attack_index, duration_level)
+function player_attack_delay(attack_index, duration_level, ignored_duration)
     return turn_memo_args("player_attack_delay",
         function()
-            return player_attack_delay_func(attack_index, duration_level)
-        end, attack_index, duration_level)
+            return player_attack_delay_func(attack_index, duration_level,
+                ignored_duration)
+        end, attack_index, duration_level, ignored_duration)
 end
 
 function monster_best_player_attack(mons)

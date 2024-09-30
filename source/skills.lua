@@ -56,7 +56,7 @@ function shield_skill_utility()
     if not shield or shield.encumbrance == 0 then
         return 0
     end
-    local sh_gain = 0.19 + shield.ac/40
+    local sh_gain = 0.19 + shield.ac / 40
     local delay_reduction = 2 * shield.encumbrance * shield.encumbrance
         / (25 + 5 * max_strength()) / 27
     local ev_gain = delay_reduction
