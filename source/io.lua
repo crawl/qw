@@ -34,8 +34,8 @@ function magicfind(target, secondary)
 end
 
 function c_answer_prompt(prompt)
-    if prompt == "Die?" then
-        return qw.wizmode_death
+    if not qw.wizmode_death and prompt == "Die?" then
+        return false
     elseif prompt:find("This attack would place you under penance") then
         return false
     elseif prompt:find("Shopping list") then
@@ -45,38 +45,9 @@ function c_answer_prompt(prompt)
                 or prompt:find("disrobing")
                 or prompt:find("equipping")) then
         return false
-    elseif prompt:find("Have to go through") then
-        return true
-    elseif prompt:find("transient mutations") then
-        return true
-    elseif prompt:find("Really")
-            and (prompt:find("take off")
-                or prompt:find("remove")
-                or prompt:find("wield")
-                or prompt:find("wear")
-                or prompt:find("put on")
-                or prompt:find("read")
-                or prompt:find("drink")
-                or prompt:find("quaff")
-                or prompt:find("rampage")
-                or prompt:find("fire at your")
-                or prompt:find("fire in the non-hostile")
-                or prompt:find("explore while Zot is near")
-                or prompt:find(".*into that.*trap")
-                or prompt:find("abort")) then
-        return true
-    elseif prompt:find("You cannot afford")
-            and prompt:find("travel there anyways") then
-        return true
-    elseif prompt:find("Are you sure you want to drop") then
-        return true
-    elseif prompt:find("next level anyway") then
-        return true
-    elseif prompt:find("into the Zot trap") then
-        return true
-    elseif prompt:find("beam is likely to hit you") then
-        return true
     end
+
+    return true
 end
 
 function control(c)

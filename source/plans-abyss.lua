@@ -45,7 +45,8 @@ end
 function plan_exit_abyss()
     if view.feature_at(0, 0) == branch_exit("Abyss")
             and not want_to_stay_in_abyss()
-            and not unable_to_use_stairs() then
+            and not unable_to_use_stairs()
+            and not dangerous_to_move(true) then
         go_upstairs()
         return true
     end
