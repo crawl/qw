@@ -148,8 +148,11 @@ local scary_monsters = {
         check = function(mons) return mons:is("ready_to_howl") end },
     ["electric golem"] = { xl = 30, resists = { rElec = 1 } },
     ["orb of fire"] = { xl = 30, resists = { rF = 1 } },
+    ["nekomata"] = { xl = 30 },
     ["pandemonium lord"] = { xl = 30 },
     ["player ghost"] = { xl = 30 },
+    ["seraph"] = { xl = 30 },
+    ["Vv"] = { xl = 30, resists = { rF = 0.5, rC = 0.5 } },
 
     ["Antaeus"] = { xl = 34 },
     ["Asmodeus"] = { xl = 34 },
