@@ -46,12 +46,8 @@ function Monster:property_memo_args(name, func, ...)
         parent = parent[key]
 
         key = arg[j]
-        -- We turn any nil argument into false so we can pass on a valid set
-        -- of args to the function. This might cause unexpected behaviour for
-        -- an arbitrary function.
         if key == nil then
             key = false
-            arg[j] = false
         end
     end
 
