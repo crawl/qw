@@ -51,7 +51,19 @@ function score_enemy_hit(result, enemy, attack)
     end
 end
 
-function assess_melee_attack_target(enemy, attack)
+function assess_melee_attack_target(enemy, attack, assume_flight)
+    if not enemy:player_can_melee()
+            and not enemy:get_player_move_towards(assume_flight) then
+        return
+    end
+
+    local summoner = enemy:summoner()
+    if summoner
+            and (summoner:player_can_melee()
+                or summoner:get_player_move_towards(assume_flight)) then
+        return
+    end
+
     local result = { attack = attack, pos = enemy:pos(), hit_positions = {} }
     score_enemy_hit(result, enemy, attack)
     return result
@@ -71,9 +83,9 @@ function make_melee_attack(weapons)
     attack.index = 1
 
     attack.props = { "los_danger", "distance", "is_constricting_you",
-        "stabbability", "damage_level", "threat", "is_orc_priest_wizard" }
+        "is_summoned", "stabbability", "damage_level", "threat" }
     -- We favor closer monsters.
-    attack.reversed_props = { distance = true }
+    attack.reversed_props = { distance = true, is_summoned = true }
     attack.min_props = { distance = true }
 
     return attack
@@ -119,12 +131,9 @@ function best_melee_target_func(assume_flight)
 
     local best_result
     for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:player_can_melee()
-                or enemy:get_player_move_towards(assume_flight) then
-            local result = assess_melee_attack_target(enemy, attack)
-            if result_improves_attack(attack, result, best_result) then
-                best_result = result
-            end
+        local result = assess_melee_attack_target(enemy, attack, assume_flight)
+        if result_improves_attack(attack, result, best_result) then
+            best_result = result
         end
     end
 
@@ -357,8 +366,8 @@ function make_launcher_attack(weapons)
     end
 
     attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
-        "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
+        "is_summoned", "damage_level", "threat" }
+    attack.reversed_props = { distance = true, is_summoned = true }
     attack.min_props = { distance = true }
     return attack
 end
@@ -381,15 +390,20 @@ function make_throwing_attack(missile, prefer_melee)
         test_spell = "Quicksilver Bolt",
     }
     attack.props = { "los_danger", "hit", "distance", "is_constricting_you",
-        "damage_level", "threat", "is_orc_priest_wizard" }
-    attack.reversed_props = { distance = true }
+        "is_summoned", "damage_level", "threat" }
+    attack.reversed_props = { distance = true, is_summoned = true }
     attack.min_props = { distance = true }
     return attack
 end
 
-function assess_ranged_attack_target(mons, attack, required_pos)
-    local pos = mons:pos()
+function assess_ranged_attack_target(enemy, attack, required_pos)
+    local pos = enemy:pos()
     if position_distance(pos, const.origin) > attack.range then
+        return
+    end
+
+    local summoner = enemy:summoner()
+    if summoner and summoner:player_attack_can_hit(attack.index) then
         return
     end
 
@@ -406,10 +420,22 @@ end
 function best_ranged_attack_target(attack)
     local melee_target
     if attack.prefer_melee then
-        melee_target = best_melee_target()
-        if melee_target
-                and get_monster_at(melee_target.pos):player_can_melee() then
-            return
+        local target = best_melee_target()
+        if target then
+            local enemy = get_monster_at(target.pos)
+            if enemy:summoner() then
+                local result = assess_ranged_attack_target(enemy:summoner(),
+                    attack)
+                if result then
+                    return result
+                end
+            end
+
+            if enemy:player_can_melee() then
+                return
+            else
+                melee_target = target
+            end
         end
     end
 
@@ -422,9 +448,7 @@ function best_ranged_attack_target(attack)
         -- If we prefer and have a melee target and there's a ranged monster,
         -- we'll abort whenever there's a monster we could move towards
         -- instead.
-        if melee_target
-                and enemy:is_ranged(true)
-                and enemy:get_player_move_towards() then
+        if melee_target and (enemy:is_ranged(true) or enemy:is_summoner()) then
             return
         end
 
@@ -449,10 +473,7 @@ function get_secondary_throwing_attack(item_name)
     end
 end
 
-function get_high_threat_target()
-    -- We want to continue attacking scary enemies with our best attack even if
-    -- they're wounded.
-    local enemy = get_scary_enemy(const.duration.active, true)
+function assess_secondary_target(enemy)
     if not enemy then
         return
     end
@@ -480,8 +501,27 @@ function get_high_threat_target()
     return assess_ranged_attack_target(enemy, attack, required_pos)
 end
 
+function assess_scary_target()
+    local enemies = assess_enemies(const.duration.active, nil, nil, true)
+    if not enemies.scary_enemy then
+        return
+    end
+
+    local summoner = enemies.scary_enemy:summoner()
+    if summoner then
+        local result = assess_secondary_target(summoner)
+        if result then
+            return result
+        end
+    end
+
+    return assess_secondary_target(enemies.scary_enemy)
+end
+
 function best_throwing_target_func()
-    local target = get_high_threat_target()
+    -- We want to continue attacking scary enemies with our best attack even if
+    -- they're wounded.
+    local target = assess_scary_target()
     if target then
         if target.attack.type ~= const.attack.throw then
             return
@@ -511,7 +551,7 @@ end
 function best_evoke_target()
     return turn_memo("best_evoke_target",
         function()
-            local target = get_high_threat_target()
+            local target = assess_scary_target()
             if target and target.attack.type == const.attack.evoke then
                 return target
             end
@@ -532,8 +572,8 @@ function poison_spit_attack()
         ignores_corrosion = true,
         test_spell = "Quicksilver Bolt",
         props = { "los_danger", "hit", "distance", "is_constricting_you",
-            "damage_level", "threat", "is_orc_priest_wizard" },
-        reversed_props = { distance = true },
+            "is_summoned", "damage_level", "threat" },
+        reversed_props = { distance = true, is_summoned = true },
         min_props = { distance = true },
         check = function(mons) return mons:res_poison() < 1 end,
     }
@@ -558,8 +598,8 @@ function make_wand_attack(wand_type)
         ignores_corrosion = true,
         test_spell = "Quicksilver Bolt",
         props = { "los_danger", "hit", "distance", "is_constricting_you",
-            "damage_level", "threat", "is_orc_priest_wizard" },
-        reversed_props = { distance = true },
+            "is_summoned", "damage_level", "threat" },
+        reversed_props = { distance = true, is_summoned = true },
         min_props = { distance = true },
     }
     return attack

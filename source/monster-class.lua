@@ -77,6 +77,18 @@ function Monster:pos()
         end)
 end
 
+function Monster:summoner()
+    return self:property_memo("summoner",
+        function()
+            local x, y = self.minfo:summoner_pos()
+            if not x then
+                return
+            end
+
+            return get_monster_at({ x = x, y = y })
+        end)
+end
+
 function Monster:map_pos()
     return self:property_memo("map_pos",
         function()
@@ -233,7 +245,8 @@ function player_attack_can_hit_monster(mons, attack_index)
         return not unable_to_throw()
             and assess_ranged_attack_target(mons, attack)
     elseif attack.type == const.attack.evoke then
-        return can_evoke() and assess_ranged_attack_target(mons, attack)
+        return not unable_to_evoke()
+            and assess_ranged_attack_target(mons, attack)
     end
 end
 
@@ -258,14 +271,6 @@ function Monster:attacking_causes_penance()
         end)
 end
 
-function Monster:is_orc_priest_wizard()
-    return self:property_memo("is_orc_priest_wizard",
-        function()
-            local name = self:name()
-            return name == "orc priest" or name == "orc wizard"
-        end)
-end
-
 -- Monsters here will be target with ranged attacks even if they're not the
 -- closest monster.
 --
@@ -281,6 +286,13 @@ function Monster:has_spell(spell)
 
     self.props.spells = spells
     return spells[spell]
+end
+
+function Monster:is_summoner()
+    return self:property_memo("is_summoner",
+        function()
+            return self:has_spell("Abjuration")
+        end)
 end
 
 -- Monsters with these spells will be target with ranged attacks even if

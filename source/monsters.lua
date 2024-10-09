@@ -459,7 +459,7 @@ function assess_enemies_func(duration_level, radius, filter, ignore_hp)
             break
         end
 
-        local ranged = enemy:is_ranged(true)
+        local ranged = enemy:is_ranged(true) or enemy:is_summoner()
         if (not filter or filter(enemy))
                 and (ranged or enemy:has_path_to_melee_player()) then
             local threat = enemy:threat(duration_level, not ignore_hp)

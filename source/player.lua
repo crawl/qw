@@ -368,11 +368,11 @@ function can_drink()
         or you.status("unable to drink"))
 end
 
-function can_evoke()
-    return not (you.berserk()
+function unable_to_evoke()
+    return you.berserk()
         or you.confused()
         or transformed()
-        or you.mutation("inability to use devices") > 0)
+        or you.mutation("inability to use devices") > 0
 end
 
 function can_teleport()

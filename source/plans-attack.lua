@@ -227,10 +227,13 @@ function plan_melee_wait_for_enemy()
     local want_wait = false
     for _, enemy in ipairs(qw.enemy_list) do
         -- We prefer to wait for a target monster to reach us over moving
-        -- towards it. However if there exists monsters with ranged attacks,
-        -- we prefer to move closer to our target over waiting. This way we
-        -- are hit with fewer ranged attacks over time.
-        if target and enemy:is_ranged() then
+        -- towards it. However if there exists monsters with ranged attacks or
+        -- summons, we prefer to move closer to our target over waiting. This
+        -- way we are hit with fewer ranged attacks and summons over the entire
+        -- fight.
+        if target and (enemy:is_ranged(true)
+                        and enemy:has_line_of_fire(const.origin)
+                    or enemy:is_summoner()) then
             qw.wait_count = 0
             return false
         end
@@ -334,7 +337,7 @@ function evoke_targeted_item(item, pos, aim_at_target)
 end
 
 function plan_targeted_evoke()
-    if not qw.danger_in_los or dangerous_to_attack() or not can_evoke() then
+    if not qw.danger_in_los or dangerous_to_attack() or unable_to_evoke() then
         return false
     end
 
