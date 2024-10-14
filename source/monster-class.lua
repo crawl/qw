@@ -567,26 +567,50 @@ function Monster:melee_move_search(pos)
         self.props.melee_move_search = {}
     end
 
-    local hash = hash_position(pos)
-    if self.props.melee_move_search[hash] ~= nil then
-        return self.props.melee_move_search[hash]
+    local search_memo = self.props.move_search
+    if not search_memo then
+        search_memo = {}
+        self.props.move_search = search_memo
+    end
+
+    local dest_hash = hash_position(dest_pos)
+    local dest_memo = search_memo[dest_hash]
+    if not dest_memo then
+        dest_memo = {}
+        search_memo[dest_hash] = dest_memo
+    end
+
+    local start_hash = hash_position(start_pos)
+    local value = dest_memo[start_hash]
+    if value ~= nil then
+        return value
     end
 
     if not self:can_seek(true) then
-        self.props.melee_move_search[hash] = false
+        dest_memo[start_hash] = false
         return false
     end
 
-    local square_func = function(pos)
-        return self:can_traverse(pos)
+    local function square_func(pos)
+        if not self:can_traverse(pos) then
+            return false
+        end
+
+        local mons = get_monster_at(pos)
+        if mons and (not mons:is_enemy() or mons:can_melee_at(dest_pos)) then
+            return false
+        end
+
+        return true
     end
-    local result = move_search(self:pos(), pos, square_func,
-        self:reach_range())
-    if result == nil then
-        result = false
+
+    value = move_search(start_pos, dest_pos, square_func, self:reach_range())
+    if value == nil then
+        value = false
     end
-    self.props.melee_move_search[hash] = result
-    return result
+
+    dest_memo[start_hash] = value
+    return value
 end
 
 function Monster:melee_move_distance(pos)
@@ -620,20 +644,24 @@ function Monster:has_path_to_melee_player()
 end
 
 --[[
-Whether this monster has a path it can take to get to the player's.
+Whether this monster has a path it can take to get adjacent to the player.
 @treturn boolean True if the monster has such a path, false otherwise.
 ]]--
-function Monster:has_path_to_player()
-    return self:property_memo("has_path_to_player",
+function Monster:can_traverse_to_player()
+    return self:property_memo("can_traverse_to_player",
         function()
+            if position_distance(self:pos(), const.origin) == 1 then
+                return true
+            end
+
             if not self:can_seek(true) then
                 return false
             end
 
-            local square_func = function(pos)
+            local function square_func(pos)
                 return self:can_traverse(pos)
             end
-            return move_search(self:pos(), const.origin, square_func, 0)
+            return move_search(self:pos(), const.origin, square_func, 1)
         end)
 end
 
@@ -646,6 +674,24 @@ function Monster:player_can_wait_for_melee()
                         or get_move_closer(self:pos()))
                 and self:distance() > self:reach_range()
         end)
+end
+
+function Monster:has_line_of_fire(pos)
+    local prop = self.props.has_line_of_fire
+    if not prop then
+        prop = {}
+        self.props.has_line_of_fire = prop
+    end
+
+    local hash = hash_position(pos)
+    local value = prop[hash]
+    if value ~= nil then
+        return value
+    end
+
+    value = monster_has_line_of_fire_at(self, pos)
+    prop[hash] = value
+    return value
 end
 
 function Monster:adjacent_cells_known()

@@ -378,7 +378,7 @@ function register_monster_at(pos)
         -- guaranteed to be able to melee it if we move one square away.
         if not qw.incoming_monsters
                 and not mons:is_summoned()
-                and mons:has_path_to_player() then
+                and mons:can_traverse_to_player() then
             qw.incoming_monsters_turn = you.turns()
             qw.incoming_monsters = true
         end
@@ -461,7 +461,7 @@ function assess_enemies_func(duration_level, radius, filter, ignore_hp)
 
         local ranged = enemy:is_ranged(true) or enemy:is_summoner()
         if (not filter or filter(enemy))
-                and (ranged or enemy:has_path_to_melee_player()) then
+                and (ranged or enemy:can_traverse_to_player()) then
             local threat = enemy:threat(duration_level, not ignore_hp)
             result.threat = result.threat + threat
             if ranged then
