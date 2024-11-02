@@ -61,6 +61,16 @@ function want_to_flee_scary_enemy(duration)
     end
 end
 
+function level_is_dangerous()
+    return qw.danger_in_los
+        or not autoexplored_level(where_branch, where_depth)
+end
+
+function was_recently_marked()
+    return you.status("marked")
+        or qw.last_marked_turns and qw.turns - qw.last_marked_turns < 40
+end
+
 function want_to_flee()
     if not qw.can_flee_upstairs then
         return false
@@ -73,8 +83,23 @@ function want_to_flee()
         return true
     end
 
+    if level_is_dangerous()
+            -- Fleeing to stairs on Vaults:5 is often counterproductive.
+            and not at_branch_end("Vaults")
+            and was_recently_marked() then
+        return true
+    end
+
+    -- We limit fleeing without danger in LOS to 10 turns in most cases.
+    local escaping = goal_status == "Escape"
     if not qw.danger_in_los then
-        if qw.last_flee_turn and qw.turns >= qw.last_flee_turn + 10 then
+        if qw.last_flee_turn
+                -- If we're escaping and we initiated fleeing to a hatch, we
+                -- always continue fleeing until we leave the level, even if
+                -- there's no danger. This is because a travel command wouldn't
+                -- take us to this hatch, but to some staircase further away.
+                and not (escaping and flee_destination_is_hatch())
+                and qw.turns >= qw.last_flee_turn + 10 then
             qw.last_flee_turn = nil
         end
 
@@ -82,18 +107,18 @@ function want_to_flee()
             return false
         end
 
-        return qw.have_orb or not buffed() and reason_to_rest(90)
+        return escaping or not buffed() and reason_to_rest(90)
     end
 
     -- Don't flee from a place were we'll be opportunity attacked, and don't
     -- flee when we have allies close by.
     if check_following_melee_enemies(2)
-            or check_allies(3) and not qw.have_orb then
+            or check_allies(3) and not escaping then
         return false
     end
 
     -- We generally prefer fleeing over fighting on the orb run.
-    if qw.have_orb then
+    if escaping then
         return true
     end
 
@@ -125,8 +150,8 @@ function want_to_flee()
         and qw.starting_spell ~= "Summon Small Mammal"
 end
 
-function enemy_can_flee_attack(enemy, flee_dist)
-    local dist_to_player = enemy:melee_move_distance(const.origin)
+function enemy_can_flee_attack(enemy, start_pos, flee_dist)
+    local dist_to_player = enemy:melee_move_distance(start_pos)
     if not dist_to_player then
         if debug_channel("flee-all") then
             local props = { is_ranged = "ranged", reach_range = "reach",
@@ -179,34 +204,40 @@ function flee_move_check(map_pos)
     return true
 end
 
-function can_flee_to_destination(pos)
-    local search = distance_map_search(qw.map_pos, pos, flee_move_check, 0)
+function can_flee_to_map_position(dest_pos, start_pos)
+    if not start_pos then
+        start_pos = qw.map_pos
+    end
+
+    local search = distance_map_search(start_pos, dest_pos, flee_move_check, 0)
     if not search then
         if debug_channel("flee") then
-            dsay("Unable to find move to flee position at "
-                .. cell_string_from_map_position(pos))
+            dsay("Unable to find move to flee destination at "
+                .. cell_string_from_map_position(dest_pos)
+                .. " from " .. cell_string_from_map_position(start_pos))
         end
 
         return false
     end
 
     if debug_channel("flee") then
-        dsay("Evaluating flee position at "
-            .. cell_string_from_map_position(pos) .. " with distance "
-            .. search.dist)
+        dsay("Evaluating flee to destination at "
+            .. cell_string_from_map_position(dest_pos) .. " with distance "
+            .. search.dist
+            .. " starting from " .. cell_string_from_map_position(start_pos))
     end
 
     local extreme_threat = have_extreme_threat()
     local flee_attackers = 0
+    local start_los_pos = position_difference(start_pos, qw.map_pos)
     for _, enemy in ipairs(qw.enemy_list) do
-        if enemy_can_flee_attack(enemy, search.dist) then
+        if enemy_can_flee_attack(enemy, start_los_pos, search.dist) then
             flee_attackers = flee_attackers + 1
         end
 
         if flee_attackers > 2 or not extreme_threat and flee_attackers > 0 then
             if debug_channel("flee") then
-                dsay("Not fleeing to " .. cell_string_from_map_position(pos)
-                    .. " due to "  .. flee_attackers
+                dsay("Not fleeing to destination due to "  .. flee_attackers
                     .. " or more attackers gaining distance")
             end
 
@@ -215,15 +246,15 @@ function can_flee_to_destination(pos)
     end
 
     if debug_channel("flee") then
-        dsay("Able to flee to " .. cell_string_from_map_position(pos))
+        dsay("Able to flee to destination.")
     end
 
     return true
 end
 
-function get_flee_move()
+function best_flee_move()
     if in_bad_form() then
-        result = best_move_towards_positions(qw.flee_positions, true)
+        result = best_move_towards_positions(qw.flee_positions)
 
         if debug_channel("flee") then
             if result then
@@ -256,7 +287,7 @@ function get_flee_move()
 
     local valid_dests = {}
     for _, pos in ipairs(qw.flee_positions) do
-        if can_flee_to_destination(pos) then
+        if can_flee_to_map_position(pos) then
             table.insert(valid_dests, pos)
         end
     end
@@ -277,10 +308,19 @@ function get_flee_move()
     return result
 end
 
+function flee_destination_is_hatch()
+    local move = best_flee_move()
+    if not move then
+        return false
+    end
+
+    return get_map_escape_hatch(where_branch, where_depth, move.dest)
+end
+
 function will_flee()
     if not want_to_flee() or unable_to_move() or dangerous_to_move() then
         return false
     end
 
-    return get_flee_move()
+    return want_to_take_upstairs() or best_flee_move()
 end

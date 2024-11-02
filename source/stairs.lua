@@ -48,7 +48,7 @@ function level_stairs_features(branch, depth, dir)
             feats = util.copy_table(const.upstairs)
         end
 
-        if want_to_use_escape_hatches(const.dir.up) then
+        if want_to_use_escape_hatch(const.dir.up) then
             table.insert(feats, "escape_hatch_up")
         end
     elseif dir == const.dir.down then
@@ -500,4 +500,68 @@ function get_stairs(branch, depth, feat)
     if branch then
         return get_branch_stairs(where_branch, where_depth, branch, dir)
     end
+end
+
+function want_to_use_escape_hatch(dir)
+    return dir == const.dir.up
+        and goal_status == "Escape"
+        and not branch_is_temporary(where_branch)
+        and not in_branch("Tomb")
+        and where_depth > 1
+        -- It's dangerous to hatch through unexplored areas in Zot as opposed
+        -- to simply taking an explored route through stone stairs. So we only
+        -- take a hatch up in Zot if the destination level is fully explored.
+        and (where_branch ~= "Zot"
+            or explored_level(where_branch, where_depth - 1))
+end
+
+function want_to_take_upstairs()
+    if not qw.can_flee_upstairs
+            -- Assume we'd rather follow through with our teleport rather than
+            -- take stairs.
+            or you.teleporting()
+            or you.caught()
+            or you.constricted()
+            or goal_status ~= "Escape"
+                and (check_brothers_in_arms(3)
+                    or check_greater_servants(3)
+                    or check_divine_warriors(3)) then
+        return false
+    end
+
+    local feat = view.feature_at(0, 0)
+    if feature_is_upstairs(feat) then
+        local state = get_destination_stairs(where_branch, where_depth, feat)
+        if state and not state.safe then
+            return false
+        end
+    elseif escape_hatch_type(feat) ~= const.dir.up
+            or not want_to_use_escape_hatch(const.dir.up) then
+        return false
+    end
+
+    local n = stairdance_count[where] or 0
+    if n >= 20 then
+        return false
+    end
+
+    local only_when_safe = you.berserk() or hp_is_low(33)
+    local follow_count = count_stair_followers(1)
+    local other_count = #qw.enemy_list - follow_count
+    if only_when_safe and follow_count > 0 then
+        return false
+    end
+
+    -- We have no stair followers, so we only go up if we're fleeing for some
+    -- reason.
+    if follow_count == 0 and want_to_flee()
+            -- We have stair followers, but there are even more non-following
+            -- monsters around, so we go up to fight the following monsters in
+            -- probable safety.
+            or other_count > 0 and follow_count > 0 then
+        stairdance_count[where] = n + 1
+        return true
+    end
+
+    return false
 end

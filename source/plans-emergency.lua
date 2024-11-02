@@ -106,7 +106,7 @@ function plan_flee()
         return false
     end
 
-    local result = get_flee_move()
+    local result = best_flee_move()
     if not result then
         return false
     end
@@ -244,11 +244,35 @@ function plan_cancellation()
         return drink_by_name("cancellation")
     end
 
+    if you.status("marked")
+            and level_is_dangerous()
+            and (at_branch_end("Vaults") or at_branch_end("Zot")) then
+        qw.marked_turns = qw.turns
+        return drink_by_name("cancellation")
+    end
+
     return false
 end
 
 function plan_blinking()
-    if not in_branch("Zig") or not qw.danger_in_los or not can_read() then
+    if not qw.danger_in_los
+            or not can_blink()
+            or not have_high_threat(const.duration.available) then
+        return false
+    end
+
+    if at_branch_end("Zot")
+            and want_to_flee()
+            and not will_flee()
+            and was_recently_marked() then
+        local result = best_blink_towards_flee_position()
+        if result then
+            local scroll = find_item("scroll", "blinking")
+            return read_scroll(scroll,  vector_move(result.blink_pos) .. ".")
+        end
+    end
+
+    if not in_branch("Zig") then
         return false
     end
 
@@ -655,7 +679,7 @@ function want_to_teleport()
         return true
     end
 
-    if have_extreme_threat() then
+    if have_extreme_threat(const.duration.available) then
         return not will_fight_extreme_threat()
     end
 
@@ -1048,7 +1072,7 @@ end
 
 function set_plan_emergency()
     plans.emergency = cascade {
-        {plan_stairdance_up, "stairdance_up"},
+        {plan_take_upstairs, "take_upstairs"},
         {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
         {plan_exit_abyss, "exit_abyss"},
         {plan_go_down_abyss, "go_down_abyss"},
@@ -1056,10 +1080,10 @@ function set_plan_emergency()
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
         {plan_cancellation, "cancellation"},
+        {plan_blinking, "blinking"},
         {plan_teleport, "teleport"},
         {plan_remove_terrible_rings, "remove_terrible_rings"},
         {plan_cure_bad_poison, "cure_bad_poison"},
-        {plan_blinking, "blinking"},
         {plan_drain_life, "drain_life"},
         {plan_heal_wounds, "heal_wounds"},
         {plan_trogs_hand, "trogs_hand"},
