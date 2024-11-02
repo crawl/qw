@@ -133,8 +133,9 @@ function turn_update(force)
             or in_branch("Pan")
             or in_branch("Tomb") and where_depth > 1
             or in_hell_branch(where_branch))
-        qw.base_corrosion = in_branch("Dis") and 8 or 0
+        qw.last_flee_turn = nil
 
+        qw.base_corrosion = in_branch("Dis") and 8 or 0
         transp_zone = 0
         qw.stuck_turns = 0
 

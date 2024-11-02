@@ -385,6 +385,15 @@ function can_teleport()
         and find_item("scroll", "teleportation")
 end
 
+function can_blink()
+    return can_read()
+        and not (you.teleporting()
+            or you.anchored()
+            or you.transform() == "tree"
+            or you.race() == "Formicid")
+        and find_item("scroll", "blinking")
+end
+
 function can_use_altars()
     return not (you.berserk()
         or you.silenced()

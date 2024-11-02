@@ -34,7 +34,7 @@ function plan_stuck_take_escape_hatch()
 end
 
 function plan_stuck_move_towards_escape_hatch()
-    if want_to_use_escape_hatches(const.dir.up) then
+    if want_to_use_escape_hatch(const.dir.up) then
         return false
     end
 

@@ -409,8 +409,6 @@ function set_plan_explore()
         {plan_dive_pan, "dive_pan"},
         {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
         {plan_move_towards_destination, "move_towards_destination"},
-        {plan_take_escape_hatch, "take_escape_hatch"},
-        {plan_move_towards_escape_hatch, "try_go_to_escape_hatch"},
         {plan_move_towards_safety, "move_towards_safety"},
         {plan_autoexplore, "try_autoexplore"},
     }

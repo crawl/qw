@@ -47,6 +47,12 @@ function monster_in_way_at(to_pos, from_pos, allow_hostiles)
         return false
     end
 
+    -- Assume this is a blink move. We can't ever blink onto any kind of
+    -- monster.
+    if position_distance(to_pos, from_pos) > 1 then
+        return true
+    end
+
     -- Strict neutral and up will swap with us, but we have to check that
     -- they can. We assume we never want to attack these.
     return mons:attitude() > const.attitude.neutral
@@ -485,6 +491,51 @@ function best_move_towards_positions(map_positions, allow_unsafe)
         if result and (not best_result
                 or result.safe and not best_result.safe
                 or result.dist < best_result.dist) then
+            best_result = result
+        end
+    end
+    return best_result
+end
+
+function assess_flee_blink_position(map_pos)
+    if position_distance(map_pos, qw.map_pos) <= 1 then
+        return
+    end
+
+    local los_pos = position_difference(map_pos, qw.map_pos)
+    if not you.see_cell_no_trans(los_pos.x, los_pos.y)
+            or not is_safe_at(los_pos) then
+        return
+    end
+
+    local best_result
+    for _, dest_pos in ipairs(qw.flee_positions) do
+        if positions_equal(dest_pos, map_pos) then
+            local dist_map = get_distance_map(dest_pos)
+            local result = assess_move(dest_pos, qw.map_pos, dist_map,
+                best_result)
+            if result then
+                result.blink_pos = los_pos
+                best_result = result
+            end
+        elseif can_flee_to_map_position(dest_pos, map_pos) then
+            local result = best_move_towards(dest_pos, map_pos)
+            if result and (not best_result
+                    or result.dist < best_result.dist) then
+                result.blink_pos = los_pos
+                best_result = result
+            end
+        end
+    end
+
+    return best_result
+end
+
+function best_blink_towards_flee_position()
+    local best_result
+    for pos in radius_iter(qw.map_pos, qw.los_radius) do
+        local result = assess_flee_blink_position(pos)
+        if result and (not best_result or result.dist < best_result.dist) then
             best_result = result
         end
     end

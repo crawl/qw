@@ -120,11 +120,10 @@ function want_scroll(item)
         return true
     end
 
-    local wanted = { "acquirement", "brand weapon", "enchant armour",
-        "enchant weapon", "identify", "teleportation"}
+    local wanted = { "acquirement", "blinking", "brand weapon",
+        "enchant armour", "enchant weapon", "identify", "teleportation" }
 
     if qw.planning_zig then
-        table.insert(wanted, "blinking")
         table.insert(wanted, "fog")
     end
 
