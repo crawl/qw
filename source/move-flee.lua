@@ -68,7 +68,7 @@ function want_to_flee()
 
     -- If we're stuck in danger a bad form or berserked with a non-melee
     -- weapon, fleeing is our best bet.
-    if (qw.danger_in_los or options.autopick_on)
+    if (qw.danger_in_los or not options.autopick_on)
             and (in_bad_form() or you.berserk() and using_ranged_weapon()) then
         return true
     end

@@ -896,9 +896,9 @@ end
 function plan_cure_confusion()
     if not you.confused()
             or not can_drink()
-            or not (qw.danger_in_los
-                or options.autopick_on
-                or qw.position_is_cloudy)
+            or not qw.danger_in_los
+                and options.autopick_on
+                and not qw.position_is_cloudy
             or view.cloud_at(0, 0) == "noxious fumes"
                 and not meph_immune() then
         return false
@@ -934,7 +934,7 @@ end
 
 function plan_wait_confusion()
     if not you.confused()
-            or not (qw.danger_in_los or options.autopick_on)
+            or not qw.danger_in_los and options.autopick_on
             or qw.position_is_cloudy then
         return false
     end
