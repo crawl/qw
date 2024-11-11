@@ -305,8 +305,6 @@ function monster_move_delay(mons)
         -- We only want to pass the first return value of gsub() to
         -- tonumber().
         delay = desc:gsub(".*travel: (%d+)%%.*", "%1")
-        -- We're converting a percentage that's based on monsters delay/energy
-        -- to aut, since this is easier to compare to player actions.
         delay = 10 * 100 / tonumber(delay)
     elseif desc:find("Speed:") then
         delay = desc:gsub(".*Speed: (%d+)%%.*", "%1")
@@ -327,6 +325,33 @@ function monster_move_delay(mons)
         else
             delay = 1.6 * delay
         end
+    end
+
+    if mons:is("hasted") or mons:is("berserk") then
+        delay = 2 / 3 * delay
+    end
+
+    if mons:is("slowed") then
+        delay = 1.5 * delay
+    end
+
+    return delay
+end
+
+-- This returns a value for monster attack energy that's on the aut scale,
+-- so that reasoning about the difference between player and monster move
+-- delay is easier.
+function monster_attack_delay(mons)
+    local desc = mons.minfo:speed_description()
+    local delay = 10
+    if desc:find("attack:") then
+        -- We only want to pass the first return value of gsub() to
+        -- tonumber().
+        delay = desc:gsub(".*attack: (%d+)%%.*", "%1")
+        delay = 10 * 100 / tonumber(delay)
+    elseif desc:find("Speed:") then
+        delay = desc:gsub(".*Speed: (%d+)%%.*", "%1")
+        delay = 10 * 100 / tonumber(delay)
     end
 
     if mons:is("hasted") or mons:is("berserk") then
@@ -813,13 +838,13 @@ function monster_has_line_of_fire_at(mons, target_pos)
     return false
 end
 
-function monster_choose_firing_pos(mons, target_pos)
-    local cur_dist = position_distance(mons:pos(), target_pos)
+function monster_choose_firing_pos(mons, target_pos, from_pos)
+    local cur_dist = position_distance(from_pos, target_pos)
     local ideal_dist = 3
     local max_dist = max(ideal_dist, cur_dist)
 
     local best_pos, best_dist, best_diff_ideal
-    for pos in radius_iter(mons:pos(), qw.los_radius) do
+    for pos in radius_iter(from_pos, qw.los_radius) do
         local dist = position_distance(pos, target_pos)
 
         if supdist(pos) < const.gxm
@@ -828,7 +853,8 @@ function monster_choose_firing_pos(mons, target_pos)
                 and mons:can_traverse(pos) then
             if not best_dist
                     or dist < best_dist
-                    or abs(dist - ideal_dist) < best_diff_ideal then
+                    or dist == best_dist
+                        and abs(dist - ideal_dist) < best_diff_ideal then
                 best_pos = pos
                 best_dist = dist
                 best_diff_ideal = abs(dist - ideal_dist)

@@ -56,6 +56,8 @@ local traversal_maps_cache
 local traversal_map
 local exclusion_maps_cache
 local exclusion_map
+local trap_maps_cache
+local trap_map
 local distance_maps_cache
 local distance_maps
 

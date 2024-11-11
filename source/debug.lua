@@ -281,6 +281,58 @@ function print_distance_maps(center, excluded)
     end
 end
 
+local trap_letters = {
+    alarm = "a",
+    dispersal = "d",
+    net = "n",
+    ["permanent teleport"] = "p",
+    ["pressure plate"] = "r",
+    shaft = "s",
+    teleport = "t",
+    web = "w",
+    Zot = "z",
+}
+
+function print_trap_map(center)
+    if not center then
+        center = const.origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    local map_center = position_sum(qw.map_pos, center)
+    say("Trap map at " .. cell_string_from_map_position(map_center))
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            local pos = position_sum(map_center, { x = x, y = y })
+            local trap = trap_map[hash_position(pos)]
+            local char
+            if positions_equal(pos, qw.map_pos) then
+                if trap == nil then
+                    str = str .. (map_is_traversable_at(pos) and "@" or "7")
+                else
+                    str = str .. "!"
+                end
+            elseif positions_equal(pos, map_center) then
+                if trap == nil then
+                    str = str .. (map_is_traversable_at(pos) and "&" or "8")
+                else
+                    str = str .. "^"
+                end
+            elseif trap == nil then
+                str = str .. (map_is_traversable_at(pos) and "." or "#")
+            else
+                str = str .. trap_letters[trap]
+            end
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
+end
+
 function set_counter()
     crawl.formatted_mpr("Set game counter to what? ", "prompt")
     local res = crawl.c_input_line()

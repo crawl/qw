@@ -1,6 +1,18 @@
 ----------------------
 -- Assessment of retreat positions
 
+const.trap_scores = {
+    ["permanent teleport"] = 0,
+    shaft = 0,
+    teleport = 0,
+    web = 0,
+    dispersal = 1,
+    net = 2,
+    Zot = 4,
+    alarm = 5,
+    ["pressure plate"] = 5,
+}
+
 function position_component(target_pos, positions)
     local components = {}
     local target_ind
@@ -79,7 +91,8 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
             and enemy:can_traverse(seed_pos) then
         if debug_channel("retreat-enemy") then
             dsay("Assigning melee enemy to seed position "
-                .. cell_string_from_position(seed_pos))
+                .. cell_string_from_position(seed_pos)
+                .. " for melee score of " .. enemy:threat())
         end
 
         melee_enemies[seed_hash] = enemy
@@ -109,7 +122,8 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
         if not melee_enemies[hash] and not get_monster_at(pos) then
             if debug_channel("retreat-enemy") then
                 dsay("Assigning melee enemy to destination component position "
-                    .. cell_string_from_position(pos))
+                    .. cell_string_from_position(pos)
+                    .. " for melee score of " .. enemy:threat())
             end
 
             melee_enemies[hash] = enemy
@@ -284,10 +298,69 @@ function enemy_ranged_score_at(enemy, target_pos, player_search,
     return score
 end
 
+function step_trap_score(step_num, search, seen_positions)
+    local pos = search.path[step_num]
+    local hash = hash_position(position_sum(qw.map_pos, pos))
+    if seen_positions[hash] then
+        return 0
+    end
+
+    local player_pos
+    if search.player_path then
+        if search.player_steps[step_num] == nil then
+            dsay(search.player_steps)
+            dsay(search.player_path)
+        end
+
+        local player_steps = math.floor(search.player_steps[step_num])
+        player_pos = search.player_path[#search.player_path - player_steps]
+    else
+        player_pos = qw.map_pos
+    end
+
+    local trap = trap_map[hash]
+    if trap and cell_see_cell(pos, player_pos) then
+        return const.trap_scores[trap]
+    end
+
+    return 0
+end
+
+function enemy_trap_score_at(enemy, target_pos, player_search)
+    local search
+    if player_search then
+        search = monster_follow_search(enemy, target_pos, player_search.path,
+            enemy:melee_square_function(target_pos))
+    else
+        search = enemy:melee_move_search(target_pos)
+    end
+
+    if not search then
+        if debug_channel("retreat-enemy") then
+            dsay("Ignoring traps: enemy can't reach target position")
+        end
+
+        return 0
+    end
+
+    local seen_positions = {}
+    local score = 0
+    for i, pos in ipairs(search.path) do
+        score = score + step_trap_score(i, search, seen_positions)
+    end
+
+    if debug_channel("retreat-enemy") then
+        dsay("Trap score: " .. score)
+    end
+
+    return score
+end
+
 function retreat_score_at(target_pos, player_search)
-    local player_los_dist
     local tree_score = 0
-    local wall_score = 0
+    local slimy_score = 0
+    local total_score = 0
+    local player_los_dist
     if player_search then
         -- This starts from the map position of pos.
         for i = 2, #player_search.path do
@@ -301,7 +374,7 @@ function retreat_score_at(target_pos, player_search)
                     tree_score = tree_score + count_trees_at(pos)
                 end
 
-                wall_score = wall_score + count_slimy_walls_at(pos)
+                slimy_score = slimy_score + count_slimy_walls_at(pos)
             end
         end
 
@@ -311,23 +384,26 @@ function retreat_score_at(target_pos, player_search)
     end
 
     if qw.awaken_forest then
-        tree_score = 5 * count_trees_at(target_pos)
+        tree_score = tree_score + 5 * count_trees_at(target_pos)
+        total_score = total_score + tree_score
 
         if tree_score > 0 and debug_channel("retreat-pos") then
             dsay("Adding " .. tree_score .. " points for Awaken Forest")
         end
     end
 
-    wall_score = 5 * count_slimy_walls_at(target_pos)
+    local slimy_score = 5 * count_slimy_walls_at(target_pos)
+    total_score = total_score + slimy_score
 
-    if wall_score > 0 and debug_channel("retreat-pos") then
-        dsay("Adding " .. wall_score .. " points for slimy walls")
+    if slimy_score > 0 and debug_channel("retreat-pos") then
+        dsay("Adding " .. slimy_score .. " points for slimy walls")
     end
 
+    local melee_fumble = not using_ranged_weapon()
+        and in_water_at(target_pos)
+        and intrinsic_fumble()
+
     local melee_enemies = {}
-    local melee_score = 0
-    local dist_score = 0
-    local ranged_score = 0
     for _, enemy in ipairs(qw.enemy_list) do
         if debug_channel("retreat-enemy") then
             local props = { threat = "threat", reach_range = "reach",
@@ -336,30 +412,36 @@ function retreat_score_at(target_pos, player_search)
         end
 
         local score = enemy_melee_score_at(enemy, target_pos, melee_enemies)
-        melee_score = melee_score + score
 
-        if debug_channel("retreat-enemy") then
-            dsay("Melee score: " .. score)
+        -- For fumbling melee attacks 37.5% of the time.
+        if melee_fumble then
+            score = score * 1.6
         end
 
         if player_search
                 and enemy:can_seek()
                 and not enemy:is_ranged(true) then
-            local score = 0.1 * enemy:threat()
+            local dist_score = 0.1 * enemy:threat()
                 * player_move_delay()
                     / enemy:move_delay()
                 * player_search.dist
+            score = score + dist_score
 
             if debug_channel("retreat-enemy") then
-                dsay("Distance score: " .. score)
+                dsay("Distance score: " .. dist_score)
             end
-
-            dist_score = dist_score + score
         end
 
-        ranged_score = ranged_score
+        --score = score + enemy_trap_score_at(enemy, target_pos, player_search)
+
+        score = score
             + enemy_ranged_score_at(enemy, target_pos, player_search,
                 player_los_dist)
+        total_score = total_score + score
+
+        if debug_channel("retreat-enemy") then
+            dsay("Total score for this enemy: " .. score)
+        end
     end
 
     -- Ensure that we have an enemy to melee at the retreat position.
@@ -381,16 +463,6 @@ function retreat_score_at(target_pos, player_search)
             return
         end
     end
-
-    if not using_ranged_weapon()
-            and in_water_at(target_pos)
-            and intrinsic_fumble() then
-        -- For fumbling melee attacks 37.5% of the time.
-        melee_score = melee_score * 1.6
-    end
-
-    local total_score = tree_score + wall_score + melee_score + dist_score
-        + ranged_score
 
     if debug_channel("retreat-pos") then
         dsay("Final retreat score: " .. total_score)
@@ -445,7 +517,6 @@ function assess_retreat_position(map_pos, dist, cache)
 
             return
         end
-
     end
 
     result.score = retreat_score_at(pos, player_search)

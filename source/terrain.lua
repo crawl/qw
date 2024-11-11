@@ -95,17 +95,17 @@ end
 -- answer to a yesno prompt. This can be conditionally disabled with
 -- qw.ignore_traps, e.g. as we do on Zot:5.
 --
--- XXX: We have to mark Zot traps as safe so we don't get the prompt, as
--- c_answer_prompt isn't called in that case. Should have the crawl
--- yes_or_no() function call c_answer_prompt to fix this.
+-- XXX: We have to mark Zot traps as safe in this function so we don't get a
+-- yes/no prompt if we have to move over them, since c_answer_prompt isn't
+-- called in that case. Should have the crawl yes_or_no() function call
+-- c_answer_prompt to fix this.
 function c_trap_is_safe(trap)
     if not trap then
         return true
     end
 
-    trap = trap:lower()
     return qw.ignore_traps
-        or trap == "zot"
+        or trap == "Zot"
         or you.race() == "Formicid"
             and (trap == "permanent teleport" or trap == "dispersal")
 end
@@ -116,13 +116,7 @@ function trap_is_safe_at(pos)
         return true
     end
 
-    local feat = view.feature_at(pos.x, pos.y)
-    if not feat:find("^trap_") then
-        return true
-    end
-
-    local trap = feat:gsub("trap_", "")
-    return c_trap_is_safe(trap) and trap ~= "zot"
+    return c_trap_is_safe(view.trap_at(pos.x, pos.y)) and trap ~= "Zot"
 end
 
 function is_safe_at(pos, assume_flight)

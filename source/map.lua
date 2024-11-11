@@ -86,6 +86,7 @@ function clear_map_cache(parity, full_clear)
 
     traversal_maps_cache[parity] = {}
     exclusion_maps_cache[parity] = {}
+    trap_maps_cache[parity] = {}
 end
 
 function find_features(feats, radius)
@@ -307,6 +308,11 @@ function update_cell_feature(cell)
         qw.slimy_walls = true
     end
 
+    local trap = view.trap_at(cell.los_pos.x, cell.los_pos.y)
+    if trap then
+        trap_map[cell.hash] = trap
+    end
+
     local has_state = feature_has_map_state(cell.feat)
     if cell.feat == "runelight" or has_state then
         if not feature_map_positions[cell.feat] then
@@ -358,8 +364,8 @@ function update_map_at_cell(cell, queue, seen)
             and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
     if cur_traversable and old_unexcluded ~= cur_unexcluded then
         exclusion_map[cell.hash] = cur_unexcluded
-        -- A traversable cell went from unexcluded to excluded, so the excluded
-        -- maps of all distance maps need a reset.
+        -- A traversable cell went from unexcluded to excluded, so the
+        -- excluded maps of all distance maps need a reset.
         if old_unexcluded
                 and not unexcluded
                 and map_reset < const.map_select.both then
@@ -473,6 +479,7 @@ function reset_map_cache(new_level, full_clear, new_waypoint)
     if not previous_where or new_level or new_waypoint or full_clear then
         traversal_map = traversal_maps_cache[cache_parity]
         exclusion_map = exclusion_maps_cache[cache_parity]
+        trap_map = trap_maps_cache[cache_parity]
         distance_maps = distance_maps_cache[cache_parity]
         feature_map_positions = feature_map_positions_cache[cache_parity]
         item_map_positions = item_map_positions_cache[cache_parity]
@@ -555,8 +562,12 @@ function cell_from_position(pos, no_unseen)
     local cell = {}
     cell.los_pos = pos
     cell.feat = feat
-    cell.pos = position_sum(qw.map_pos, pos)
-    cell.hash = hash_position(cell.pos)
+
+    if qw.map_pos then
+        cell.pos = position_sum(qw.map_pos, pos)
+        cell.hash = hash_position(cell.pos)
+    end
+
     return cell
 end
 

@@ -129,6 +129,7 @@ function initialize()
     if not cache_parity then
         traversal_maps_cache = {}
         exclusion_maps_cache = {}
+        trap_maps_cache = {}
 
         distance_maps_cache = {}
         feature_map_positions_cache = {}
