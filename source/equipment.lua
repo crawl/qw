@@ -810,7 +810,7 @@ function update_equip_tracking()
 end
 
 function equip_is_valuable_unidentified(item)
-    if item.fully_identified then
+    if item.is_identified then
         return false
     elseif item.artefact then
         return true
