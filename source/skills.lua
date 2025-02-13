@@ -58,7 +58,7 @@ function shield_skill_utility()
     end
     local sh_gain = 0.19 + shield.ac / 40
     local delay_reduction = 2 * shield.encumbrance * shield.encumbrance
-        / (25 + 5 * max_strength()) / 27
+        / (25 + 5 * you.strength()) / 27
     local ev_gain = delay_reduction
     return const.sh_value * diminish(sh_gain, you.sh())
         + const.ev_value * diminish(ev_gain, you.ev())
@@ -67,7 +67,7 @@ end
 
 function skill_value(sk)
     if sk == "Dodging" then
-        local str = max_strength()
+        local str = you.strength()
         if str < 1 then
             str = 1
         end
@@ -86,7 +86,7 @@ function skill_value(sk)
             / (20 + 2 * body_size()) * penalty_factor
         return const.ev_value * diminish(ev_gain, you.ev())
     elseif sk == "Armour" then
-        local str = max_strength()
+        local str = you.strength()
         if str < 0 then
             str = 0
         end
@@ -248,7 +248,7 @@ function choose_stat_gain()
     elseif ap == "light" then
         return "d"
     else
-        if 3 * max_strength() < 2 * max_dexterity() then
+        if 3 * you.strength() < 2 * you.dexterity() then
             return "s"
         else
             return "d"

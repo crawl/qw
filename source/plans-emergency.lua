@@ -972,16 +972,6 @@ function plan_special_purification()
         return use_purification()
     end
 
-    local str, mstr = you.strength()
-    local int, mint = you.intelligence()
-    local dex, mdex = you.dexterity()
-    if str < mstr
-            and (str < mstr - 5 or str < 3)
-                or int < mint and int < 3
-                or dex < mdex and (dex < mdex - 8 or dex < 3) then
-        return use_purification()
-    end
-
     return false
 end
 

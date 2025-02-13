@@ -237,7 +237,7 @@ function weapon_delay(weapon, duration_level, ignored_duration)
         delay = delay +
             2 * shield.encumbrance * shield.encumbrance
             * (27 - shield_skill)
-            / (25 + 5 * max_strength())
+            / (25 + 5 * you.strength())
             / 27
     end
 

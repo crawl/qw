@@ -632,11 +632,3 @@ function want_to_be_surrounded()
             return count_enemies(qw.los_radius, vamp_check) >= 4
         end)
 end
-
-function max_strength()
-    return select(2, you.strength())
-end
-
-function max_dexterity()
-    return select(2, you.dexterity())
-end
