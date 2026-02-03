@@ -17,10 +17,11 @@ function turn_memo(name, func)
 end
 
 function turn_memo_args(name, func, ...)
-    assert(arg.n > 0)
+    local args = table.pack(...)
+    assert(args.n > 0)
 
     local parent, key
-    for j = 1, arg.n do
+    for j = 1, args.n do
         if j == 1 then
             parent = qw.turn_memos
             key = name
@@ -32,7 +33,7 @@ function turn_memo_args(name, func, ...)
 
         parent = parent[key]
 
-        key = arg[j]
+        key = args[j]
         if key == nil then
             key = false
         end
