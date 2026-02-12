@@ -12,7 +12,7 @@ function assess_square_enemies(a)
     for _, enemy in ipairs(qw.enemy_list) do
         local dist = enemy:melee_move_distance(a.pos)
         local see_cell = cell_see_cell(enemy:pos(), a.pos)
-        local ranged = enemy:is_ranged(true)
+        local ranged = enemy:is_ranged()
         local liquid_bound = enemy:is_liquid_bound()
 
         if dist < best_dist then

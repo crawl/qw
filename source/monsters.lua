@@ -456,12 +456,11 @@ function assess_enemies_func(duration_level, radius, filter, ignore_hp)
             break
         end
 
-        local ranged = enemy:is_ranged(true) or enemy:is_summoner()
         if (not filter or filter(enemy))
-                and (ranged or enemy:can_traverse_to_player()) then
+                and (enemy:is_ranged() or enemy:can_traverse_to_player()) then
             local threat = enemy:threat(duration_level, not ignore_hp)
             result.threat = result.threat + threat
-            if ranged then
+            if enemy:is_ranged() then
                 result.ranged_threat = result.ranged_threat + threat
             end
 
@@ -560,7 +559,7 @@ function check_immediate_danger()
             return true
         elseif dist == 3 and enemy:reach_range() >= 2 then
             return true
-        elseif enemy:is_ranged(true) then
+        elseif enemy:is_ranged() then
             return true
         end
 
@@ -780,7 +779,7 @@ function monster_threat(mons, duration_level, consider_hp)
 end
 
 function monster_has_line_of_fire_at(mons, target_pos)
-    if not cell_see_cell(mons:pos(), target_pos) then
+    if not mons:is_ranged() or not cell_see_cell(mons:pos(), target_pos) then
         return false
     end
 
@@ -788,11 +787,6 @@ function monster_has_line_of_fire_at(mons, target_pos)
             or mons:has_spell("Creeping Frost")
                 and is_adjacent_solid_wall_at(target_pos) then
         return true
-    end
-
-    -- Creeping Frost is their only significant ranged attack.
-    if mons:name() == "ironbound frostheart" then
-        return false
     end
 
     local positions = spells.path("Quicksilver Bolt", target_pos.x,

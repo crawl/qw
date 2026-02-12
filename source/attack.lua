@@ -445,10 +445,9 @@ function best_ranged_attack_target(attack)
 
     local best_result
     for _, enemy in ipairs(qw.enemy_list) do
-        -- If we prefer and have a melee target and there's a ranged monster,
-        -- we'll abort whenever there's a monster we could move towards
-        -- instead.
-        if melee_target and (enemy:is_ranged(true) or enemy:is_summoner()) then
+        -- If we have and prefer a melee target and there's a ranged monster,
+        -- we'll abort whenever there's one we could move towards instead.
+        if melee_target and enemy:has_line_of_fire(const.origin) then
             return
         end
 

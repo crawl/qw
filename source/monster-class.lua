@@ -457,8 +457,23 @@ function Monster:is_summoned()
         end)
 end
 
+function Monster:range()
+    return self:property_memo("range")
+end
+
 function Monster:reach_range()
     return self:property_memo("reach_range")
+end
+
+function Monster:is_ranged()
+    return self:property_memo("is_ranged",
+        function()
+            if self:los_danger() or self:can_attack_los()  then
+                return true
+            end
+
+            return self:range() > self:reach_range()
+        end)
 end
 
 function Monster:is_constricted()
@@ -471,25 +486,6 @@ end
 
 function Monster:stabbability()
     return self:property_memo("stabbability")
-end
-
-local polearm_ranged_monsters = util.set({
-    "Ilsuiw", "merfolk javelineer", "Sigmund", "Urug"
-})
-function Monster:is_ranged(ignore_reach)
-    return self:property_memo_args("is_ranged",
-        function()
-            if self:los_danger() or self:can_attack_los()  then
-                return true
-            end
-
-            if polearm_ranged_monsters[self:name()] then
-                return true
-            end
-
-            return self.minfo:has_known_ranged_attack()
-                and not (ignore_reach and self:reach_range() > 1)
-        end, ignore_reach)
 end
 
 local fighter_monsters = util.set({
@@ -533,7 +529,7 @@ end
 function Monster:regains_los()
     return self:property_memo("regains_los",
         function()
-            if not self:is_ranged(true) or self:intelligence() ~= "Human" then
+            if not self:is_ranged() or self:intelligence() ~= "Human" then
                 return false
             end
 

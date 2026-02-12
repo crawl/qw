@@ -233,7 +233,7 @@ end
 
 function enemy_ranged_score_at(enemy, target_pos, player_search,
         player_los_dist)
-    if not enemy:is_ranged(true) then
+    if not enemy:is_ranged() then
         return 0
     end
 
@@ -255,12 +255,7 @@ function enemy_ranged_score_at(enemy, target_pos, player_search,
         -- position after our current position.
         for i = #player_search.path - 1, 1, -1 do
             local pos = position_difference(player_search.path[i], qw.map_pos)
-            -- Creeping Frost is their only significant ranged attack and
-            -- doesn't depend on their approach.
-            if enemy:name() == "ironbound frostheart" then
-                sight_score = sight_score
-                    + (enemy:has_line_of_fire(pos) and 1 or 0)
-            elseif enemy:has_line_of_fire(pos) then
+            if enemy:has_line_of_fire(pos) then
                 sight_score = sight_score + 1
             elseif cell_see_cell(enemy:pos(), pos) then
                 sight_score = sight_score + 0.75
@@ -344,7 +339,7 @@ function retreat_score_at(target_pos, player_search)
 
         if player_search
                 and enemy:can_seek()
-                and not enemy:is_ranged(true) then
+                and not enemy:is_ranged() then
             local score = 0.1 * enemy:threat()
                 * player_move_delay()
                     / enemy:move_delay()

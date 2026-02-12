@@ -163,8 +163,7 @@ function enemy_can_flee_attack(enemy, start_pos, flee_dist)
         return false
     end
 
-    local closing_dist = dist_to_player
-        - (enemy:is_ranged(true) and 4 or 0)
+    local closing_dist = dist_to_player - (enemy:is_ranged() and 4 or 0)
     local dist_gain = flee_dist
         * (player_move_delay() - enemy:move_delay())
         / enemy:move_delay()

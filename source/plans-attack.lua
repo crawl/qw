@@ -231,9 +231,7 @@ function plan_melee_wait_for_enemy()
         -- summons, we prefer to move closer to our target over waiting. This
         -- way we are hit with fewer ranged attacks and summons over the entire
         -- fight.
-        if target and (enemy:is_ranged(true)
-                        and enemy:has_line_of_fire(const.origin)
-                    or enemy:is_summoner()) then
+        if target and enemy:has_line_of_fire(const.origin) then
             qw.wait_count = 0
             return false
         end

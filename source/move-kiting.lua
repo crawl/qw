@@ -31,7 +31,7 @@ function enemy_needs_attack_distance(enemy, attack_delay)
 end
 
 function enemy_allows_kiting(enemy, attack_delay, move_delay)
-    if enemy:is_ranged(true) or enemy:los_danger() then
+    if enemy:is_ranged() or enemy:los_danger() then
         if debug_channel("kite") then
             local props = { los_danger = "los danger", is_ranged = "ranged" }
             dsay("Unable to kite due to LOS danger or ranged: "
