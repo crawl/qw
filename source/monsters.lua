@@ -490,7 +490,7 @@ end
 
 function have_high_threat(duration_level, ignore_hp)
     local enemies = assess_enemies(duration_level, nil, nil, ignore_hp)
-    return enemies.threat >= moderate_high_level()
+    return enemies.threat >= high_threat_level()
 end
 
 function have_extreme_threat(duration_level, ignore_hp)
