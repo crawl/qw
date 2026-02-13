@@ -253,17 +253,14 @@ end
 
 function want_cure_mutations()
     return base_mutation("inhibited regeneration") > 0
-            and you.race() ~= "Ghoul"
         or base_mutation("teleportitis") > 0
-        or base_mutation("inability to drink after injury") > 0
-        or base_mutation("inability to read after injury") > 0
+        or base_mutation("renounce potions") > 0
+        or base_mutation("renounce scrolls") > 0
         or base_mutation("deformed body") > 0
             and you.race() ~= "Naga"
             and you.race() ~= "Armataur"
             and (armour_plan() == "heavy"
                 or armour_plan() == "large")
-        or base_mutation("berserk") > 0
-        or base_mutation("deterioration") > 1
         or base_mutation("frail") > 0
         or base_mutation("no potion heal") > 0
             and you.race() ~= "Vine Stalker"
