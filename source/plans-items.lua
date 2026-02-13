@@ -501,8 +501,7 @@ function plan_drop_items()
     for item in inventory_iter() do
         if want_drop_item(item) then
             say("DROPPING " .. item.name() .. ".")
-            magic("d" .. item_letter(item) .. "\r")
-            return true
+            return item.drop()
         end
     end
 
