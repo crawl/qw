@@ -766,7 +766,7 @@ function rated_attack_average_damage(mons, attack, duration_level)
                 and you.xl() < 18
                 and mons:is_real_hydra() then
             local value = hydra_weapon_value(item)
-            damage = damage * math.pow(2, value)
+            damage = damage * 2^value
         end
 
         total_damage = total_damage + damage * mons:weapon_accuracy(item)
@@ -779,7 +779,7 @@ function evoked_attack_average_damage(mons, attack)
     local item = attack.items[1]
     local damage = item.evoke_damage
     damage = damage:gsub(".-(%d+)d(%d+).*", "%1 %2")
-    local dice, size = unpack(split(damage, " "))
+    local dice, size = table.unpack(split(damage, " "))
     damage = dice * (1 + size) / 2
 
     local res_prop = const.monster_resist_props[attack.resist]
