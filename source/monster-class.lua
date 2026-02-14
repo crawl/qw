@@ -786,12 +786,18 @@ function Monster:can_traverse_to_player()
         end)
 end
 
+function Monster:player_melee_range()
+    return self:property_memo("player_melee_range",
+        function()
+            return self:is("warding") and 1 or player_reach_range()
+        end)
+end
 function Monster:player_can_wait_for_melee()
     return self:property_memo("player_can_wait_for_melee",
         function()
             return not self:player_can_melee(true)
                 and self:has_path_to_melee_player()
-                and (self:reach_range() <= player_reach_range()
+                and (self:reach_range() <= self:player_melee_range()
                         or get_move_closer(self:pos()))
                 and self:distance() > self:reach_range()
         end)
@@ -856,7 +862,7 @@ function Monster:player_has_path_to_melee()
             end
 
             return move_search(const.origin, self:pos(),
-                traversal_function(), player_reach_range())
+                traversal_function(), self:player_melee_range())
         end)
 end
 
@@ -864,7 +870,7 @@ function Monster:get_player_move_towards(assume_flight)
     return self:property_memo_args("get_player_move_towards",
         function()
             local result = move_search(const.origin, self:pos(),
-                tab_function(assume_flight), player_reach_range())
+                tab_function(assume_flight), self:player_melee_range())
             return result and result.move or false
         end, assume_flight)
 end

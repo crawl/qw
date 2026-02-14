@@ -580,7 +580,7 @@ function player_can_melee_mons(mons, ignore_temp)
         return false
     end
 
-    local range = player_reach_range()
+    local range = mons:player_melee_range()
     local dist = mons:distance()
     if range == 2 then
         return dist <= range and view.can_reach(mons:x_pos(), mons:y_pos())

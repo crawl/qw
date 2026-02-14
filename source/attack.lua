@@ -397,8 +397,8 @@ function make_throwing_attack(missile, prefer_melee)
 end
 
 function assess_ranged_attack_target(enemy, attack, required_pos)
-    local pos = enemy:pos()
-    if position_distance(pos, const.origin) > attack.range then
+    if enemy:distance() > attack.range
+            or enemy:distance() > 1 and enemy:is("warding") then
         return
     end
 
@@ -409,9 +409,11 @@ function assess_ranged_attack_target(enemy, attack, required_pos)
 
     local result
     if attack.is_exploding then
-        result = best_exploding_attack_position(pos, attack, required_pos)
+        result = best_exploding_attack_position(enemy:pos(), attack,
+            required_pos)
     else
-        result = assess_ranged_attack_position(pos, attack, required_pos)
+        result = assess_ranged_attack_position(enemy:pos(), attack,
+            required_pos)
     end
 
     return result

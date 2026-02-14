@@ -3,13 +3,16 @@
 
 function kiting_attack_delay()
     local target = best_ranged_target()
-    -- Due to opportunity attack, Rift is the only polearm we could ever kite
-    -- with.
+    -- Due to opportunity attacks, Rift is the only melee weapon we could
+    -- ever kite with.
     if not target and player_reach_range() > 2 then
         target = best_melee_target()
+        if not target then
+            return
+        end
 
         local enemy = get_monster_at(target.pos)
-        if not enemy or enemy:reach_range() >= player_reach_range() - 1 then
+        if enemy:reach_range() >= enemy:player_melee_range() - 1 then
             return
         end
     end

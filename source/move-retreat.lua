@@ -177,7 +177,7 @@ function enemy_los_score_at(enemy, target_pos, player_search, player_los_dist)
         return 0
     end
 
-    local range = player_reach_range()
+    local range = enemy:player_melee_range()
     if cell_see_cell(enemy:pos(), target_pos) then
         return max(0, position_distance(enemy:pos(), target_pos) - range)
     end
@@ -362,7 +362,7 @@ function retreat_score_at(target_pos, player_search)
         local can_melee = false
         for hash, enemy in pairs(melee_enemies) do
             local pos = unhash_position(hash)
-            if positions_can_melee(target_pos, pos, player_reach_range()) then
+            if positions_can_melee(target_pos, pos, enemy:player_melee_range()) then
                 can_melee = true
                 break
             end
