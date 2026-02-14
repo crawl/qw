@@ -1,25 +1,38 @@
 ------------------
 -- The common plan functions and the overall turn plan.
 
-function use_ability(name, extra, mute)
-    for letter, abil in pairs(you.ability_table()) do
-        if abil == name then
-            -- Want to make sure we don't get a skill selection screen if we
-            -- were training Dodging.
-            if name == "Sacrifice Nimbleness" then
-                you.train_skill("Fighting", 1)
-            end
-
-            if not mute then
-                say("INVOKING " .. name .. ".")
-            end
-
-            magic("a" .. letter .. (extra or ""))
-            return true
-        end
+function get_ability_info(name)
+    local info = you.ability_info(name)
+    if not info then
+        return
     end
 
-    return false
+    return { name = info[1][1], usable = info[1][2], key = info[1][3] }
+end
+
+function can_use_ability(name)
+    local ability = get_ability_info(name)
+    return ability and ability.usable
+end
+
+function use_ability(name, extra, mute)
+    local ability = get_ability_info(name)
+    if not ability or not ability.usable then
+        return false
+    end
+
+    if not mute then
+        say("INVOKING " .. name .. ".")
+    end
+
+    -- Want to make sure we don't get a skill selection screen if we
+    -- were training Dodging.
+    if name == "Sacrifice Nimbleness" then
+        you.train_skill("Fighting", 1)
+    end
+
+    magic("a" .. ability.key .. (extra or ""))
+    return true
 end
 
 -- This plan is called outside of the turn plan cascade.

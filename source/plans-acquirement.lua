@@ -5,22 +5,20 @@ function can_receive_okawaru_weapon()
     return not c_persist.okawaru_weapon_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
-        and contains_string_in("Receive Weapon", you.abilities())
-        and can_invoke()
+        and can_use_ability("Receive Weapon")
 end
 
 function can_receive_okawaru_armour()
     return not c_persist.okawaru_armour_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
-        and contains_string_in("Receive Armour", you.abilities())
-        and can_invoke()
+        and can_use_ability("Receive Armour")
 end
 
 function can_invent_gizmo()
     return not c_persist.invented_gizmo
         and you.xl() >= 14
-        and contains_string_in("Invent Gizmo", you.abilities())
+        and can_use_ability("Invent Gizmo")
 end
 
 function choose_acquirement(acquire_type)
