@@ -161,11 +161,12 @@ function teleporting_before_dangerous_stairs()
 end
 
 function plan_teleport_dangerous_stairs()
-    if not can_teleport() or not teleporting_before_dangerous_stairs() then
+    if not can_read_teleport()
+            or not teleporting_before_dangerous_stairs() then
         return false
     end
 
-    return teleport()
+    return read_teleport()
 end
 
 function plan_use_travel_stairs()

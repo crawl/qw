@@ -1,9 +1,9 @@
 ------------------
 -- Emergency plans
 
-function plan_teleport()
-    if can_teleport() and want_to_teleport() then
-        return teleport()
+function plan_read_teleport()
+    if can_read_teleport() and want_to_teleport() then
+        return read_teleport()
     end
 
     return false
@@ -254,9 +254,9 @@ function plan_cancellation()
     return false
 end
 
-function plan_blinking()
+function plan_read_blink()
     if not qw.danger_in_los
-            or not can_blink()
+            or not can_read_blink()
             or not have_high_threat(const.duration.available) then
         return false
     end
@@ -278,8 +278,7 @@ function plan_blinking()
 
     local para_danger = false
     for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:name() == "floating eye"
-                or enemy:name() == "starcursed mass" then
+        if enemy:name() == "starcursed mass" then
             para_danger = true
         end
     end
@@ -287,16 +286,10 @@ function plan_blinking()
         return false
     end
 
-    if count_item("scroll", "blinking") == 0 then
-        return false
-    end
-
     local cur_count = 0
     for pos in adjacent_iter(const.origin) do
         local mons = get_monster_at(pos)
-        if mons and mons:name() == "floating eye" then
-            cur_count = cur_count + 3
-        elseif mons and mons:name() == "starcursed mass" then
+        if mons and mons:name() == "starcursed mass" then
             cur_count = cur_count + 1
         end
     end
@@ -1080,8 +1073,8 @@ function set_plan_emergency()
         {plan_special_purification, "special_purification"},
         {plan_cure_confusion, "cure_confusion"},
         {plan_cancellation, "cancellation"},
-        {plan_blinking, "blinking"},
-        {plan_teleport, "teleport"},
+        {plan_read_blink, "read_blink"},
+        {plan_read_teleport, "read_teleport"},
         {plan_remove_terrible_rings, "remove_terrible_rings"},
         {plan_cure_bad_poison, "cure_bad_poison"},
         {plan_drain_life, "drain_life"},

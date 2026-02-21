@@ -35,7 +35,7 @@ function drink_by_name(name)
     return false
 end
 
-function teleport()
+function read_teleport()
     return read_scroll_by_name("teleportation")
 end
 

@@ -110,9 +110,9 @@ function plan_forget_map()
     return false
 end
 
-function plan_stuck_teleport()
-    if can_teleport() then
-        return teleport()
+function plan_stuck_read_teleport()
+    if can_read_teleport() then
+        return read_teleport()
     end
 
     return false
@@ -127,7 +127,7 @@ function set_plan_stuck()
         {plan_stuck_dig_grate, "try_stuck_dig_grate"},
         {plan_forget_map, "try_forget_map"},
         {plan_stuck_initial, "stuck_initial"},
-        {plan_stuck_teleport, "stuck_teleport"},
+        {plan_stuck_read_teleport, "stuck_read_teleport"},
         {plan_random_step, "random_step"},
     }
 end

@@ -375,7 +375,7 @@ function unable_to_evoke()
         or you.mutation("inability to use devices") > 0
 end
 
-function can_teleport()
+function can_read_teleport()
     return can_read()
         and not (you.teleporting()
             or you.anchored()
@@ -385,7 +385,7 @@ function can_teleport()
         and find_item("scroll", "teleportation")
 end
 
-function can_blink()
+function can_read_blink()
     return can_read()
         and not (you.teleporting()
             or you.anchored()
