@@ -24,10 +24,7 @@ function plan_abandon_god()
 end
 
 function plan_join_beogh()
-    if you.race() ~= "Hill Orc"
-            or goal_status ~= "God:Beogh"
-            or you.confused()
-            or you.silenced() then
+    if goal_status ~= "God:Beogh" or you.confused() or you.silenced() then
         return false
     end
 
