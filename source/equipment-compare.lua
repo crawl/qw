@@ -62,12 +62,17 @@ function equip_set_value(equip, ignore_item)
     end
 
     local total_value, weapon_delay, weapon_count = 0, 0, 0
+    local shield = false
     for slot, item in equip_set_iter(equip) do
         local value = 0
         if slot == "weapon" then
             weapon_delay = weapon_delay + weapon_min_delay(item)
             weapon_count = weapon_count + 1
         elseif const.armour_equip_names[slot] then
+            if slot == "shield" then
+                shield = true
+            end
+
             value = armour_base_value(item, true)
         elseif slot == "amulet" then
             value = amulet_base_value(item, true)
@@ -388,7 +393,7 @@ function armour_base_value(item, cur)
             value = value - 25 * item.ac
         end
 
-        evp = item.encumbrance
+        evp = armour_evp(item)
         ap = armour_plan()
         if ap == "heavy" or ap == "large" then
             if evp >= 20 then
@@ -570,6 +575,14 @@ function weapon_base_value(item, cur, sit)
                 min_val = min_val + (cur and 500 or 0)
                 max_val = max_val + 500
             end
+        elseif ego == "reaping" then
+            -- Almost nothing to reap in these branches.
+            if branch_soon("Crypt") or branch_soon("Tomb") then
+                max_val = max_val + 200
+            else
+                min_val = min_val + (cur and 200 or 0)
+                max_val = max_val + 200
+            end
         elseif ego == "speed" then
             -- This is good too
             value = value + 300
@@ -585,7 +598,12 @@ function weapon_base_value(item, cur, sit)
             end
         elseif ego == "penetration" then
             value = value + 150
-        elseif ego == "heavy" then
+        elseif ego == "heavy"
+                or ego == "rebuke"
+                or ego == "valour"
+                or ego == "entangling"
+                or ego == "sundering"
+                or ego == "concussion" then
             value = value + 100
         elseif ego == "flaming"
                 or ego == "freezing"

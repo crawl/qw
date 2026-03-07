@@ -254,8 +254,13 @@ end
 function want_cure_mutations()
     return base_mutation("inhibited regeneration") > 0
         or base_mutation("teleportitis") > 0
-        or base_mutation("renounce potions") > 0
-        or base_mutation("renounce scrolls") > 0
+        or base_mutation("potion fungus") > 0
+        or base_mutation("meek") > 0
+        or base_mutation("clumsy") > 0 and weapon_skill_uses_dex()
+        or base_mutation("weak") > 0 and not weapon_skill_uses_dex()
+        or base_mutation("reckless") > 0 and get_shield(true)
+        or base_mutation("poor constitution") > 0 and not want_ranged_weapon()
+        or base_mutation("initially attractive") > 0 and want_ranged_weapon()
         or base_mutation("deformed body") > 0
             and you.race() ~= "Naga"
             and you.race() ~= "Armataur"
@@ -265,12 +270,19 @@ function want_cure_mutations()
         or base_mutation("no potion heal") > 0
             and you.race() ~= "Vine Stalker"
         or base_mutation("heat vulnerability") > 0
-            and (you.res_fire() < 0
+            and (you.res_fire() < 1
                 or you.res_fire() < 3
-                    and (branch_soon("Zot") or branch_soon("Geh")))
+                    and (branch_soon("Zot")
+                            and you.zot_orb_monster() == "orbs of fire"
+                        or branch_soon("Geh")))
         or base_mutation("cold vulnerability") > 0
-            and (you.res_cold() < 0
-                or you.res_cold() < 3 and branch_soon("Coc"))
+            and (you.res_cold() < 1
+                or you.res_cold() < 3
+                    and (branch_soon("Zot")
+                            and you.zot_orb_monster() == "orbs of winter"
+                        or branch_soon("Slime")
+                        or branch_soon("Coc")))
+        or base_mutation("electricity vulnerability") > 0
 end
 
 function get_enchantable_weapon(known_scroll)
@@ -346,13 +358,31 @@ function get_brandable_weapon(known_scroll)
     return fallback_weapon
 end
 
+function item_has_zot_resist(item)
+    local orb_mons = you.zot_orb_monster()
+    if not orb_mons then
+        return false
+    end
+
+    return orb_mons == "orbs of entropy"
+            and (intrinsic_property("rCorr") < 1
+                    and item_property(item, "rCorr") > 0
+                or intrinsic_property("rN") < 3
+                    and item_property(item, "rN") > 0)
+        or orb_mons == "orbs of fire" and item_property(item, "rF") > 0
+        or orb_mons == "orbs of winter" and item_property(item, "rC") > 0
+end
+
 function body_armour_is_great_to_enchant(armour)
     local name = armour.name("base")
     local ap = armour_plan()
     if ap == "heavy" then
         return name == "golden dragon scales"
             or name == "crystal plate armour"
-            or name == "plate armour" and item_property("rF", armour) > 0
+            or name == "plate armour"
+                and item_has_zot_resist(armour)
+            or name == "storm dragon scales"
+                and intrinsic_property("rElec") < 1
             or name == "pearl dragon scales"
     elseif ap == "large" then
         return name:find("dragon scales")
@@ -360,7 +390,7 @@ function body_armour_is_great_to_enchant(armour)
         return armour.encumbrance <= 11 and name:find("dragon scales")
     else
         return name:find("dragon scales")
-            or name == "robe" and item_property("rF", armour) > 0
+            or name == "robe" and item_has_zot_resist(armour)
     end
 end
 
@@ -373,16 +403,18 @@ function body_armour_is_good_to_enchant(armour)
         return false
     elseif ap == "dodgy" then
         return name == "ring mail"
-            or name == "robe" and armour.ego() == "resistance"
+            or (name == "leather armour" or name == "robe")
+                and (item_property(armour, "rF") > 0
+                    or item_property(armour, "rC") > 0
+                    or intrinsic_property("rPois") < 1
+                        and item_property(armour, "rPois") > 0)
     else
-        return name == "robe" and item_property("rF", armour) > 0
-            or name == "troll leather armour"
+        return name == "troll leather armour"
     end
 end
 
 function get_enchantable_armour(known_scroll)
     local best_equip = best_equip_set()
-    local ac_value = linear_property_value("AC")
     local fallback_armour, body_armour
     local best_armour = equip_set_value_search(best_equip,
         function(item)

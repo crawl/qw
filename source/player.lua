@@ -158,7 +158,11 @@ function intrinsic_property(prop)
     elseif prop == "Fly" then
         return intrinsic_flight() and 1 or 0
     elseif prop == "Spirit" then
-        return you.race() == "Vine Stalker" and 1 or 0
+        return you.mutation("magic shield") and 1 or 0
+    elseif prop == "Faith" then
+        return you.mutation("faith") and 1 or 0
+    elseif prop == "Acrobat" then
+        return you.mutation("acrobatic") and 1 or 0
     end
 
     return 0
@@ -213,9 +217,7 @@ function player_resist_percentage(resist, level)
 
     if resist == "rF" or resist == "rC" then
         return level == 1 and 0.5 or (level == 2 and 1 / 3 or 0.2)
-    elseif resist == "rElec" then
-        return 2 / 3
-    elseif resist == "rPois" then
+    elseif resist == "rElec" or resist == "rPois" then
         return 1 / 3
     elseif resist == "rCorr" then
         return 0.5

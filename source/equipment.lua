@@ -286,12 +286,20 @@ function at_min_delay()
     return you.base_skill(weapon_skill()) >= min_delay_skill()
 end
 
-function armour_evp()
-    local armour = get_slot_item("body", true)
-    if armour then
-        return armour.encumbrance
-    else
+function armour_evp(item)
+    local armour = item
+    if not armour then
+        armour = get_slot_item("body", true)
+    end
+
+    if not armour then
         return 0
+    end
+
+    if want_ranged_weapon() and armour.ego() == "archery" then
+        return armour.encumbrance / 2
+    else
+        return armour.encumbrance
     end
 end
 

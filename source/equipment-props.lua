@@ -3,19 +3,19 @@
 
 -- Properties that don't have a linear progression of value at different
 -- levels. The Str/Dex/Int in nonlinear_property can only recieve negative
--- utility, which happens when they are reduced to dangerous levels.
+-- utility, which happens when they are reduced to 0 or less.
 const.nonlinear_properties = { "Str", "Dex", "Int", "rF", "rC", "rElec",
     "rPois", "rN", "Will", "rCorr", "SInv", "Fly", "Faith", "Spirit",
-    "Acrobat", "Reflect", "RMsl", "Clar", "-Tele", "Ponderous", "Harm",
-    "^Fragile", "^Drain", "^Contam" }
+    "Acrobat", "reflection", "RMsl", "Clar", "Hurl", "Light", "Snipe",
+    "Parrying", "-Tele", "Ponderous", "Harm", "^Fragile", "^Drain",
+    "^Contam", "Bane" }
 
-const.no_swap_properties = { "^Fragile", "^Drain", "^Contam" }
-
+const.no_swap_properties = { "^Fragile", "^Drain", "^Contam", "Bane" }
 
 -- These properties always provide the same benefit (or detriment) with each
 -- point of the property.
 const.linear_properties = { "Str", "Dex", "Slay", "AC", "EV", "SH", "Regen",
-    "*Slow", "*Corrode", "*Tele", "*Rage" }
+    "*Slow", "*Corrode", "*Tele", "*Rage", "*Silence" }
 
 const.property_max_levels = {}
 for _, prop in ipairs(const.nonlinear_properties) do
@@ -49,10 +49,9 @@ function item_property(prop, item)
             elseif ego == "fire resistance"
                     or ego == "resistance"
                     or subtype == "ring of protection from fire"
-                    or name:find("golden dragon")
-                    or subtype == "ring of fire" then
+                    or name:find("golden dragon") then
                 return 1
-            elseif name:find("ice dragon") or subtype == "ring of ice" then
+            elseif name:find("ice dragon") then
                 return -1
             else
                 return 0
@@ -62,10 +61,9 @@ function item_property(prop, item)
                 return 2
             elseif ego == "cold resistance" or ego == "resistance"
                      or subtype == "ring of protection from cold"
-                     or name:find("golden dragon")
-                     or subtype == "ring of ice" then
+                     or name:find("golden dragon") then
                 return 1
-            elseif name:find("fire dragon") or subtype == "ring of fire" then
+            elseif name:find("fire dragon") then
                 return -1
             else
                 return 0
@@ -86,7 +84,8 @@ function item_property(prop, item)
                 or subtype == "ring of willpower"
                 or name:find("quicksilver dragon")) and 1 or 0
         elseif prop == "rCorr" then
-            return (subtype == "ring of resist corrosion"
+            return (ego == "corrosion resistance"
+                or subtype == "ring of resist corrosion"
                 or name:find("acid dragon")) and 1 or 0
         elseif prop == "SInv" then
             return (ego == "see invisible"
@@ -114,6 +113,14 @@ function item_property(prop, item)
              return ego == "ponderousness" and 1 or 0
         elseif prop == "Harm" then
              return ego == "harm" and 1 or 0
+        elseif prop == "Hurl" then
+            return ego == "hurling" and 1 or 0
+        elseif prop == "Archery" then
+            return ego == "archery" and 1 or 0
+        elseif prop == "Light" then
+            return ego == "light" and 1 or 0
+        elseif prop == "Snipe" then
+            return ego == "sniping" and 1 or 0
         elseif prop == "Str" then
             if subtype == "ring of strength" then
                 return item.plus or 0
@@ -154,15 +161,11 @@ function item_property(prop, item)
 end
 
 -- The current utility of having a given level of an artprop.
-function absolute_property_value(prop, level)
+function absolute_property_value(prop, level, shield)
     if prop == "Str" or prop == "Int" or prop == "Dex" then
-        if level > 4 then
+        if level > 0 then
             -- Handled by linear_property_value()
             return 0
-        elseif level > 2 then
-            return -100
-        elseif level > 0 then
-            return -250
         else
             return -10000
         end
@@ -176,7 +179,6 @@ function absolute_property_value(prop, level)
             and (prop == "rF"
                 or prop == "rElec"
                 or prop == "rPois"
-                or prop == "rN"
                 or prop == "SInv") then
         return 0
     end
@@ -201,10 +203,15 @@ function absolute_property_value(prop, level)
             value = 250
         end
 
-        if prop == "rF" and (branch_soon("Zot") or branch_soon("Geh")) then
+        if prop == "rF"
+                and (branch_soon("Zot")
+                    and you.zot_orb_monster() == "orbs of fire"
+                or branch_soon("Geh")) then
             value = value * 2.5
         elseif prop == "rC" then
-            if branch_soon("Coc") then
+            if (branch_soon("Zot")
+                        and you.zot_orb_monster() == "orbs of winter"
+                    or branch_soon("Coc")) then
                 value = value * 2.5
             elseif branch_soon("Slime") then
                 value = value * 1.5
@@ -213,16 +220,39 @@ function absolute_property_value(prop, level)
 
         return value
     elseif prop == "rElec" then
-        return 75
+        if level <= -1 then
+            value = -150
+        else
+            return 75
+        end
     elseif prop == "rPois" then
         return easy_runes() < 2 and 225 or 75
     elseif prop == "rN" then
-        return 25 * min(level, 3)
+        if branch_soon("Zot")
+                and you.zot_orb_monster() == "orbs of entropy" then
+            if level == 1 then
+                return 315
+            elseif level == 2 then
+                return 500
+            -- Immunity at rN+++
+            elseif level == 3 then
+                return 750
+            end
+        else
+            return 25 * min(level, 3)
+        end
     elseif prop == "Will" then
         local branch_factor = branch_soon("Vaults") and 1.5 or 1
         return min(100 * branch_factor * level, 300 * branch_factor)
     elseif prop == "rCorr" then
-        return branch_soon("Slime") and 1200 or 50
+        if branch_soon("Zot")
+                and you.zot_orb_monster() == "orbs of entropy" then
+            return 500
+        elseif branch_soon("Slime") then
+            return 1200
+        else
+            return 50
+        end
     elseif prop == "SInv" then
         return 200
     elseif prop == "Fly" then
@@ -258,9 +288,22 @@ function absolute_property_value(prop, level)
         return you.race() == "Mummy" and 100 or 20
     elseif prop == "Rampage" then
         return using_ranged_weapon() and -50 or 20
+    elseif prop == "Parrying" then
+        local value = linear_property_value("SH")
+        return shield and value * 4 or value * 8
+    elseif prop == "Hurl" then
+        return using_ranged_weapon() and 0 or 100
+    elseif prop == "Light" then
+        return using_ranged_weapon() and 50 or 100
+    elseif prop == "Snipe" then
+        return using_ranged_weapon() and 50 or 0
     -- Begin properties we always assign a nonpositive value.
     elseif prop == "Harm" then
-        return -500
+        if level == 1 then
+            return -500
+        else
+            return -750
+        end
     elseif prop == "Ponderous" then
         return -300
     elseif prop == "-Tele" then
@@ -276,6 +319,7 @@ function max_property_value(prop, level)
     end
 
     local ires = intrinsic_property(prop)
+    local orb_mons = you.zot_orb_monster()
     if prop == "rF" or prop == "rC" then
         local value
         if level == 1 then
@@ -286,10 +330,12 @@ function max_property_value(prop, level)
             value = 250
         end
 
-        if prop == "rF" then
+        if prop == "rF" and (not orb_mons or orb_mons == "orbs of fire") then
             value = value * 2.5
         elseif prop == "rC" then
-            if qw.planning_cocytus then
+            if not orb_mons
+                    or orb_mons == "orbs of winter"
+                    or qw.planning_cocytus then
                 value = value * 2.5
             elseif qw.planning_slime then
                 value = value * 1.5
@@ -301,17 +347,42 @@ function max_property_value(prop, level)
     elseif prop == "rPois" then
         return ires < 1 and (easy_runes() < 2 and 225 or 75) or 0
     elseif prop == "rN" then
-        return ires < 3 and 25 * level or 0
+        if ires >= 3 then
+            return 0
+        elseif not orb_mons or orb_mons == "orbs of entropy" then
+            if level == 1 then
+                return 315
+            elseif level == 2 then
+                return 500
+            -- Immunity at rN+++
+            elseif level == 3 then
+                return 750
+            end
+        else
+            return 25 * level
+        end
     elseif prop == "Will" then
         local branch_factor = qw.planning_vaults and 1.5 or 1
         return min(100 * branch_factor * level, 300 * branch_factor)
     elseif prop == "rCorr" then
-        return ires < 1 and (qw.planning_slime and 1200 or 50) or 0
+        if ires > 0 then
+            return 0
+        elseif qw.planning_slime then
+            return 1200
+        elseif not orb_mons or orb_mons == "orbs of entropy" then
+            return 500
+        else
+            return 50
+        end
     elseif prop == "SInv" then
         return ires < 1 and 200 or 0
     elseif prop == "Fly" then
         return ires < 1 and 200 or 0
     elseif prop == "Faith" then
+        if ires > 0 then
+            return 0
+        end
+
         if you.god() == "Cheibriados"
                 or you.god() == "Beogh"
                 or you.god() == "Qazlal"
@@ -331,7 +402,7 @@ function max_property_value(prop, level)
             return 100
         end
     elseif prop == "Acrobat" then
-        return 100
+        return ires < 1 and 100 or 0
     elseif prop == "Reflect" then
         return 20
     elseif prop == "RMsl" then
@@ -375,7 +446,11 @@ function min_property_value(prop, level)
             return -10000
         -- Begin properties that are always bad.
         elseif prop == "Harm" then
-            return -500
+            if level == 1 then
+                return -500
+            else
+                return -750
+            end
         elseif prop == "Ponderous" then
             return -300
         elseif prop == "-Tele" then
@@ -445,6 +520,8 @@ function linear_property_value(prop)
         return you.race() == "Formicid" and 0 or -100
     elseif prop == "*Corrode" then
         return -100
+    elseif prop == "*Silence" then
+        return -20
     end
 
     return 0
