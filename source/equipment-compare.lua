@@ -587,7 +587,7 @@ function weapon_base_value(item, cur, sit)
             -- This is good too
             value = value + 300
         elseif ego == "spectralizing" then
-            value = value + 400
+            value = value + 300
         elseif ego == "draining" then
             -- XXX: Same issue as for vampirism above.
             if undead_demon then
