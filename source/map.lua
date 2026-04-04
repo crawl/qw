@@ -606,6 +606,46 @@ function get_item_map_positions(item_names, radius)
     end
 end
 
+function exclude_at(pos, radius)
+    if debug_channel("map") then
+        dsay("Excluding " .. cell_string_from_position(pos))
+    end
+
+    if not view.in_known_map_bounds(pos.x, pos.y) then
+        if debug_channel("map") then
+            dsay("Ignoring out of bounds coordinates " .. pos_string(pos))
+        end
+
+        return
+    end
+
+    local hash = hash_position(map_position(pos))
+    if not c_persist.exclusions[where] then
+        c_persist.exclusions[where] = {}
+    end
+    c_persist.exclusions[where][hash] = true
+
+    travel.set_exclude(pos.x, pos.y, radius)
+end
+
+function unexclude_at(pos)
+    if debug_channel("map") then
+        dsay("Unexcluding " .. cell_string_from_position(pos))
+    end
+
+    if not view.in_known_map_bounds(pos.x, pos.y) then
+        if debug_channel("map") then
+            dsay("Ignoring out of bounds position " .. pos_string(pos))
+        end
+
+        return
+    end
+
+    travel.del_exclude(pos.x, pos.y)
+    local hash = hash_position(map_position(pos))
+    c_persist.exclusions[where][hash] = nil
+end
+
 function remove_exclusions(record_only)
     if record_only then
         c_persist.exclusions[where] = nil
@@ -616,45 +656,13 @@ function remove_exclusions(record_only)
     end
 
     for hash, _ in pairs(c_persist.exclusions[where]) do
-        local pos = position_difference(unhash_position(hash), qw.map_pos)
-        if view.in_known_map_bounds(pos.x, pos.y) then
-            if debug_channel("combat") then
-                dsay("Unexcluding position "
-                    .. cell_string_from_map_position(pos))
-            end
-
-            travel.del_exclude(pos.x, pos.y)
-        elseif debug_channel("combat") then
-            dsay("Ignoring out of bounds exclusion coordinates "
-                .. pos_string(pos))
-        end
+        unexclude_at(los_position(pos))
     end
-    c_persist.exclusions[where] = nil
-end
-
-function exclude_position(pos)
-    if debug_channel("map") then
-        local desc
-        local mons = get_monster_at(pos)
-        if mons then
-            desc = mons:name()
-        else
-            desc = view.feature_at(pos.x, pos.y)
-        end
-        dsay("Excluding " .. desc .. " at " .. pos_string(pos))
-    end
-
-    local hash = hash_position(position_sum(qw.map_pos, pos))
-    if not c_persist.exclusions[where] then
-        c_persist.exclusions[where] = {}
-    end
-    c_persist.exclusions[where][hash] = true
-
-    travel.set_exclude(pos.x, pos.y)
 end
 
 function level_has_exclusions(branch, depth)
-    return c_persist.exclusions[make_level(branch, depth)]
+    local exc = c_persist.exclusions[make_level(branch, depth)]
+    return exc and next(exc)
 end
 
 function update_exclusions(new_waypoint)

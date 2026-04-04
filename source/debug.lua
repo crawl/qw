@@ -412,3 +412,7 @@ end
 function map_position(pos)
     return position_sum(qw.map_pos, pos)
 end
+
+function los_position(map_pos)
+    return position_difference(map_pos, qw.map_pos)
+end
