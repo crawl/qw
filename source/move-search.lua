@@ -1,7 +1,8 @@
 ----------------------
--- The movement search algorithm.
+-- General movement search algorithms mostly used for monsters.
 
 const.max_search_radius = 14
+const.max_search_deviations = 4
 
 function traversal_function(assume_flight)
     return function(pos)
@@ -28,7 +29,7 @@ function tab_function(assume_flight)
     end
 end
 
-function search_from(search, pos, current, is_deviation)
+function search_to(search, pos, current, is_deviation)
     local hash = hash_position(pos)
     if search.seen[hash] then
         return false
@@ -46,15 +47,14 @@ function search_from(search, pos, current, is_deviation)
     local cache = search.cache[hash]
     if cache then
         local result
-        if cache and cache.path then
+        if cache.path then
             for _, ppos in ipairs(cache.path) do
                 table.insert(search.path, ppos)
                 search.dist = search.dist + 1
             end
 
             result = true
-        elseif not cache
-                or cache.deviations_failed
+        elseif cache.deviations_failed
                     and cache.deviations_failed <= cur_deviations then
             result = false
         end
@@ -79,7 +79,7 @@ function search_from(search, pos, current, is_deviation)
         return false
     end
 
-    if cur_deviations > 4 then
+    if cur_deviations > const.max_search_deviations then
         if debug_channel("move-all") then
             dsay("Too many deviation movements")
         end
@@ -89,11 +89,14 @@ function search_from(search, pos, current, is_deviation)
     end
 
     if search.square_func(pos) then
+        -- The seen table is only updated when we can successfully continue the
+        -- recursive search. It prevents revisiting a succesfully traversed
+        -- square in the same path.
+        search.seen[hash] = true
         search.dist = search.dist + 1
         search.num_deviations = cur_deviations
 
         table.insert(search.path, pos)
-        search.seen[hash] = true
         local cur_i = #search.path
 
         if do_move_search(search, pos) then
@@ -102,17 +105,19 @@ function search_from(search, pos, current, is_deviation)
                 table.insert(cache.path, search.path[i])
             end
             search.cache[hash] = cache
+
             return true
         else
             search.path[#search.path] = nil
             search.seen[hash] = nil
-
             search.dist = search.dist - 1
+
             if is_deviation then
                 search.num_deviations = search.num_deviations - 1
             end
 
             search.cache[hash] = { deviations_failed = cur_deviations }
+
             return false
         end
     end
@@ -140,17 +145,17 @@ function do_move_search(search, current)
     local sign_diff_x = sign(diff.x)
     local sign_diff_y = sign(diff.y)
     pos = { x = current.x + sign_diff_x, y = current.y + sign_diff_y }
-    if search_from(search, pos, current) then
+    if search_to(search, pos, current) then
         return true
     end
 
     pos = { x = current.x + sign_diff_x, y = current.y }
-    if search_from(search, pos, current) then
+    if search_to(search, pos, current) then
         return true
     end
 
     pos = { x = current.x, y = current.y + sign_diff_y }
-    if search_from(search, pos, current) then
+    if search_to(search, pos, current) then
         return true
     end
 
@@ -159,64 +164,64 @@ function do_move_search(search, current)
     if abs_diff_x >= abs_diff_y then
         if abs_diff_y > 0 then
             pos = { x = current.x + sign_diff_x, y = current.y - sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x - sign_diff_x, y = current.y + sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
         else
             pos = { x = current.x + sign_diff_x, y = current.y + 1 }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x + sign_diff_x, y = current.y - 1 }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x, y = current.y + 1 }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x, y = current.y - 1 }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
         end
     elseif abs_diff_x < abs_diff_y then
         if abs_diff_x > 0 then
             pos = { x = current.x - sign_diff_x, y = current.y + sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x + sign_diff_x, y = current.y - sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
         else
             pos = { x = current.x + 1, y = current.y + sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x - 1, y = current.y + sign_diff_y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x + 1, y = current.y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
 
             pos = { x = current.x - 1, y = current.y }
-            if search_from(search, pos, current, true) then
+            if search_to(search, pos, current, true) then
                 return true
             end
         end

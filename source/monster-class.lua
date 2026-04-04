@@ -650,6 +650,36 @@ function Monster:can_melee_player()
     return self:can_melee_at(const.origin)
 end
 
+function Monster:melee_square_function(dest_pos)
+    local memo = self.props.melee_square_function
+    if not memo then
+        memo = {}
+        self.props.melee_square_function = memo
+    end
+
+    local hash = hash_position(dest_pos)
+    local func = memo[hash]
+    if func then
+        return func
+    end
+
+    func = function(pos)
+        if not self:can_traverse(pos) then
+            return false
+        end
+
+        local mons = get_monster_at(pos)
+        if mons and (not mons:is_enemy() or mons:can_melee_at(dest_pos)) then
+            return false
+        end
+
+        return true
+    end
+
+    memo[hash] = func
+    return func
+end
+
 function Monster:melee_move_search(dest_pos, start_pos)
     if not start_pos then
         start_pos = self:pos()
@@ -679,20 +709,8 @@ function Monster:melee_move_search(dest_pos, start_pos)
         return false
     end
 
-    local function square_func(pos)
-        if not self:can_traverse(pos) then
-            return false
-        end
-
-        local mons = get_monster_at(pos)
-        if mons and (not mons:is_enemy() or mons:can_melee_at(dest_pos)) then
-            return false
-        end
-
-        return true
-    end
-
-    value = move_search(start_pos, dest_pos, square_func, self:reach_range())
+    value = move_search(start_pos, dest_pos,
+        self:melee_square_function(dest_pos), self:reach_range())
     if value == nil then
         value = false
     end
