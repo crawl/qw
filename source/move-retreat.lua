@@ -511,9 +511,9 @@ function best_retreat_result_func()
     local i = 1
     local dist_map = get_distance_map(qw.map_pos, max_dist)
     for pos in radius_iter(qw.map_pos, max_dist) do
-        if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
-                dsay("Searched block " .. i / 1000
+        if qw.coroutine_throttle and i % 100 == 0 then
+            if debug_channel("retreat-all") then
+                dsay("Searched block " .. i / 100
                     .. " of potential retreat positions")
             end
 

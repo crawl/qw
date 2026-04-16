@@ -24,13 +24,13 @@ This variables should be configured in the qw rc file.
   + "goals": Current goal and travel destination.
   + "items": Item evaluation.
   + "map": Updates to the map data and distance maps.
+  + "memory": Memory usage.
   + "move": Movement evaluation.
   + "plans": The last successfully executed plan.
   + "plans-all": The results of every plan in the cascade. Generates a lot of output.
   + "ranged": Ranged targeting and combat.
   + "retreat": Retreat position evaluation.
   + "skills": Skill selection.
-  + "throttle": Throttling and memory usage.
 
   Also see the `toggle_debug_channel()` function.
 

@@ -107,7 +107,7 @@ function run_qw()
     end
 
     local memory_count = collectgarbage("count")
-    if debug_channel("throttle") then
+    if debug_channel("memory") then
         dsay("Memory count is " .. memory_count)
     end
 

@@ -3,9 +3,15 @@
 
 function initialize_debug()
     qw.debug_mode = DEBUG_MODE
+
     qw.debug_channels = {}
     for _, channel in ipairs(DEBUG_CHANNELS) do
         qw.debug_channels[channel] = true
+    end
+
+    qw.debug_trace_channels = {}
+    for _, channel in ipairs(DEBUG_TRACE_CHANNELS) do
+        qw.debug_trace_channels[channel] = true
     end
 end
 
@@ -15,7 +21,12 @@ function toggle_debug()
 end
 
 function debug_channel(channel)
-    return qw.debug_mode and qw.debug_channels[channel]
+    if not qw.debug_mode or not qw.debug_channels[channel] then
+        return false
+    end
+
+    qw.debug_trace_on = qw.debug_trace_channels[channel]
+    return true
 end
 
 function toggle_debug_channel(channel)
@@ -24,9 +35,20 @@ function toggle_debug_channel(channel)
       .. channel .. " debug channel", false)
 end
 
+function toggle_debug_trace_channel(channel)
+    qw.debug_trace_channels[channel] = not qw.debug_trace_channels[channel]
+    dsay((qw.debug_trace_channels[channel] and "Enabling " or "Disabling ")
+      .. channel .. " debug channel trace", false)
+end
+
 function disable_all_debug_channels()
     dsay("Disabling all debug channels", false)
     qw.debug_channels = {}
+end
+
+function disable_all_debug_trace_channels()
+    dsay("Disabling all debug trace channels", false)
+    qw.debug_trace_channels = {}
 end
 
 function enable_debug_log()
@@ -118,6 +140,10 @@ function dsay(x, debug_log, do_note)
         str = qw.stringify_table(x)
     else
         str = qw.stringify(x)
+    end
+
+    if qw.debug_trace_on then
+        str = "Stack trace: \n" .. crawl.stack() .. "\n" .. str
     end
 
     if debug_log and qw.debug_log then

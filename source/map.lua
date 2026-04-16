@@ -147,7 +147,7 @@ function find_map_items(item_names, radius)
     local i = 1
     for pos in square_iter(const.origin, radius, true) do
         if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
+            if debug_channel("map-all") then
                 dsay("Searched items in block " .. i / 1000
                     .. " of map positions")
             end

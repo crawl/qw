@@ -136,7 +136,7 @@ function distance_map_propagate(dist_map)
     local count = ind
     while ind <= #dist_map.queue do
         if qw.coroutine_throttle and count % 300 == 0 then
-            if debug_channel("throttle") then
+            if debug_channel("map-all") then
                 dsay("Propagated block " .. count / 300
                     .. " with " .. #dist_map.queue - ind
                     .. " positions remaining")

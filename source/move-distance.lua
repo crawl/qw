@@ -142,7 +142,7 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe)
     end
     local current_safe_dist = dist_map.excluded_map[from_hash]
 
-    if debug_channel("move-all") then
+    if debug_channel("move") then
         local msg = "Determining move from "
             .. cell_string_from_map_position(from_pos)
             .. " to " ..  cell_string_from_map_position(dest_pos)
@@ -249,7 +249,7 @@ function best_move_towards_unexplored_near(map_pos, allow_unsafe)
     local i = 1
     for pos in radius_iter(map_pos, const.gxm) do
         if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
+            if debug_channel("move-all") then
                 dsay("Searched for unexplored in block " .. i / 1000
                     .. " of map positions near "
                     .. cell_string_from_map_position(map_pos))
@@ -294,7 +294,7 @@ function best_move_towards_safety()
     local i = 1
     for pos in radius_iter(qw.map_pos, const.gxm) do
         if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
+            if debug_channel("move-all") then
                 dsay("Searched for safety in block " .. i / 1000
                     .. " of map positions")
             end
@@ -456,7 +456,7 @@ function distance_map_search(center, target, square_func, min_dist,
         return
     end
 
-    if debug_channel("move-all") then
+    if debug_channel("move") then
         dsay("Distance map move search from "
             .. cell_string_from_map_position(center)
             .. " to " .. cell_string_from_map_position(target))

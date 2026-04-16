@@ -148,7 +148,7 @@ function best_inventory_equip(extra_item)
         equip.value = equip_set_value(equip)
 
         if qw.coroutine_throttle and i % 100 == 0 then
-            if debug_channel("throttle") then
+            if debug_channel("items-all") then
                 dsay("Searched equipment sets in block " .. i / 100)
             end
 
