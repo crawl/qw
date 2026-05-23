@@ -11,9 +11,7 @@ end
 
 -- Are we significantly stronger than usual thanks to a buff that we used?
 function buffed()
-    if hp_is_low(50)
-            or transformed()
-            or you.corrosion() >= 8 + qw.base_corrosion then
+    if hp_is_low(50) or you.corrosion() >= 8 + qw.base_corrosion then
         return false
     end
 
@@ -949,19 +947,13 @@ function plan_escape_net()
     return move_to(new_position(0, 1))
 end
 
-function plan_wait_confusion()
-    if not you.confused()
-            or not qw.danger_in_los and options.autopick_on
-            or qw.position_is_cloudy then
-        return false
-    end
-
-    wait_one_turn()
-    return true
-end
-
 function plan_non_melee_berserk()
-    if not you.berserk() or not using_ranged_weapon() then
+    if not you.berserk()
+            -- This plan is only relevant with enemies around, otherwise we
+            -- could just rest off the berserk.
+            or not qw.danger_in_los and options.autopickup_on
+            -- If we have a melee weapon, we'll try to melee while berserk.
+            or not using_ranged_weapon() then
         return false
     end
 
@@ -1085,7 +1077,6 @@ function set_plan_emergency()
         {plan_move_towards_abyssal_feature, "move_towards_abyssal_feature"},
         {plan_explore_near_runelights, "explore_near_runelights"},
         {plan_priority_tactical_step, "priority_tactical_step"},
-        {plan_wait_confusion, "wait_confusion"},
         {plan_zig_fog, "zig_fog"},
         {plan_flee, "flee"},
         {plan_tactical_step, "tactical_step"},

@@ -25,13 +25,14 @@ function plan_cure_poison()
 end
 
 function should_rest()
-    if qw.danger_in_los and not qw.all_enemies_safe or qw.position_is_cloudy then
+    if qw.danger_in_los and not qw.all_enemies_safe
+            or qw.position_is_cloudy then
         return false
     end
 
     if qw.have_orb then
         return you.confused()
-            or transformed()
+            or in_bad_form()
             or you.slowed() and not qw.slow_aura
             or you.berserk()
             or you.teleporting()
@@ -70,7 +71,8 @@ function reason_to_rest(percentage)
     end
 
     return you.confused()
-        or transformed()
+        or you.berserk() and using_ranged_weapon()
+        or in_bad_form()
         or you.slowed() and not qw.slow_aura
         or you.exhausted()
         or you.teleporting()

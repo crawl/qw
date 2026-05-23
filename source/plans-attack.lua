@@ -195,7 +195,7 @@ function plan_melee_wait_for_enemy()
         return false
     end
 
-    if unable_to_move() or dangerous_to_move() then
+    if unable_to_move() or dangerous_to_move(true) then
         wait_combat()
         return true
     end
@@ -353,7 +353,7 @@ function plan_flight_move_towards_enemy()
             or using_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
-            or dangerous_to_move() then
+            or dangerous_to_move(true) then
         return false
     end
 
@@ -385,7 +385,7 @@ function plan_move_towards_enemy()
             or using_ranged_weapon()
             or unable_to_move()
             or dangerous_to_attack()
-            or dangerous_to_move() then
+            or dangerous_to_move(true) then
         return false
     end
 

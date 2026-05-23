@@ -327,6 +327,7 @@ function in_bad_form(include_tree)
         or form == "pig"
         or form == "wisp"
         or form == "fungus"
+        or form == "jelly"
         or include_tree and form == "tree"
 end
 
@@ -344,6 +345,7 @@ function unable_to_wield_weapon()
         or form == "tree"
         or form == "statue"
         or form == "maw"
+        or form == "hive"
         or form == "death")
 end
 
