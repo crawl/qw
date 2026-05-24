@@ -359,7 +359,7 @@ function finalize_depth_dir(result, dir)
     -- target level, so there's nothing to do in that direction.
     if count_stairs(result.branch, result.depth, dir,
                 const.explore.reachable)
-            == num_required_stairs(result.branch, depth, dir) then
+            == num_required_stairs(result.branch, result.depth, dir) then
         return false
     end
 
