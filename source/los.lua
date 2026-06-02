@@ -108,17 +108,23 @@ local square_move = {
     {0, 1}, {-1, 0}, {0, -1}, {1, 0}
 }
 
-function radius_iter(pos, radius, include_center)
+function radius_iter(pos, radius, include_center, reverse_radius)
     if not radius then
         radius = qw.los_radius
     end
     assert(radius > 0, "Radius must be a positive integer.")
 
-    local r = 0
+    local r = reverse_radius and radius or 0
     local i = 1
     local dx, dy = 0, 0
     return function()
         if r == 0 then
+            -- If we reached here under reverse_radius, we returned the center
+            -- last iteration, so we're done.
+            if reverse_radius then
+                return
+            end
+
             r = 1
             if include_center then
                 return pos
@@ -126,16 +132,19 @@ function radius_iter(pos, radius, include_center)
         end
 
         local last_point = i == #square + 1
-        if last_point
-                and dx + square_move[i - 1][1] == r * square[1][1]
-                and dy + square_move[i - 1][2] == r * square[1][2]
-            or not last_point
-                and dx == r * square[i][1]
-                and dy == r * square[i][2] then
+        if last_point and dx + square_move[i - 1][1] == r * square[1][1]
+                    and dy + square_move[i - 1][2] == r * square[1][2]
+                or not last_point
+                    and dx == r * square[i][1]
+                    and dy == r * square[i][2] then
 
             if last_point then
-                r = r + 1
-                if r > radius then
+                r = r + (reverse_radius and -1 or 1)
+                if reverse_radius and r == 0 then
+                    return include_center and pos or nil
+                end
+
+                if not reverse_radius and r > radius then
                     return
                 end
 

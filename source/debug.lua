@@ -132,16 +132,50 @@ function dsay(x, debug_log, do_note)
     end
 end
 
-function test_radius_iter()
-    dsay("Testing 3, 3 with radius 1")
-    for pos in radius_iter({ x = 3, y = 3 }, 1) do
-        dsay("x: " .. pos.x .. ", y: " .. pos.y)
+function test_radius_iter(center, radius, include_center, reverse_radius)
+    if not center then
+        center = const.origin
     end
 
-    dsay("Testing const.origin with radius 3")
-    for pos in radius_iter(const.origin, 3) do
-        dsay("x: " .. pos.x .. ", y: " .. pos.y)
+    if not radius then
+        radius = 3
     end
+
+    local radius_str = " with " .. (reverse_radius and "reversed " or "")
+        .. "radius of " .. radius
+    local center_str = " and center "
+        .. (include_center and " included" or " excluded")
+    say("Testing radius iterator at " .. pos_string(center) .. radius_str
+        .. center_str)
+    local str = "Points: "
+    local map = {}
+    local i = 0
+    for pos in radius_iter(center, radius, include_center, reverse_radius) do
+        str = str .. pos_string(pos) .. "; "
+
+        local char = i > 61 and "Ø" or string.char(string.byte('A') + i)
+        map[hash_position(pos)] = char
+        i = i + 1
+    end
+    say(str)
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    say("Map: ")
+    for y = -radius, radius do
+        str = ""
+        for x = -radius, radius do
+            local pos = position_sum(center, { x = x, y = y })
+            local char = map[hash_position(pos)]
+            if not char then
+                char = " "
+            end
+            str = str .. char
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
 end
 
 function print_traversal_map(center)
