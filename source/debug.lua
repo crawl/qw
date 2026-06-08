@@ -410,6 +410,41 @@ function toggle_delay()
     dsay((qw.delayed and "Enabling" or "Disabling") .. " action delay", false)
 end
 
+function start_profiler()
+    if not qw.enable_profiling or qw.profiling then
+        return
+    end
+
+    dsay("Starting profiler")
+
+    if not qw.profiler then
+        qw.profiler = require 'ProFi'
+    end
+
+    qw.profiler:start()
+    qw.profiling = true
+end
+
+function stop_profiler()
+    if not qw.profiling then
+        return
+    end
+
+    dsay("Stopping profiler")
+    qw.profiler:stop()
+    qw.profiler:writeReport('qw_profiler_report.txt')
+    qw.profiling = false
+end
+
+function toggle_profiler()
+    qw.enable_profiling = not qw.enable_profiling
+    if not qw.enable_profiling and qw.profiling then
+        stop_profiler()
+    end
+
+    dsayf("Profiling is now %s", qw.enable_profiling and "enabled" or "disabled")
+end
+
 function reset_coroutine()
     qw.update_coroutine = nil
     collectgarbage("collect")

@@ -88,6 +88,8 @@ function run_qw()
         return
     end
 
+    start_profiler()
+
     if qw.update_coroutine == nil then
         qw.update_coroutine = coroutine.create(qw_main)
     end

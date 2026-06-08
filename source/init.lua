@@ -95,6 +95,8 @@ function initialize_rc_variables()
 
     qw.shield_crazy = SHIELD_CRAZY and you.race() ~= "Coglin"
     qw.full_inventory_panic = FULL_INVENTORY_PANIC
+
+    qw.enable_profiling = ENABLE_PROFILING
 end
 
 function initialize_enums()
