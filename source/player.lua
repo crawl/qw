@@ -524,6 +524,10 @@ end
 function unable_to_move()
     return turn_memo("unable_to_move",
         function()
+            if you.status("immotile") then
+                return true
+            end
+
             local form = you.transform()
             return form == "tree" or form == "fungus" and qw.danger_in_los
         end)
