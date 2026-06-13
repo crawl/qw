@@ -57,6 +57,7 @@ function reset_cached_turn_data(force)
     end
 
     qw.turn_memos = {}
+    qw.autopickup_cache = {}
     qw.best_equip = nil
     qw.attacks = nil
     qw.want_to_kite = nil

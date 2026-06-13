@@ -39,122 +39,122 @@ function item_property(prop, item)
 
     if item.artefact and item.artprops and item.artprops[prop] then
         return item.artprops[prop]
-    else
-        local name = item.name()
-        local ego = item.ego()
-        local subtype = item.subtype()
-        if prop == "rF" then
-            if name:find("fire dragon") then
-                return 2
-            elseif ego == "fire resistance"
-                    or ego == "resistance"
-                    or subtype == "ring of protection from fire"
-                    or name:find("golden dragon") then
-                return 1
-            elseif name:find("ice dragon") then
-                return -1
-            else
-                return 0
-            end
-        elseif prop == "rC" then
-            if name:find("ice dragon") then
-                return 2
-            elseif ego == "cold resistance" or ego == "resistance"
-                     or subtype == "ring of protection from cold"
-                     or name:find("golden dragon") then
-                return 1
-            elseif name:find("fire dragon") then
-                return -1
-            else
-                return 0
-            end
-        elseif prop == "rElec" then
-            return name:find("storm dragon") and 1 or 0
-        elseif prop == "rPois" then
-            return (ego == "poison resistance"
-                or subtype == "ring of poison resistance"
-                or name:find("swamp dragon")
-                or name:find("golden dragon")) and 1 or 0
-        elseif prop == "rN" then
-            return (ego == "positive energy"
-                or subtype == "ring of positive energy"
-                or name:find("pearl dragon")) and 1 or 0
-        elseif prop == "Will" then
-            return (ego == "willpower"
-                or subtype == "ring of willpower"
-                or name:find("quicksilver dragon")) and 1 or 0
-        elseif prop == "rCorr" then
-            return (ego == "corrosion resistance"
-                or subtype == "ring of resist corrosion"
-                or name:find("acid dragon")) and 1 or 0
-        elseif prop == "SInv" then
-            return (ego == "see invisible"
-                or subtype == "ring of see invisible") and 1 or 0
-        elseif prop == "Fly" then
-            return ego == "flying" and 1 or 0
-        elseif prop == "Faith" then
-            return subtype == "amulet of faith" and 1 or 0
-        elseif prop == "Spirit" then
-            return (ego == "spirit shield"
-                    or subtype == "amulet of guardian spirit") and 1 or 0
-        elseif prop == "Regen" then
-             return (name:find("troll leather")
-                     or subtype == "amulet of regeneration") and 1 or 0
-        elseif prop == "Acrobat" then
-             return subtype == "amulet of the acrobat" and 1 or 0
-        elseif prop == "Reflect" then
-             return (ego == "reflection" or subtype == "amulet of reflection")
-                 and 1 or 0
-        elseif prop == "*Dream" then
-             return name:find("dreamshard necklace") and 1 or 0
-        elseif prop == "RMsl" then
-             return ego == "repulsion" and 1 or 0
-        elseif prop == "Ponderous" then
-             return ego == "ponderousness" and 1 or 0
-        elseif prop == "Harm" then
-             return ego == "harm" and 1 or 0
-        elseif prop == "Hurl" then
-            return ego == "hurling" and 1 or 0
-        elseif prop == "Archery" then
-            return ego == "archery" and 1 or 0
-        elseif prop == "Light" then
-            return ego == "light" and 1 or 0
-        elseif prop == "Snipe" then
-            return ego == "sniping" and 1 or 0
-        elseif prop == "Str" then
-            if subtype == "ring of strength" then
-                return item.plus or 0
-            elseif ego == "strength" then
-                return 3
-            end
-        elseif prop == "Dex" then
-            if subtype == "ring of dexterity" then
-                return item.plus or 0
-            elseif ego == "dexterity" then
-                return 3
-            end
-        elseif prop == "Int" then
-            if subtype == "ring of intelligence" then
-                return item.plus or 0
-            elseif ego == "intelligence" then
-                return 3
-            end
-        elseif prop == "Slay" then
-            return subtype == "ring of slaying" and item.plus or 0
-        elseif prop == "AC" then
-            if subtype == "ring of protection" then
-                return item.plus or 0
-            -- Wrong for weapons, but we scale things differently for weapons.
-            elseif ego == "protection" then
-                return 3
-            elseif ego == "RevParry" then
-                return 5
-            end
-        elseif prop == "EV" then
-            return subtype == "ring of evasion"  and item.plus or 0
-        elseif prop == "SH" then
-            return subtype == "amulet of reflection" and 5 or 0
+    end
+
+    local name = item.name()
+    local ego = item.ego()
+    local subtype = item.subtype()
+    if prop == "rF" then
+        if name:find("fire dragon") then
+            return 2
+        elseif ego == "fire resistance"
+                or ego == "resistance"
+                or subtype == "ring of protection from fire"
+                or name:find("golden dragon") then
+            return 1
+        elseif name:find("ice dragon") then
+            return -1
+        else
+            return 0
         end
+    elseif prop == "rC" then
+        if name:find("ice dragon") then
+            return 2
+        elseif ego == "cold resistance" or ego == "resistance"
+                 or subtype == "ring of protection from cold"
+                 or name:find("golden dragon") then
+            return 1
+        elseif name:find("fire dragon") then
+            return -1
+        else
+            return 0
+        end
+    elseif prop == "rElec" then
+        return name:find("storm dragon") and 1 or 0
+    elseif prop == "rPois" then
+        return (ego == "poison resistance"
+            or subtype == "ring of poison resistance"
+            or name:find("swamp dragon")
+            or name:find("golden dragon")) and 1 or 0
+    elseif prop == "rN" then
+        return (ego == "positive energy"
+            or subtype == "ring of positive energy"
+            or name:find("pearl dragon")) and 1 or 0
+    elseif prop == "Will" then
+        return (ego == "willpower"
+            or subtype == "ring of willpower"
+            or name:find("quicksilver dragon")) and 1 or 0
+    elseif prop == "rCorr" then
+        return (ego == "corrosion resistance"
+            or subtype == "ring of resist corrosion"
+            or name:find("acid dragon")) and 1 or 0
+    elseif prop == "SInv" then
+        return (ego == "see invisible"
+            or subtype == "ring of see invisible") and 1 or 0
+    elseif prop == "Fly" then
+        return ego == "flying" and 1 or 0
+    elseif prop == "Faith" then
+        return subtype == "amulet of faith" and 1 or 0
+    elseif prop == "Spirit" then
+        return (ego == "spirit shield"
+                or subtype == "amulet of guardian spirit") and 1 or 0
+    elseif prop == "Regen" then
+         return (name:find("troll leather")
+                 or subtype == "amulet of regeneration") and 1 or 0
+    elseif prop == "Acrobat" then
+         return subtype == "amulet of the acrobat" and 1 or 0
+    elseif prop == "Reflect" then
+         return (ego == "reflection" or subtype == "amulet of reflection")
+             and 1 or 0
+    elseif prop == "*Dream" then
+         return name:find("dreamshard necklace") and 1 or 0
+    elseif prop == "RMsl" then
+         return ego == "repulsion" and 1 or 0
+    elseif prop == "Ponderous" then
+         return ego == "ponderousness" and 1 or 0
+    elseif prop == "Harm" then
+         return ego == "harm" and 1 or 0
+    elseif prop == "Hurl" then
+        return ego == "hurling" and 1 or 0
+    elseif prop == "Archery" then
+        return ego == "archery" and 1 or 0
+    elseif prop == "Light" then
+        return ego == "light" and 1 or 0
+    elseif prop == "Snipe" then
+        return ego == "sniping" and 1 or 0
+    elseif prop == "Str" then
+        if subtype == "ring of strength" then
+            return item.plus or 0
+        elseif ego == "strength" then
+            return 3
+        end
+    elseif prop == "Dex" then
+        if subtype == "ring of dexterity" then
+            return item.plus or 0
+        elseif ego == "dexterity" then
+            return 3
+        end
+    elseif prop == "Int" then
+        if subtype == "ring of intelligence" then
+            return item.plus or 0
+        elseif ego == "intelligence" then
+            return 3
+        end
+    elseif prop == "Slay" then
+        return subtype == "ring of slaying" and item.plus or 0
+    elseif prop == "AC" then
+        if subtype == "ring of protection" then
+            return item.plus or 0
+        -- Wrong for weapons, but we scale things differently for weapons.
+        elseif ego == "protection" then
+            return 3
+        elseif ego == "RevParry" then
+            return 5
+        end
+    elseif prop == "EV" then
+        return subtype == "ring of evasion"  and item.plus or 0
+    elseif prop == "SH" then
+        return subtype == "amulet of reflection" and 5 or 0
     end
 
     return 0

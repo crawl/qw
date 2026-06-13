@@ -169,35 +169,39 @@ function autopickup(item, name)
 
     reset_cached_turn_data()
 
+    if qw.autopickup_cache[name] ~= nil then
+        return qw.autopickup_cache[name]
+    end
+
     local class = item.class(true)
+    local result = false
     if class == "gem" then
-        return true
+        result = true
     elseif class == "rune" then
         record_seen_item(you.where(), item.name())
-        return true
+        result = true
     elseif class == "orb" then
         record_seen_item(you.where(), item.name())
         c_persist.found_orb = true
-        return goal_status == "Orb"
+        result = goal_status == "Orb"
+    elseif equip_slot(item) then
+        result = not equip_is_dominated(item)
+    elseif class == "gold" then
+        result = true
+    elseif class == "potion" then
+        result = want_potion(item)
+    elseif class == "scroll" then
+        result = want_scroll(item)
+    elseif class == "wand" then
+        result = want_wand(item)
+    elseif class == "missile" then
+        result = want_missile(item)
+    elseif class == "misc" then
+        result = want_miscellaneous(item)
     end
 
-    if equip_slot(item) then
-        return not equip_is_dominated(item)
-    elseif class == "gold" then
-        return true
-    elseif class == "potion" then
-        return want_potion(item)
-    elseif class == "scroll" then
-        return want_scroll(item)
-    elseif class == "wand" then
-        return want_wand(item)
-    elseif class == "missile" then
-        return want_missile(item)
-    elseif class == "misc" then
-        return want_miscellaneous(item)
-    else
-        return false
-    end
+    qw.autopickup_cache[name] = result
+    return result
 end
 
 -----------------------------------------

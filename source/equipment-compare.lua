@@ -799,6 +799,10 @@ function weapon_is_sit_dominated(item, sit)
 end
 
 function equip_is_dominated(item)
+    if debug_channel("items-all") then
+        dsay("Checking item domination of " .. item.name())
+    end
+
     local slot = equip_slot(item)
 
     -- We don't want orbs.
