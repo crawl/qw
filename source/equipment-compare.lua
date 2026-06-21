@@ -293,6 +293,9 @@ function property_dominated(item1, item2)
     local bmin1, bmax1 = equip_value(item1, false, nil, nil, true)
     local bmin2, bmax2 = equip_value(item2, false, nil, nil, true)
     local diff = bmin2 - bmax1
+    if debug_channel("items-all") then
+        dsay("Diff of Item2 min and Item1 max: " .. diff)
+    end
     if diff < 0 then
         return false
     end
@@ -303,6 +306,9 @@ function property_dominated(item1, item2)
         if props1[i] > props2[i] then
             diff = diff - (props1[i] - props2[i])
         end
+    end
+    if debug_channel("items-all") then
+        dsay("Final diff: " .. diff)
     end
     return diff >= 0
 end
@@ -843,6 +849,10 @@ function equip_is_dominated(item)
                 slots_free = slots_free - 1
 
                 if slots_free == 0 then
+                    if debug_channel("items-all") then
+                        dsay("Item is dominated by " .. item2.name())
+                    end
+
                     return true
                 end
             end

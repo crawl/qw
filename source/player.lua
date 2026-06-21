@@ -146,7 +146,8 @@ function intrinsic_property(prop)
         end
         return val
     elseif prop == "Will" then
-        return you.mutation("strong-willed") + (you.god() == "Trog" and 1 or 0)
+        return (you.mutation("strong-willed")
+            + (you.god() == "Trog" and 1 or 0))
     elseif prop == "rCorr" then
         return 0
     elseif prop == "SInv" then
@@ -175,16 +176,22 @@ Does not include some temporary effects.
 ]]--
 function player_property(prop, ignore_equip)
     local value
-    local prop_is_stat = false
+    local cumulative = false
     if prop == "Str" then
         value = you.strength()
-        prop_is_stat = true
+        cumulative = true
     elseif prop == "Dex" then
         value = you.dexterity()
-        prop_is_stat = true
+        cumulative = true
     elseif prop == "Int" then
         value = you.intelligence()
-        prop_is_stat = true
+        cumulative = true
+    elseif prop == "Will" then
+        value = (you.willpower() - (you.status("strong-willed") and 1 or 0))
+            * (you.status("weak-willed") and 2 or 1)
+            -- Assume we'll always have a pip available from Trog's hand.
+            + (you.god() == "Trog" and 1 or 0)
+        cumulative = true
     else
         value = intrinsic_property(prop)
     end
@@ -193,9 +200,9 @@ function player_property(prop, ignore_equip)
         local is_ignored = item_in_equip_set(item, ignore_equip)
         -- For stats, we must remove the value contributed by an ignored
         -- item.
-        if is_ignored and prop_is_stat then
+        if is_ignored and cumulative then
             value = value - item_property(prop, item)
-        elseif not is_ignored and not prop_is_stat then
+        elseif not is_ignored and not cumulative then
             value = value + item_property(prop, item)
         end
     end
