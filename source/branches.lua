@@ -1,50 +1,52 @@
 ------------------------------
 -- Branch data and logic
 
--- Some tables with hardcoded data about branches/gods/portals/monsters:
+-- Some tables with hardcoded data about branches/gods/portals/monsters.
 
--- Branch data: branch abbreviation, interlevel travel code, max depth,
--- entrance description, parent branch, min parent branch depth, max parent
--- branch depth, rune name(s).
---
 -- This gets loaded into the branch_data table, which is keyed by the branch
--- name. Use the helper functions to access this data: branch_travel(),
--- branch_depth(), parent_branch(), and have_branch_runes().
+-- name. Use the helper functions to access this data: branch_symbol(),
+-- branch_is_connected(), branch_depth(), parent_branch(), and
+-- have_branch_runes().
+local branch_data_keys = { "branch", "symbol", "is_connected", "depth",
+    "entrance", "parent", "parent_min_depth", "parent_max_depth", "runes" }
 local branch_data_values = {
-    { "D", "D", 15 },
-    { "Ossuary", nil, 1, "enter_ossuary" },
-    { "Sewer", nil, 1, "enter_sewer" },
-    { "Bailey", nil, 1, "enter_bailey" },
-    { "IceCv", nil, 1, "enter_ice_cave" },
-    { "Volcano", nil, 1, "enter_volcano" },
-    { "Bailey", nil, 1, "enter_bailey" },
-    { "Gauntlet", nil, 1, "enter_gauntlet" },
-    { "Bazaar", nil, 1, "enter_bazaar" },
-    { "WizLab", nil, 1, "enter_wizlab" },
-    { "Desolation", nil, 1, "enter_desolation" },
-    { "Temple", "T", 1, "enter_temple", "D", 4, 7 },
-    { "Orc", "O", 2, "enter_orcish_mines", "D", 9, 12 },
-    { "Elf", "E", 3, "enter_elven_halls", "Orc", 2, 2 },
-    { "Lair", "L", 5, "enter_lair", "D", 8, 11 },
-    { "Swamp", "S", 4, "enter_swamp", "Lair", 2, 4, { "decaying" } },
-    { "Shoals", "A", 4, "enter_shoals", "Lair", 2, 4, { "barnacled" } },
-    { "Snake", "P", 4, "enter_snake_pit", "Lair", 2, 4, { "serpentine" } },
-    { "Spider", "N", 4, "enter_spider_nest", "Lair", 2, 4, { "gossamer" } },
-    { "Slime", "M", 5, "enter_slime_pits", "Lair", 5, 6, { "slimy" } },
-    { "Vaults", "V", 5, "enter_vaults", "D", 13, 14, { "silver" } },
-    { "Crypt", "C", 3, "enter_crypt", "Vaults", 3, 4 },
-    { "Tomb", "W", 3, "enter_tomb", "Crypt", 3, 3, { "golden" } },
-    { "Depths", "U", 4, "enter_depths", "D", 15, 15 },
-    { "Zig", nil, 27, "enter_ziggurat", "Depths", 1, 4 },
-    { "Zot", "Z", 5, "enter_zot", "Depths", 4, 4 },
-    { "Pan", nil, 1, "enter_pandemonium", "Depths", 2, 2,
+    { "D", "D", true, 15 },
+    { "Bazaar", "1", false, 1, "enter_bazaar" },
+    { "Trove", "2", false, 1, "enter_trove" },
+    { "Sewer", "3", false, 1, "enter_sewer" },
+    { "Ossuary", "4", false, 1, "enter_ossuary" },
+    { "Bailey", "5", false, 1, "enter_bailey" },
+    { "IceCv", "6", false, 1, "enter_ice_cave" },
+    { "Volcano", "7", false, 1, "enter_volcano" },
+    { "WizLab", "8", false, 1, "enter_wizlab" },
+    { "Desolation", "9", false, 1, "enter_desolation" },
+    { "Gauntlet", "!", false, 1, "enter_gauntlet" },
+    { "Necropolis", "%", false, 1, "enter_necropolis" },
+    { "Temple", "T", true, 1, "enter_temple", "D", 4, 7 },
+    { "Orc", "O", true, 2, "enter_orcish_mines", "D", 9, 12 },
+    { "Elf", "E", true, 3, "enter_elven_halls", "Orc", 2, 2 },
+    { "Lair", "L", true, 5, "enter_lair", "D", 8, 11 },
+    { "Swamp", "S", true, 4, "enter_swamp", "Lair", 2, 4, { "decaying" } },
+    { "Shoals", "A", true, 4, "enter_shoals", "Lair", 2, 4, { "barnacled" } },
+    { "Snake", "P", true, 4, "enter_snake_pit", "Lair", 2, 4,
+        { "serpentine" } },
+    { "Spider", "N", true, 4, "enter_spider_nest", "Lair", 2, 4,
+        { "gossamer" } },
+    { "Slime", "M", true, 5, "enter_slime_pits", "Lair", 5, 6, { "slimy" } },
+    { "Vaults", "V", true, 5, "enter_vaults", "D", 13, 14, { "silver" } },
+    { "Crypt", "C", true, 3, "enter_crypt", "Vaults", 3, 4 },
+    { "Tomb", "W", true, 3, "enter_tomb", "Crypt", 3, 3, { "golden" } },
+    { "Depths", "U", true, 4, "enter_depths", "D", 15, 15 },
+    { "Zot", "Z", true, 5, "enter_zot", "Depths", 4, 4 },
+    { "Pan", "R", false, 1, "enter_pandemonium", "Depths", 2, 2,
         { "dark", "demonic", "fiery", "glowing", "magical" } },
-    { "Abyss", nil, 7, "enter_abyss", "Depths", 3, 3, { "abyssal" } },
-    { "Hell", "H", 1, "enter_hell", "Depths", 1, 4 },
-    { "Dis", "I", 7, "enter_dis", "Hell", 1, 1, { "iron" } },
-    { "Geh", "G", 7, "enter_gehenna", "Hell", 1, 1, { "obsidian" } },
-    { "Coc", "X", 7, "enter_cocytus", "Hell", 1, 1, { "icy" } },
-    { "Tar", "Y", 7, "enter_tartarus", "Hell", 1, 1, { "bone" } },
+    { "Abyss", "J", false, 7, "enter_abyss", "Depths", 3, 3, { "abyssal" } },
+    { "Zig", "Q", false, 27, "enter_ziggurat", "Depths", 1, 4 },
+    { "Hell", "H", true, 1, "enter_hell", "Depths", 1, 4 },
+    { "Dis", "I", true, 7, "enter_dis", "Hell", 1, 1, { "iron" } },
+    { "Geh", "G", true, 7, "enter_gehenna", "Hell", 1, 1, { "obsidian" } },
+    { "Coc", "X", true, 7, "enter_cocytus", "Hell", 1, 1, { "icy" } },
+    { "Tar", "Y", true, 7, "enter_tartarus", "Hell", 1, 1, { "bone" } },
 }
 
 hell_branches = { "Coc", "Dis", "Geh", "Tar" }
@@ -76,16 +78,12 @@ function initialize_branch_data()
     for _, entry in ipairs(branch_data_values) do
         local branch = entry[1]
         local data = {}
-        data["travel"] = entry[2]
-        data["depth"] = entry[3]
-        data["entrance"] = entry[4]
-        data["parent"] = entry[5]
-        data["parent_min_depth"] = entry[6]
-        data["parent_max_depth"] = entry[7]
-        data["runes"] = entry[8]
+        for i = 2, #branch_data_keys do
+            data[branch_data_keys[i]] = entry[i]
+        end
 
         -- Update the parent entry depth with that of an entry found in the
-        -- parent either if the entry depth is unconfirmed our the found entry
+        -- parent either if the entry depth is unconfirmed or the found entry
         -- is at a lower depth.
         if c_persist.branch_entries[branch] then
             for level, _ in pairs(c_persist.branch_entries[branch]) do
@@ -124,12 +122,20 @@ function initialize_branch_data()
     zot_end = branch_end("Zot")
 end
 
-function branch_travel(branch)
+function branch_is_connected(branch)
     if not branch_data[branch] then
         error("Unknown branch: " .. tostring(branch))
     end
 
-    return branch_data[branch].travel
+    return branch_data[branch].is_connected
+end
+
+function branch_symbol(branch)
+    if not branch_data[branch] then
+        error("Unknown branch: " .. tostring(branch))
+    end
+
+    return branch_data[branch].symbol
 end
 
 function branch_depth(branch)

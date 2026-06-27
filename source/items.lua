@@ -231,21 +231,23 @@ function get_item(letter)
     return items.inslot(items.letter_to_index(letter))
 end
 
-function find_item_func(cls, name)
+function find_item_func(cls, subtype, ego)
     for item in inventory_iter() do
-        if item.class(true) == cls and item.name():find(name) then
+        if item.class(true) == cls
+                and item.subtype() == subtype
+                and (not ego or item.ego() == ego) then
             return item
         end
     end
 end
 
-function find_item(cls, name)
-    return turn_memo_args(find_item_func, cls, name)
+function find_item(cls, subtype, ego)
+    return turn_memo_args(find_item_func, cls, subtype, ego)
 end
 
 function missile_damage(missile)
     if missile.class(true) ~= "missile"
-            or missile:name():find("throwing net") then
+            or missile.subtype() == "throwing net" then
         return
     end
 
@@ -273,7 +275,7 @@ end
 
 function missile_quantity(missile)
     if missile.class(true) ~= "missile"
-            or missile:name():find("throwing net") then
+            or missile.subtype() == "throwing net" then
         return
     end
 
@@ -282,7 +284,7 @@ end
 
 function boomerang_quantity(missile)
     if missile.class(true) ~= "missile"
-            or not missile:name():find("boomerang") then
+            or not missile.subtype() == "boomerang" then
         return
     end
 
@@ -305,8 +307,8 @@ function best_missile(value_func)
     return turn_memo_args(best_missile_func, value_func)
 end
 
-function count_item(cls, name)
-    local it = find_item(cls, name)
+function count_item(cls, subtype, ego)
+    local it = find_item(cls, subtype, ego)
     if it then
         return it.quantity
     end

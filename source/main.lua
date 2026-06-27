@@ -6,10 +6,17 @@ function stop()
     unset_options()
 end
 
-function start()
+function start(do_ready)
+    if do_ready == nil then
+        do_ready = true
+    end
+
     qw.automatic = true
     set_options()
-    ready()
+
+    if do_ready then
+        ready()
+    end
 end
 
 function startstop()
@@ -62,6 +69,8 @@ end
 function qw_main()
     turn_update()
 
+    handle_scenario()
+
     if qw.time_passed and qw.single_step then
         stop()
     end
@@ -76,6 +85,7 @@ function qw_main()
             plans.turn()
         end
     end
+
     -- restart_cascade must remain true for the entire move cascade while we're
     -- restarting.
     if did_restart then
@@ -103,9 +113,7 @@ function run_qw()
 
     if coroutine.status(qw.update_coroutine) == "dead" then
         qw.update_coroutine = nil
-        qw.do_dummy_action = qw.do_dummy_action == nil and qw.restart_cascade
-    else
-        qw.do_dummy_action = qw.do_dummy_action == nil
+        qw.do_dummy_action = qw.do_dummy_action and qw.restart_cascade
     end
 
     local memory_count = collectgarbage("count")
@@ -132,7 +140,7 @@ function run_qw()
     if qw.do_dummy_action then
         crawl.process_keys(":" .. string.char(27) .. string.char(27))
     end
-    qw.do_dummy_action = nil
+    qw.do_dummy_action = true
 end
 
 function ready()

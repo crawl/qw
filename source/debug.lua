@@ -158,6 +158,10 @@ function dsay(x, debug_log, do_note)
     end
 end
 
+function dsayf(fmt, ...)
+    dsay(string.format(fmt, ...))
+end
+
 function test_radius_iter(center, radius, include_center, reverse_radius)
     if not center then
         center = const.origin
@@ -349,7 +353,7 @@ function set_counter()
 end
 
 function override_goal(goal)
-    qw.debug_goal = goal
+    qw.override_goal = goal
     update_goal()
 end
 

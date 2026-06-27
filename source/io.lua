@@ -1,22 +1,26 @@
--------------------
+-----------------
 -- Some general input and message output handling, as well as in-game message
 -- parsing.
+
+function qw_message(msg, turns)
+    if turns then
+        return string.format(" QW(%d): %s", you.turns(), msg)
+    else
+        return " QW: " .. msg
+    end
+end
 
 function note(x)
     crawl.take_note(qw_message(x))
 end
 
-function qw_message(x, turns)
-    if turns then
-        return " QW(" .. you.turns() .. "): " .. x
-    else
-        return " QW: " .. x
-    end
+function say(msg)
+    crawl.mpr(qw_message(msg, true))
+    note(msg)
 end
 
-function say(x)
-    crawl.mpr(qw_message(x, true))
-    note(x)
+function sayf(fmt, ...)
+    say(string.format(fmt, ...))
 end
 
 function magic(command)
@@ -34,8 +38,17 @@ function magicfind(target, secondary)
 end
 
 function c_answer_prompt(prompt)
-    if not qw.wizmode_death and prompt == "Die?" then
-        return false
+    if prompt == "Die?" then
+        if qw.scenario then
+            qw.scenario.deaths = qw.scenario.deaths + 1
+            qw.override_goal = nil
+
+            return false
+        elseif qw.wizmode_death then
+            return true
+        else
+            return false
+        end
     elseif prompt:find("This attack would place you under penance") then
         return false
     elseif prompt:find("Shopping list") then

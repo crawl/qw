@@ -27,7 +27,7 @@ function excluded_map_selected(map_select)
         or map_select == const.map_select.both
 end
 
-function update_waypoint(new_level)
+function update_waypoint(new_level, force)
     local place = where
     if in_portal() then
         place = "Portal"
@@ -37,7 +37,7 @@ function update_waypoint(new_level)
     local waypoint_num = c_persist.waypoints[place]
     -- XXX: Hack to make Tomb hatch plans work. Re-create the waypoint each
     -- time we enter a level.
-    if new_level and waypoint_num and in_branch("Tomb") then
+    if waypoint_num and new_level and (force or in_branch("Tomb")) then
         travel.set_waypoint(waypoint_num, 0, 0)
         new_waypoint = true
     elseif not waypoint_num then

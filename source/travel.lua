@@ -98,7 +98,7 @@ function travel_down_branches(result, dest_branch, dest_depth, parents,
         -- We stop if we haven't found the next branch or if we can't actually
         -- enter it with travel.
         if not branch_found(next_branch, const.explore.reachable)
-                or not branch_travel(next_branch) then
+                or not branch_is_connected(next_branch) then
             result.stop_branch = next_branch
             break
         end

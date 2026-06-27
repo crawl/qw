@@ -156,20 +156,20 @@ end
 function choose_goal()
     local next_goal, chosen_goal, normal_goal, last_completed
 
-    if qw.debug_goal then
-        if qw.debug_goal == "Normal" then
+    if qw.override_goal then
+        if qw.override_goal == "Normal" then
             normal_goal = goal_normal_next(false)
             if normal_goal then
-                chosen_goal = qw.debug_goal
+                chosen_goal = normal_goal
             else
-                last_completed = qw.debug_goal
-                qw.debug_goal = nil
+                last_completed = "Normal"
+                qw.override_goal = nil
             end
-        elseif goal_complete(qw.debug_goal) then
-            last_completed = qw.debug_goal
-            qw.debug_goal = nil
+        elseif goal_complete(qw.override_goal) then
+            last_completed = qw.override_goal
+            qw.override_goal = nil
         else
-            chosen_goal = qw.debug_goal
+            chosen_goal = qw.override_goal
         end
     end
 
@@ -272,7 +272,7 @@ function determine_goal()
     local chosen_goal, normal_goal = choose_goal()
     local old_status = goal_status
     local status = chosen_goal
-    local goal = status
+    local goal = chosen_goals
 
     if status == "Save" then
         goal_status = status
@@ -868,10 +868,6 @@ function god_options()
 end
 
 function goal_options()
-    if override_goals then
-        return override_goals
-    end
-
     return qw.goals[c_persist.current_goals]
 end
 

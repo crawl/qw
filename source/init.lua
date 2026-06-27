@@ -97,6 +97,7 @@ function initialize_rc_variables()
     qw.full_inventory_panic = FULL_INVENTORY_PANIC
 
     qw.enable_profiling = ENABLE_PROFILING
+    qw.scenarios = SCENARIOS
 end
 
 function initialize_const()
@@ -105,6 +106,8 @@ function initialize_const()
 end
 
 function initialize()
+    qw.do_dummy_action = true
+
     -- The version of qw for logging purposes. Run the make-qw.sh script to set
     -- this variable automatically based on the latest annotated git tag and
     -- commit, or change it here to a custom version string.
@@ -239,7 +242,7 @@ function first_turn_initialize()
     if not goals then
         goals = qw.default_goal
         if not goals then
-            error("No default goal defined in DEFAULT_GOAL rc varaible.")
+            error("No default goal defined in DEFAULT_GOAL rc variable.")
         end
     end
     c_persist.current_goals = goals

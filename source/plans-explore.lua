@@ -42,7 +42,7 @@ function send_travel(branch, depth)
         depth_str = depth
     end
 
-    magic("G" .. branch_travel(branch) .. depth_str .. "\rY")
+    magic("G" .. branch_symbol(branch) .. depth_str .. "\rY")
 end
 
 function unable_to_travel()
