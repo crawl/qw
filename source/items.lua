@@ -231,15 +231,16 @@ function get_item(letter)
     return items.inslot(items.letter_to_index(letter))
 end
 
+function find_item_func(cls, name)
+    for item in inventory_iter() do
+        if item.class(true) == cls and item.name():find(name) then
+            return item
+        end
+    end
+end
+
 function find_item(cls, name)
-    return turn_memo_args("find_item",
-        function()
-            for item in inventory_iter() do
-                if item.class(true) == cls and item.name():find(name) then
-                    return item
-                end
-            end
-        end, cls, name)
+    return turn_memo_args(find_item_func, cls, name)
 end
 
 function missile_damage(missile)
@@ -289,19 +290,19 @@ function boomerang_quantity(missile)
 end
 
 
+function best_missile_func(value_func)
+    local best_missile, best_value
+    for item in inventory_iter() do
+        local value = value_func(item)
+        if value and (not best_value or value > best_value) then
+            best_missile = item
+            best_value = value
+        end
+    end
+end
+
 function best_missile(value_func)
-    return turn_memo_args("best_missile",
-        function()
-            local best_missile, best_value
-            for item in inventory_iter() do
-                local value = value_func(item)
-                if value and (not best_value or value > best_value) then
-                    best_missile = item
-                    best_value = value
-                end
-            end
-            return best_missile
-        end, value_func)
+    return turn_memo_args(best_missile_func, value_func)
 end
 
 function count_item(cls, name)

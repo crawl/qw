@@ -215,27 +215,12 @@ function los_position(map_pos)
     return position_difference(map_pos, qw.map_pos)
 end
 
+function cell_see_cell_func(a, b)
+    return view.cell_see_cell(a.x, a.y, b.x, b.y)
+end
+
 function cell_see_cell(a, b)
-    local main_memo = qw.turn_memos.cell_see_cell
-    if not main_memo then
-        main_memo = {}
-        qw.turn_memos.cell_see_cell = main_memo
-    end
-
-    local memo = main_memo[a.hash]
-    if not memo then
-        memo = {}
-        main_memo[a.hash] = memo
-    end
-
-    local value = memo[b.hash]
-    if value ~= nil then
-        return value
-    end
-
-    value = view.cell_see_cell(a.x, a.y, b.x, b.y)
-    memo[b.hash] = value
-    return value
+    return turn_memo_args(cell_see_cell_func, a, b)
 end
 
 function map_cell_see_cell(a, b)

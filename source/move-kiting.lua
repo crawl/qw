@@ -313,7 +313,7 @@ function best_kiting_destination_func()
 end
 
 function best_kiting_destination()
-    return turn_memo("best_kiting_destination", best_kiting_destination_func)
+    return turn_memo(best_kiting_destination_func)
 end
 
 function is_kite_step(pos)

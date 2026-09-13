@@ -484,7 +484,7 @@ function player_move_delay_func()
 end
 
 function player_move_delay()
-    return turn_memo("player_move_delay", player_move_delay_func)
+    return turn_memo(player_move_delay_func)
 end
 
 function base_mutation(str)
@@ -528,50 +528,46 @@ function calc_los_radius()
     end
 end
 
-function unable_to_move()
-    return turn_memo("unable_to_move",
-        function()
-            if you.status("immotile") then
-                return true
-            end
+function unable_to_move_func()
+    if you.status("immotile") then
+        return true
+    end
 
-            local form = you.transform()
-            return form == "tree" or form == "fungus" and qw.danger_in_los
-        end)
+    local form = you.transform()
+    return form == "tree" or form == "fungus" and qw.danger_in_los
+end
+
+function unable_to_move()
+    return tun_memo(unable_to_move_func)
+end
+
+function dangerous_to_move_func(allow_spiked)
+    return not allow_spiked and you.status("spiked")
+        or you.confused()
+            and (check_brothers_in_arms(1)
+                or check_greater_servants(1)
+                or check_divine_warriors(1)
+                or check_beogh_allies(1))
 end
 
 function dangerous_to_move(allow_spiked)
-    return turn_memo_args("dangerous_to_move",
-        function()
-            return not allow_spiked and you.status("spiked")
-                or you.confused()
-                    and (check_brothers_in_arms(1)
-                        or check_greater_servants(1)
-                        or check_divine_warriors(1)
-                        or check_beogh_allies(1))
-        end, allow_spiked)
+    return turn_memo_args(dangerous_to_move_func, allow_spiked)
 end
 
 function unable_to_melee()
-    return turn_memo("unable_to_melee",
-        function()
-            return you.caught()
-        end)
+    return you.caught()
 end
 
 function unable_to_shoot()
-    return turn_memo("unable_to_shoot",
-        function()
-            if you.berserk() or you.caught() then
-                return true
-            end
+    if you.berserk() or you.caught() then
+        return true
+    end
 
-            local form = you.transform()
-            return not (form == ""
-                or form == "tree"
-                or form == "statue"
-                or form == "lich")
-        end)
+    local form = you.transform()
+    return not (form == ""
+        or form == "tree"
+        or form == "statue"
+        or form == "lich")
 end
 
 function unable_to_throw()
@@ -603,29 +599,27 @@ function player_can_melee_mons(mons, ignore_temp)
 end
 
 function dangerous_to_shoot()
-    return turn_memo("dangerous_to_shoot",
-        function()
-            return dangerous_to_attack()
-                -- Don't attempt to shoot with summoned allies adjacent.
-                or you.confused()
-                    and (check_brothers_in_arms(qw.los_radius)
-                        or check_greater_servants(qw.los_radius)
-                        or check_divine_warriors(qw.los_radius)
-                        or check_beogh_allies(qw.los_radius))
-        end)
+    return dangerous_to_attack()
+        -- Don't attempt to shoot with summoned allies adjacent.
+        or you.confused()
+            and (check_brothers_in_arms(qw.los_radius)
+                or check_greater_servants(qw.los_radius)
+                or check_divine_warriors(qw.los_radius)
+                or check_beogh_allies(qw.los_radius))
 end
 
-function dangerous_to_melee()
-    return turn_memo("dangerous_to_melee",
-        function()
-            return dangerous_to_attack()
-                -- Don't attempt melee with summoned allies adjacent.
-                or you.confused()
-                    and (check_brothers_in_arms(1)
-                        or check_greater_servants(1)
-                        or check_divine_warriors(1)
-                        or check_beogh_allies(1))
-        end)
+function dangerous_to_melee_func()
+    return dangerous_to_attack()
+        -- Don't attempt melee with summoned allies adjacent.
+        or you.confused()
+            and (check_brothers_in_arms(1)
+                or check_greater_servants(1)
+                or check_divine_warriors(1)
+                or check_beogh_allies(1))
+end
+
+return dangerous_to_melee()
+    return turn_memo(dangerous_to_melee_func)
 end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
@@ -633,24 +627,26 @@ function dangerous_to_attack()
     return not map_is_unexcluded_at(qw.map_pos)
 end
 
-function want_to_be_surrounded()
-    return turn_memo("want_to_be_surrounded",
-        function()
-            local have_vamp_cleave = false
-            for weapon in equipped_slot_iter("weapon") do
-                if weapon.weap_skill == "Axes"
-                        and weapon:ego() == "vampirism" then
-                    have_vamp_cleave = true
-                    break
-                end
-            end
-            if not have_vamp_cleave then
-                return false
-            end
+function mons_vamp_check(mons)
+    return not mons:is_immune_vampirism()
+end
 
-            local vamp_check = function(mons)
-                    return not mons:is_immune_vampirism()
-                end
-            return count_enemies(qw.los_radius, vamp_check) >= 4
-        end)
+function want_to_be_surrounded_func()
+    local have_vamp_cleave = false
+    for weapon in equipped_slot_iter("weapon") do
+        if weapon.weap_skill == "Axes"
+                and weapon:ego() == "vampirism" then
+            have_vamp_cleave = true
+            break
+        end
+    end
+    if not have_vamp_cleave then
+        return false
+    end
+
+    return count_enemies(qw.los_radius, mons_vamp_check) >= 4
+end
+
+function want_to_be_surrounded()
+    return turn_memo(want_to_be_surrounded_func)
 end

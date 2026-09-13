@@ -40,9 +40,7 @@ function get_slot_item_func(slot, allow_melded)
 end
 
 function get_slot_item(slot, allow_melded)
-    return turn_memo_args("get_slot_item",
-        function() return get_slot_item_func(slot, allow_melded) end,
-        slot, allow_melded)
+    return turn_memo_args(get_slot_item_func, slot, allow_melded)
 end
 
 function get_weapon(allow_melded)
@@ -77,10 +75,7 @@ function equip_slot(item)
 end
 
 function want_ranged_weapon()
-    return turn_memo("want_ranged_weapon",
-        function()
-            return weapon_skill() == "Ranged Weapons"
-        end)
+    return weapon_skill() == "Ranged Weapons"
 end
 
 function using_ranged_weapon(allow_melded)
@@ -98,33 +93,35 @@ function using_two_handed_weapon(allow_melded)
     return weapon and weapon.hands == 2
 end
 
-function using_two_one_handed_weapons(allow_melded)
-    return turn_memo_args("using_two_one_handed_weapons",
-        function()
-            local one_handers = 0
-            for weapon in equipped_slot_iter("weapon", allow_melded) do
-                if weapon.hands == 1 then
-                    one_handers = one_handers + 1
-                end
+function using_two_one_handed_weapons_func(allow_melded)
+    local one_handers = 0
+    for weapon in equipped_slot_iter("weapon", allow_melded) do
+        if weapon.hands == 1 then
+            one_handers = one_handers + 1
+        end
 
-                if one_handers > 1 then
-                    return true
-                end
-            end
+        if one_handers > 1 then
+            return true
+        end
+    end
 
-            return false
-        end, allow_melded)
+    return false
+end
+
+function using_two_one_handed_weapons_func(allow_melded)
+    return turn_memo_args(using_two_one_handed_weapons_func, allow_melded)
+end
+
+function using_cleave_func(allow_melded)
+    for weapon in equipped_slot_iter("weapon", allow_melded) do
+        if weapon.weap_skill == "Axes" then
+            return true
+        end
+    end
 end
 
 function using_cleave(allow_melded)
-    return turn_memo_args("using_cleave",
-        function()
-            for weapon in equipped_slot_iter("weapon", allow_melded) do
-                if weapon.weap_skill == "Axes" then
-                    return true
-                end
-            end
-        end, allow_melded)
+    return turn_memo_args(using_cleave_func, allow_melded)
 end
 
 -- Would we ever want to use a two-handed weapon? This returns true when we
@@ -153,18 +150,19 @@ function want_shield()
     return true
 end
 
-function player_reach_range()
-    return turn_memo("player_reach_range",
-        function()
-            local range = 1
-            for weapon in equipped_slot_iter("weapon") do
-                if weapon.reach_range > range then
-                    range = weapon.reach_range
-                end
-            end
+function player_reach_range_func()
+    local range = 1
+    for weapon in equipped_slot_iter("weapon") do
+        if weapon.reach_range > range then
+            range = weapon.reach_range
+        end
+    end
 
-            return range
-        end)
+    return range
+end
+
+function player_reach_range()
+    return turn_memo(player_reach_range_func)
 end
 
 function weapon_min_delay(weapon)
@@ -437,10 +435,7 @@ function inventory_equip_func(inventory_type, ignore_melding)
 end
 
 function inventory_equip(inventory_type, ignore_melding)
-    return turn_memo_args("inventory_equip",
-        function()
-            return inventory_equip_func(inventory_type, ignore_melding)
-        end, inventory_type, ignore_melding)
+    return turn_memo_args(inventory_equip_func, inventory_type, ignore_melding)
 end
 
 function inventory_slots_iter(slots, ignore_melding)

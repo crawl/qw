@@ -562,7 +562,7 @@ function best_retreat_result_func()
 end
 
 function best_retreat_result()
-    return turn_memo("best_retreat_result", best_retreat_result_func)
+    return turn_memo(best_retreat_result_func)
 end
 
 function will_fight_extreme_threat()

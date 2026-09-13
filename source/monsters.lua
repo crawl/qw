@@ -476,11 +476,8 @@ function assess_enemies_func(duration_level, radius, filter, ignore_hp)
 end
 
 function assess_enemies(duration_level, radius, filter, ignore_hp)
-    return turn_memo_args("assess_enemies",
-        function()
-            return assess_enemies_func(duration_level, radius,
-                filter, ignore_hp)
-        end, duration_level, radius, filter, ignore_hp)
+    return turn_memo_args(assess_enemies_func, duration_level, radius,
+        filter, ignore_hp)
 end
 
 function have_moderate_threat(duration_level, ignore_hp)
@@ -539,10 +536,7 @@ function check_enemies_func(radius, filter)
 end
 
 function check_enemies(radius, filter)
-    return turn_memo_args("check_enemies",
-        function()
-            return check_enemies_func(radius, filter)
-        end, radius, filter)
+    return turn_memo_args(check_enemies_func, radius, filter)
 end
 
 function check_enemies_in_list(radius, mons_list)
@@ -579,10 +573,7 @@ function count_enemies_func(radius, filter)
 end
 
 function count_enemies(radius, filter)
-    return turn_memo_args("count_enemies",
-        function()
-            return count_enemies_func(radius, filter)
-        end, radius, filter)
+    return turn_memo_args(count_enemies_func, radius, filter)
 end
 
 function count_enemies_by_name(radius, name)

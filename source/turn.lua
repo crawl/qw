@@ -4,19 +4,20 @@
 -- A value for sorting last when comparing turns.
 const.inf_turns = 200000000
 
-function turn_memo(name, func)
-    if qw.turn_memos[name] == nil then
-        local val = func()
+function turn_memo(func)
+    local val = qw.turn_memos[func]
+    if val == nil then
+        val = func()
         if val == nil then
             val = false
         end
-        qw.turn_memos[name] = val
+        qw.turn_memos[func] = val
     end
 
-    return qw.turn_memos[name]
+    return val
 end
 
-function turn_memo_args(name, func, ...)
+function turn_memo_args(func, ...)
     local args = table.pack(...)
     assert(args.n > 0)
 
@@ -24,30 +25,36 @@ function turn_memo_args(name, func, ...)
     for j = 1, args.n do
         if j == 1 then
             parent = qw.turn_memos
-            key = name
+            key = func
         end
 
-        if parent[key] == nil then
-            parent[key] = {}
+        local child = parent[key]
+        if child == nil then
+            child = {}
+            parent[key] = child
         end
-
-        parent = parent[key]
+        parent = child
 
         key = args[j]
         if key == nil then
             key = false
+        -- A position table. The position hash is the key.
+        elseif type(key) == "table" then
+            key = key.hash
         end
     end
 
-    if parent[key] == nil then
-        local val = func()
+    -- Obtain the actual value for this combination of arguments.
+    local val = parent[key]
+    if val == nil then
+        val = func(...)
         if val == nil then
             val = false
         end
         parent[key] = val
     end
 
-    return parent[key]
+    return val
 end
 
 function reset_cached_turn_data(force)

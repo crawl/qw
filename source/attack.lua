@@ -141,10 +141,7 @@ function best_melee_target_func(assume_flight)
 end
 
 function best_melee_target(assume_flight)
-    return turn_memo_args("best_melee_target",
-        function()
-            return best_melee_target_func(assume_flight)
-        end, assume_flight)
+    return turn_memo_args(best_melee_target_func, assume_flight)
 end
 
 function assess_explosion_position(target_pos, attack, required_pos)
@@ -542,22 +539,26 @@ function best_throwing_target_func()
 end
 
 function best_throwing_target()
-    return turn_memo("best_throwing_target", best_throwing_target_func)
+    return turn_memo(best_throwing_target_func)
+end
+
+function best_evoke_target_func()
+    local target = assess_scary_target()
+    if target and target.attack.type == const.attack.evoke then
+        return target
+    end
 end
 
 function best_evoke_target()
-    return turn_memo("best_evoke_target",
-        function()
-            local target = assess_scary_target()
-            if target and target.attack.type == const.attack.evoke then
-                return target
-            end
-        end)
+    return turn_memo(best_evoke_target_func)
+end
+
+function best_launcher_target_func()
+    return best_ranged_attack_target(get_attack(1))
 end
 
 function best_launcher_target()
-    return turn_memo("best_launcher_target",
-        function() return best_ranged_attack_target(get_attack(1)) end)
+    return turn_memo(best_launcher_target_func)
 end
 
 function poison_spit_attack()
@@ -653,27 +654,28 @@ function get_attack(index)
     return attacks[index]
 end
 
+function best_ranged_target_func()
+    if you.berserk() then
+        return false
+    end
+
+    local target = best_evoke_target()
+    if target then
+        return target
+    end
+
+    target = best_throwing_target()
+    if target then
+        return target
+    end
+
+    if using_ranged_weapon() then
+        return best_launcher_target()
+    end
+end
+
 function best_ranged_target()
-    return turn_memo("best_ranged_target",
-        function()
-            if you.berserk() then
-                return false
-            end
-
-            local target = best_evoke_target()
-            if target then
-                return target
-            end
-
-            target = best_throwing_target()
-            if target then
-                return target
-            end
-
-            if using_ranged_weapon() then
-                return best_launcher_target()
-            end
-        end)
+    return turn_memo(best_ranged_target_func)
 end
 
 function have_target()
@@ -710,21 +712,22 @@ function initialize_ego_damage()
     }
 end
 
-function primary_attack_has_chaos()
-    return turn_memo("primary_attack_has_chaos",
-        function()
-            local attack = get_attack(1)
-            if not attack.items then
-                return false
-            end
+function primary_attack_has_chaos_func()
+    local attack = get_attack(1)
+    if not attack.items then
+        return false
+    end
 
-            for _, item in ipairs(attack.items) do
-                if item.ego() == "chaos" then
-                    return true
-                end
-            end
-            return false
-        end)
+    for _, item in ipairs(attack.items) do
+        if item.ego() == "chaos" then
+            return true
+        end
+    end
+    return false
+end
+
+function primary_attack_has_chaos()
+    return turn_memo(primary_attack_has_chaos_func)
 end
 
 function rated_attack_average_damage(mons, attack, duration_level)
@@ -886,11 +889,8 @@ function player_attack_delay_func(attack_index, duration_level, ignored_duration
 end
 
 function player_attack_delay(attack_index, duration_level, ignored_duration)
-    return turn_memo_args("player_attack_delay",
-        function()
-            return player_attack_delay_func(attack_index, duration_level,
+    return turn_memo_args(player_attack_delay_func, attack_index, duration_level,
                 ignored_duration)
-        end, attack_index, duration_level, ignored_duration)
 end
 
 function monster_best_player_attack(mons)

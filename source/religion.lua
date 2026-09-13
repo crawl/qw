@@ -399,10 +399,14 @@ function check_allies_func(radius, filter)
 end
 
 function check_allies(radius, filter)
-    return turn_memo_args("check_allies",
-        function()
-            return check_allies_func(radius, filter)
-        end, radius, filter)
+    return turn_memo_args(check_allies_func, radius, filter)
+end
+
+function ally_brother_in_arms(ally)
+    return ally:is("summoned")
+        and ally:is("berserk")
+        and contains_string_in(ally:name(),
+            { "ogre", "giant", "bear", "troll" })
 end
 
 function check_brothers_in_arms(radius)
@@ -410,13 +414,12 @@ function check_brothers_in_arms(radius)
         return false
     end
 
-    local filter = function (mons)
-        return mons:is("summoned")
-            and mons:is("berserk")
-            and contains_string_in(mons:name(),
-                { "ogre", "giant", "bear", "troll" })
-    end
-    return check_allies(radius, filter)
+    return check_allies(radius, ally_brother_in_arms)
+end
+
+function ally_elliptic(ally)
+    return ally:is("summoned")
+        and contains_string_in(ally:name(), { "elliptic" })
 end
 
 function check_elliptic(radius)
@@ -424,11 +427,13 @@ function check_elliptic(radius)
         return false
     end
 
-    local filter = function (mons)
-        return mons:is("summoned")
-            and contains_string_in(mons:name(), { "elliptic" })
-    end
-    return check_allies(radius, filter)
+    return check_allies(radius, ally_elliptic)
+end
+
+function ally_greater_servant(ally)
+    return ally:is("summoned")
+        and contains_string_in(ally:name(), { "Executioner", "green death",
+            "blizzard demon", "balrug", "cacodemon" })
 end
 
 function check_greater_servants(radius)
@@ -436,12 +441,12 @@ function check_greater_servants(radius)
         return false
     end
 
-    local filter = function (mons)
-        return mons:is("summoned")
-            and contains_string_in(mons:name(), { "Executioner", "green death",
-                "blizzard demon", "balrug", "cacodemon" })
-    end
-    return check_allies(radius, filter)
+    return check_allies(radius, ally_greater_servant)
+end
+
+function ally_divine_warrior(ally)
+    return ally:is_summoned()
+        and contains_string_in(ally:name(), { "angel", "daeva" })
 end
 
 function check_divine_warriors(radius)
@@ -449,11 +454,13 @@ function check_divine_warriors(radius)
         return false
     end
 
-    local filter = function (mons)
-        return mons:is_summoned()
-            and contains_string_in(mons:name(), { "angel", "daeva" })
-    end
-    return check_allies(radius, filter)
+    return check_allies(radius, ally_divine_warrior)
+end
+
+function ally_beogh(ally)
+    -- Beogh allies are permanent.
+    return not ally:is_summoned()
+        and contains_string_in(ally:name(), { "orc" })
 end
 
 function check_beogh_allies(radius)
@@ -461,12 +468,7 @@ function check_beogh_allies(radius)
         return false
     end
 
-    local filter = function (mons)
-        -- Beogh allies are permanent.
-        return not mons:is_summoned()
-            and contains_string_in(mons:name(), { "orc" })
-    end
-    return check_allies(radius, filter)
+    return check_allies(radius, ally_beogh)
 end
 
 function update_altar(god, level, pos, state, force)
