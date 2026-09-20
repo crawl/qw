@@ -59,24 +59,26 @@ function arrowkey(c)
     return a2c[c]
 end
 
-local d2v = {
-    [-1] = { [-1] = 'y', [0] = 'h', [1] = 'b' },
-    [0]  = { [-1] = 'k', [1] = 'j' },
-    [1]  = { [-1] = 'u', [0] = 'l', [1] = 'n' },
-}
+local d2v = {}
 local v2d = {}
-for x, _ in pairs(d2v) do
-    for y, c in pairs(d2v[x]) do
-        v2d[c] = { x = x, y = y }
+function initialize_vikeys()
+    -- The vikeys in order of adjacent_iter()
+    local vikeys = { 'y', 'h', 'n', 'k', 'j', 'u', 'l', 'm' }
+    local i = 1
+    for pos in adjacent_iter(const.origin) do
+        local key = vikeys[i]
+        d2v[pos.hash] = key
+        v2d[key] = pos
+        i = i + 1
     end
 end
 
 function delta_to_vi(pos)
-    return d2v[pos.x][pos.y]
+    return d2v[pos.hash]
 end
 
-function vi_to_delta(c)
-    return v2d[c]
+function vi_to_delta(k)
+    return v2d[k]
 end
 
 function vector_move(pos)

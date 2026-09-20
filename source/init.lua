@@ -110,6 +110,7 @@ function initialize()
     -- commit, or change it here to a custom version string.
     qw.version = "%VERSION%"
 
+    initialize_vikeys()
     initialize_rc_variables()
 
     initialize_debug()
