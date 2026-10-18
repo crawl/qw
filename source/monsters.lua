@@ -30,12 +30,6 @@ function in_desc(lev, str)
     end
 end
 
-function pan_lord(lev)
-    return function (mons)
-        return you.xl() < lev and mons:type() == const.pan_lord_type
-    end
-end
-
 local player_resist_funcs = {
     rF=you.res_fire,
     rC=you.res_cold,
@@ -305,8 +299,6 @@ function monster_move_delay(mons)
         -- We only want to pass the first return value of gsub() to
         -- tonumber().
         delay = desc:gsub(".*travel: (%d+)%%.*", "%1")
-        -- We're converting a percentage that's based on monsters delay/energy
-        -- to aut, since this is easier to compare to player actions.
         delay = 10 * 100 / tonumber(delay)
     elseif desc:find("Speed:") then
         delay = desc:gsub(".*Speed: (%d+)%%.*", "%1")
@@ -318,8 +310,8 @@ function monster_move_delay(mons)
         delay = delay - 5
     end
 
-    local feat = view.feature_at(mons:x_pos(), mons:y_pos())
-    if (feat == "shallow_water" or feat == "deep_water" or feat == "lava")
+    local feat = feature_at(mons:pos())
+    if (feat:find("_water$") or feat == "lava")
             and not mons:is("airborne") then
         if desc:find("swim:") then
             delay = desc:gsub(".*swim: (%d+)%%.*", "%1")
@@ -388,6 +380,8 @@ function register_monster_at(pos)
     qw.monster_map[pos.hash] = mons
 end
 
+-- For now, update_monsters() doesn't rely on any cached map information
+-- that would be invalid at this point before update_map() is called.
 function update_monsters()
     qw.monster_map = {}
     qw.enemy_list = {}
@@ -403,13 +397,14 @@ function update_monsters()
     local sinv = you.see_invisible()
 
     for pos in radius_iter(const.origin) do
-        if you.see_cell_no_trans(pos.x, pos.y) then
+        if cell_see_cell(const.origin, pos, const.los.default) then
             register_monster_at(pos)
 
             if not sinv
                     and not closest_invis_pos
                     and view.invisible_monster(pos.x, pos.y)
-                    and you.see_cell_solid_see(pos.x, pos.y) then
+                    and cell_see_cell(const.origin, pos,
+                        const.los.solid_see) then
                 closest_invis_pos = pos
             end
         end
@@ -426,23 +421,6 @@ function get_closest_enemy()
     if #qw.enemy_list > 0 then
         return qw.enemy_list[1]
     end
-end
-
-function monster_in_list(mons, mons_list)
-    local entry = mons_list[mons:name()]
-    if type(entry) == "number" and you.xl() < entry then
-        return true
-    elseif type(entry) == "function" and entry(mons) then
-        return true
-    end
-
-    for _, entry in ipairs(mons_list["*"]) do
-        if entry(mons) then
-            return true
-        end
-    end
-
-    return false
 end
 
 function assess_enemies_func(duration_level, radius, filter, ignore_hp)
@@ -499,8 +477,24 @@ function mons_res_holy_check(mons)
     return mons:res_holy() <= 0
 end
 
-function mons_tso_heal_check(mons)
-    return mons:res_holy() <= 0 and not mons:is_summoned()
+function mons_res_holy_check(mons)
+    return mons:res_holy() <= 0
+end
+
+function mons_holy_wrath_check(mons)
+    -- We're most concerned with hell monsters that aren't vulnerable to any
+    -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
+    -- brand).
+    local have_holy_wrath = you.god() == "the Shining One"
+    if not have_holy_wrath then
+        for weapon in equipped_slot_iter("weapon") do
+            if weapon.ego() == "holy wrath" then
+                have_holy_wrath = true
+            end
+        end
+    end
+
+    return not have_holy_wrath or mons:res_holy() > 0
 end
 
 function assess_hell_enemies(radius)
@@ -508,20 +502,7 @@ function assess_hell_enemies(radius)
         return { threat = 0, ranged_threat = 0, count = 0 }
     end
 
-    -- We're most concerned with hell monsters that aren't vulnerable to any
-    -- holy wrath we might have (either from TSO Cleansing Flame or the weapon
-    -- brand).
-    local have_holy_wrath = you.god() == "the Shining One"
-    for weapon in equipped_slot_iter("weapon") do
-        if weapon.ego() == "holy wrath" then
-            have_holy_wrath = true
-        end
-    end
-
-    local filter = function(mons)
-        return not have_holy_wrath or mons:res_holy() > 0
-    end
-    return assess_enemies(const.duration.active, radius, filter)
+    return assess_enemies(const.duration.active, radius, mons_holy_wrath_check)
 end
 
 function check_enemies_func(radius, filter)
@@ -539,27 +520,47 @@ function check_enemies(radius, filter)
     return turn_memo_args(check_enemies_func, radius, filter)
 end
 
-function check_enemies_in_list(radius, mons_list)
-    local filter = function(enemy)
-        return monster_in_list(enemy, mons_list)
+function monster_in_list(mons, mons_list)
+    local entry = mons_list[mons:name()]
+    if type(entry) == "number" and you.xl() < entry then
+        return true
+    elseif type(entry) == "function" and entry(mons) then
+        return true
     end
-    return check_enemies(radius, filter)
+
+    for _, entry in ipairs(mons_list["*"]) do
+        if entry(mons) then
+            return true
+        end
+    end
+
+    return false
+end
+
+
+function mons_trogs_hand_check(mons)
+    return monster_in_list(mons, hand_monsters)
+end
+
+function check_trogs_hand_enemies(radius)
+    return check_enemies(radius, mons_trogs_hand_check)
+end
+
+function enemy_immediate_danger_check(enemy)
+    local dist = enemy:distance()
+    if dist <= 2 then
+        return true
+    elseif dist == 3 and enemy:melee_range() >= 2 then
+        return true
+    elseif enemy:is_ranged() then
+        return true
+    end
+
+    return false
 end
 
 function check_immediate_danger()
-    local filter = function(enemy)
-        local dist = enemy:distance()
-        if dist <= 2 then
-            return true
-        elseif dist == 3 and enemy:reach_range() >= 2 then
-            return true
-        elseif enemy:is_ranged() then
-            return true
-        end
-
-        return false
-    end
-    return check_enemies(qw.los_radius, filter)
+    return check_enemies(qw.los_radius, enemy_immediate_danger_check)
 end
 
 function count_enemies_func(radius, filter)
@@ -574,26 +575,6 @@ end
 
 function count_enemies(radius, filter)
     return turn_memo_args(count_enemies_func, radius, filter)
-end
-
-function count_enemies_by_name(radius, name)
-    return count_enemies(radius,
-        function(enemy) return enemy:name() == name end)
-end
-
-function count_hostile_summons(radius)
-    if you.god() ~= "Makhleb" then
-        return 0
-    end
-
-    return count_enemies(radius,
-        function(enemy) return enemy:is_summoned()
-            and monster_is_greater_servant(enemy) end)
-end
-
-function count_pan_lords(radius)
-    return count_enemies(radius,
-        function(mons) return mons:type() == const.pan_lord_type end)
 end
 
 function should_dig_unreachable_monster(mons)
@@ -813,7 +794,8 @@ function monster_choose_firing_pos(mons, target_pos)
                 and mons:can_traverse(pos) then
             if not best_dist
                     or dist < best_dist
-                    or abs(dist - ideal_dist) < best_diff_ideal then
+                    or dist == best_dist
+                        and abs(dist - ideal_dist) < best_diff_ideal then
                 best_pos = pos
                 best_dist = dist
                 best_diff_ideal = abs(dist - ideal_dist)

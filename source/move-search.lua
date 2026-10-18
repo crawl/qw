@@ -1,33 +1,8 @@
 ----------------------
--- General movement search algorithms mostly used for monsters.
+-- General movement search algorithms used for monsters.
 
 const.max_search_radius = 14
 const.max_search_deviations = 4
-
-function traversal_function(assume_flight)
-    return function(pos)
-        -- XXX: This needs to run before update_map() and hence before
-        -- traversal_map is updated, so we have to do an uncached check.
-        -- Ideally we'd use the traversal map, but this requires separating
-        -- the traversal map update to its own path and somehow retaining
-        -- information about the per-cell changes so update_map() can
-        -- propagate updates to adjacent cells.
-        return feature_is_traversable(view.feature_at(pos.x, pos.y),
-            assume_flight)
-    end
-end
-
-function tab_function(assume_flight)
-    return function(pos)
-        local mons = get_monster_at(pos)
-        if mons and not mons:is_harmless() then
-            return false
-        end
-
-        return is_safe_at(pos, assume_flight)
-            and not view.withheld(pos.x, pos.y)
-    end
-end
 
 function search_to(search, pos, current, is_deviation)
     if search.seen[pos.hash] then
@@ -36,7 +11,7 @@ function search_to(search, pos, current, is_deviation)
 
     local cur_deviations = search.num_deviations + (is_deviation and 1 or 0)
 
-    if debug_channel("move-all") then
+    if debug_channel("move-search") then
         dsay("Checking "
             .. (is_deviation and "deviation(" .. cur_deviations .. ") " or "")
             .. "move from " .. cell_string_from_position(current)
@@ -59,7 +34,7 @@ function search_to(search, pos, current, is_deviation)
         end
 
         if result ~= nil then
-            if debug_channel("move-all") then
+            if debug_channel("move-search") then
                 dsay("Cached move search result: "
                     .. (result and "success" or "failure"))
             end
@@ -69,7 +44,7 @@ function search_to(search, pos, current, is_deviation)
     end
 
     if position_distance(search.center, pos) > const.max_search_radius then
-        if debug_channel("move-all") then
+        if debug_channel("move-search") then
             dsay("Search traveled past max search radius of "
                 .. const.max_search_radius)
         end
@@ -79,7 +54,7 @@ function search_to(search, pos, current, is_deviation)
     end
 
     if cur_deviations > const.max_search_deviations then
-        if debug_channel("move-all") then
+        if debug_channel("move-search") then
             dsay("Too many deviation movements")
         end
 
@@ -87,7 +62,7 @@ function search_to(search, pos, current, is_deviation)
         return false
     end
 
-    if search.square_func(pos) then
+    if search.move_func(pos) then
         -- The seen table is only updated when we can successfully continue the
         -- recursive search. It prevents revisiting a succesfully traversed
         -- square in the same path.
@@ -121,7 +96,7 @@ function search_to(search, pos, current, is_deviation)
         end
     end
 
-    if debug_channel("move-all") then
+    if debug_channel("move-search") then
         dsay("Square function failed")
     end
 
@@ -228,7 +203,7 @@ function do_move_search(search, current)
     return false
 end
 
-function move_search(center, target, square_func, min_dist, cache)
+function move_search(center, target, move_func, min_dist, cache)
     if not min_dist then
         min_dist = 0
     end
@@ -239,13 +214,13 @@ function move_search(center, target, square_func, min_dist, cache)
         return
     end
 
-    if debug_channel("move-all") then
+    if debug_channel("move-search") then
         dsay("Move search from " .. cell_string_from_position(center)
             .. " to " .. cell_string_from_position(target)
             .. " with min distance " .. min_dist)
     end
 
-    search = { center = center, target = target, square_func = square_func,
+    search = { center = center, target = target, move_func = move_func,
         min_dist = min_dist, dist = 0, path = { center },
         seen = { [center.hash] = true }, num_deviations = 0 }
 

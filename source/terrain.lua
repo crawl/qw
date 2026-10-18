@@ -10,6 +10,25 @@ const.explore = enum({
     "explored",
 })
 
+function feature_at(pos)
+    local feat
+    if qw.map_pos then
+        feat = qw.feature_map[map_position(pos).hash]
+    end
+
+    if feat then
+        return feat
+    end
+
+    -- We don't have the feature data cached. Don't try to update the cache
+    -- because doing so messes with map updates.
+    return view.feature_at(pos.x, pos.y)
+end
+
+function map_feature_at(pos)
+    return feature_at(los_position(pos))
+end
+
 function get_feature_name(where_name)
     for _, value in ipairs(portal_data) do
         if where_name == value[1] then
@@ -18,11 +37,31 @@ function get_feature_name(where_name)
     end
 end
 
+-- Is the feature an unsafe trap?
+function feature_is_trap(feat)
+    if not feat then
+        return false
+    end
+
+    -- For the traversal map, we want to always return an actual boolean and
+    -- never nil.
+    local score = const.trap_scores[feat]
+    if not score or score == 0 then
+        return false
+    end
+
+    -- Species with stasis can safely walk over these.
+    return you.race() ~= "Formicid"
+        or feat ~= "trap_teleport_permanent"
+            and feat ~= "trap_dispersal"
+            and feat ~= "trap_dispersal_inactive"
+end
+
 function feature_is_traversable(feat, assume_flight)
     -- XXX: Can we pass a default nil value instead?
     return travel.feature_traversable(feat, assume_flight and true or false)
             and not feature_is_runed_door(feat)
-        or feat:find("^trap") ~= nil
+        or feature_is_trap(feat)
 end
 
 function feature_is_diggable(feat)
@@ -95,57 +134,16 @@ end
 -- answer to a yesno prompt. This can be conditionally disabled with
 -- qw.ignore_traps, e.g. as we do on Zot:5.
 --
--- XXX: We have to mark Zot traps as safe so we don't get the prompt, as
--- c_answer_prompt isn't called in that case. Should have the crawl
--- yes_or_no() function call c_answer_prompt to fix this.
+-- XXX: We have to mark Zot traps as safe in this function so we don't get a
+-- yes/no prompt if we have to move over them, since c_answer_prompt isn't
+-- called in that case. Should have the crawl yes_or_no() function call
+-- c_answer_prompt to fix this.
 function c_trap_is_safe(trap)
-    if not trap then
+    if not feature_is_trap(trap) then
         return true
     end
 
-    trap = trap:lower()
-    return qw.ignore_traps
-        or trap == "zot"
-        or you.race() == "Formicid"
-            and (trap == "permanent teleport" or trap == "dispersal")
-end
-
-function trap_is_safe_at(pos)
-    -- A trap is always safe if we're already standing on it.
-    if positions_equal(pos, const.origin) then
-        return true
-    end
-
-    local feat = view.feature_at(pos.x, pos.y)
-    if not feat:find("^trap_") then
-        return true
-    end
-
-    local trap = feat:gsub("trap_", "")
-    return c_trap_is_safe(trap) and trap ~= "zot"
-end
-
-function is_safe_at(pos, assume_flight)
-    local map_pos = map_position(pos)
-    if not map_is_unexcluded_at(map_pos) then
-        return false
-    end
-
-    if assume_flight then
-        local feat = view.feature_at(pos.x, pos.y)
-        if not feature_is_traversable(feat, true) then
-            return false
-        end
-    elseif not map_is_traversable_at(map_pos) then
-        return false
-    end
-
-    local cloud = view.cloud_at(pos.x, pos.y)
-    if not cloud_is_safe(cloud) then
-        return false
-    end
-
-    return trap_is_safe_at(pos)
+    return qw.ignore_traps or trap == "trap_zot"
 end
 
 function is_cornerish_at(pos)
@@ -175,7 +173,7 @@ end
 function count_trees_at(pos)
     local count = 0
     for apos in adjacent_iter(pos) do
-        local feat = view.feature_at(apos.x, apos.y)
+        local feat = feature_at(apos)
         if feat == "mangrove" or feat == "tree" then
             count = count + 1
         end
@@ -191,7 +189,7 @@ function count_slimy_walls_at(pos)
 
     local count = 0
     for apos in adjacent_iter(pos) do
-        if view.feature_at(apos.x, apos.y) == "slimy_wall" then
+        if feature_at(apos) == "slimy_wall" then
             count = count + 1
         end
     end
@@ -199,7 +197,7 @@ function count_slimy_walls_at(pos)
 end
 
 function is_solid_at(pos, exclude_doors)
-    local feat = view.feature_at(pos.x, pos.y)
+    local feat = feature_at(pos)
     return (feat == "unseen" or travel.feature_solid(feat))
         and (not exclude_doors
             or feat ~= "closed_door" and feat ~= "closed_clear_door")
@@ -211,7 +209,7 @@ function feature_destroys_items(feat)
 end
 
 function destroys_items_at(pos)
-    return feature_destroys_items(view.feature_at(pos.x, pos.y))
+    return feature_destroys_items(feature_at(pos))
 end
 
 function feature_is_upstairs(feat)
@@ -301,6 +299,6 @@ end
 
 function in_water_at(pos)
     return not (you.flying()
-            or you.god() == "Beogh" and you.piety_rank() >= 5)
-        and view.feature_at(pos.x, pos.y) == "shallow_water"
+                or you.god() == "Beogh" and you.piety_rank() >= 5)
+        and feature_at(pos):match("_water$")
 end

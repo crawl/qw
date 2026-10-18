@@ -54,7 +54,7 @@ function plan_go_to_pan_exit()
 end
 
 function plan_enter_pan()
-    if view.feature_at(0, 0) == branch_entrance("Pan")
+    if feature_at(const.origin) == branch_entrance("Pan")
             and want_to_be_in_pan()
             and not unable_to_use_stairs() then
         go_downstairs(true)
@@ -66,8 +66,8 @@ end
 
 local pan_stairs_turn = -100
 function plan_go_down_pan()
-    if view.feature_at(0, 0) ~= "transit_pandemonium"
-                and view.feature_at(0, 0) ~= branch_exit("Pan")
+    if feature_at(const.origin) ~= "transit_pandemonium"
+                and feature_at(const.origin) ~= branch_exit("Pan")
             or unable_to_use_stairs() then
         return false
     end
@@ -88,8 +88,8 @@ function plan_dive_pan()
         return false
     end
 
-    if view.feature_at(0, 0) == "transit_pandemonium"
-            or view.feature_at(0, 0) == branch_exit("Pan") then
+    if feature_at(const.origin) == "transit_pandemonium"
+            or feature_at(const.origin) == branch_exit("Pan") then
         if pan_stairs_turn == qw.turns then
             pan_failed_rune_count = you.num_runes()
             return false
@@ -106,7 +106,7 @@ function plan_dive_pan()
 end
 
 function plan_exit_pan()
-    if view.feature_at(0, 0) == branch_exit("Pan")
+    if feature_at(const.origin) == branch_exit("Pan")
             and not want_to_be_in_pan()
             and not unable_to_use_stairs() then
         go_upstairs()

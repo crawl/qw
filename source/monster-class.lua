@@ -161,7 +161,7 @@ function Monster:range()
     return self:property_memo("range")
 end
 
-function Monster:reach_range()
+function Monster:melee_range()
     return self:property_memo("reach_range")
 end
 
@@ -500,7 +500,7 @@ function Monster:_is_ranged()
         return true
     end
 
-    return self:range() > self:reach_range()
+    return self:range() > self:melee_range()
 end
 
 function Monster:is_ranged()
@@ -622,12 +622,12 @@ function Monster:can_move(ignore_temporary)
     return self:function_memo_args(self._can_move, ignore_temporary)
 end
 
-function Monster:_can_swap()
+function Monster:_player_can_swap()
     return self:attitude() > const.attitude.neutral and self:can_move()
 end
 
-function Monster:can_swap()
-    return self:function_memo(self._can_swap)
+function Monster:player_can_swap()
+    return self:function_memo(self._player_can_swap)
 end
 
 function Monster:_can_seek(ignore_temporary)
@@ -644,7 +644,7 @@ function Monster:can_seek(ignore_temporary)
 end
 
 function Monster:_can_melee_at(pos)
-    return positions_can_melee(self:pos(), pos, self:reach_range())
+    return positions_can_melee(self:pos(), pos, self:melee_range())
 end
 
 function Monster:can_melee_at(pos)
@@ -694,7 +694,7 @@ function Monster:_melee_move_search(dest_pos, start_pos)
     end
 
     return move_search(start_pos, dest_pos, self:melee_square_function(dest_pos),
-        self:reach_range())
+        self:melee_range())
 end
 
 function Monster:melee_move_search(dest_pos, start_pos)
@@ -765,7 +765,7 @@ function Monster:can_traverse_to_player()
 end
 
 function Monster:_player_melee_range()
-    return self:is("warding") and 1 or player_reach_range()
+    return self:is("warding") and 1 or player_melee_range()
 end
 
 function Monster:player_melee_range()
@@ -775,9 +775,9 @@ end
 function Monster:_player_can_wait_for_melee()
     return not self:player_can_melee(true)
         and self:has_path_to_melee_player()
-        and (self:reach_range() <= self:player_melee_range()
+        and (self:melee_range() <= self:player_melee_range()
                 or get_move_closer(self:pos()))
-        and self:distance() > self:reach_range()
+        and self:distance() > self:melee_range()
 end
 
 function Monster:player_can_wait_for_melee()
@@ -824,7 +824,7 @@ function Monster:_player_has_path_to_melee(allow_unsafe)
 
     local move_type = allow_unsafe and const.move.traversable
         or const.move.safe
-    return move_path(move_type, self:map_pos(), true)
+    return move_path(move_type, self:map_pos(), self:player_melee_range())
 end
 
 function Monster:player_has_path_to_melee(allow_unsafe)

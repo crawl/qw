@@ -15,9 +15,9 @@ function plan_move_towards_safety()
     if result then
         if debug_channel("move") then
             dsay("Moving to safe position at "
-                .. cell_string_from_map_position(result.dest))
+                .. cell_string_from_map_position(result.dest_pos))
         end
-        return move_towards_destination(result.move, result.dest, "safety")
+        return move_towards_destination(result.move, result.dest_pos, "safety")
     end
 
     return false
@@ -79,7 +79,7 @@ function plan_go_command()
             and goal_travel.branch == "D"
             and goal_travel.depth == 1 then
         -- We're already on the stairs, so travel won't take us further.
-        if view.feature_at(0, 0) == branch_exit("D") then
+        if feature_at(const.origin) == branch_exit("D") then
             go_upstairs(true)
         else
             send_travel("D", 0)
@@ -108,7 +108,7 @@ function plan_open_runed_doors()
     end
 
     for pos in adjacent_iter(const.origin) do
-        if view.feature_at(pos.x, pos.y) == "runed_clear_door" then
+        if feature_at(pos) == "runed_clear_door" then
             magic(delta_to_vi(pos) .. "Y")
             return true
         end
@@ -118,12 +118,12 @@ end
 
 function plan_enter_portal()
     if not is_portal_branch(goal_branch)
-            or view.feature_at(0, 0) ~= branch_entrance(goal_branch)
+            or feature_at(const.origin) ~= branch_entrance(goal_branch)
             or unable_to_use_stairs() then
         return false
     end
 
-    go_downstairs(goal_branch == "Zig", true)
+    go_downstairs(goal_branch == "Zig")
     return true
 end
 
@@ -131,7 +131,7 @@ function plan_exit_portal()
     if not in_portal()
             -- Zigs have their own exit rules.
             or where_branch == "Zig"
-            or view.feature_at(0, 0) ~= branch_exit(where_branch)
+            or feature_at(const.origin) ~= branch_exit(where_branch)
             or unable_to_use_stairs() then
         return false
     end
@@ -145,9 +145,9 @@ end
 
 function want_rune_on_current_level()
     return not have_branch_runes(where_branch)
-            and where_branch == goal_branch
-            and where_depth == goal_depth
-            and goal_depth == branch_rune_depth(goal_branch)
+        and where_branch == goal_branch
+        and where_depth == goal_depth
+        and goal_depth == branch_rune_depth(goal_branch)
 end
 
 function plan_pick_up_rune()
@@ -156,7 +156,7 @@ function plan_pick_up_rune()
     end
 
     local runes = branch_runes(where_branch, true)
-    local rune_positions = get_item_map_positions(runes)
+    local rune_positions = get_item_positions(runes)
     if not rune_positions
             or not positions_equal(qw.map_pos, rune_positions[1]) then
         return false
@@ -175,14 +175,14 @@ function plan_move_towards_rune()
     end
 
     local runes = branch_runes(where_branch, true)
-    local rune_positions = get_item_map_positions(runes)
+    local rune_positions = get_item_positions(runes)
     if not rune_positions then
         return false
     end
 
     local result = best_move_towards_positions(rune_positions, true)
     if result then
-        return move_towards_destination(result.move, result.dest, "goal")
+        return move_towards_destination(result.move, result.dest_pos, "goal")
     end
 
     return false
@@ -207,13 +207,13 @@ function plan_move_towards_travel_feature()
         return false
     end
 
-    if util.contains(feats, view.feature_at(0, 0)) then
+    if util.contains(feats, feature_at(const.origin)) then
         return false
     end
 
     local result = best_move_towards_features(feats, true)
     if result then
-        return move_towards_destination(result.move, result.dest, "goal")
+        return move_towards_destination(result.move, result.dest_pos, "goal")
     end
 
     local god = goal_god(goal_status)
@@ -221,10 +221,14 @@ function plan_move_towards_travel_feature()
         return false
     end
 
+    -- We were unable to reach the altar, so downgrade its explore state to
+    -- seen.
     if c_persist.altars[god] and c_persist.altars[god][where] then
-        for hash, _ in pairs(c_persist.altars[god][where]) do
-            if update_altar(god, where, position_from_hash(hash),
-                { feat = const.explore.seen }, true) then
+        for hash, state in pairs(c_persist.altars[god][where]) do
+            if state.explore > const.explore.seen then
+                update_altar_state(god, branch, depth,
+                    position_from_hash(hash), { explore = const.explore.seen },
+                    true)
                 qw.restart_cascade = true
             end
         end
@@ -244,7 +248,7 @@ function plan_move_towards_destination()
         return false
     end
 
-    result = best_move_towards(qw.move_destination, qw.map_pos, true)
+    result = best_move_towards(qw.move_destination, true)
     if result then
         return move_to(result.move)
     end
@@ -275,13 +279,14 @@ function plan_move_towards_monster()
         return false
     end
 
-    local result = best_move_towards_positions(mons_targets)
+    local result = best_move_towards_positions(mons_targets, true, true)
     if result then
         if debug_channel("move") then
             dsay("Moving to enemy at "
-                .. cell_string_from_map_position(result.dest))
+                .. cell_string_from_map_position(result.dest_pos))
         end
-        return move_towards_destination(result.move, result.dest, "monster")
+        return move_towards_destination(result.move, result.dest_pos,
+            "monster")
     end
 
     return false
@@ -296,19 +301,21 @@ function plan_move_towards_unexplored()
     if result then
         if debug_channel("move") then
             dsay("Moving to explore near safe position at "
-                .. cell_string_from_map_position(result.dest))
+                .. cell_string_from_map_position(result.dest_pos))
         end
-        return move_towards_destination(result.move, result.dest, "unexplored")
+        return move_towards_destination(result.move, result.dest_pos,
+            "unexplored")
     end
 
     local result = best_move_towards_unexplored(true)
     if result then
         if debug_channel("move") then
             dsay("Moving to explore near unsafe position at "
-                .. cell_string_from_map_position(result.dest))
+                .. cell_string_from_map_position(result.dest_pos))
         end
 
-        return move_towards_destination(result.move, result.dest, "unexplored")
+        return move_towards_destination(result.move, result.dest_pos,
+            "unexplored")
     end
 
     return false
@@ -317,7 +324,7 @@ end
 function plan_tomb_use_hatch()
     if (where == "Tomb:2" and not have_branch_runes("Tomb")
                 or where == "Tomb:1")
-            and view.feature_at(0, 0) == "escape_hatch_down" then
+            and feature_at(const.origin) == "escape_hatch_down" then
         prev_hatch_dist = 1000
         go_downstairs()
         return true
@@ -325,7 +332,7 @@ function plan_tomb_use_hatch()
 
     if (where == "Tomb:3" and have_branch_runes("Tomb")
                 or where == "Tomb:2")
-            and view.feature_at(0, 0) == "escape_hatch_up" then
+            and feature_at(const.origin) == "escape_hatch_up" then
         prev_hatch_dist = 1000
         go_upstairs()
         return true
@@ -337,7 +344,7 @@ end
 function plan_tomb_go_to_final_hatch()
     if where == "Tomb:2"
             and not have_branch_runes("Tomb")
-            and view.feature_at(0, 0) ~= "escape_hatch_down" then
+            and feature_at(const.origin) ~= "escape_hatch_down" then
         magic("X>\r")
         return true
     end
@@ -347,16 +354,16 @@ end
 function plan_tomb_go_to_hatch()
     if where == "Tomb:3"
             and have_branch_runes("Tomb")
-            and view.feature_at(0, 0) ~= "escape_hatch_up" then
+            and feature_at(const.origin) ~= "escape_hatch_up" then
         magic("X<\r")
         return true
     elseif where == "Tomb:2" then
         if not have_branch_runes("Tomb")
-                and view.feature_at(0, 0) == "escape_hatch_down" then
+                and feature_at(const.origin) == "escape_hatch_down" then
             return false
         end
 
-        if view.feature_at(0, 0) == "escape_hatch_up" then
+        if feature_at(const.origin) == "escape_hatch_up" then
             local new_hatch_dist = supdist(qw.map_pos)
             if new_hatch_dist >= prev_hatch_dist
                     and not positions_equal(qw.map_pos, prev_hatch) then
@@ -370,7 +377,7 @@ function plan_tomb_go_to_hatch()
         magic("X<\r")
         return true
     elseif where == "Tomb:1" then
-        if view.feature_at(0, 0) == "escape_hatch_down" then
+        if feature_at(const.origin) == "escape_hatch_down" then
             local new_hatch_dist = supdist(qw.map_pos)
             if new_hatch_dist >= prev_hatch_dist
                     and not positions_equal(qw.map_pos, prev_hatch) then
@@ -388,85 +395,85 @@ function plan_tomb_go_to_hatch()
     return false
 end
 
-
 function set_plan_pre_explore()
-    plans.pre_explore = cascade {
-        {plan_ancestor_life, "ancestor_life"},
-        {plan_sacrifice, "sacrifice"},
-        {plans.acquirement, "acquirement"},
-        {plan_bless_weapon, "bless_weapon"},
-        {plan_remove_shield, "remove_shield"},
-        {plan_upgrade_weapon, "upgrade_weapon"},
-        {plan_wear_shield, "wear_shield"},
-        {plan_use_good_consumables, "use_good_consumables"},
-        {plan_unwield_weapon, "unwield_weapon"},
-    }
+    plans.pre_explore = cascade({
+        { plan_ancestor_life, "ancestor_life" },
+        { plan_sacrifice, "sacrifice" },
+        { plans.acquirement, "acquirement" },
+        { plan_bless_weapon, "bless_weapon" },
+        { plan_remove_shield, "remove_shield" },
+        { plan_upgrade_weapon, "upgrade_weapon" },
+        { plan_wear_shield, "wear_shield" },
+        { plan_use_good_consumables, "use_good_consumables" },
+        { plan_unwield_weapon, "unwield_weapon" },
+    })
 end
 
 function set_plan_explore()
-    plans.explore = cascade {
-        {plan_dive_pan, "dive_pan"},
-        {plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs"},
-        {plan_move_towards_destination, "move_towards_destination"},
-        {plan_move_towards_safety, "move_towards_safety"},
-        {plan_autoexplore, "try_autoexplore"},
-    }
+    plans.explore = cascade({
+        { plan_dive_pan, "dive_pan" },
+        { plan_dive_go_to_pan_downstairs, "try_dive_go_to_pan_downstairs" },
+        { plan_move_towards_destination, "move_towards_destination" },
+        { plan_move_towards_safety, "move_towards_safety" },
+        { plan_autoexplore, "try_autoexplore" },
+    })
 end
 
 function set_plan_pre_explore2()
-    plans.pre_explore2 = cascade {
-        {plan_upgrade_equipment, "upgrade_equipment"},
-        {plan_remove_equipment, "remove_equipment"},
-        {plan_use_identify_scrolls, "use_identify_scrolls"},
-        {plan_read_unided_scrolls, "try_read_unided_scrolls"},
-        {plan_quaff_unided_potions, "quaff_unided_potions"},
-        {plan_drop_items, "drop_items"},
-        {plan_full_inventory_panic, "full_inventory_panic"},
-    }
+    plans.pre_explore2 = cascade({
+        { plan_upgrade_equipment, "upgrade_equipment" },
+        { plan_remove_equipment, "remove_equipment" },
+        { plan_use_identify_scrolls, "use_identify_scrolls" },
+        { plan_read_unided_scrolls, "try_read_unided_scrolls" },
+        { plan_quaff_unided_potions, "quaff_unided_potions" },
+        { plan_drop_items, "drop_items" },
+        { plan_full_inventory_panic, "full_inventory_panic" },
+    })
 end
 
 function set_plan_explore2()
-    plans.explore2 = cascade {
-        {plan_abandon_god, "abandon_god"},
-        {plan_use_altar, "use_altar"},
-        {plan_go_to_altar, "try_go_to_altar"},
-        {plan_enter_portal, "enter_portal"},
-        {plan_go_to_portal_entrance, "try_go_to_portal_entrance"},
-        {plan_open_runed_doors, "open_runed_doors"},
-        {plan_enter_transporter, "enter_transporter"},
-        {plan_transporter_orient_exit, "try_transporter_orient_exit"},
-        {plan_go_to_transporter, "try_go_to_transporter"},
-        {plan_exit_portal, "exit_portal"},
-        {plan_go_to_portal_exit, "try_go_to_portal_exit"},
-        {plan_shopping_spree, "try_shopping_spree"},
-        {plan_tomb_go_to_final_hatch, "try_tomb_go_to_final_hatch"},
-        {plan_tomb_go_to_hatch, "try_tomb_go_to_hatch"},
-        {plan_tomb_use_hatch, "tomb_use_hatch"},
-        {plan_enter_pan, "enter_pan"},
-        {plan_go_to_pan_portal, "try_go_to_pan_portal"},
-        {plan_exit_pan, "exit_pan"},
-        {plan_go_to_pan_exit, "try_go_to_pan_exit"},
-        {plan_go_down_pan, "try_go_down_pan"},
-        {plan_go_to_pan_downstairs, "try_go_to_pan_downstairs"},
-        {plan_enter_abyss, "enter_abyss"},
-        {plan_go_to_abyss_portal, "try_go_to_abyss_portal"},
-        {plan_move_to_zigfig_location, "try_move_to_zigfig_location"},
-        {plan_use_zigfig, "use_zigfig"},
-        {plan_zig_dig, "zig_dig"},
-        {plan_go_to_zig_dig, "try_go_to_zig_dig"},
-        {plan_zig_leave_level, "zig_leave_level"},
-        {plan_zig_go_to_stairs, "try_zig_go_to_stairs"},
-        {plan_take_unexplored_stairs, "take_unexplored_stairs"},
-        {plan_move_towards_rune, "move_towards_rune"},
-        {plan_go_to_orb, "try_go_to_orb"},
-        {plan_go_command, "try_go_command"},
-        {plan_teleport_dangerous_stairs, "teleport_dangerous_stairs"},
-        {plan_use_travel_stairs, "use_travel_stairs"},
-        {plan_move_towards_travel_feature, "move_towards_travel_feature"},
-        {plan_autoexplore, "try_autoexplore2"},
-        {plan_move_towards_monster, "move_towards_monster"},
-        {plan_move_towards_unexplored, "move_towards_unexplored"},
-        {plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack"},
-        {plan_abort_safe_stairs, "try_abort_safe_stairs"},
-    }
+    plans.explore2 = cascade({
+        { plan_abandon_god, "abandon_god" },
+        { plan_use_altar, "use_altar" },
+        { plan_go_to_altar, "try_go_to_altar" },
+        { plan_enter_portal, "enter_portal" },
+        { plan_go_to_portal_entrance, "try_go_to_portal_entrance" },
+        { plan_open_runed_doors, "open_runed_doors" },
+        { plan_enter_transporter, "enter_transporter" },
+        { plan_transporter_orient_exit, "try_transporter_orient_exit" },
+        { plan_go_to_transporter, "try_go_to_transporter" },
+        { plan_exit_portal, "exit_portal" },
+        { plan_go_to_portal_exit, "try_go_to_portal_exit" },
+        { plan_shopping_spree, "try_shopping_spree" },
+        { plan_tomb_go_to_final_hatch, "try_tomb_go_to_final_hatch" },
+        { plan_tomb_go_to_hatch, "try_tomb_go_to_hatch" },
+        { plan_tomb_use_hatch, "tomb_use_hatch" },
+        { plan_enter_pan, "enter_pan" },
+        { plan_go_to_pan_portal, "try_go_to_pan_portal" },
+        { plan_exit_pan, "exit_pan" },
+        { plan_go_to_pan_exit, "try_go_to_pan_exit" },
+        { plan_go_down_pan, "try_go_down_pan" },
+        { plan_go_to_pan_downstairs, "try_go_to_pan_downstairs" },
+        { plan_enter_abyss, "enter_abyss" },
+        { plan_go_to_abyss_portal, "try_go_to_abyss_portal" },
+        { plan_move_to_zigfig_location, "try_move_to_zigfig_location" },
+        { plan_use_zigfig, "use_zigfig" },
+        { plan_zig_dig, "zig_dig" },
+        { plan_go_to_zig_dig, "try_go_to_zig_dig" },
+        { plan_zig_leave_level, "zig_leave_level" },
+        { plan_zig_go_to_stairs, "try_zig_go_to_stairs" },
+        { plan_take_unexplored_stairs, "take_unexplored_stairs" },
+        { plan_move_towards_rune, "move_towards_rune" },
+        { plan_move_towards_tesseract, "move_towards_tesseract" },
+        { plan_move_towards_orb, "move_towards_orb" },
+        { plan_go_command, "try_go_command" },
+        { plan_teleport_dangerous_stairs, "teleport_dangerous_stairs" },
+        { plan_use_travel_stairs, "use_travel_stairs" },
+        { plan_move_towards_travel_feature, "move_towards_travel_feature" },
+        { plan_autoexplore, "try_autoexplore2" },
+        { plan_move_towards_monster, "move_towards_monster" },
+        { plan_move_towards_unexplored, "move_towards_unexplored" },
+        { plan_unexplored_stairs_backtrack, "try_unexplored_stairs_backtrack" },
+        { plan_abort_safe_stairs, "try_abort_safe_stairs" },
+    })
 end

@@ -167,7 +167,7 @@ function current_god_hates_item(it)
     local new_god
     if goal_status then
         new_god = goal_god(goal_status)
-        if new_god and view.feature_at(0, 0) ~= god_altar(new_god) then
+        if new_god and feature_at(const.origin) ~= god_altar(new_god) then
             new_god = nil
         end
     end
@@ -231,9 +231,9 @@ function god_uses_invocations(god)
     return god_data[god].uses_invocations
 end
 
-function altar_found(god, feat_state)
-    if not feat_state then
-        feat_state = const.explore.reachable
+function altar_found(god, explore_state)
+    if not explore_state then
+        explore_state = const.explore.reachable
     end
 
     if not c_persist.altars[god] then
@@ -242,7 +242,7 @@ function altar_found(god, feat_state)
 
     for level, entries in pairs(c_persist.altars[god]) do
         for _, state in pairs(entries) do
-            if state.feat >= feat_state then
+            if state.explore >= explore_state then
                 return level
             end
         end
@@ -261,7 +261,6 @@ function can_brothers_in_arms()
         and can_invoke()
 end
 
-
 function can_heroism()
     return you.god() == "Okawaru"
         and you.piety_rank() >= 1
@@ -278,10 +277,11 @@ end
 
 function can_recall()
     return you.god() == "Yredelemnul"
-            or you.god() == "Beogh" and you.piety_rank() >= 4
-        and not you.status("recalling")
-        and can_use_mp(2)
-        and can_invoke()
+        or you.god() == "Beogh"
+            and you.piety_rank() >= 4
+            and not you.status("recalling")
+            and can_use_mp(2)
+            and can_invoke()
 end
 
 function can_drain_life()
@@ -430,23 +430,9 @@ function check_elliptic(radius)
     return check_allies(radius, ally_elliptic)
 end
 
-function ally_greater_servant(ally)
-    return ally:is("summoned")
-        and contains_string_in(ally:name(), { "Executioner", "green death",
-            "blizzard demon", "balrug", "cacodemon" })
-end
-
-function check_greater_servants(radius)
-    if you.god() ~= "Makhleb" then
-        return false
-    end
-
-    return check_allies(radius, ally_greater_servant)
-end
-
 function ally_divine_warrior(ally)
-    return ally:is_summoned()
-        and contains_string_in(ally:name(), { "angel", "daeva" })
+    return ally:is("summoned")
+        and contains_string_in(mons:name(), { "angel", "daeva" })
 end
 
 function check_divine_warriors(radius)
@@ -457,22 +443,15 @@ function check_divine_warriors(radius)
     return check_allies(radius, ally_divine_warrior)
 end
 
-function ally_beogh(ally)
-    -- Beogh allies are permanent.
-    return not ally:is_summoned()
-        and contains_string_in(ally:name(), { "orc" })
-end
-
-function check_beogh_allies(radius)
-    if you.god() ~= "Beogh" then
-        return false
+function get_altar_state(god, branch, depth, map_pos)
+    local level = make_level(branch, depth)
+    if c_persist.altars[god] and c_persist.altars[god][level] then
+        return c_persist.altars[god][level][map_pos.hash]
     end
-
-    return check_allies(radius, ally_beogh)
 end
 
-function update_altar(god, level, pos, state, force)
-    if state.safe == nil and not state.feat and not state.threat then
+function update_altar_state(god, branch, depth, map_pos, state, force)
+    if state.safe == nil and not state.explore and not state.threat then
         error("Undefined altar state.")
     end
 
@@ -480,50 +459,50 @@ function update_altar(god, level, pos, state, force)
         c_persist.altars[god] = {}
     end
 
+    local level = make_level(branch, depth)
     if not c_persist.altars[god][level] then
         c_persist.altars[god][level] = {}
     end
 
-    local current = c_persist.altars[god][level][pos.hash]
+    local current = c_persist.altars[god][level][map_pos.hash]
     if not current then
         current = {}
         cleanup_feature_state(current)
-        c_persist.altars[god][level][pos.hash] = current
+        c_persist.altars[god][level][map_pos.hash] = current
     end
 
     if state.safe == nil then
         state.safe = current.safe
     end
-    if state.feat == nil then
-        state.feat = current.feat
+    if state.explore == nil then
+        state.explore = current.explore
     end
     if state.threat == nil then
         state.threat = current.threat
     end
 
-    local feat_state_changed = current.feat < state.feat
-            or force and current.feat ~= state.feat
+    local explore_state_changed = current.explore < state.explore
+            or force and current.explore ~= state.explore
     if state.safe == current.safe
-            and not feat_state_changed
+            and not explore_state_changed
             and state.threat == current.threat then
-        return false
+        return
     end
 
     if debug_channel("map") then
-        dsay("Updating altar on " .. level .. " at "
-            .. cell_string_from_map_position(pos)
-            .. " from " .. stairs_state_string(current)
-            .. " to " .. stairs_state_string(state))
+        dsayf("Updating altar on %s at %s from %s to %s",
+            level,
+            cell_string_from_map_position(map_pos),
+            stairs_state_string(current),
+            stairs_state_string(state))
     end
 
     current.safe = state.safe
     current.threat = state.threat
-    if feat_state_changed then
-        current.feat = state.feat
+    if explore_state_changed then
+        current.explore = state.explore
         qw.want_goal_update = true
     end
-
-    return true
 end
 
 function estimate_slouch_damage()
@@ -551,17 +530,19 @@ function estimate_slouch_damage()
 end
 
 function update_permanent_flight()
-    if not gained_permanent_flight then
+    if not qw.gained_permanent_flight then
         return
     end
 
     for god, levels in pairs(c_persist.altars) do
         for level, altars in pairs(levels) do
             for hash, state in pairs(altars) do
-                if state.feat >= const.explore.seen
-                        and state.feat < const.explore.reachable then
-                    update_altar(god, level, position_from_hash(hash),
-                        { feat = const.explore.reachable })
+                if state.explore >= const.explore.seen
+                        and state.explore < const.explore.reachable then
+                    local branch, depth = parse_level_range(level)
+                    update_altar_state(god, branch, depth,
+                        position_from_hash(hash),
+                        { explore = const.explore.reachable })
                 end
             end
         end

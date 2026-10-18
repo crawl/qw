@@ -5,8 +5,14 @@ function cleanup_feature_state(state)
     if state.safe == nil then
         state.safe = true
     end
-    if state.feat == nil then
-        state.feat = const.explore.none
+    -- begin 0.34 c_persist compat
+    if state.feat ~= nil then
+        state.explore = state.feat
+        state.feat = nil
+    end
+    -- end 0.34 c_persist compat
+    if state.explore == nil then
+        state.explore = const.explore.none
     end
     if state.threat == nil then
         state.threat = 0
@@ -47,7 +53,7 @@ function initialize_c_persist()
         "abyssal_stairs", "altars", "autoexplore", "branch_entries",
         "branch_exits", "down_hatches", "downstairs", "exclusions",
         "expiring_portals", "pan_transits", "plan_fail_count", "portals",
-        "potion_ident", "scroll_ident", "seen_items",
+        "potion_ident", "scroll_ident", "seen_items", "zot5",
         "up_hatches", "upstairs", "waypoints",
     }
     for _, table in ipairs(tables) do
@@ -121,19 +127,13 @@ function initialize()
     initialize_plan_cascades()
     initialize_c_persist()
 
-    if not cache_parity then
-        traversal_maps_cache = {}
-        exclusion_maps_cache = {}
-
-        distance_maps_cache = {}
-        feature_map_positions_cache = {}
-        item_map_positions_cache = {}
-
-        clear_map_cache(1, true)
-        clear_map_cache(2, true)
-
-        cache_parity = 1
+    if not qw.cache then
+        qw.cache = {}
+        -- This will later get toggled to slot 1 in the first turn update.
+        qw.cache.slot = 2
     end
+
+    initialize_move_functions()
 
     local turns = you.turns()
     if turns == 0 then
@@ -149,16 +149,7 @@ function initialize()
 
     note_qw_data()
 
-    calc_los_radius()
-
-    initialize_goals()
-    qw.starting_spell = get_starting_spell()
-
-    set_options()
-
-    clear_autopickup_funcs()
-    add_autopickup_func(autopickup)
-
+    qw.max_persistent_distance_maps = 5
     qw.dump_count = turns + 100 - (turns % 100)
     qw.skill_count = turns - (turns % 5)
     qw.read_message = true
@@ -167,6 +158,16 @@ function initialize()
     qw.last_wait = -100
     qw.incoming_monsters_turn = -1
     qw.full_hp_turn = -1
+
+    qw.los_radius = you.los()
+
+    initialize_goals()
+    qw.starting_spell = get_starting_spell()
+
+    set_options()
+
+    clear_autopickup_funcs()
+    add_autopickup_func(autopickup)
 
     qw.initialized = true
 end

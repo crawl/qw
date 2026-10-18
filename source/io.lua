@@ -76,7 +76,7 @@ local d2v = {}
 local v2d = {}
 function initialize_vikeys()
     -- The vikeys in order of adjacent_iter()
-    local vikeys = { 'y', 'h', 'n', 'k', 'j', 'u', 'l', 'm' }
+    local vikeys = { 'y', 'h', 'b', 'k', 'j', 'u', 'l', 'n' }
     local i = 1
     for pos in adjacent_iter(const.origin) do
         local key = vikeys[i]
@@ -155,6 +155,7 @@ function c_message(text, channel)
             or text:find("You fly downwards")
             or text:find("You climb upwards")
             or text:find("You fly upwards") then
+        -- Don't use the feature cache, since it's for the previous level.
         stairs_travel = view.feature_at(0, 0)
     -- Record the staircase if we had just set stairs_travel.
     elseif text:find("There is a stone staircase") then
@@ -166,10 +167,10 @@ function c_message(text, channel)
             if travel_dir and dir and travel_dir == -dir
                     and travel_num == num then
                 local branch, depth = parse_level_range(you.where())
-                update_stone_stairs(branch, depth, dir, num,
-                    { feat = const.explore.explored })
-                update_stone_stairs(branch, depth + dir, travel_dir,
-                    travel_num, { feat = const.explore.explored })
+                update_stone_stairs_state(branch, depth, dir, num,
+                    { explore = const.explore.explored })
+                update_stone_stairs_state(branch, depth + dir, travel_dir,
+                    travel_num, { explore = const.explore.explored })
             end
         end
         stairs_travel = nil
@@ -214,7 +215,13 @@ function c_message(text, channel)
             or text:find("You enter a permanent teleport trap") then
         qw.ignore_traps = false
     elseif text:find("You feel very bouyant") then
-        temporary_flight = true
+        qw.temporary_flight = true
+    elseif text:find("You feel the power of Zot begin to gather") then
+        c_persist.zot5.tesseracts_active = true
+        qw.want_goal_update = true
+    elseif text:find("you feel the reach of Zot diminish.") then
+        c_persist.zot5.tesseracts_active = false
+        qw.want_goal_update = true
     elseif text:find("You pick up the Orb of Zot") then
         qw.want_goal_update = true
     elseif text:find("Zot's power touches on you") then

@@ -74,13 +74,23 @@ function equip_slot(item)
     end
 end
 
-function want_ranged_weapon()
+function want_ranged_weapon_func()
     return weapon_skill() == "Ranged Weapons"
+end
+
+function want_ranged_weapon()
+    return turn_memo(want_ranged_weapon_func)
 end
 
 function using_ranged_weapon(allow_melded)
     local weapon = get_weapon(allow_melded)
     return weapon and weapon.is_ranged
+end
+
+function will_fumble_primary_attack_at(pos)
+    return in_water_at(pos)
+        and not using_ranged_weapon()
+        and not intrinsic_amphibious()
 end
 
 function weapon_allows_shield(weapon)
@@ -108,7 +118,7 @@ function using_two_one_handed_weapons_func(allow_melded)
     return false
 end
 
-function using_two_one_handed_weapons_func(allow_melded)
+function using_two_one_handed_weapons(allow_melded)
     return turn_memo_args(using_two_one_handed_weapons_func, allow_melded)
 end
 
@@ -150,7 +160,7 @@ function want_shield()
     return true
 end
 
-function player_reach_range_func()
+function player_melee_range_func()
     local range = 1
     for weapon in equipped_slot_iter("weapon") do
         if weapon.reach_range > range then
@@ -161,8 +171,8 @@ function player_reach_range_func()
     return range
 end
 
-function player_reach_range()
-    return turn_memo(player_reach_range_func)
+function player_melee_range()
+    return turn_memo(player_melee_range_func)
 end
 
 function weapon_min_delay(weapon)
@@ -332,7 +342,7 @@ function can_swap_item(item, upgrade)
         return false
     end
 
-    local feat = view.feature_at(0, 0)
+    local feat = map_feature_at(qw.map_pos)
     if you.flying()
             and (feat == "deep_water" and not intrinsic_amphibious()
                 or feat == "lava")
@@ -717,7 +727,7 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
 
     if slot == "boots"
             and you.mutation("mertail") > 0
-            and (feat == "shallow_water" or feat == "deep_water") then
+            and in_water_at(const.origin) then
         return
     end
 

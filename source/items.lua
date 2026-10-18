@@ -121,7 +121,8 @@ function want_scroll(item)
     end
 
     local wanted = { "acquirement", "blinking", "brand weapon",
-        "enchant armour", "enchant weapon", "identify", "teleportation" }
+        "enchant armour", "enchant weapon", "identify", "revelation",
+        "teleportation" }
 
     if qw.planning_zig then
         table.insert(wanted, "fog")
@@ -301,6 +302,7 @@ function best_missile_func(value_func)
             best_value = value
         end
     end
+    return best_missile
 end
 
 function best_missile(value_func)

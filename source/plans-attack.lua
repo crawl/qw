@@ -101,7 +101,7 @@ end
 
 -- This gets stuck if netted, confused, etc
 function do_reach_attack(pos)
-    magic('vr' .. vector_move(pos) .. '.')
+    magic("vr" .. vector_move(pos) .. ".")
 end
 
 function plan_melee()
@@ -203,9 +203,7 @@ function plan_melee_wait_for_enemy()
     if dangerous_to_attack()
             or qw.position_is_cloudy
             or not options.autopick_on
-            or view.feature_at(0, 0) == "shallow_water"
-                and intrinsic_fumble()
-                and not you.flying()
+            or will_fumble_primary_attack_at(const.origin)
             or in_branch("Abyss")
             or qw.wait_count >= 10 then
         qw.wait_count = 0
@@ -216,8 +214,7 @@ function plan_melee_wait_for_enemy()
         qw.wait_count = 0
     end
 
-    -- Hack to wait when we enter the Vaults end, so we don't move off
-    -- stairs.
+    -- Hack to wait when we enter the Vaults end, so we don't move off stairs.
     if vaults_end_entry_turn and qw.turns <= vaults_end_entry_turn + 2 then
         wait_combat()
         return true
@@ -267,9 +264,6 @@ function plan_launcher_wait_for_enemy()
     if dangerous_to_attack()
             or qw.position_is_cloudy
             or not options.autopick_on
-            or view.feature_at(0, 0) == "shallow_water"
-                and intrinsic_fumble()
-                and not you.flying()
             or in_branch("Abyss")
             or qw.wait_count >= 10 then
         qw.wait_count = 0
@@ -292,7 +286,7 @@ end
 
 function plan_poison_spit()
     local mut_level = you.mutation("spit poison")
-    if not qw.danger_in_los
+        if not qw.danger_in_los
             or dangerous_to_attack()
             or you.xl() > 11
             or mut_level < 1
@@ -314,8 +308,9 @@ function plan_poison_spit()
         return false
     end
 
-    return use_ability(ability, "r" .. vector_move(target.pos)
-        .. (target.aim_at_target and "." or "\r"))
+    return use_ability(ability,
+        "r" .. vector_move(target.pos)
+            .. (target.aim_at_target and "." or "\r"))
 end
 
 function evoke_targeted_item(item, pos, aim_at_target)
@@ -344,40 +339,7 @@ function plan_targeted_evoke()
         return false
     end
 
-    evoke_targeted_item(target.attack.items[1], target.pos,
-        target.aim_at_target)
-end
-
-function plan_flight_move_towards_enemy()
-    if not qw.danger_in_los
-            or using_ranged_weapon()
-            or unable_to_move()
-            or dangerous_to_attack()
-            or dangerous_to_move(true) then
-        return false
-    end
-
-    local potion = find_item("potion", "enlightenment")
-    if not potion or not can_drink() then
-        return false
-    end
-
-    local target = best_melee_target(true)
-    if not target then
-        return false
-    end
-
-    local move = get_monster_at(target.pos):get_player_move_towards(true)
-    local feat = view.feature_at(move.x, move.y)
-    -- Only quaff flight when we finally reach an impassable square.
-    if (feat == "deep_water" or feat == "lava")
-            and not is_traversable_at(move) then
-        return drink_potion(potion)
-    else
-        return move_to(move)
-    end
-
-    return false
+    evoke_targeted_item(target.attack.items[1], target.pos, target.aim_at_target)
 end
 
 function plan_move_towards_enemy()
@@ -394,83 +356,68 @@ function plan_move_towards_enemy()
         return false
     end
 
-    local mons = get_monster_at(target.pos)
-    local move = mons:get_player_move_towards()
-    if not move then
+    local map_pos = map_position(target.pos)
+    local result = best_move_towards(map_pos, false, true)
+    if not result then
         return false
     end
 
-    qw.enemy_memory = position_difference(mons:pos(), move)
-    qw.enemy_map_memory = mons:map_pos()
-    qw.enemy_memory_turns_left = 2
-    return move_to(move)
-end
-
-function closest_adjacent_map_position(map_pos)
-    if map_is_reachable_at(map_pos) then
-        return pos
+    if move_to(result.move) then
+        qw.enemy_memory_pos = result.dest_pos
+        qw.enemy_memory_moves = 1
+        return true
     end
 
-    local best_dist, best_pos
-    for pos in adjacent_iter(map_pos) do
-        local dist = position_distance(pos, qw.map_pos)
-        if map_is_reachable_at(pos)
-                and (not best_dist or dist < best_dist) then
-            best_dist = dist
-            best_pos = pos
-        end
-    end
-
-    return best_pos
+    return false
 end
 
 function plan_continue_move_towards_enemy()
-    if not qw.enemy_memory
-            or not options.autopick_on
+    if not qw.enemy_memory_pos
             or unable_to_move()
             or dangerous_to_attack()
             or dangerous_to_move() then
         return false
     end
 
-    if qw.enemy_memory and position_is_origin(qw.enemy_memory) then
-        qw.enemy_memory = nil
-        qw.enemy_memory_turns_left = 0
-        qw.enemy_map_memory = nil
+    if positions_equal(qw.map_pos, qw.enemy_memory_pos) then
+        qw.enemy_memory_pos = nil
+        qw.enemy_memory_moves = nil
         return false
     end
 
-    if qw.enemy_memory_turns_left > 0 then
-        local result = move_search(const.origin, qw.enemy_memory,
-            tab_function(), player_reach_range())
+    if qw.enemy_memory_moves < 3 then
+        local result = best_move_towards(qw.enemy_memory_pos)
         if not result then
             return false
         end
 
-        return move_to(result.move)
-    end
-
-    qw.enemy_memory = nil
-
-    if qw.last_enemy_map_memory
-            and qw.enemy_map_memory
-            and positions_equal(qw.last_enemy_map_memory, qw.enemy_map_memory) then
-        qw.enemy_map_memory = nil
-
-        local dest = closest_adjacent_map_position(qw.last_enemy_map_memory)
-        if not dest then
+        if move_to(result.move) then
+            qw.enemy_memory_moves = qw.enemy_memory_moves + 1
+            return true
+        else
             return false
         end
+    end
 
-        local result = best_move_towards(dest)
+    qw.enemy_memory_moves = nil
+
+    -- We've been unable to reach the same enemy melee position in 3 movement
+    -- turns on two recent occasions. So just set this as a move destination so
+    -- we can settle the matter.
+    if qw.last_enemy_memory_pos
+            and positions_equal(qw.last_enemy_memory_pos,
+                qw.enemy_memory_pos) then
+        local result = best_move_towards(qw.enemy_memory_pos)
+        qw.enemy_memory_pos = nil
         if result then
-            return move_towards_destination(result.move, result.dest,
+            return move_towards_destination(result.move, result.dest_pos,
                 "monster")
         end
     end
 
-    qw.last_enemy_map_memory = qw.enemy_map_memory
-    qw.enemy_map_memory = nil
+    qw.enemy_memory_pos = nil
+    qw.last_enemy_memory_pos = qw.enemy_memory_pos
+    qw.last_enemy_memory_turns = qw.turns
     return false
 end
 
@@ -509,20 +456,19 @@ function plan_disturbance_random_step()
 end
 
 function set_plan_attack()
-    plans.attack = cascade {
-        {plan_starting_spell, "starting_spell"},
-        {plan_poison_spit, "poison_spit"},
-        {plan_targeted_evoke, "attack_wand"},
-        {plan_throw, "throw"},
-        {plan_launcher, "launcher"},
-        {plan_melee, "melee"},
-        {plan_launcher_wait_for_enemy, "launcher_wait_for_enemy"},
-        {plan_melee_wait_for_enemy, "melee_wait_for_enemy"},
-        {plan_continue_move_towards_enemy, "continue_move_towards_enemy"},
-        {plan_move_towards_enemy, "move_towards_enemy"},
-        {plan_flight_move_towards_enemy, "flight_move_towards_enemy"},
-        {plan_shoot_at_invis, "shoot_at_invis"},
-        {plan_flail_at_invis, "flail_at_invis"},
-        {plan_disturbance_random_step, "disturbance_random_step"},
-    }
+    plans.attack = cascade({
+        { plan_starting_spell, "starting_spell" },
+        { plan_poison_spit, "poison_spit" },
+        { plan_targeted_evoke, "attack_wand" },
+        { plan_throw, "throw" },
+        { plan_launcher, "launcher" },
+        { plan_melee, "melee" },
+        { plan_launcher_wait_for_enemy, "launcher_wait_for_enemy" },
+        { plan_melee_wait_for_enemy, "melee_wait_for_enemy" },
+        { plan_continue_move_towards_enemy, "continue_move_towards_enemy" },
+        { plan_move_towards_enemy, "move_towards_enemy" },
+        { plan_shoot_at_invis, "shoot_at_invis" },
+        { plan_flail_at_invis, "flail_at_invis" },
+        { plan_disturbance_random_step, "disturbance_random_step" },
+    })
 end

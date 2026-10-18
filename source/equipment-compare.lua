@@ -146,6 +146,10 @@ function best_inventory_equip(extra_item)
     local i = 1
     for equip in equip_combo_iter(inventory, extra_item) do
         equip.value = equip_set_value(equip)
+        if equip.value > 0
+                and (not best_equip or equip.value > best_equip.value) then
+            best_equip = equip
+        end
 
         if qw.coroutine_throttle and i % 100 == 0 then
             if debug_channel("items-all") then
@@ -154,17 +158,6 @@ function best_inventory_equip(extra_item)
 
             qw.throttle_delay = qw.delay_time
             coroutine.yield()
-        end
-
-        if debug_channel("items-all") then
-            dsay("Iteration #" .. i .. ": "
-                .. equip_set_string(equip) .. "; value: "
-                .. equip.value)
-        end
-
-        if equip.value > 0
-                and (not best_equip or equip.value > best_equip.value) then
-            best_equip = equip
         end
 
         i = i + 1

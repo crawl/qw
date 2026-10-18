@@ -2,16 +2,15 @@
 -- General movement calculations
 
 function can_move_to(to_pos, from_pos, allow_hostiles)
-    return is_traversable_at(to_pos)
-        and not view.withheld(to_pos.x, to_pos.y)
+    return not view.withheld(to_pos.x, to_pos.y)
         and (supdist(to_pos) > qw.los_radius
             or not monster_in_way_at(to_pos, from_pos, allow_hostiles))
 end
 
-function friendly_can_swap_to(mons, pos)
-    return mons:can_seek()
+function player_can_swap_mons_to(mons, pos)
+    return mons:player_can_swap()
         and mons:can_traverse(pos)
-        and view.feature_at(pos.x, pos.y) ~= "trap_zot"
+        and feature_at(pos) ~= "trap_zot"
 end
 
 function monster_in_way_at(to_pos, from_pos, allow_hostiles)
@@ -26,12 +25,8 @@ function monster_in_way_at(to_pos, from_pos, allow_hostiles)
         return true
     end
 
-    -- Strict neutral and up will swap with us, but we have to check that
-    -- they can. We assume we never want to attack these.
-    return mons:attitude() > const.attitude.neutral
-            and not friendly_can_swap_to(mons, from_pos)
-        or not allow_hostiles
-        or not mons:player_can_attack()
+    return not (player_can_swap_mons_to(mons, from_pos)
+        or allow_hostiles and mons:player_can_attack())
 end
 
 function get_move_closer(pos)
@@ -74,11 +69,6 @@ function update_move_destination()
                 .. cell_string_from_map_position(qw.move_destination))
         end
 
-        local dist_map = distance_maps[qw.move_destination.hash]
-        if dist_map and not dist_map.permanent then
-            distance_map_remove(dist_map)
-        end
-
         qw.move_destination = nil
         qw.move_reason = nil
     end
@@ -91,7 +81,7 @@ function move_to(pos, cloud_waiting)
 
     if cloud_waiting
             and not qw.position_is_cloudy
-            and unexcluded_at(pos)
+            and not is_excluded_at(pos)
             and cloud_is_dangerous_at(pos) then
         wait_one_turn()
         return true

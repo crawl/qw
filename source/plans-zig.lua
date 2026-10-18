@@ -20,7 +20,7 @@ function plan_move_to_zigfig_location()
             or goal_branch ~= "Zig"
             or branch_is_temporary(where_branch)
             or not find_item("misc", "figurine of a ziggurat")
-            or not feature_is_critical(view.feature_at(0, 0)) then
+            or not feature_is_critical(feature_at(const.origin)) then
         return false
     end
 
@@ -29,7 +29,7 @@ function plan_move_to_zigfig_location()
                 and not is_solid_at(pos)
                 and not monster_in_way_at(pos, const.origin)
                 and is_safe_at(pos)
-                and not feature_is_critical(view.feature_at(pos.x, pos.y)) then
+                and not feature_is_critical(feature_at(pos)) then
             return move_to(pos)
         end
     end
@@ -44,7 +44,7 @@ function plan_use_zigfig()
             or not qw.position_is_safe
             or you.berserk()
             or you.confused()
-            or feature_is_critical(view.feature_at(0, 0)) then
+            or feature_is_critical(feature_at(const.origin)) then
         return false
     end
 
@@ -62,8 +62,8 @@ function plan_go_to_zig_dig()
     if unable_to_travel()
             or goal_branch ~= "Zig"
             or not branch_found("Zig")
-            or view.feature_at(0, 0) == branch_entrance("Zig")
-            or view.feature_at(3, 1) == branch_entrance("Zig")
+            or feature_at(const.origin) == branch_entrance("Zig")
+            or feature_at(new_position(3, 1)) == branch_entrance("Zig")
             or count_charges("digging") == 0 then
         return false
     end
@@ -76,13 +76,13 @@ function plan_zig_dig()
     local wand = find_item("wand", "digging")
     if not in_branch("Depths")
             or goal_branch ~= "Zig"
-            or view.feature_at(3, 1) ~= branch_entrance("Zig")
+            or feature_at(new_position(3, 1)) ~= branch_entrance("Zig")
             or not wand
             or unable_to_evoke() then
         return false
     end
 
-    return evoke_targeted_item(wand, { x = 1, y = 0 })
+    return evoke_targeted_item(wand, new_position(1, 0))
 end
 
 function plan_zig_go_to_stairs()
@@ -104,12 +104,12 @@ function plan_zig_leave_level()
     end
 
     if c_persist.zig_completed
-            and view.feature_at(0, 0) == branch_exit("Zig") then
+            and feature_at(const.origin) == branch_exit("Zig") then
         local parent, depth = parent_branch(where_branch)
         remove_portal(make_level(parent, depth), where_branch, true)
         go_upstairs(true)
         return true
-    elseif feature_is_downstairs(view.feature_at(0, 0)) then
+    elseif feature_is_downstairs(feature_at(const.origin)) then
         go_downstairs()
         return true
     end

@@ -3,20 +3,23 @@
 -- LOS origin.
 const.origin = new_position(0, 0)
 
+const.los = enum({"default", "no_trans", "solid_see"})
+
 function supdist(pos)
     return max(abs(pos.x), abs(pos.y))
 end
 
-function feature_state(pos)
-    if you.see_cell_solid_see(pos.x, pos.y) then
+function explore_state_at(pos)
+    if move_distance(const.move.traversable, pos) then
         return const.explore.reachable
-    elseif you.see_cell_no_trans(pos.x, pos.y) then
+    elseif cell_see_cell(const.origin, pos) then
         return const.explore.diggable
     end
+
     return const.explore.seen
 end
 
-function positions_can_melee(from_pos, to_pos, range)
+function positions_can_melee_func(from_pos, to_pos, range)
     local dist = position_distance(from_pos, to_pos)
     if dist == 0 then
         return false
@@ -68,6 +71,15 @@ function positions_can_melee(from_pos, to_pos, range)
             new_position(from_pos.x + sign(x_diff), from_pos.y + sign(y_diff)),
             true)
     end
+end
+
+function positions_can_melee(from_pos, to_pos, range)
+    return turn_memo_args(positions_can_melee_func, from_pos, to_pos, range)
+end
+
+function map_positions_can_melee(from_pos, to_pos, range)
+    return positions_can_melee(los_position(from_pos), los_position(to_pos),
+        range)
 end
 
 function position_from_hash(hash)
@@ -215,14 +227,31 @@ function los_position(map_pos)
     return position_difference(map_pos, qw.map_pos)
 end
 
-function cell_see_cell_func(a, b)
-    return view.cell_see_cell(a.x, a.y, b.x, b.y)
+function cell_see_cell_func(a, b, los_type)
+    if positions_equal(a, b) then
+        return true
+    end
+
+    -- We default to LOS_NO_TRANS instead of LOS_DEFAULT,
+    -- because the former is what we want a large majority of
+    -- the time.
+    if not los_type then
+        los_type = const.los.no_trans
+    end
+
+    if los_type == const.los.default then
+        return view.cell_see_cell(a.x, a.y, b.x, b.y)
+    elseif los_type == const.los.no_trans then
+        return view.cell_see_cell_no_trans(a.x, a.y, b.x, b.y)
+    elseif los_type == const.los.solid_see then
+        return view.cell_see_cell_solid_see(a.x, a.y, b.x, b.y)
+    end
 end
 
-function cell_see_cell(a, b)
-    return turn_memo_args(cell_see_cell_func, a, b)
+function cell_see_cell(a, b, los_type)
+    return turn_memo_args(cell_see_cell_func, a, b, los_type)
 end
 
 function map_cell_see_cell(a, b)
-    return cell_see_cell(map_position(a), map_position(b))
+    return cell_see_cell(los_position(a), los_position(b), los_type)
 end

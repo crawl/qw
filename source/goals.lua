@@ -359,8 +359,7 @@ function determine_goal()
             local parent = parent_branch(branch)
             if branch ~= "Vaults"
                     and parent ~= "Vaults"
-                    and parent ~= "Crypt"
-                    and parent ~= "Tomb" then
+                    and parent ~= "Crypt" then
                 override = true
             end
         else
@@ -368,7 +367,6 @@ function determine_goal()
         end
 
         if override then
-            branch = "Vaults"
             status = "Rune:Vaults"
             goal = vaults_end
             desc = "Vaults rune"
@@ -379,11 +377,16 @@ function determine_goal()
         status = qw.have_orb and "Escape" or "Orb"
     end
 
+    if c_persist.zot5 and c_persist.zot5.tesseracts_active
+            and (goal == zot_end or status == "Orb") then
+        status = "Tesseracts"
+    end
+
     if status == "Escape" then
         goal = "D:1"
     -- Dive to and explore the end of Zot. We'll start trying to pick up the
     -- ORB via stash search travel as soon as it's found.
-    elseif status == "Orb" then
+    elseif status == "Tesseracts" or status == "Orb" then
         goal = zot_end
     end
 
@@ -402,6 +405,8 @@ function determine_goal()
         if not desc then
             if status == "Shopping" then
                 desc = "Shopping Spree"
+            elseif status == "Tesseracts" then
+                desc = "Boundless Tesseracts"
             elseif status == "Orb" then
                 desc = "The ORB of Zot!"
             else

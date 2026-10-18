@@ -15,8 +15,8 @@ function buffed()
         return false
     end
 
-    if you.god() == "Okawaru"
-            and (have_duration("heroism") or have_duration("finesse")) then
+    if you.god() == "Okawaru" and (have_duration("heroism")
+            or have_duration("finesse")) then
         return true
     end
 
@@ -42,14 +42,6 @@ end
 function plan_brothers_in_arms()
     if can_brothers_in_arms() and want_to_brothers_in_arms() then
         return use_ability("Brothers in Arms")
-    end
-
-    return false
-end
-
-function plan_greater_servant()
-    if can_greater_servant() and want_to_greater_servant() then
-        return use_ability("Greater Servant of Makhleb")
     end
 
     return false
@@ -113,49 +105,11 @@ function plan_flee()
         qw.last_flee_turn = qw.turns
     end
 
-    local cell_string = cell_string_from_map_position(result.dest)
     if move_to(result.move) then
-        say("FLEEEEING towards " .. cell_string)
+        say("FLEEEEING towards " .. cell_string_from_map_position(result.dest_pos))
         return true
     end
 
-    return false
-end
-
--- XXX: This plan is broken due to changes to combat assessment.
-function plan_grand_finale()
-    if not qw.danger_in_los
-            or dangerous_to_attack()
-            or you.teleporting
-            or not can_grand_finale() then
-        return false
-    end
-
-    local invo = you.skill("Invocations")
-    -- fail rate potentially too high, need to add ability failure rate lua
-    if invo < 10 or you.piety_rank() < 6 and invo < 15 then
-        return false
-    end
-    local bestx, besty, best_info, new_info
-    local flag_order = {"threat", "injury", "distance"}
-    local flag_reversed = {false, true, true}
-    local best_info, best_pos
-    for _, enemy in ipairs(qw.enemy_list) do
-        local pos = enemy:pos()
-        if is_traversable_at(pos)
-                and not cloud_is_dangerous_at(pos) then
-            if new_info.safe == 0
-                    and (not best_info
-                        or compare_melee_targets(enemy, best_enemy, props, reversed)) then
-                best_info = new_info
-                best_pos = pos
-            end
-        end
-    end
-    if best_info then
-        use_ability("Grand Finale", "r" .. vector_move(best_pos) .. "\rY")
-        return true
-    end
     return false
 end
 
@@ -165,22 +119,6 @@ function plan_apocalypse()
     end
 
     return false
-end
-
-function plan_hydra_destruction()
-    if not can_destruction()
-            or you.skill("Invocations") < 8
-            or check_greater_servants(4) then
-        return false
-    end
-
-    local hydra_dist = dangerous_hydra_distance()
-    if not hydra_dist or hydra_dist > 5 then
-        return false
-    end
-
-    return use_ability("Major Destruction",
-        "r" .. vector_move(enemy:x_pos(), enemy:y_pos()) .. "\r")
 end
 
 function fiery_armour()
@@ -266,7 +204,7 @@ function plan_read_blink()
         local result = best_blink_towards_flee_position()
         if result then
             local scroll = find_item("scroll", "blinking")
-            return read_scroll(scroll,  vector_move(result.blink_pos) .. ".")
+            return read_scroll(scroll, vector_move(result.blink_pos) .. ".")
         end
     end
 
@@ -298,12 +236,7 @@ function plan_read_blink()
     local best_count = 0
     local best_pos
     for pos in square_iter(const.origin) do
-        if is_traversable_at(pos)
-                and not is_solid_at(pos)
-                and not get_monster_at(pos)
-                and is_safe_at(pos)
-                and not view.withheld(pos.x, pos.y)
-                and you.see_cell_no_trans(pos.x, pos.y) then
+        if is_safe_at(pos, true) and cell_see_cell(const.origin, pos) then
             local count = 0
             for dpos in adjacent_iter(pos) do
                 if supdist(dpos) <= qw.los_radius then
@@ -311,8 +244,7 @@ function plan_read_blink()
                     if mons and mons:is_enemy()
                             and mons:name() == "floating eye" then
                         count = count + 3
-                    elseif mons
-                            and mons:is_enemy()
+                    elseif mons and mons:is_enemy()
                             and mons:name() == "starcursed mass" then
                         count = count + 1
                     end
@@ -328,6 +260,7 @@ function plan_read_blink()
         local scroll = find_item("scroll", "blinking")
         return read_scroll(scroll, vector_move(best_pos) .. ".")
     end
+
     return false
 end
 
@@ -361,7 +294,8 @@ function heal_general()
         elseif not item_type_is_ided("potion", "heal wounds")
                 and quaff_unided_potion() then
             return true
-        elseif you.race() == "Oni" and not item_type_is_ided("potion", "curing")
+        elseif you.race() == "Oni"
+                and not item_type_is_ided("potion", "curing")
                 and quaff_unided_potion() then
             return true
         end
@@ -531,29 +465,9 @@ function want_to_drain_life()
     return qw.danger_in_los
         and not dangerous_to_attack()
         and not you.teleporting()
-        and count_enemies(qw.los_radius,
-            function(mons) return mons:res_draining() == 0 end)
-end
-
-function want_to_greater_servant()
-    if not qw.danger_in_los
-            or dangerous_to_attack()
-            or you.teleporting()
-            or you.skill("Invocations") < 12
-            or check_greater_servants(4) then
-        return false
-    end
-
-    if hp_is_low(50) and qw.immediate_danger then
-        return true
-    end
-
-    local result = assess_enemies()
-    if result.threat >= 15 then
-        return true
-    end
-
-    return false
+        and count_enemies(qw.los_radius, function(mons)
+            return mons:res_draining() == 0
+        end)
 end
 
 function want_to_cleansing_flame()
@@ -562,7 +476,7 @@ function want_to_cleansing_flame()
     end
 
     local result = assess_enemies(const.duration.active, 2,
-        function(mons) return mons:res_holy() <= 0 end, true)
+        mons_res_holy_check, true)
     if result.scary_enemy and not result.scary_enemy:player_attack_can_hit(1)
             or result.threat >= high_threat_level() and result.count >= 3 then
         return true
@@ -652,14 +566,9 @@ function want_to_teleport()
         return true
     end
 
-    if count_hostile_summons(qw.los_radius) > 0 and you.xl() < 21 then
-        hostile_summons_timer = qw.turns
-        return true
-    end
-
     if qw.immediate_danger and bad_corrosion()
             or qw.immediate_danger and hp_is_low(25) then
-            return true
+        return true
     end
 
     if will_flee() then
@@ -678,7 +587,11 @@ function want_to_teleport()
 end
 
 function want_to_heal_wounds()
-    if want_to_orbrun_heal_wounds() then
+    if qw.have_orb
+            and (qw.danger_in_los
+                    and (hp_is_low(25)
+                        or hp_is_low(50) and you.teleporting())
+                or not qw.danger_in_los and hp_is_low(50)) then
         return true
     end
 
@@ -686,7 +599,9 @@ function want_to_heal_wounds()
         return false
     end
 
-    if can_ely_healing() and hp_is_low(50) and you.piety_rank() >= 5 then
+    if can_ely_healing()
+            and hp_is_low(50)
+            and you.piety_rank() >= 5 then
         return true
     end
 
@@ -747,6 +662,10 @@ function want_to_haste()
     return false
 end
 
+function mons_draining_gaze_check(mons)
+    return mons:has_spell("Draining Gaze")
+end
+
 function want_magic_points()
     if you.race() == "Djinni" then
         return false
@@ -759,7 +678,7 @@ function want_magic_points()
         -- Don't bother restoring MP if our max MP is low.
         and mmp >= 20
         -- No point trying to restore MP with ghost moths around.
-        and count_enemies_by_name(qw.los_radius, "ghost moth") == 0
+        and count_enemies(qw.los_radius, mons_draining_gaze_check) == 0
         -- We want and could use these abilities if we had more MP.
         and (can_cleansing_flame(true)
                 and not can_cleansing_flame()
@@ -989,8 +908,7 @@ function can_dig_to(pos)
     local hit_grate = false
     for i, coords in ipairs(positions) do
         local dpos = new_position(coords[1], coords[2])
-        if not hit_grate
-                and view.feature_at(dpos.x, dpos.y) == "iron_grate" then
+        if not hit_grate and feature_at(dpos) == "iron_grate" then
             hit_grate = true
         end
 
@@ -1056,52 +974,50 @@ function plan_dig_grate()
 end
 
 function set_plan_emergency()
-    plans.emergency = cascade {
-        {plan_take_upstairs, "take_upstairs"},
-        {plan_lugonu_exit_abyss, "lugonu_exit_abyss"},
-        {plan_exit_abyss, "exit_abyss"},
-        {plan_go_down_abyss, "go_down_abyss"},
-        {plan_pick_up_rune, "pick_up_rune"},
-        {plan_special_purification, "special_purification"},
-        {plan_cure_confusion, "cure_confusion"},
-        {plan_cancellation, "cancellation"},
-        {plan_read_blink, "read_blink"},
-        {plan_read_teleport, "read_teleport"},
-        {plan_remove_terrible_rings, "remove_terrible_rings"},
-        {plan_cure_bad_poison, "cure_bad_poison"},
-        {plan_drain_life, "drain_life"},
-        {plan_heal_wounds, "heal_wounds"},
-        {plan_trogs_hand, "trogs_hand"},
-        {plan_escape_net, "escape_net"},
-        {plan_move_towards_abyssal_rune, "move_towards_abyssal_rune"},
-        {plan_move_towards_abyssal_feature, "move_towards_abyssal_feature"},
-        {plan_explore_near_runelights, "explore_near_runelights"},
-        {plan_priority_tactical_step, "priority_tactical_step"},
-        {plan_zig_fog, "zig_fog"},
-        {plan_flee, "flee"},
-        {plan_tactical_step, "tactical_step"},
-        {plan_tomb2_arrival, "tomb2_arrival"},
-        {plan_tomb3_arrival, "tomb3_arrival"},
-        {plan_magic_points, "magic_points"},
-        {plan_cleansing_flame, "try_cleansing_flame"},
-        {plan_divine_warrior, "divine_warrior"},
-        {plan_brothers_in_arms, "brothers_in_arms"},
-        {plan_greater_servant, "greater_servant"},
-        {plan_apocalypse, "try_apocalypse"},
-        {plan_slouch, "try_slouch"},
-        {plan_hydra_destruction, "try_hydra_destruction"},
-        {plan_grand_finale, "grand_finale"},
-        {plan_fiery_armour, "fiery_armour"},
-        {plan_dig_grate, "try_dig_grate"},
-        {plan_wield_weapon, "wield_weapon"},
-        {plan_resistance, "resistance"},
-        {plan_finesse, "finesse"},
-        {plan_heroism, "heroism"},
-        {plan_haste, "haste"},
-        {plan_might, "might"},
-        {plan_recall, "recall"},
-        {plan_recall_ancestor, "try_recall_ancestor"},
-        {plan_recite, "try_recite"},
-        {plan_berserk, "berserk"},
-    }
+    plans.emergency = cascade({
+        { plan_take_upstairs, "take_upstairs" },
+        { plan_lugonu_exit_abyss, "lugonu_exit_abyss" },
+        { plan_exit_abyss, "exit_abyss" },
+        { plan_go_down_abyss, "go_down_abyss" },
+        { plan_pick_up_rune, "pick_up_rune" },
+        { plan_special_purification, "special_purification" },
+        { plan_cure_confusion, "cure_confusion" },
+        { plan_cancellation, "cancellation" },
+        { plan_read_blink, "read_blink" },
+        { plan_read_teleport, "read_teleport" },
+        { plan_remove_terrible_rings, "remove_terrible_rings" },
+        { plan_cure_bad_poison, "cure_bad_poison" },
+        { plan_drain_life, "drain_life" },
+        { plan_heal_wounds, "heal_wounds" },
+        { plan_trogs_hand, "trogs_hand" },
+        { plan_escape_net, "escape_net" },
+        { plan_move_towards_abyssal_rune, "move_towards_abyssal_rune" },
+        { plan_move_towards_abyssal_feature, "move_towards_abyssal_feature" },
+        { plan_read_revelation, "read_revelation" },
+        { plan_explore_near_runelights, "explore_near_runelights" },
+        { plan_priority_tactical_step, "priority_tactical_step" },
+        { plan_zig_fog, "zig_fog" },
+        { plan_flee, "flee" },
+        { plan_tactical_step, "tactical_step" },
+        { plan_tomb2_arrival, "tomb2_arrival" },
+        { plan_tomb3_arrival, "tomb3_arrival" },
+        { plan_magic_points, "magic_points" },
+        { plan_cleansing_flame, "try_cleansing_flame" },
+        { plan_divine_warrior, "divine_warrior" },
+        { plan_brothers_in_arms, "brothers_in_arms" },
+        { plan_apocalypse, "try_apocalypse" },
+        { plan_slouch, "try_slouch" },
+        { plan_fiery_armour, "fiery_armour" },
+        { plan_dig_grate, "try_dig_grate" },
+        { plan_wield_weapon, "wield_weapon" },
+        { plan_resistance, "resistance" },
+        { plan_finesse, "finesse" },
+        { plan_heroism, "heroism" },
+        { plan_haste, "haste" },
+        { plan_might, "might" },
+        { plan_recall, "recall" },
+        { plan_recall_ancestor, "try_recall_ancestor" },
+        { plan_recite, "try_recite" },
+        { plan_berserk, "berserk" },
+    })
 end

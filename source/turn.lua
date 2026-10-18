@@ -67,6 +67,7 @@ function reset_cached_turn_data(force)
     qw.autopickup_cache = {}
     qw.best_equip = nil
     qw.attacks = nil
+    qw.flee_positions = nil
     qw.want_to_kite = nil
     qw.want_to_kite_step = nil
 
@@ -87,10 +88,11 @@ function turn_update(force)
         return
     end
 
+    qw.los_radius = you.los()
     qw.have_orb = you.have_orb()
     qw.turns = turns
 
-    -- This is not normally reset during a turn updated, but when forcing,
+    -- This is not normally reset during a turn update, but when forcing,
     -- which is often used in Wizard Mode, we want to reset it.
     if force then
         qw.retreat_result = nil
@@ -121,17 +123,21 @@ function turn_update(force)
     end
 
     local new_level = false
-    local full_map_clear = false
-    if you.where() ~= where then
+    local clear_cache = false
+    local current_where = you.where()
+    if current_where ~= where then
         new_level = previous_where ~= nil
-        cache_parity = 3 - cache_parity
+        qw.cache.slot = 3 - qw.cache.slot
 
-        if you.where() ~= previous_where and new_level then
-            full_map_clear = true
+        -- The map cache at this slot is invalid, since it's not for the
+        -- level we're loading, so clear it. When a game is started or
+        -- resumed, this will also ensure that the slot is intialized.
+        if current_where ~= previous_where then
+            clear_cache = true
         end
 
         previous_where = where
-        where = you.where()
+        where = current_where
         where_branch = you.branch()
         where_depth = you.depth()
         qw.want_goal_update = true
@@ -163,39 +169,33 @@ function turn_update(force)
         qw.ignore_traps = false
     end
 
+    update_map(new_level, clear_cache)
+
     qw.base_corrosion = qw.base_corrosion
         + 4 * count_slimy_walls_at(const.origin)
 
     if you.flying() then
-        gained_permanent_flight = permanent_flight == false
-            and not temporary_flight
-        if gained_permanent_flight then
+        qw.gained_permanent_flight = qw.permanent_flight == false
+            and not qw.temporary_flight
+        if qw.gained_permanent_flight then
             qw.want_goal_update = true
         end
 
-        permanent_flight = not temporary_flight
+        qw.permanent_flight = not qw.temporary_flight
     else
-        permanent_flight = false
-        temporary_flight = false
+        qw.permanent_flight = false
+        qw.temporary_flight = false
     end
-
-    update_monsters()
-
-    update_map(new_level, full_map_clear)
 
     qw.position_is_safe = is_safe_at(const.origin)
     qw.position_is_cloudy = not qw.position_is_safe
         and not cloud_is_safe(view.cloud_at(0, 0))
 
     qw.danger_in_los = #qw.enemy_list > 0
-        or not map_is_unexcluded_at(qw.map_pos)
+        or map_is_excluded_at(qw.map_pos)
     qw.immediate_danger = check_immediate_danger()
 
-    update_reachable_position()
-    update_reachable_features()
-
     update_move_destination()
-    update_flee_positions()
 
     if qw.want_goal_update then
         update_goal()
@@ -211,8 +211,10 @@ function turn_update(force)
         c_persist.zig_completed = true
     end
 
-    if qw.enemy_memory and qw.enemy_memory_turns_left > 0 then
-        qw.enemy_memory_turns_left = qw.enemy_memory_turns_left - 1
+    if qw.last_enemy_memory_turns
+            and qw.turns - qw.last_enemy_memory_turns > 10 then
+        qw.last_enemy_memory_pos = nil
+        qw.last_enemy_memory_turns = nil
     end
 
     choose_tactical_step()

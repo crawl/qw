@@ -60,7 +60,7 @@ end
 
 function plan_enter_transporter()
     if not transp_search
-            or view.feature_at(0, 0) ~= "transporter"
+            or feature_at(const.origin) ~= "transporter"
             or unable_to_use_transporters() then
         return false
     end
@@ -74,14 +74,14 @@ function plan_take_unexplored_stairs()
         return false
     end
 
-    local feat = view.feature_at(0, 0)
+    local feat = feature_at(const.origin)
     local dir, num = stone_stairs_type(feat)
     if not dir or dir ~= goal_travel.stairs_dir then
         return false
     end
 
-    local state = get_stone_stairs(where_branch, where_depth, dir, num)
-    if state.feat >= const.explore.explored then
+    local state = get_stone_stairs_state(where_branch, where_depth, dir, num)
+    if state.explore >= const.explore.explored then
         return false
     end
 
@@ -106,13 +106,15 @@ end
 -- return to the previous level, we'll take a different set of stairs from
 -- that level via a new travel stairs search direction.
 function plan_unexplored_stairs_backtrack()
-    if unable_to_travel() or goal_travel.want_go or not goal_travel.stairs_dir then
+    if unable_to_travel()
+            or goal_travel.want_go
+            or not goal_travel.stairs_dir then
         return false
     end
 
     local next_depth = where_depth + goal_travel.stairs_dir
-    reset_stone_stairs(where_branch, where_depth, goal_travel.stairs_dir)
-    reset_stone_stairs(where_branch, next_depth, -goal_travel.stairs_dir)
+    reset_stone_stairs_state(where_branch, where_depth, goal_travel.stairs_dir)
+    reset_stone_stairs_state(where_branch, next_depth, -goal_travel.stairs_dir)
     send_travel(where_branch, next_depth)
     return true
 end
@@ -121,7 +123,7 @@ function unable_to_use_stairs()
     return unable_to_move() or you.mesmerised()
 end
 
-function count_stair_followers(radius)
+function count_stairs_followers(radius)
     return count_enemies(radius,
         function (mons)
             return mons:can_seek() and mons:can_use_stairs()
@@ -144,12 +146,12 @@ function teleporting_before_dangerous_stairs()
         return false
     end
 
-    local feat = view.feature_at(0, 0)
+    local feat = feature_at(const.origin)
     if feat ~= goal_travel.safe_stairs then
         return false
     end
 
-    local state = get_destination_stairs(where_branch, where_depth, feat)
+    local state = get_destination_stairs_state(where_branch, where_depth, feat)
     local threat = 0
     if state then
         threat = state.threat
@@ -174,7 +176,7 @@ function plan_use_travel_stairs()
         return false
     end
 
-    local feat = view.feature_at(0, 0)
+    local feat = feature_at(const.origin)
     if goal_travel.safe_hatch_pos and not goal_travel.want_go then
         if not positions_equal(qw.map_pos, goal_travel.safe_hatch_pos)
                 or feat ~= "escape_hatch_down" then

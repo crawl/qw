@@ -4,7 +4,7 @@
 -- the final qw lua source file.
 
 -- The main qw table.
-local qw = {}
+qw = {}
 
 local branch_data = {}
 local hell_branches
@@ -34,25 +34,8 @@ local where
 local where_branch
 local where_depth
 
-local permanent_flight
-local gained_permanent_flight
-local temporary_flight
 local permanent_bazaar
 local dislike_pan_level = false
-
-local cache_parity
-local check_reachable_features = {}
-local feature_map_positions_cache
-local feature_map_positions
-local item_searches
-local item_map_positions_cache
-local item_map_positions
-local traversal_maps_cache
-local traversal_map
-local exclusion_maps_cache
-local exclusion_map
-local distance_maps_cache
-local distance_maps
 
 local transp_map = {}
 local transp_search_zone
@@ -93,7 +76,7 @@ function enum(tbl)
 end
 
 -- All constants go in this table.
-local const = {}
+const = {}
 
 -- Maximum map width. We use this as a general map radius that's guaranteed to
 -- reach the entire map, since qw is never given absolute coordinates by crawl.

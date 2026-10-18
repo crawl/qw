@@ -100,19 +100,6 @@ function intrinsic_amphibious()
     return sp == "Merfolk" or sp == "Octopode" or sp == "Barachi"
 end
 
-function intrinsic_fumble()
-    if intrinsic_amphibious() or intrinsic_flight() then
-        return false
-    end
-
-    local sp = you.race()
-    return not (sp == "Grey Draconian"
-        or sp == "Armataur"
-        or sp == "Naga"
-        or sp == "Troll"
-        or sp == "Oni")
-end
-
 function intrinsic_evil()
     local sp = you.race()
     return sp == "Demonspawn"
@@ -335,11 +322,7 @@ function transformed()
     return you.transform() ~= ""
 end
 
-function unable_to_wield_weapon()
-    if you.berserk() or you.race() == "Felid" then
-        return true
-    end
-
+function in_weaponless_form()
     local form = you.transform()
     return not (form == ""
         or form == "tree"
@@ -347,6 +330,14 @@ function unable_to_wield_weapon()
         or form == "maw"
         or form == "hive"
         or form == "death")
+end
+
+function unable_to_wield_weapon()
+    if you.berserk() or you.race() == "Felid" then
+        return true
+    end
+
+    return in_weaponless_form()
 end
 
 function unable_to_swap_weapons()
@@ -474,10 +465,8 @@ function player_move_delay_func()
         delay = 1.5 * delay
     end
 
-    if view.feature_at(0, 0) == "shallow_water"
-            and not (you.flying()
-                or you.god() == "Beogh"
-                    and you.piety_rank() >= 5)
+    if in_water_at(const.origin)
+            and not (you.flying() or you.god() == "Beogh" and you.piety_rank() >= 5)
             and not intrinsic_amphibious() then
         delay = 8 / 5 * delay
     end
@@ -494,9 +483,13 @@ function base_mutation(str)
 end
 
 function drain_level()
-    local drain_levs = { ["lightly drained"] = 1, ["drained"] = 2,
-        ["heavily drained"] = 3, ["very heavily drained"] = 4,
-        ["extremely drained"] = 5 }
+    local drain_levs = {
+        ["lightly drained"] = 1,
+        ["drained"] = 2,
+        ["heavily drained"] = 3,
+        ["very heavily drained"] = 4,
+        ["extremely drained"] = 5,
+    }
     for s, v in pairs(drain_levs) do
         if you.status(s) then
             return v
@@ -520,16 +513,6 @@ function body_size()
     end
 end
 
-function calc_los_radius()
-    if you.race() == "Barachi" then
-        qw.los_radius = 8
-    elseif you.race() == "Kobold" then
-        qw.los_radius = 4
-    else
-        qw.los_radius = 7
-    end
-end
-
 function unable_to_move_func()
     if you.status("immotile") then
         return true
@@ -540,16 +523,12 @@ function unable_to_move_func()
 end
 
 function unable_to_move()
-    return tun_memo(unable_to_move_func)
+    return turn_memo(unable_to_move_func)
 end
 
 function dangerous_to_move_func(allow_spiked)
     return not allow_spiked and you.status("spiked")
-        or you.confused()
-            and (check_brothers_in_arms(1)
-                or check_greater_servants(1)
-                or check_divine_warriors(1)
-                or check_beogh_allies(1))
+        or you.confused() and (check_brothers_in_arms(1) or check_divine_warriors(1))
 end
 
 function dangerous_to_move(allow_spiked)
@@ -565,11 +544,7 @@ function unable_to_shoot()
         return true
     end
 
-    local form = you.transform()
-    return not (form == ""
-        or form == "tree"
-        or form == "statue"
-        or form == "lich")
+    return in_weaponless_form()
 end
 
 function unable_to_throw()
@@ -577,27 +552,19 @@ function unable_to_throw()
         return true
     end
 
-    local form = you.transform()
-    return not (form == ""
-        or form == "tree"
-        or form == "statue"
-        or form == "lich")
+    return in_weaponless_form()
 end
 
 function player_can_melee_mons(mons, ignore_temp)
-    if mons:name() == "orb of destruction"
-            or mons:attacking_causes_penance()
-            or not ignore_temp and unable_to_melee() then
+    if
+        mons:name() == "orb of destruction"
+        or mons:attacking_causes_penance()
+        or not ignore_temp and unable_to_melee()
+    then
         return false
     end
 
-    local range = mons:player_melee_range()
-    local dist = mons:distance()
-    if range == 2 then
-        return dist <= range and view.can_reach(mons:x_pos(), mons:y_pos())
-    else
-        return dist <= range
-    end
+    return positions_can_melee(const.origin, mons:pos(), mons:player_melee_range())
 end
 
 function dangerous_to_shoot()
@@ -605,28 +572,23 @@ function dangerous_to_shoot()
         -- Don't attempt to shoot with summoned allies adjacent.
         or you.confused()
             and (check_brothers_in_arms(qw.los_radius)
-                or check_greater_servants(qw.los_radius)
-                or check_divine_warriors(qw.los_radius)
-                or check_beogh_allies(qw.los_radius))
+                or check_divine_warriors(qw.los_radius))
 end
 
 function dangerous_to_melee_func()
     return dangerous_to_attack()
         -- Don't attempt melee with summoned allies adjacent.
-        or you.confused()
-            and (check_brothers_in_arms(1)
-                or check_greater_servants(1)
-                or check_divine_warriors(1)
-                or check_beogh_allies(1))
+        or you.confused() and (check_brothers_in_arms(1)
+            or check_divine_warriors(1))
 end
 
-return dangerous_to_melee()
+function dangerous_to_melee()
     return turn_memo(dangerous_to_melee_func)
 end
 
 -- Currently we only use this to disallow attacking when in an exclusion.
 function dangerous_to_attack()
-    return not map_is_unexcluded_at(qw.map_pos)
+    return map_is_excluded_at(qw.map_pos)
 end
 
 function mons_vamp_check(mons)
@@ -636,8 +598,7 @@ end
 function want_to_be_surrounded_func()
     local have_vamp_cleave = false
     for weapon in equipped_slot_iter("weapon") do
-        if weapon.weap_skill == "Axes"
-                and weapon:ego() == "vampirism" then
+        if weapon.weap_skill == "Axes" and weapon:ego() == "vampirism" then
             have_vamp_cleave = true
             break
         end

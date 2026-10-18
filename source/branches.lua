@@ -271,13 +271,13 @@ function branch_exists(branch)
         or not branch_data[branch])
 end
 
-function branch_found(branch, min_state)
+function branch_found(branch, min_explore)
     if branch == "D" then
         return {"D:0"}
     end
 
-    if not min_state then
-        min_state = const.explore.seen
+    if not min_explore then
+        min_explore = const.explore.seen
     end
 
     if not c_persist.branch_entries[branch] then
@@ -285,7 +285,7 @@ function branch_found(branch, min_state)
     end
 
     for level, state in pairs(c_persist.branch_entries[branch]) do
-        if state.feat >= min_state then
+        if state.explore >= min_explore then
             return level
         end
     end

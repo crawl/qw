@@ -13,7 +13,6 @@ function assess_square_enemies(a)
         local dist = enemy:melee_move_distance(a.pos)
         local see_cell = cell_see_cell(enemy:pos(), a.pos)
         local ranged = enemy:is_ranged()
-        local liquid_bound = enemy:is_liquid_bound()
 
         if dist < best_dist then
             best_dist = dist
@@ -49,6 +48,10 @@ end
 
 function assess_square(pos)
     a = { pos = pos }
+
+    if debug_channel("move-tactics") then
+        dsayf("Assessing tactical step position %s", cell_string_from_position(pos))
+    end
 
     -- Distance to current square
     a.supdist = supdist(pos)
@@ -89,7 +92,7 @@ function assess_square(pos)
     a.slimy_wall_count = count_slimy_walls_at(pos)
 
     -- Will we fumble if we try to attack from this square?
-    a.fumble = not using_ranged_weapon() and in_water and intrinsic_fumble()
+    a.fumble = will_fumble_primary_attack_at(pos)
 
     -- Will we be slow if we move into this square?
     a.slow = in_water and not intrinsic_amphibious()
@@ -110,11 +113,6 @@ end
 --   kiting         - kiting slower monsters with a reaching or ranged weapon
 --   retreating     - retreating to a better defensive position
 function step_reason(a1, a2)
-    -- If we step away from dangerous things that don't go away fairly quickly
-    -- (or at all), we want to be guaranteed to have a monster follow us so
-    -- that we can attack directly at the new position.
-    local can_step_away = qw.incoming_monsters
-        and (a1.melee_count > 0 or best_ranged_target())
     if not (a2.can_move and a2.safe and a2.supdist > 0) then
         return
     elseif a2.sticky_fire_danger < a1.sticky_fire_danger then
@@ -178,11 +176,22 @@ function choose_tactical_step()
         local a = assess_square(pos)
         local reason = step_reason(a0, a)
         -- If reason is defined, we have sufficient reason to move from a0->a.
-        if reason and (not besta
-                or compare_table_keys(a, besta, step_keys, rev_step_keys)) then
-            best_pos = pos
-            besta = a
-            best_reason = reason
+        if reason then
+            if debug_channel("move-tactics") then
+                dsayf("Would take this step from origin for reason " .. reason)
+            end
+
+            if not besta
+                    or compare_table_keys(a, besta, step_keys,
+                        rev_step_keys) then
+                if debug_channel("move-tactics") then
+                    dsay("Step is new best position")
+                end
+
+                best_pos = pos
+                besta = a
+                best_reason = reason
+            end
         end
     end
 
@@ -191,9 +200,9 @@ function choose_tactical_step()
         qw.tactical_reason = best_reason
 
         if debug_channel("move") then
-            dsay("Chose tactical step to "
-                .. cell_string_from_position(qw.tactical_step)
-                .. " for reason: " .. qw.tactical_reason)
+            dsayf("Chose tactical step to %s for reason %s",
+                cell_string_from_position(qw.tactical_step),
+                qw.tactical_reason)
         end
 
         return

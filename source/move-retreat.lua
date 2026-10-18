@@ -45,27 +45,30 @@ function position_component(target_pos, positions)
     return components[target_ind]
 end
 
-function enemy_melee_score_at(enemy, target_pos, melee_enemies)
+function enemy_melee_score_at(enemy, target_pos, melee_enemies, factor)
     if enemy:threat() < 1 then
-        if debug_channel("retreat-enemy") then
+        if debug_channel("retreat-all") then
             dsay("Ignoring melee enemy: low threat")
         end
 
         return 0
     end
 
-    if positions_can_melee(enemy:pos(), target_pos, enemy:reach_range()) then
-        if debug_channel("retreat-enemy") then
-            dsay("Assigning melee enemy to its current position")
+    if enemy:can_melee_at(target_pos) then
+        local score = enemy:threat() * factor
+        if debug_channel("retreat-all") then
+            dsayf("Assigning enemy to its current position for melee score"
+                    .. " of %.1f",
+                score)
         end
 
         melee_enemies[enemy:pos().hash] = enemy
-        return enemy:threat()
+        return score
     end
 
     local search = enemy:melee_move_search(target_pos)
     if not search then
-        if debug_channel("retreat-enemy") then
+        if debug_channel("retreat-all") then
             dsay("Ignoring melee enemy: can't reach player")
         end
 
@@ -76,27 +79,29 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
     if not melee_enemies[seed_pos.hash]
             and not get_monster_at(seed_pos)
             and enemy:can_traverse(seed_pos) then
-        if debug_channel("retreat-enemy") then
-            dsay("Assigning melee enemy to seed position "
-                .. cell_string_from_position(seed_pos))
+        local score = enemy:threat() * factor
+        if debug_channel("retreat-all") then
+            dsayf("Assigning enemy to seed position %s for melee score of %.1f",
+                cell_string_from_position(seed_pos),
+                score)
         end
 
         melee_enemies[seed_pos.hash] = enemy
-        return enemy:threat()
+        return score
     end
 
     local positions = {}
-    for pos in radius_iter(target_pos, enemy:reach_range()) do
+    for pos in radius_iter(target_pos, enemy:melee_range()) do
         if enemy:can_traverse(pos)
-                and positions_can_melee(pos, target_pos,
-                    enemy:reach_range()) then
+                and positions_can_melee(pos,
+                    target_pos, enemy:melee_range()) then
             table.insert(positions, pos)
         end
     end
 
     local component = position_component(seed_pos, positions)
     if not component then
-        if debug_channel("retreat-enemy") then
+        if debug_channel("retreat-all") then
             dsay("Ignoring melee enemy: No available melee position found")
         end
 
@@ -105,17 +110,20 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
 
     for _, pos in ipairs(component) do
         if not melee_enemies[pos.hash] and not get_monster_at(pos) then
-            if debug_channel("retreat-enemy") then
-                dsay("Assigning melee enemy to destination component position "
-                    .. cell_string_from_position(pos))
+            local score = enemy:threat() * factor
+            if debug_channel("retreat-all") then
+                dsayf("Assigning enemy to destination component position %s"
+                        .. " for melee score of %.1f",
+                    cell_string_from_position(pos),
+                    score)
             end
 
             melee_enemies[pos.hash] = enemy
-            return enemy:threat()
+            return score
         end
     end
 
-    if debug_channel("retreat-enemy") then
+    if debug_channel("retreat-all") then
         dsay("Ignoring melee enemy: No available melee position found")
     end
 
@@ -129,12 +137,12 @@ function enemy_target_los_distance(enemy, start_pos, end_pos, target_pos)
 
     if cell_see_cell(start_pos, target_pos) then
         local los_dist = position_distance(start_pos, target_pos)
-        if debug_channel("retreat-enemy") then
-            dsay("Found LOS distance of " .. los_dist
-                .. " for target position "
-                .. cell_string_from_position(target_pos)
-                .. " via LOS when starting from "
-                .. cell_string_from_position(start_pos))
+        if debug_channel("retreat-all") then
+            dsayf("Found LOS distance of %d for target position %s via LOS"
+                    .. " when starting from %s",
+                los_dist,
+                cell_string_from_position(target_pos),
+                cell_string_from_position(start_pos))
         end
 
         return los_dist
@@ -148,14 +156,13 @@ function enemy_target_los_distance(enemy, start_pos, end_pos, target_pos)
     for _, pos in ipairs(search.path) do
         if cell_see_cell(pos, target_pos) then
             local los_dist = position_distance(pos, target_pos)
-            if debug_channel("retreat-enemy") then
-                dsay("Found LOS distance of " .. los_dist
-                    .. " for target position "
-                    .. cell_string_from_position(target_pos)
-                    .. " via move search from "
-                    .. cell_string_from_position(start_pos)
-                    .. " to "
-                    .. cell_string_from_position(end_pos))
+            if debug_channel("retreat-all") then
+                dsayf("Found LOS distance of %d for target position %s via"
+                        .. " move path from %s to %s",
+                    los_dist,
+                    cell_string_from_position(target_pos),
+                    cell_string_from_position(start_pos),
+                    cell_string_from_position(end_pos))
             end
 
             return los_dist
@@ -165,13 +172,13 @@ function enemy_target_los_distance(enemy, start_pos, end_pos, target_pos)
     return const.inf_dist
 end
 
-function enemy_los_score_at(enemy, target_pos, player_search, player_los_dist)
+function enemy_los_score_at(enemy, target_pos, player_path, player_los_dist)
     if using_ranged_weapon()
-            -- Creeping Frost is their only significant ranged attack and we
-            -- won't usually move towards this monster if solid walls would
-            -- become adjacent.
-            or enemy:name() == "ironbound frostheart"
-                and not enemy:has_line_of_fire(target_pos) then
+        -- Creeping Frost is their only significant ranged attack and we
+        -- won't usually move towards this monster if solid walls would
+        -- become adjacent.
+        or enemy:name() == "ironbound frostheart"
+            and not enemy:has_line_of_fire(target_pos) then
         return 0
     end
 
@@ -185,18 +192,16 @@ function enemy_los_score_at(enemy, target_pos, player_search, player_los_dist)
         player_los_score = max(0, player_los_dist - range)
     end
 
-    if player_search and enemy:regains_los() then
-        -- The player search is in reverse, from the retreat destination to
-        -- the player position, so we walk it in reverse and start from the
-        -- first position after our current position.
-        for i = #player_search.path - 1, 1, -1 do
-            local pos = los_position(player_search.path[i])
+    if player_path and enemy:regains_los() then
+        -- We start at the first position after our current position.
+        for i = 2, #player_path do
+            local pos = los_position(player_path[i])
             if not cell_see_cell(enemy:pos(), pos) then
                 local firing_pos = enemy:choose_firing_pos(pos)
                 if firing_pos then
-                    if debug_channel("retreat-enemy") then
-                        dsay("Chose firing position of "
-                            .. cell_string_from_position(firing_pos))
+                    if debug_channel("retreat-all") then
+                        dsayf("Chose firing position of %s",
+                            cell_string_from_position(firing_pos))
                     end
 
                     local los_dist = enemy_target_los_distance(enemy,
@@ -229,8 +234,7 @@ function enemy_los_score_at(enemy, target_pos, player_search, player_los_dist)
     return player_los_score
 end
 
-function enemy_ranged_score_at(enemy, target_pos, player_search,
-        player_los_dist)
+function enemy_ranged_score_at(enemy, target_pos, player_path, player_los_dist)
     if not enemy:is_ranged() then
         return 0
     end
@@ -239,20 +243,18 @@ function enemy_ranged_score_at(enemy, target_pos, player_search,
         return 0
     end
 
-    local los_score = enemy_los_score_at(enemy, target_pos, player_search,
+    local los_score = enemy_los_score_at(enemy, target_pos, player_path,
         player_los_dist)
 
     -- The player movement and enemy visibility components of ranged score
-    -- don't apply for our current position, when player_search is nil. The
+    -- don't apply for our current position, when player_path is nil. The
     -- LOS distance component still applies.
     local sight_score = 0
     local dist_score = 0
-    if player_search then
-        -- The player search starts from the retreat destination, so we walk
-        -- backwards through the path, starting from the first from the first
-        -- position after our current position.
-        for i = #player_search.path - 1, 1, -1 do
-            local pos = los_position(player_search.path[i])
+    if player_path then
+        -- We skip the starting position.
+        for i = 2, #player_path do
+            local pos = los_position(player_path[i])
             if enemy:has_line_of_fire(pos) then
                 sight_score = sight_score + 1
             elseif cell_see_cell(enemy:pos(), pos) then
@@ -261,113 +263,108 @@ function enemy_ranged_score_at(enemy, target_pos, player_search,
         end
 
         dist_score = 0.25 * player_move_delay() / enemy:move_delay()
-            * player_search.dist
+            * (#player_path - 1)
     end
 
-    local score = enemy:threat()
+    local total_score = enemy:threat()
         * (player_move_delay() / 10 * (los_score + sight_score) + dist_score)
 
-    if debug_channel("retreat-enemy") then
-        dsay("Ranged enemy final score: " .. score
-            .. "; LOS distance score: " .. los_score
-            .. "; sight score: " .. sight_score
-            .. "; dist score: " .. dist_score)
+    if debug_channel("retreat-all") then
+        dsayf("Ranged enemy final score: %.1f; LOS distance score: %.1f; Sight"
+                .. " score: %.1f; Dist score: %.1f",
+            total_score,
+            los_score,
+            sight_score,
+            dist_score)
     end
 
-    return score
+    return total_score
 end
 
-function retreat_score_at(target_pos, player_search)
-    local player_los_dist
+function retreat_score_at(target_pos, player_path)
     local tree_score = 0
-    local wall_score = 0
-    if player_search then
-        -- This starts from the map position of pos.
-        for i = 2, #player_search.path do
-            local pos = los_position(player_search.path[i])
+    local slimy_score = 0
+    local player_los_dist
+    if player_path then
+        -- Skip the starting position.
+        for i = 2, #player_path do
+            local pos = los_position(player_path[i])
             if cell_see_cell(pos, target_pos) then
                 player_los_dist = i - 1
             end
 
-            if i < #player_search.path then
+            -- We score the final position differently and even if we don't
+            -- have a path.
+            if i < #player_path then
                 if qw.awaken_forest then
                     tree_score = tree_score + count_trees_at(pos)
                 end
 
-                wall_score = wall_score + count_slimy_walls_at(pos)
+                slimy_score = slimy_score + count_slimy_walls_at(pos)
             end
-        end
-
-        if debug_channel("retreat-pos") then
-            dsay("Player LOS distance: " .. player_los_dist)
         end
     end
 
     if qw.awaken_forest then
-        tree_score = 5 * count_trees_at(target_pos)
-
-        if tree_score > 0 and debug_channel("retreat-pos") then
-            dsay("Adding " .. tree_score .. " points for Awaken Forest")
-        end
+        tree_score = tree_score + 5 * count_trees_at(target_pos)
     end
 
-    wall_score = 5 * count_slimy_walls_at(target_pos)
+    slimy_score = slimy_score + 5 * count_slimy_walls_at(target_pos)
 
-    if wall_score > 0 and debug_channel("retreat-pos") then
-        dsay("Adding " .. wall_score .. " points for slimy walls")
-    end
-
+    -- For fumbling melee attacks 37.5% of the time.
+    local melee_factor = will_fumble_primary_attack_at(target_pos) and 1.6 or 1
     local melee_enemies = {}
     local melee_score = 0
     local dist_score = 0
     local ranged_score = 0
     for _, enemy in ipairs(qw.enemy_list) do
-        if debug_channel("retreat-enemy") then
-            local props = { threat = "threat", reach_range = "reach",
+        if debug_channel("retreat-all") then
+            local props = { threat = "threat", melee_range = "melee range",
                 move_delay = "move delay" }
             dsay("Assessing retreat score of " .. monster_string(enemy, props))
         end
 
-        local score = enemy_melee_score_at(enemy, target_pos, melee_enemies)
+        local score = enemy_melee_score_at(enemy, target_pos, melee_enemies, melee_factor)
         melee_score = melee_score + score
+        local enemy_score = score
 
-        if debug_channel("retreat-enemy") then
-            dsay("Melee score: " .. score)
-        end
-
-        if player_search
-                and enemy:can_seek()
-                and not enemy:is_ranged() then
-            local score = 0.1 * enemy:threat()
+        if player_path and enemy:can_seek() and not enemy:is_ranged() then
+            score = 0.1
+                * enemy:threat()
                 * player_move_delay()
-                    / enemy:move_delay()
-                * player_search.dist
+                / enemy:move_delay()
+                -- This is just the move distance.
+                * (#player_path - 1)
+            dist_score = dist_score + score
+            enemy_score = enemy_score + score
 
-            if debug_channel("retreat-enemy") then
+            if debug_channel("retreat-all") then
                 dsay("Distance score: " .. score)
             end
-
-            dist_score = dist_score + score
         end
 
-        ranged_score = ranged_score
-            + enemy_ranged_score_at(enemy, target_pos, player_search,
-                player_los_dist)
+        score = enemy_ranged_score_at(enemy, target_pos, player_path, player_los_dist)
+        ranged_score = ranged_score + score
+        enemy_score = enemy_score + score
+
+        if debug_channel("retreat-all") then
+            dsay("Total score for this enemy: " .. enemy_score)
+        end
     end
 
     -- Ensure that we have an enemy to melee at the retreat position.
-    if player_search and not using_ranged_weapon() then
+    if player_path and not using_ranged_weapon() then
         local can_melee = false
         for hash, enemy in pairs(melee_enemies) do
-            local pos = position_from_hash(hash)
-            if positions_can_melee(target_pos, pos, enemy:player_melee_range()) then
+            if positions_can_melee(target_pos, position_from_hash(hash),
+                    enemy:player_melee_range()) then
                 can_melee = true
                 break
             end
         end
 
         if not can_melee then
-            if debug_channel("retreat-pos") then
+            if debug_channel("retreat-all") then
                 dsay("Invalid retreat position: no enemy to melee")
             end
 
@@ -375,73 +372,80 @@ function retreat_score_at(target_pos, player_search)
         end
     end
 
-    if not using_ranged_weapon()
-            and in_water_at(target_pos)
-            and intrinsic_fumble() then
-        -- For fumbling melee attacks 37.5% of the time.
-        melee_score = melee_score * 1.6
+    local trap_score = trap_score_at(target_pos)
+    if not trap_score then
+        trap_score = 0
     end
 
-    local total_score = tree_score + wall_score + melee_score + dist_score
+    local total_score = melee_score
+        + dist_score
         + ranged_score
+        + trap_score
+        + tree_score
+        + slimy_score
 
-    if debug_channel("retreat-pos") then
-        dsay("Final retreat score: " .. total_score)
+    if debug_channel("retreat-all") then
+        dsayf("Final retreat score: %.1f; Player LOS distance: %s;"
+                .. " Melee score: %.1f; Distance score: %.1f;"
+                .. " Ranged score: %.1f; Trap score: %.1f;"
+                .. " Tree score: %.1f; Slimy wall score: %.1f",
+            total_score,
+            -- Can be nil
+            tostring(player_los_dist),
+            melee_score,
+            dist_score,
+            ranged_score,
+            trap_score,
+            tree_score,
+            slimy_score)
     end
 
     return total_score
 end
 
-function retreat_move_check(map_pos)
-    local pos = los_position(map_pos)
-    if not is_safe_at(pos) then
+function retreat_move_check_func(map_pos)
+    if not map_is_safe_at(map_pos) then
         return false
     end
 
-    local mons = get_monster_at(pos)
-    if mons and not mons:is_friendly() then
+    local mons = get_monster_at(los_position(map_pos))
+    if mons and not mons:player_can_swap() then
         return false
     end
 
     return true
 end
 
-function assess_retreat_position(map_pos, dist, cache)
-    local pos = los_position(map_pos)
-    local result = { pos = pos, map_pos = map_pos }
+function retreat_move_check(map_pos)
+    return turn_memo_args(retreat_move_check_func, map_pos)
+end
 
-    local is_origin = position_is_origin(pos)
-    if is_origin then
-        if not is_safe_at(pos) then
-            return
-        end
+function assess_retreat_position(pos, dist)
+    local result = { pos = pos, map_pos = map_position(pos), dist = dist }
 
-        result.dist = 0
-    else
-        result.dist = dist
+    if dist == 0 and not is_safe_at(pos) then
+        return
     end
 
-    if debug_channel("retreat-pos") then
-        dsay("Evaluating retreat position "
-            .. cell_string_from_map_position(map_pos)
-            .. " at distance " .. result.dist)
+    if debug_channel("retreat-all") then
+        dsayf("Evaluating retreat position %s at distance %d",
+            cell_string_from_position(pos),
+            dist)
     end
 
-    local player_search
-    if not is_origin then
-        player_search = distance_map_search(map_pos, qw.map_pos,
-            retreat_move_check, 0, false, cache)
-        if not player_search then
-            if debug_channel("retreat-pos") then
+    local player_path
+    if dist > 0 then
+        player_path = move_path(const.move.retreat, result.map_pos)
+        if not player_path then
+            if debug_channel("retreat-all") then
                 dsay("Invalid retreat position: no valid retreat path")
             end
 
             return
         end
-
     end
 
-    result.score = retreat_score_at(pos, player_search)
+    result.score = retreat_score_at(pos, player_path)
     if not result.score then
         return
     end
@@ -450,8 +454,16 @@ function assess_retreat_position(map_pos, dist, cache)
 end
 
 function best_retreat_result_func()
-    if not map_is_unexcluded_at(qw.map_pos) then
+    if map_is_excluded_at(qw.map_pos) then
         return
+    end
+
+    -- The retreat location has become unreachable.
+    if qw.retreat_result
+            and not map_is_reachable_at(qw.map_pos,
+                const.move.retreat, qw.retreat_result.map_pos) then
+        qw.retreat_result = nil
+        qw.retreat_turns = nil
     end
 
     if not qw.danger_in_los then
@@ -467,14 +479,16 @@ function best_retreat_result_func()
         return
     end
 
-    local cache = {}
     local cur_result
     if is_safe_at(const.origin) then
-        cur_result = assess_retreat_position(qw.map_pos, nil, cache)
+        cur_result = assess_retreat_position(const.origin, 0)
     elseif debug_channel("retreat") then
         dsay("Current position is not safe")
     end
 
+    -- We don't search for a new retreat position for at least 3 turns,
+    -- unless our current position turns out to have a better score than the
+    -- cached result.
     if qw.retreat_result then
         if qw.turns - qw.retreat_turns <= 3
                 and (not cur_result
@@ -486,47 +500,37 @@ function best_retreat_result_func()
         end
     end
 
-    -- We never retreat further than our closest flee position, if one is
-    -- available.
-    local max_dist = const.max_search_radius
-    local flee_move = best_move_towards_positions(qw.flee_positions)
-    if flee_move then
-        max_dist = min(max_dist, max(qw.los_radius, flee_move.dist + 1))
-    end
-
-    local enemies = assess_enemies()
+    local max_dist = qw.los_radius * 3
     if debug_channel("retreat") then
         local enemies = assess_enemies()
-        dsay("Calculating best retreat position"
-            .. " with max search radius of " .. max_dist
-            .. " and threat of " .. enemies.threat
-            .. " and ranged threat of " .. enemies.ranged_threat
-            .. " and current retreat score of "
-            .. (cur_result and cur_result.score or "nil"))
+        dsayf("Calculating best retreat position; Max search radius: %d;"
+                .. " Total threat: %.1f; Ranged threat: %.1f;"
+                .. " Current position score: %s",
+            max_dist,
+            enemies.threat,
+            enemies.ranged_threat,
+            (cur_result and string.format("%.1f", cur_result.score) or "nil"))
     end
 
     local best_result = cur_result
     local i = 1
-    local dist_map = get_distance_map(qw.map_pos, max_dist)
     for pos in radius_iter(qw.map_pos, max_dist) do
-        if qw.coroutine_throttle and i % 100 == 0 then
-            if debug_channel("retreat-all") then
-                dsay("Searched block " .. i / 100
-                    .. " of potential retreat positions")
-            end
-
-            coroutine.yield()
-        end
-
-        local dist = dist_map.excluded_map[pos.hash]
+        local dist = move_distance(const.move.retreat, pos)
         if dist and dist < max_dist
                 and not map_has_adjacent_unseen_at(pos)
                 and retreat_move_check(pos) then
-            local result = assess_retreat_position(pos, dist, cache)
-            if result and (not best_result
-                    or best_result.score > result.score) then
+            local result = assess_retreat_position(los_position(pos), dist)
+            if result and (not best_result or result.score < best_result.score) then
                 best_result = result
             end
+        end
+
+        if qw.coroutine_throttle and i % 100 == 0 then
+            if debug_channel("retreat-all") then
+                dsayf("Searched block %d of potential retreat positions", i / 100)
+            end
+
+            coroutine.yield()
         end
 
         i = i + 1
@@ -549,10 +553,11 @@ function best_retreat_result_func()
     end
 
     if debug_channel("retreat") then
-        dsay("Found new best retreat position with distance "
-            .. best_result.dist .. " at "
-            .. cell_string_from_map_position(best_result.map_pos)
-            .. " with a retreat score of " .. best_result.score)
+        dsayf("Found new best retreat position with distance %d at %s with a"
+                .. " retreat score of %.1f",
+            best_result.dist,
+            cell_string_from_position(best_result.pos),
+            best_result.score)
     end
 
     qw.retreat_result = best_result
@@ -574,17 +579,14 @@ function will_fight_extreme_threat()
 end
 
 function retreat_distance_at(pos)
-    local map_pos = map_position(pos)
     local result = best_retreat_result()
-    if not result then
-        return const.inf_dist
-    elseif positions_equal(map_pos, result.map_pos) then
-        return 0
-    end
-
-    local move = best_move_towards(result.map_pos, map_pos)
-    if move then
-        return move.dist + 1
+    if result then
+        local dist = move_distance(const.move.retreat, map_position(pos), result.map_pos)
+        if dist then
+            return dist
+        else
+            return const.inf_dist
+        end
     else
         return const.inf_dist
     end

@@ -14,7 +14,7 @@ function plan_go_to_abyss_portal()
 end
 
 function plan_enter_abyss()
-    if view.feature_at(0, 0) == "enter_abyss"
+    if feature_at(const.origin) == "enter_abyss"
             and goal_branch == "Abyss"
             and not unable_to_use_stairs() then
         go_downstairs(true, true)
@@ -29,8 +29,8 @@ function plan_pick_up_abyssal_rune()
         return false
     end
 
-    local rune_pos = item_map_positions[branch_runes(where_branch, true)[1]]
-    if rune_pos and positions_equal(qw.map_pos, rune_pos) then
+    local rune_pos = get_item_positions(branch_runes(where_branch, true))
+    if rune_pos and positions_equal(qw.map_pos, rune_pos[1]) then
         magic(",")
         return true
     end
@@ -43,7 +43,7 @@ function want_to_stay_in_abyss()
 end
 
 function plan_exit_abyss()
-    if view.feature_at(0, 0) == branch_exit("Abyss")
+    if feature_at(const.origin) == branch_exit("Abyss")
             and not want_to_stay_in_abyss()
             and not unable_to_use_stairs()
             and not dangerous_to_move(true) then
@@ -83,7 +83,8 @@ function plan_move_towards_abyssal_feature()
     if feats then
         local result = best_move_towards_features(feats, true)
         if result then
-            return move_towards_destination(result.move, result.dest, "goal")
+            return move_towards_destination(result.move,
+                result.dest_pos, "goal")
         end
     end
 
@@ -94,7 +95,7 @@ function plan_go_down_abyss()
     if in_branch("Abyss")
             and goal_branch == "Abyss"
             and where_depth < goal_depth
-            and view.feature_at(0, 0) == "abyssal_stair"
+            and feature_at(const.origin) == "abyssal_stair"
             and not unable_to_use_stairs() then
         go_downstairs()
         return true
@@ -117,7 +118,7 @@ function want_to_move_to_abyssal_rune()
         return false
     end
 
-    local rune_pos = item_map_positions[branch_runes(where_branch, true)[1]]
+    local rune_pos = get_item_positions(branch_runes(where_branch, true)[1])
     return rune_pos and not positions_equal(qw.map_pos, rune_pos)
         or c_persist.sense_abyssal_rune
 end
@@ -130,21 +131,21 @@ function plan_move_towards_abyssal_rune()
     end
 
     local rune = branch_runes(where_branch, true)[1]
-    local rune_pos = get_item_map_positions({ rune })
+    local rune_pos = get_item_positions({ rune })
     if rune_pos then
         rune_pos = rune_pos[1]
     else
         return false
     end
 
-    local result = best_move_towards(rune_pos, qw.map_pos, true)
+    local result = best_move_towards(rune_pos, true)
     if result then
         return move_towards_destination(result.move, result.rune_pos, "goal")
     end
 
     result = best_move_towards_unexplored_near(rune_pos, true)
     if result then
-        return move_towards_destination(result.move, result.dest, "goal")
+        return move_towards_destination(result.move, result.dest_pos, "goal")
     end
 
     return false
@@ -157,14 +158,14 @@ function plan_explore_near_runelights()
         return false
     end
 
-    local runelights = get_feature_map_positions({ "runelight" })
+    local runelights = get_feature_positions({ "runelight" })
     if not runelights then
         return false
     end
 
     local result = best_move_towards_unexplored_near_positions(runelights)
     if result then
-        return move_towards_destination(result.move, result.dest, "goal")
+        return move_towards_destination(result.move, result.dest_pos, "goal")
     end
 
     return false

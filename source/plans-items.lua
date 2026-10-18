@@ -6,6 +6,10 @@ function read_scroll(item, etc)
         etc = ""
     end
 
+    if item.subtype() == "revelation" then
+        qw.update_entire_map = true
+    end
+
     say("READING " .. item.name() .. ".")
     magic("r" .. item_letter(item) .. etc)
 end
@@ -594,6 +598,16 @@ function plan_use_identify_scrolls()
     return true
 end
 
+function plan_read_revelation()
+    if qw.have_orb
+            or not at_branch_end("Zot")
+            or c_persist.zot5.halls then
+        return false
+    end
+
+    return read_scroll_by_name("revelation")
+end
+
 function want_to_buy(it)
     local class = it.class(true)
     if class == "missile" then
@@ -613,7 +627,7 @@ end
 
 function plan_shop()
     if qw.danger_in_los
-            or view.feature_at(0, 0) ~= "enter_shop"
+            or feature_at(const.origin) ~= "enter_shop"
             or free_inventory_slots() == 0 then
         return false
     end

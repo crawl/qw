@@ -38,7 +38,7 @@ end
 function plan_use_altar()
     local god = goal_god(goal_status)
     if not god
-            or view.feature_at(0, 0) ~= god_altar(god)
+            or feature_at(const.origin) ~= god_altar(god)
             or not can_use_altars() then
         return false
     end

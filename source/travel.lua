@@ -243,7 +243,7 @@ function travel_safe_stairs(result)
     local level = make_level(result.branch, result.depth)
     for _, feat in ipairs(stairs) do
         -- If the stairs are unknown, assume a threat of 0.
-        local state = get_stairs(result.branch, result.depth, feat)
+        local state = get_stairs_state(result.branch, result.depth, feat)
         local threat = 0
         -- Unknown stairs are safe.
         local safe = true
@@ -266,7 +266,8 @@ function travel_safe_stairs(result)
         else
             dest_feat = branch_entrance(result.branch)
         end
-        local dest_state = get_destination_stairs(result.branch, result.depth, feat)
+        local dest_state = get_destination_stairs_state(result.branch,
+            result.depth, feat)
         safe = safe and dest_state and dest_state.safe
 
         -- We can only check reachability when we're on the same level as the
@@ -274,7 +275,7 @@ function travel_safe_stairs(result)
         local reachable = true
         if where_branch == result.branch
                 and where_depth == result.depth - 1 then
-            local pos = get_feature_map_positions({ dest_feat })
+            local pos = get_feature_positions({ dest_feat })
             if pos then
                 reachable = map_is_reachable_at(pos[1])
             else
@@ -453,8 +454,9 @@ function finalize_travel_depth(result)
             -- we have specific plans for branch ends we may need to follow.
             and (have_branch_runes(result.branch)
                 or result.depth < branch_rune_depth(result.branch)) then
-        reset_stone_stairs(result.branch, result.depth, const.dir.up)
-        reset_stone_stairs(result.branch, result.depth - 1, const.dir.down)
+        reset_stone_stairs_state(result.branch, result.depth, const.dir.up)
+        reset_stone_stairs_state(result.branch, result.depth - 1,
+            const.dir.down)
         result.depth = result.depth - 1
         finalize_first_dir(result)
         result.stairs_dir = const.dir.down
@@ -462,8 +464,8 @@ function finalize_travel_depth(result)
     end
 
     if down_reachable then
-        reset_stone_stairs(result.branch, result.depth, const.dir.down)
-        reset_stone_stairs(result.branch, result.depth + 1, const.dir.up)
+        reset_stone_stairs_state(result.branch, result.depth, const.dir.down)
+        reset_stone_stairs_state(result.branch, result.depth + 1, const.dir.up)
         -- If we've just reset upstairs, that direction gets priority as the
         -- first search destination.
         if not finished then
@@ -534,8 +536,7 @@ function update_goal_travel()
     -- We use a stash search to reach our destination, but will still do a
     -- travel search for any given goal branch/depth, so we can use a go
     -- command as a backup.
-    local want_stash = goal_status == "Orb" and c_persist.found_orb
-        or not goal_branch
+    local want_stash = not goal_branch
         or goal_status:find("^God") and goal_branch ~= "Temple"
         or is_portal_branch(goal_branch)
             and not in_portal()
@@ -566,7 +567,7 @@ function update_goal_travel()
     local goal_feats = goal_travel_features()
     local goal_positions
     if goal_feats then
-        goal_positions = get_feature_map_positions(goal_feats)
+        goal_positions = get_feature_positions(goal_feats)
         goal_reachable = false
     end
 
@@ -585,7 +586,14 @@ function update_goal_travel()
             or goal_travel.safe_stairs
             or goal_travel.safe_hatch_pos
             or goal_travel.want_go
-            or goal_travel.want_stash)
+            or goal_travel.want_stash
+            or at_branch_end("Zot")
+                -- No autoexplore on Zot:5 if we need to move towards the
+                -- tesseracts or the ORB.
+                and (goal_status == "Orb"
+                        and c_persist.zot5.entry_pos
+                        and not map_has_exclusion_at(c_persist.zot5.entry_pos)
+                    or goal_status == "Tesseracts"))
         and goal_reachable
         -- We do allow autoexplore even when we want to travel if the current
         -- is fully explored, since then it's safe to pick up any surrounding
@@ -599,7 +607,7 @@ function update_goal_travel()
         -- exist. In that case autoexplore would move us next to a runed door
         -- and off of our intermediate stair, altar, etc., where we need to be.
             or (in_branch("Abyss")
-                or goal_status == "Escape" and qw.have_orb
+                or goal_status == "Escape"
                 or goal_travel.branch and not goal_travel.want_go))
 
     if debug_channel("goals") then
@@ -638,8 +646,8 @@ function goal_travel_features()
             goal_travel.stairs_dir)
         local wanted_feats = {}
         for _, feat in ipairs(feats) do
-            local state = get_stairs(where_branch, where_depth, feat)
-            if not state or state.feat < const.explore.explored then
+            local state = get_stairs_state(where_branch, where_depth, feat)
+            if not state or state.explore < const.explore.explored then
                 table.insert(wanted_feats, feat)
             end
         end

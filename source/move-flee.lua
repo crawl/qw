@@ -1,20 +1,23 @@
 ----------------------
 -- Assessment of fleeing positions
 
-function update_flee_positions()
-    qw.flee_positions = {}
-
-    if unable_to_move() then
-        return
+function get_flee_positions()
+    if qw.flee_positions then
+        if #qw.flee_positions == 0 then
+            return
+        else
+            return qw.flee_positions
+        end
     end
 
+    qw.flee_positions = {}
     local stairs_feats = level_stairs_features(where_branch, where_depth,
         const.dir.up)
     local search_feats = {}
     -- Only retreat to safe stairs with a safe destination.
     for _, feat in ipairs(stairs_feats) do
-        local state = get_stairs(where_branch, where_depth, feat)
-        local dest_state = get_destination_stairs(where_branch, where_depth,
+        local state = get_stairs_state(where_branch, where_depth, feat)
+        local dest_state = get_destination_stairs_state(where_branch, where_depth,
             feat)
         if (not state or state.safe)
                 and (not dest_state or dest_state.safe) then
@@ -22,25 +25,31 @@ function update_flee_positions()
         end
     end
 
-    local positions, feats = get_feature_map_positions(search_feats)
+    local positions = get_feature_positions(search_feats)
     if not positions then
         return
     end
 
-    for i, pos in ipairs(positions) do
-        local state
-        if feats[i] == "escape_hatch_up" then
-            state = get_map_escape_hatch(where_branch, where_depth, pos)
+    local best_dist
+    for _, pos in ipairs(positions) do
+        if not can_flee_to(pos) then
+            goto continue
         end
-        if (not state or state.safe)
-                and map_is_reachable_at(pos) then
-            if debug_channel("flee") then
-                dsay("Adding flee position #" .. #qw.flee_positions + 1
-                    .. " at " .. cell_string_from_map_position(pos))
-            end
 
+        if not best_dist or dist < best_dist then
+            qw.flee_positions = { pos }
+            best_dist = dist
+        elseif dist == best_dist then
             table.insert(qw.flee_positions, pos)
         end
+
+        ::continue::
+    end
+
+    if #qw.flee_positions == 0 then
+        return
+    else
+        return qw.flee_positions
     end
 end
 
@@ -154,39 +163,31 @@ function enemy_can_flee_attack(enemy, start_pos, flee_dist)
     local dist_to_player = enemy:melee_move_distance(start_pos)
     if not dist_to_player then
         if debug_channel("flee-all") then
-            local props = { is_ranged = "ranged", reach_range = "reach",
-                move_delay = "move delay" }
             dsay("Ignoring monster that can't reach us: "
-                .. monster_string(enemy, props))
+                .. monster_string(enemy))
         end
 
         return false
     end
 
-    local closing_dist = dist_to_player - (enemy:is_ranged() and 4 or 0)
+    local closing_dist = dist_to_player - enemy:range()
     local dist_gain = flee_dist
         * (player_move_delay() - enemy:move_delay())
         / enemy:move_delay()
 
     if debug_channel("flee-all") then
-        local props = { is_ranged = "ranged", reach_range = "reach",
-            move_delay = "move delay" }
-        dsay("Evaluating " .. monster_string(enemy, props)
-            .. " with a closing distance of " .. closing_dist
-            .. " compared to a distance gain of " .. dist_gain)
+        dsayf("Evaluating %s with a closing distance of %d compared to a"
+                .. " distance gain of %d",
+            monster_string(enemy), closing_dist, dist_gain)
     end
 
     return closing_dist < dist_gain
 end
 
-function flee_move_check(map_pos)
+function flee_move_check_func(map_pos)
     local pos = los_position(map_pos)
     if not is_safe_at(pos) then
         return false
-    end
-
-    if supdist(pos) > qw.los_radius then
-        return true
     end
 
     local mons = get_monster_at(pos)
@@ -203,41 +204,54 @@ function flee_move_check(map_pos)
     return true
 end
 
-function can_flee_to_map_position(dest_pos, start_pos)
-    if not start_pos then
+function flee_move_check(map_pos)
+    return turn_memo_args(flee_move_check_func, map_pos)
+end
+
+function can_flee_to(dest_pos, start_pos)
+    -- If start_pos is not the default of the player's position, we must map
+    -- to dest_pos. Otherwise, if we're starting at the player's position, we
+    -- can map there to check many flee destinations with one distance map.
+    local dist_pos, dist_map_pos
+    if start_pos then
+        dist_pos = start_pos
+        dist_map_pos = dest_pos
+    else
         start_pos = qw.map_pos
+        dist_pos = dest_pos
+        dist_map_pos = start_pos
     end
 
-    local search = distance_map_search(start_pos, dest_pos, flee_move_check, 0)
-    if not search then
+    local dist = move_distance(const.move.flee, dist_pos, dist_map_pos)
+    if not dist then
         if debug_channel("flee") then
-            dsay("Unable to find move to flee destination at "
-                .. cell_string_from_map_position(dest_pos)
-                .. " from " .. cell_string_from_map_position(start_pos))
+            dsayf("Unable to find flee move from %s to %s",
+                cell_string_from_map_position(start_pos),
+                cell_string_from_map_position(dest_pos))
         end
-
         return false
+
     end
 
     if debug_channel("flee") then
-        dsay("Evaluating flee to destination at "
-            .. cell_string_from_map_position(dest_pos) .. " with distance "
-            .. search.dist
-            .. " starting from " .. cell_string_from_map_position(start_pos))
+        dsayf("Evaluating flee move from %s to %s with distance %d",
+            cell_string_from_map_position(start_pos),
+            cell_string_from_map_position(dest_pos),
+            dist)
     end
 
     local extreme_threat = have_extreme_threat()
     local flee_attackers = 0
-    local start_los_pos = los_position(start_pos)
     for _, enemy in ipairs(qw.enemy_list) do
-        if enemy_can_flee_attack(enemy, start_los_pos, search.dist) then
+        if enemy_can_flee_attack(enemy, los_position(start_pos), dist) then
             flee_attackers = flee_attackers + 1
         end
 
         if flee_attackers > 2 or not extreme_threat and flee_attackers > 0 then
             if debug_channel("flee") then
-                dsay("Not fleeing to destination due to "  .. flee_attackers
-                    .. " or more attackers gaining distance")
+                dsayf("Not fleeing to destination due to at least %d attackers"
+                        .. " gaining distance",
+                    flee_attackers)
             end
 
             return false
@@ -252,15 +266,19 @@ function can_flee_to_map_position(dest_pos, start_pos)
 end
 
 function best_flee_move()
+    local flee_positions = get_flee_positions()
+    if not flee_positions then
+        return
+    end
+
     if in_bad_form() then
-        result = best_move_towards_positions(qw.flee_positions)
+        result = best_move_towards_positions(flee_positions)
 
         if debug_channel("flee") then
             if result then
-                dsay("Found bad form flee move to "
-                    .. cell_string_from_position(result.move)
-                    .. " towards destination "
-                    .. cell_string_from_map_position(result.dest))
+                dsayf("Found bad form flee move to %s towards destination %s",
+                    cell_string_from_position(result.move),
+                    cell_string_from_map_position(result.dest_pos))
             else
                 dsay("No bad form flee move found towards any destination")
             end
@@ -272,10 +290,10 @@ function best_flee_move()
 
         if debug_channel("flee") then
             if result then
-                dsay("Found bad form flee move to "
-                    .. cell_string_from_position(result.move)
-                    .. " towards destination near unexplored areas at "
-                    .. cell_string_from_map_position(result.dest))
+                dsayf("Found bad form flee move to %s towards unexplored areas"
+                        .. " at %s",
+                    cell_string_from_position(result.move),
+                    cell_string_from_map_position(result.dest_pos))
             else
                 dsay("No bad form flee move found towards unexplored areas")
             end
@@ -284,21 +302,13 @@ function best_flee_move()
         return result
     end
 
-    local valid_dests = {}
-    for _, pos in ipairs(qw.flee_positions) do
-        if can_flee_to_map_position(pos) then
-            table.insert(valid_dests, pos)
-        end
-    end
-
-    local result = best_move_towards_positions(valid_dests)
+    local result = best_move_towards_positions(flee_positions)
 
     if debug_channel("flee") then
         if result then
-            dsay("Found flee move to "
-                .. cell_string_from_position(result.move)
-                .. " towards destination "
-                .. cell_string_from_map_position(result.dest))
+            dsayf("Found flee move to %s towards destination %s",
+                cell_string_from_position(result.move),
+                cell_string_from_map_position(result.dest_pos))
         else
             dsay("No move found towards any flee destination")
         end
@@ -313,7 +323,7 @@ function flee_destination_is_hatch()
         return false
     end
 
-    return get_map_escape_hatch(where_branch, where_depth, move.dest)
+    return get_escape_hatch_state(where_branch, where_depth, move.dest_pos)
 end
 
 function will_flee()

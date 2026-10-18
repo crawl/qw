@@ -288,17 +288,16 @@ function print_excluded_map(center)
     crawl.setopt("msg_condense_repeats = true")
 end
 
-function print_distance_map(dist_map, center, excluded)
+function print_distance_map(dist_map, center)
     if not center then
         center = const.origin
     end
 
     crawl.setopt("msg_condense_repeats = false")
 
-    local map = excluded and dist_map.excluded_map or dist_map.map
     local map_center = map_position(center)
-    say("Distance map at " .. cell_string_from_map_position(dist_map.pos)
-        .. " from position " .. cell_string_from_map_position(map_center))
+    sayf("%s from %s", distance_map_description(dist_map),
+        cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         local str = ""
@@ -340,9 +339,53 @@ function print_distance_maps(center, excluded)
         center = const.origin
     end
 
-    for _, dist_map in pairs(distance_maps) do
-        print_distance_map(dist_map, center, excluded)
+    for _, maps in pairs(qw.distance_maps) do
+        for _, dist_map in pairs(maps) do
+            print_distance_map(dist_map, center, excluded)
+        end
     end
+end
+
+function print_trap_scores(center)
+    if not center then
+        center = const.origin
+    end
+
+    crawl.setopt("msg_condense_repeats = false")
+
+    say("Trap map at " .. cell_string_from_position(center))
+    -- This needs to iterate by row then column for display purposes.
+    for y = -20, 20 do
+        local str = ""
+        for x = -20, 20 do
+            local pos = position_sum(center, new_position(x, y))
+            local score = trap_score_at(pos)
+            if positions_equal(pos, const.origin) then
+                if not score then
+                    str = str .. "✞"
+                else
+                    str = str .. (is_traversable_at(pos) and "@" or "7")
+                end
+            elseif positions_equal(pos, center) then
+                if not score then
+                    str = str .. "W"
+                else
+                    str = str .. (is_traversable_at(pos) and "&" or "8")
+                end
+            else
+                if not score then
+                    str = str .. " "
+                elseif score > 61 then
+                    str = str .. "Ø"
+                else
+                    str = str .. string.char(string.byte('A') + score)
+                end
+            end
+        end
+        say(str)
+    end
+
+    crawl.setopt("msg_condense_repeats = true")
 end
 
 function set_counter()
@@ -391,7 +434,7 @@ end
 
 function monster_string(mons, props)
     if not props then
-        props = { move_delay = "move delay", reach_range = "reach",
+        props = { move_delay = "move delay", melee_range = "melee range",
             is_ranged = "ranged" }
     end
 

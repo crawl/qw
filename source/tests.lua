@@ -20,7 +20,6 @@ function clear_level_data(branch, depth)
     update_waypoint(true, true)
     where = current_where
 
-    local level = make_level(branch, depth)
     if branch_is_connected(branch) then
         if level == zot_end then
             c_persist.zot5 = {}

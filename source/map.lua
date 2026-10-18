@@ -10,21 +10,29 @@ const.autoexplore = enum({
     "full",
 })
 
-const.map_select = {
-    "none",
-    "excluded",
-    "main",
-    "both",
+const.trap_scores = {
+    shaft = 0,
+    trap_teleport = 1,
+    trap_teleport_permanent = 1,
+    web = 1,
+    trap_harlequin = 2,
+    trap_archmage = 2,
+    trap_net = 3,
+    trap_dispersal = 3,
+    trap_dispersal_inactive = 3,
+    trap_tyrant = 3,
+    trap_devourer = 3,
+    trap_zot = 4,
+    trap_alarm = 5,
+    trap_pressure_plate = 5,
 }
 
-function main_map_selected(map_select)
-    return map_select == const.map_select.main
-        or map_select == const.map_select.both
+function map_trap_score_at(pos)
+    return qw.trap_score_map[pos.hash]
 end
 
-function excluded_map_selected(map_select)
-    return map_select == const.map_select.excluded
-        or map_select == const.map_select.both
+function trap_score_at(pos)
+    return map_trap_score_at(map_position(pos))
 end
 
 function update_waypoint(new_level, force)
@@ -67,63 +75,6 @@ function update_waypoint(new_level, force)
     return new_waypoint
 end
 
-function clear_map_cache(parity, full_clear)
-    if debug_channel("map") then
-        dsay((full_clear and "Full clearing" or "Clearing")
-            .. " map cache for slot " .. parity)
-    end
-
-    feature_map_positions_cache[parity] = {}
-    item_map_positions_cache[parity] = {}
-    distance_maps_cache[parity] = {}
-
-    traversal_maps_cache[parity] = {}
-    exclusion_maps_cache[parity] = {}
-end
-
-function find_features(feats, radius)
-    if not radius then
-        radius = const.gxm
-    end
-
-    local searches = {}
-    for _, feat in ipairs(feats) do
-        searches[feat] = true
-    end
-
-    local positions = {}
-    local found_feats = {}
-    local i = 1
-    for pos in square_iter(const.origin, radius, true) do
-        if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("throttle") then
-                dsay("Searched features in block " .. i / 1000
-                    .. " of map positions")
-            end
-
-            coroutine.yield()
-        end
-
-        local feat = view.feature_at(pos.x, pos.y)
-        if searches[feat] then
-            if not feature_map_positions[feat] then
-                feature_map_positions[feat] = {}
-            end
-
-            local gpos = map_position(pos)
-            if not feature_map_positions[feat][gpos.hash] then
-                feature_map_positions[feat][gpos.hash] = gpos
-            end
-            table.insert(positions, gpos)
-            table.insert(found_feats, feat)
-        end
-
-        i = i + 1
-    end
-
-    return positions, found_feats
-end
-
 function find_map_items(item_names, radius)
     if not radius then
         radius = const.gxm
@@ -138,15 +89,6 @@ function find_map_items(item_names, radius)
     local found_items = {}
     local i = 1
     for pos in square_iter(const.origin, radius, true) do
-        if qw.coroutine_throttle and i % 1000 == 0 then
-            if debug_channel("map-all") then
-                dsay("Searched items in block " .. i / 1000
-                    .. " of map positions")
-            end
-
-            coroutine.yield()
-        end
-
         local floor_items = items.get_items_at(pos.x, pos.y)
         if floor_items then
             for _, it in ipairs(floor_items) do
@@ -163,6 +105,14 @@ function find_map_items(item_names, radius)
                     end
                 end
             end
+        end
+
+        if qw.coroutine_throttle and i % 1000 == 0 then
+            if debug_channel("map-all") then
+                dsayf("Searched %d map positions for items", i)
+            end
+
+            coroutine.yield()
         end
 
         i = i + 1
@@ -183,7 +133,7 @@ function map_is_unseen_at(pos)
     return qw.traversable_map[pos.hash] == nil
 end
 
-function handle_item_searches(cell)
+function update_item_search_from_cell(cell)
     -- Don't do an expensive iteration over all items if we don't have an
     -- active search.
     if table_is_empty(item_searches) then
@@ -198,7 +148,7 @@ function handle_item_searches(cell)
     for _, it in ipairs(floor_items) do
         local name = it.name()
         if item_searches[name] then
-            item_map_positions[name] = cell.pos
+            qw.item_positions[name] = cell.map_pos
             item_searches[name] = nil
 
             if table_is_empty(item_searches) then
@@ -208,56 +158,133 @@ function handle_item_searches(cell)
     end
 end
 
-function has_exclusion_center_at(pos)
-    local map_pos = map_position(pos)
-    return c_persist.exclusions[where] and c_persist.exclusions[where][map_pos.hash]
+function map_has_exclusion_at(pos)
+    return c_persist.exclusions[where]
+        and c_persist.exclusions[where][pos.hash]
 end
 
 --[[
-Are the given map coordinates unexcluded according to the exclusion map cache?
+Are the given map coordinates excluded according to the map cache?
 @table pos The map position.
-@treturn boolean True if coordinates are unexcluded, false otherwise.
+@treturn boolean True if coordinates are excluded, false otherwise.
 --]]
-function map_is_unexcluded_at(pos)
-    return exclusion_map[pos.hash]
+function map_is_excluded_at(pos)
+    return qw.excluded_map[pos.hash]
 end
 
-function unexcluded_at(pos)
-    return map_is_unexcluded_at(map_position(pos))
+function is_excluded_at(pos)
+    return map_is_excluded_at(map_position(pos))
 end
 
-function update_feature(branch, depth, feat, pos, state)
-    local dir, num = stone_stairs_type(feat)
+--[[
+Is the terrain safe according to the safety map cache?
+@table pos The map position.
+@treturn boolean True if the terrain at pos is safe, false otherwise.
+--]]
+function map_feature_is_safe_at(pos)
+    return qw.feature_safe_map[pos.hash]
+end
+
+--[[
+Are the given map coordinates safe?
+@table pos The map position.
+@boolean no_monster If true, the position is considered unsafe whenever a
+                    monster of any kind is present.
+@treturn boolean True if position is safe, false otherwise.
+--]]
+function map_is_safe_at_func(pos, no_monster)
+    if not map_feature_is_safe_at(pos) or map_is_excluded_at(pos) then
+        return false
+    end
+
+    local los_pos = los_position(pos)
+    if supdist(los_pos) > qw.los_radius then
+        return true
+    end
+
+    if view.withheld(los_pos.x, los_pos.y)
+            or not cloud_is_safe(view.cloud_at(los_pos.x, los_pos.y)) then
+        return false
+    end
+
+    local mons = get_monster_at(los_pos)
+    if mons then
+        if no_monster then
+            return false
+        else
+            return mons:player_can_swap()
+        end
+    else
+        return true
+    end
+end
+
+function map_is_safe_at(pos, no_monster)
+    return turn_memo_args(map_is_safe_at_func, pos, no_monster)
+end
+
+function is_safe_at(pos, no_monster)
+    return map_is_safe_at(map_position(pos), no_monster)
+end
+
+function get_feature_state(branch, depth, feat, map_pos)
+    local state = get_stairs_state(branch, depth, feat)
+    if state then
+        return state
+    end
+
+    local dir = escape_hatch_type(feat)
     if dir then
-        update_stone_stairs(branch, depth, dir, num, state)
-        return
+        return get_escape_hatch_state(branch, depth, dir, map_pos)
     end
 
     if feat == "abyssal_stair" then
-        update_abyssal_stairs(pos, state)
+        return c_persist.abyssal_stairs[map_pos.hash]
+    end
+
+    if feat == "transit_pandemonium" then
+        return c_persist.pan_transits[map_pos.hash]
+    end
+
+    local god = altar_god(feat)
+    if god then
+        return get_altar_state(god, branch, depth, map_pos)
+    end
+end
+
+function update_feature_state(branch, depth, feat, map_pos, state, force)
+    local dir, num = stone_stairs_type(feat)
+    if dir then
+        update_stone_stairs_state(branch, depth, dir, num, state, force)
         return
     end
 
     local dest_branch, dir = branch_stairs_type(feat)
     if dest_branch then
-        update_branch_stairs(branch, depth, dest_branch, dir, state)
+        update_branch_stairs_state(branch, depth, dest_branch, dir, state,
+            force)
+        return
+    end
+
+    if feat == "abyssal_stair" then
+        update_abyssal_stairs_state(map_pos, state, force)
         return
     end
 
     local dir = escape_hatch_type(feat)
     if dir then
-        update_escape_hatch(branch, depth, dir, pos, state)
+        update_escape_hatch_state(branch, depth, dir, map_pos, state, force)
         return
     end
 
     if feat == "transit_pandemonium" then
-        update_pan_transit(hash, state)
+        update_pan_transit_state(map_pos, state, force)
         return
     end
 
     local god = altar_god(feat)
     if god then
-        update_altar(god, make_level(branch, depth), pos, state)
+        update_altar_state(god, branch, depth, map_pos, state, force)
         return
     end
 end
@@ -278,12 +305,12 @@ function feature_has_map_state(feat)
     return has_state
 end
 
-function expire_cell_portal(cell)
-    for feat, positions in pairs(feature_map_positions) do
+function expire_portal_from_cell(cell)
+    for feat, positions in pairs(qw.feature_positions) do
         local branch = branch_stairs_type(feat)
         if branch and is_portal_branch(branch) then
             for hash, _ in pairs(positions) do
-                if cell.pos.hash == hash then
+                if cell.map_pos.hash == hash then
                     remove_portal(where, branch)
                     return
                 end
@@ -292,127 +319,116 @@ function expire_cell_portal(cell)
     end
 end
 
-function update_cell_feature(cell)
-    if cell.feat == "expired_portal" then
-        expire_cell_portal(cell)
-    elseif not qw.slimy_walls and cell.feat == "slimy_wall" then
-        qw.slimy_walls = true
+function update_trap_from_cell(cell)
+    local new_score = const.trap_scores[cell.feat]
+    if not new_score then
+        new_score = 0
     end
 
-    local has_state = feature_has_map_state(cell.feat)
-    if cell.feat == "runelight" or has_state then
-        if not feature_map_positions[cell.feat] then
-            feature_map_positions[cell.feat] = {}
-        end
-        if not feature_map_positions[cell.feat][cell.pos.hash] then
-            feature_map_positions[cell.feat][cell.pos.hash] = cell.pos
-        end
+    local old_score = const.trap_scores[cell.old_feat]
+    if not old_score then
+        old_score = 0
     end
 
-    if not has_state then
+    if old_score == new_score then
         return
     end
 
-    local enemies = assess_enemies(const.duration.ignore)
-    local feat_state = feature_state(cell.los_pos)
-    update_feature(where_branch, where_depth, cell.feat, cell.pos,
-        { safe = exclusion_map[cell.pos.hash], feat = feat_state,
-            threat = enemies.threat })
+    for pos in square_iter(cell.map_pos, qw.los_radius, true) do
+        if map_is_traversable_at(pos)
+                and map_cell_see_cell(pos, cell.map_pos) then
+            local map_score = qw.trap_score_map[pos.hash]
+            if not map_score then
+                map_score = 0
+            end
 
-    if feat_state < const.explore.reachable then
-        check_reachable_features[cell.feat] = true
+            local dist = position_distance(pos, cell.map_pos)
+            qw.trap_score_map[pos.hash] = map_score
+                + (qw.los_radius - dist + 1) * (new_score - old_score)
+        end
     end
 end
 
-function update_map_at_cell(cell, queue, seen)
-    local map_reset = const.map_select.none
+function update_feature_from_cell(cell)
+    local feature_updated = false
+    cell.old_feat = qw.feature_map[cell.map_pos.hash]
+    local is_trap = feature_is_trap(cell.feat)
+    if cell.old_feat ~= cell.feat then
+        feature_updated = true
+        qw.feature_map[cell.map_pos.hash] = cell.feat
 
-    if seen[cell.pos.hash] then
-        return map_reset
-    end
-
-    local map_updated = false
-    local old_traversable = traversal_map[cell.pos.hash]
-    local cur_traversable = feature_is_traversable(cell.feat)
-    if old_traversable ~= cur_traversable then
-        traversal_map[cell.pos.hash] = cur_traversable
-        -- A cell went from traversable to untraversable, so any distance maps
-        -- need a full reset.
-        if old_traversable and not cur_traversable then
-            map_reset = const.map_select.both
+        if cell.feat == "expired_portal" then
+            expire_portal_from_cell(cell)
+        elseif not qw.slimy_walls and cell.feat == "slimy_wall" then
+            qw.slimy_walls = true
         end
-        map_updated = true
-    end
 
-    local old_unexcluded = exclusion_map[cell.pos.hash]
-    local cur_unexcluded =
-        not (view.in_known_map_bounds(cell.los_pos.x, cell.los_pos.y)
-            and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
-    if cur_traversable and old_unexcluded ~= cur_unexcluded then
-        exclusion_map[cell.pos.hash] = cur_unexcluded
-        -- A traversable cell went from unexcluded to excluded, so the excluded
-        -- maps of all distance maps need a reset.
-        if old_unexcluded
-                and not unexcluded
-                and map_reset < const.map_select.both then
-            map_reset = const.map_select.excluded
+        if is_trap or feature_is_trap(cell.old_feat) then
+            table.insert(cell.queue.trap_cells, cell)
         end
-        map_updated = true
     end
 
-    update_cell_feature(cell)
-    seen[cell.pos.hash] = true
+    local traversable = feature_is_traversable(cell.feat)
+    qw.traversable_map[cell.map_pos.hash] = traversable
+    -- This cell may never be in LOS of a trap, so we 0-initialize it here.
+    if traversable and not qw.trap_score_map[cell.map_pos.hash] then
+        qw.trap_score_map[cell.map_pos.hash] = 0
+    end
 
-    if not map_updated then
-        return map_reset
+    local is_excluded = travel.is_excluded(cell.los_pos.x,
+        cell.los_pos.y)
+    qw.excluded_map[cell.map_pos.hash] = is_excluded
+    qw.feature_safe_map[cell.map_pos.hash] = traversable
+        and not (is_excluded or is_trap)
+
+    if feature_has_map_state(cell.feat) then
+        table.insert(cell.queue.feature_state_cells, cell)
+    end
+
+    if not c_persist.zot5.entry_pos
+            and at_branch_end("Zot")
+            and cell.feat == "granite_statue" then
+        table.insert(cell.queue.zot5_cells, cell)
+    end
+
+    update_item_search_from_cell(cell)
+
+    if cell.queue.no_propagate or not feature_updated then
+        return
     end
 
     for pos in adjacent_iter(cell.los_pos) do
         local acell = cell_from_position(pos, true)
-        if acell and not seen[acell.pos.hash] then
-            table.insert(queue, acell)
+        if not acell or cell.queue.update_set[acell.map_pos.hash] then
+            goto continue
         end
-    end
 
-    return map_reset
+        acell.queue = cell.queue
+        table.insert(cell.queue.update_cells, acell)
+        cell.queue.update_set[acell.map_pos.hash] = acell
+
+        ::continue::
+    end
 end
 
-function update_map_cells()
-    local queue = {}
-    for pos in square_iter(const.origin, qw.los_radius, true) do
-        local cell = cell_from_position(pos, true)
-        if cell then
-            table.insert(queue, cell)
-        end
-    end
-
-    local seen = {}
+function update_map_features()
+    local cells = qw.map_queue.update_cells
     local ind = 1
-    local count = 1
-    local map_reset = const.map_select.none
-    while ind <= #queue do
-        if qw.coroutine_throttle and count % 1000 == 0 then
-            if debug_channel("throttle") then
-                dsay("Updated map in block " .. count / 1000
-                    .. " with " .. #queue - ind .. " cells remaining")
+    -- This list can grow as we iterate, hence we don't use an iterator.
+    while ind <= #cells do
+        update_feature_from_cell(cells[ind])
+
+        if qw.coroutine_throttle and ind % 1000 == 0 then
+            if debug_channel("map-all") then
+                dsayf("Updated map features in block %d with %d cells"
+                        .. " remaining", ind / 1000, #cells - ind)
             end
 
             coroutine.yield()
         end
 
-        local cell = queue[ind]
-        local cell_map_reset = update_map_at_cell(cell, queue, seen)
-        if cell_map_reset > map_reset then
-            map_reset = cell_map_reset
-        end
-
-        handle_item_searches(cell)
-
-        count = ind
         ind = ind + 1
     end
-
-    return queue, map_reset
 end
 
 function reset_c_persist(new_waypoint, new_level)
@@ -457,17 +473,32 @@ function reset_c_persist(new_waypoint, new_level)
     end
 end
 
-function reset_map_cache(new_level, full_clear, new_waypoint)
-    if new_waypoint or full_clear then
-        clear_map_cache(cache_parity, full_clear)
+local cache_tables = { "feature_map", "traversable_map", "excluded_map",
+    "feature_safe_map", "trap_score_map", "feature_positions",
+    "item_positions", "distance_maps" }
+function clear_map_cache(slot)
+    if debug_channel("map") then
+        dsay("Clearing map cache for slot " .. slot)
     end
 
-    if not previous_where or new_level or new_waypoint or full_clear then
-        traversal_map = traversal_maps_cache[cache_parity]
-        exclusion_map = exclusion_maps_cache[cache_parity]
-        distance_maps = distance_maps_cache[cache_parity]
-        feature_map_positions = feature_map_positions_cache[cache_parity]
-        item_map_positions = item_map_positions_cache[cache_parity]
+    qw.cache[slot] = {}
+    for _, t in ipairs(cache_tables) do
+        qw.cache[slot][t] = {}
+    end
+end
+
+function load_map_cache(new_level, clear_cache)
+    if clear_cache then
+        clear_map_cache(qw.cache.slot)
+    end
+
+    if new_level or clear_cache then
+        -- Load these tables from cache at the given slot into the main qw
+        -- table for easier access. TODO: Make cache a class so we don't have
+        -- to do this.
+        for _, t in ipairs(cache_tables) do
+            qw[t] = qw.cache[qw.cache.slot][t]
+        end
     end
 end
 
@@ -477,27 +508,27 @@ function reset_item_tracking()
         if not (c_persist.seen_items[where]
                     and c_persist.seen_items[where][rune])
                 and not c_persist.sense_abyssal_rune then
-            item_map_positions[rune] = nil
+            qw.item_positions[rune] = nil
         end
     end
 
     item_searches = {}
     if c_persist.seen_items[where] then
         for name, _ in pairs(c_persist.seen_items[where]) do
-            if not item_map_positions[name] then
+            if not qw.item_positions[name] then
                 item_searches[name] = true
             end
         end
     end
 
     local purged = {}
-    for name, _ in pairs(item_map_positions) do
+    for name, _ in pairs(qw.item_positions) do
         if have_quest_item(name) then
             table.insert(purged, name)
         end
     end
     for name, _ in ipairs(purged) do
-        item_map_positions[name] = nil
+        qw.item_positions[name] = nil
     end
 end
 
@@ -509,54 +540,236 @@ function update_seen_items()
     -- Any seen item for which we don't have an item position is unregistered.
     local seen_items = {}
     for name, _ in pairs(c_persist.seen_items[where]) do
-        if item_map_positions[name] then
+        if qw.item_positions[name] then
             seen_items[name] = true
         end
     end
     c_persist.seen_items[where] = seen_items
 end
 
-function update_map(new_level, full_clear)
+function update_zot5_from_cell(cell)
+    if debug_channel("map-all") then
+        dsay("Checking Zot:5 features from " .. cell_string(cell))
+    end
+
+    local y_offset
+    local pos = cell.los_pos
+    if feature_at(position_coord_sum(pos, 0, 1)) == "stone_wall" then
+        y_offset =  1
+    elseif feature_at(position_coord_sum(pos, 0, -1)) == "stone_wall" then
+        y_offset =  -1
+    else
+        return
+    end
+    if debug_channel("map-all") then
+        dsay("Found y offset: " .. y_offset)
+    end
+
+
+    local x_offset
+    if feature_at(position_coord_sum(pos, 1, y_offset)) == "stone_wall" then
+        x_offset = 1
+    elseif feature_at(position_coord_sum(pos, -1, y_offset))
+            == "stone_wall" then
+        x_offset = -1
+    else
+        return
+    end
+    if debug_channel("map-all") then
+        dsay("Found x offset: " .. x_offset)
+    end
+
+    if feature_at(position_coord_sum(pos, 2 * x_offset, y_offset))
+            ~= "permarock_wall" then
+        return
+    end
+
+    local map_pos = cell.map_pos
+    c_persist.zot5.entry_pos = position_coord_sum(map_pos, 21 * x_offset,
+        -12 * y_offset)
+    c_persist.zot5.orb_pos = position_coord_sum(map_pos, 21 * x_offset,
+        9 * y_offset)
+
+    if debug_channel("map-all") then
+        dsay("Found Hall of Zot entry position "
+            .. cell_string_from_map_position(c_persist.zot5.entry_pos)
+            .. " and Orb position "
+            .. cell_string_from_map_position(c_persist.zot5.orb_pos))
+    end
+
+    -- We want to fully autoexplore outside the Hall of Zot, unless the
+    -- tesseracts activate first, so exclude the entry cell.
+    if not c_persist.zot5.tesseracts_active then
+        exclude_map_at(c_persist.zot5.entry_pos)
+    end
+
+    local hall1 = {
+        tesseract_pos = position_coord_sum(map_pos, 0, 2 * y_offset ),
+        chamber_pos = position_coord_sum(map_pos, 15 * x_offset, 9 * y_offset)
+    }
+    local hall2 = {
+        tesseract_pos = position_coord_sum(map_pos, 42, 2 * y_offset),
+        chamber_pos = position_coord_sum(map_pos, 27 * x_offset, 9 * y_offset)
+    }
+    c_persist.zot5.halls = { hall1, hall2 }
+
+    if debug_channel("map-all") then
+        dsay("Found first tesseract position: "
+            .. cell_string_from_map_position(hall1.tesseract_pos)
+            .. "; found first chamber position: "
+            .. cell_string_from_map_position(hall1.chamber_pos))
+        dsay("Found second tesseract position: "
+            .. cell_string_from_map_position(hall2.tesseract_pos)
+            .. "; found second chamber position: "
+            .. cell_string_from_map_position(hall2.chamber_pos))
+    end
+end
+
+-- Update any feature state information that requires the entire
+-- feature map to be updated.
+function update_feature_state_from_cell(cell)
+    -- All features that have state have their positions
+    -- recorded.
+    if not qw.feature_positions[cell.feat] then
+        qw.feature_positions[cell.feat] = {}
+    end
+    if not qw.feature_positions[cell.feat][cell.map_pos.hash] then
+        qw.feature_positions[cell.feat][cell.map_pos.hash] = cell.map_pos
+    end
+
+    local enemies = assess_enemies(const.duration.ignore)
+    update_feature_state(where_branch, where_depth, cell.feat, cell.map_pos,
+        -- We don't care about non-permanent clouds and these features can
+        -- never be traps, so checking for exclusions is enough.
+        { safe = not map_is_excluded_at(cell.map_pos),
+          explore = explore_state_at(cell.map_pos), threat = enemies.threat })
+end
+
+function finalize_map_features(queue)
+    for _, cell in ipairs(qw.map_queue.trap_cells) do
+        update_trap_from_cell(cell)
+    end
+
+    for _, cell in ipairs(qw.map_queue.feature_state_cells) do
+        update_feature_state_from_cell(cell)
+    end
+
+    for _, cell in ipairs(qw.map_queue.zot5_cells) do
+        update_zot5_from_cell(cell)
+    end
+
+    -- For all recorded feature positions, re-evaluate whether any unreachable
+    -- ones have become reachable.
+    for feat, positions in pairs(qw.feature_positions) do
+        for _, pos in ipairs(positions) do
+            local state = get_feature_state(where_branch, where_depth, feat,
+                pos)
+            if state and state.explore < const.explore.reachable
+                    and map_is_reachable_at(pos) then
+                update_feature_state(where_branch, where_depth, feat, pos,
+                    { explore = const.explore.reachable })
+            end
+        end
+    end
+end
+
+function update_map_queue(clear_cache)
+    local queue = { update_cells = {}, update_set = {}, trap_cells = {},
+        feature_state_cells = {}, zot5_cells = {} }
+    local radius
+    if clear_cache or qw.update_entire_map then
+        radius = const.gxm
+        queue.no_propagate = true
+        qw.update_entire_map = false
+    else
+        radius = qw.los_radius
+    end
+
+    if debug_channel("map-all") then
+        dsayf("Updating map queue with radius %d", radius)
+    end
+
+    local i = 1
+    for pos in square_iter(const.origin, radius, true) do
+        local cell = cell_from_position(pos, true, true)
+        if not cell then
+            goto continue
+        end
+
+        cell.queue = queue
+        table.insert(queue.update_cells, cell)
+        queue.update_set[cell.map_pos.hash] = cell
+
+        if qw.coroutine_throttle and i % 1000 == 0 then
+            if debug_channel("map-all") then
+                dsayf("Queued %d map positions", i)
+            end
+
+            coroutine.yield()
+        end
+
+        i = i + 1
+
+        ::continue::
+    end
+
+    qw.map_queue = queue
+end
+
+function update_map(new_level, clear_cache)
     local new_waypoint = update_waypoint(new_level)
 
     reset_c_persist(new_waypoint, new_level)
-    reset_map_cache(new_level, full_clear, new_waypoint)
+    -- For the Abyss or Tomb, new waypoints are repeatedly made on levels
+    -- we've visited before, so we force clearing map cache in that case.
+    load_map_cache(new_level, clear_cache or new_waypoint)
     reset_item_tracking()
-
-    update_exclusions(new_waypoint)
 
     if new_level then
         qw.slimy_walls = false
     end
 
-    local cell_queue, map_reset = update_map_cells()
+    update_map_queue(clear_cache)
 
+    -- This first pass of the map update handles the feature and traversability
+    -- data.
+    update_map_features()
+    update_transporters()
     update_seen_items()
 
-    update_distance_maps(cell_queue, map_reset)
+    -- We must update the enemy list before possibly excluding any of them.
+    update_monsters()
+    update_map_exclusions(new_waypoint)
 
-    update_transporters()
+    finalize_map_features()
+    expire_distance_maps()
 end
 
-function cell_from_position(pos, no_unseen)
-    local feat = view.feature_at(pos.x, pos.y)
+function cell_from_position(pos, no_unseen, no_cache)
+    local feat
+    if no_cache then
+        feat = view.feature_at(pos.x, pos.y)
+    else
+        feat = feature_at(pos, no_cache)
+    end
     if no_unseen and feat == "unseen" then
         return
     end
 
-    local cell = {}
-    cell.los_pos = pos
-    cell.feat = feat
-    cell.pos = map_position(pos)
+    local cell = { los_pos = pos, feat = feat }
+    if qw.map_pos then
+        cell.map_pos = map_position(pos)
+    end
+
     return cell
 end
 
-function get_feature_map_positions(feats)
+function get_feature_positions(feats)
     local positions = {}
     local features = {}
     for _, feat in ipairs(feats) do
-        if feature_map_positions[feat] then
-            for _, pos in pairs(feature_map_positions[feat]) do
+        if qw.feature_positions[feat] then
+            for _, pos in pairs(qw.feature_positions[feat]) do
                 table.insert(positions, pos)
                 table.insert(features, feat)
             end
@@ -567,12 +780,12 @@ function get_feature_map_positions(feats)
     end
 end
 
-function get_item_map_positions(item_names, radius)
+function get_item_positions(item_names, radius)
     local positions = {}
     local found_items = {}
     for _, name in ipairs(item_names) do
-        if item_map_positions[name] then
-            table.insert(positions, item_map_positions[name])
+        if qw.item_positions[name] then
+            table.insert(positions, qw.item_positions[name])
             table.insert(found_items, name)
         end
     end
@@ -598,54 +811,70 @@ function get_item_map_positions(item_names, radius)
 end
 
 function exclude_at(pos, radius)
+    if not radius then
+        radius = qw.los_radius
+    end
+
     if debug_channel("map") then
         dsay("Excluding " .. cell_string_from_position(pos))
     end
 
-    if not view.in_known_map_bounds(pos.x, pos.y) then
-        if debug_channel("map") then
-            dsay("Ignoring out of bounds coordinates " .. pos_string(pos))
-        end
-
-        return
-    end
-
+    local map_pos = map_position(pos)
     if not c_persist.exclusions[where] then
         c_persist.exclusions[where] = {}
     end
-    c_persist.exclusions[where][map_position(pos).hash] = true
+    c_persist.exclusions[where][map_pos.hash] = radius
+
+    for epos in square_iter(map_pos, radius, true) do
+        qw.excluded_map[epos.hash] = true
+    end
 
     travel.set_exclude(pos.x, pos.y, radius)
 end
 
+function exclude_map_at(pos, radius)
+    exclude_at(los_position(pos), radius)
+end
+
 function unexclude_at(pos)
     if debug_channel("map") then
-        dsay("Unexcluding " .. cell_string_from_position(pos))
-    end
-
-    if not view.in_known_map_bounds(pos.x, pos.y) then
-        if debug_channel("map") then
-            dsay("Ignoring out of bounds position " .. pos_string(pos))
-        end
-
-        return
+        dsay("Unexcluding " .. cell_string_from_map_position(pos))
     end
 
     travel.del_exclude(pos.x, pos.y)
-    c_persist.exclusions[where][map_position(pos).hash] = nil
+
+    local map_pos = map_position(pos)
+    local radius = c_persist.exclusions[where][map_pos.hash]
+    c_persist.exclusions[where][map_pos.hash] = nil
+
+    -- Update exclusion data. Check all squares in the radius, since
+    -- exclusions that overlapped this one might still exist.
+    for epos in square_iter(pos, radius) do
+        -- travel will error if given coordinates out of map bounds.
+        if view.in_known_map_bounds(epos.x, epos.y) then
+            qw.excluded_map[map_position(epos).hash] =
+                travel.is_excluded(epos.x, epos.y)
+        end
+    end
+end
+
+function unexclude_map_at(pos)
+    unexclude_at(los_position(pos))
 end
 
 function remove_exclusions(record_only)
     if record_only then
         c_persist.exclusions[where] = nil
-    end
-
-    if not c_persist.exclusions[where] then
         return
     end
 
-    for hash, _ in pairs(c_persist.exclusions[where]) do
-        unexclude_at(position_from_hash(hash))
+    local exclusions = c_persist.exclusions[where]
+    if not exclusions then
+        return
+    end
+
+    for hash, _ in pairs(exclusions) do
+        unexclude_map_at(position_from_hash(hash))
     end
 end
 
@@ -654,21 +883,25 @@ function level_has_exclusions(branch, depth)
     return exc and next(exc)
 end
 
-function update_exclusions(new_waypoint)
+function update_map_exclusions(new_waypoint)
     if new_waypoint then
         remove_exclusions()
     end
 
-    -- We're unlikely to be able to run away when mesmerised.
-    if you.mesmerised() then
-        return
+    -- Once we've either autoexplored outside the Zot:5 vault or activated the
+    -- tesseracts, it's time to enter the vault.
+    if at_branch_end("Zot")
+            and c_persist.zot5.entry_pos
+            and map_has_exclusion_at(c_persist.zot5.entry_pos)
+            and (explored_level(where_branch, where_depth)
+                or c_persist.zot5.tesseracts_active) then
+        unexclude_map_at(c_persist.zot5.entry_pos)
     end
 
     -- Monsters we can't reach via melee or ranged attack that also can't move
     -- to our melee range get excluded immediately.
-    local auto_exclude = {}
     for _, enemy in ipairs(qw.enemy_list) do
-        if not has_exclusion_center_at(enemy:pos())
+        if not map_has_exclusion_at(enemy:map_pos())
                 -- No excluding safe monsters.
                 and not enemy:is_safe()
                 -- No excluding temporary monsters.
@@ -676,39 +909,29 @@ function update_exclusions(new_waypoint)
                 -- We need to at least see all cells adjacent to them to be
                 -- so our movement evaluation is reasonably correct.
                 and enemy:adjacent_cells_known()
-                -- We can't move into melee range...
-                and not enemy:player_has_path_to_melee()
-                -- ... they can't move to where we could melee them
-                and not enemy:player_can_wait_for_melee()
-                -- ... and we can't target them with any other attack
-                and not enemy:best_player_attack()
-                -- ... and we know that we don't want to dig them out.
-                and not enemy:should_dig_unreachable() then
-            table.insert(auto_exclude, enemy:pos())
-        end
-    end
-    if #auto_exclude > 0 then
-        for _, pos in ipairs(auto_exclude) do
-            exclude_position(pos)
-        end
-
-        return
-    end
-
-    -- If we've been trying to attack monsters that can't reach our position
-    -- and get to low HP, we wan't to exclude them and end the fight. We
-    -- additionally require that we've been at full HP since the last turn were
-    -- we had incoming monsters. This way if we fight a mix of some monsters
-    -- that can reach us and some that can't, we'll deal with the monsters that
-    -- can't only after finishing off the monsters that can and then resting to
-    -- full HP.
-    if qw.full_hp_turn > 0
-            and qw.full_hp_turn >= qw.incoming_monsters_turn
-            and hp_is_low(50) then
-        for _, enemy in ipairs(qw.enemy_list) do
-            if not enemy:is_summoned() then
-                exclude_position(enemy:pos())
-            end
+                -- One of two main cases must be further satisfied before we
+                -- exclude this monster.
+                --
+                -- (1) If we've gotten to low HP trying to attack monsters
+                -- that can't reach our position. Specifically we require...
+                -- ... that we have rested to full HP...
+                and (qw.full_hp_turn > 0
+                        -- ... since the turn we last had incoming monsters...
+                        and qw.full_hp_turn >= qw.incoming_monsters_turn
+                        -- ... and our HP is low.
+                        and hp_is_low(50)
+                    -- or (2) We have no way of attacking the monster or using
+                    -- a ranged attack and we don't want to dig them out.
+                    -- Specifically we require...
+                    -- ... that we can't move into melee range...
+                    or not enemy:player_has_path_to_melee(true)
+                        -- ... and they can't move into our melee range
+                        and not enemy:player_can_wait_for_melee()
+                        -- ... and we can't target them with a range attack
+                        and not enemy:best_player_attack()
+                        -- ... and we don't want to (or can't) dig them out.
+                        and not enemy:should_dig_unreachable()) then
+            exclude_at(enemy:pos())
         end
     end
 end
@@ -721,7 +944,7 @@ end
 function update_transporters()
     transp_search = nil
     if want_to_use_transporters() then
-        local feat = view.feature_at(0, 0)
+        local feat = feature_at(const.origin)
         if feature_uses_map_key(">", feat) and transp_search_zone then
             if not transp_map[transp_search_zone] then
                 transp_map[transp_search_zone] = {}
