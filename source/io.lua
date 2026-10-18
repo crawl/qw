@@ -82,10 +82,10 @@ end
 function vector_move(pos)
     local str = ''
     for i = 1, abs(pos.x) do
-        str = str .. delta_to_vi({ x = sign(pos.x), y = 0 })
+        str = str .. delta_to_vi(new_position(sign(pos.x), 0))
     end
     for i = 1, abs(pos.y) do
-        str = str .. delta_to_vi({ x = 0, y = sign(pos.y) })
+        str = str .. delta_to_vi(new_position(0, sign(pos.y)))
     end
     return str
 end

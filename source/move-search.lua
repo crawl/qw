@@ -30,8 +30,7 @@ function tab_function(assume_flight)
 end
 
 function search_to(search, pos, current, is_deviation)
-    local hash = hash_position(pos)
-    if search.seen[hash] then
+    if search.seen[pos.hash] then
         return false
     end
 
@@ -44,7 +43,7 @@ function search_to(search, pos, current, is_deviation)
             .. " to " .. cell_string_from_position(pos))
     end
 
-    local cache = search.cache[hash]
+    local cache = search.cache[pos.hash]
     if cache then
         local result
         if cache.path then
@@ -75,7 +74,7 @@ function search_to(search, pos, current, is_deviation)
                 .. const.max_search_radius)
         end
 
-        search.cache[hash] = false
+        search.cache[pos.hash] = false
         return false
     end
 
@@ -84,7 +83,7 @@ function search_to(search, pos, current, is_deviation)
             dsay("Too many deviation movements")
         end
 
-        search.cache[hash] = { deviations_failed = cur_deviations }
+        search.cache[pos.hash] = { deviations_failed = cur_deviations }
         return false
     end
 
@@ -92,7 +91,7 @@ function search_to(search, pos, current, is_deviation)
         -- The seen table is only updated when we can successfully continue the
         -- recursive search. It prevents revisiting a succesfully traversed
         -- square in the same path.
-        search.seen[hash] = true
+        search.seen[pos.hash] = true
         search.dist = search.dist + 1
         search.num_deviations = cur_deviations
 
@@ -104,19 +103,19 @@ function search_to(search, pos, current, is_deviation)
             for i = cur_i, #search.path do
                 table.insert(cache.path, search.path[i])
             end
-            search.cache[hash] = cache
+            search.cache[pos.hash] = cache
 
             return true
         else
             search.path[#search.path] = nil
-            search.seen[hash] = nil
+            search.seen[pos.hash] = nil
             search.dist = search.dist - 1
 
             if is_deviation then
                 search.num_deviations = search.num_deviations - 1
             end
 
-            search.cache[hash] = { deviations_failed = cur_deviations }
+            search.cache[pos.hash] = { deviations_failed = cur_deviations }
 
             return false
         end
@@ -126,7 +125,7 @@ function search_to(search, pos, current, is_deviation)
         dsay("Square function failed")
     end
 
-    search.cache[hash] = { deviations_failed = cur_deviations }
+    search.cache[pos.hash] = { deviations_failed = cur_deviations }
     return false
 end
 
@@ -141,20 +140,19 @@ function do_move_search(search, current)
         return true
     end
 
-    local pos
     local sign_diff_x = sign(diff.x)
     local sign_diff_y = sign(diff.y)
-    pos = { x = current.x + sign_diff_x, y = current.y + sign_diff_y }
+    local pos = position_coord_sum(current, sign_diff_x, sign_diff_y)
     if search_to(search, pos, current) then
         return true
     end
 
-    pos = { x = current.x + sign_diff_x, y = current.y }
+    pos = position_coord_sum(current,  sign_diff_x, 0)
     if search_to(search, pos, current) then
         return true
     end
 
-    pos = { x = current.x, y = current.y + sign_diff_y }
+    pos = position_coord_sum(current, 0, sign_diff_y)
     if search_to(search, pos, current) then
         return true
     end
@@ -163,64 +161,64 @@ function do_move_search(search, current)
     local abs_diff_y = abs(diff.y)
     if abs_diff_x >= abs_diff_y then
         if abs_diff_y > 0 then
-            pos = { x = current.x + sign_diff_x, y = current.y - sign_diff_y }
+            pos = position_coord_sum(current, sign_diff_x, -sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x - sign_diff_x, y = current.y + sign_diff_y }
+            pos = position_coord_sum(current, -sign_diff_x, sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
         else
-            pos = { x = current.x + sign_diff_x, y = current.y + 1 }
+            pos = position_coord_sum(current, sign_diff_x, 1)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x + sign_diff_x, y = current.y - 1 }
+            pos = position_coord_sum(current, sign_diff_x, -1)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x, y = current.y + 1 }
+            pos = position_coord_sum(current, 0, 1)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x, y = current.y - 1 }
+            pos = position_coord_sum(current, 0, -1)
             if search_to(search, pos, current, true) then
                 return true
             end
         end
     elseif abs_diff_x < abs_diff_y then
         if abs_diff_x > 0 then
-            pos = { x = current.x - sign_diff_x, y = current.y + sign_diff_y }
+            pos = position_coord_sum(current, -sign_diff_x, sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x + sign_diff_x, y = current.y - sign_diff_y }
+            pos = position_coord_sum(current, sign_diff_x, -sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
         else
-            pos = { x = current.x + 1, y = current.y + sign_diff_y }
+            pos = position_coord_sum(current, 1, sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x - 1, y = current.y + sign_diff_y }
+            pos = position_coord_sum(current, -1, sign_diff_y)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x + 1, y = current.y }
+            pos = position_coord_sum(current, 1, 0)
             if search_to(search, pos, current, true) then
                 return true
             end
 
-            pos = { x = current.x - 1, y = current.y }
+            pos = position_coord_sum(current, -1, 0)
             if search_to(search, pos, current, true) then
                 return true
             end
@@ -249,7 +247,7 @@ function move_search(center, target, square_func, min_dist, cache)
 
     search = { center = center, target = target, square_func = square_func,
         min_dist = min_dist, dist = 0, path = { center },
-        seen = { [hash_position(center)] = true }, num_deviations = 0 }
+        seen = { [center.hash] = true }, num_deviations = 0 }
 
     if cache then
         search.cache = cache

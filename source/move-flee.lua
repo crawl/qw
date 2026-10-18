@@ -180,7 +180,7 @@ function enemy_can_flee_attack(enemy, start_pos, flee_dist)
 end
 
 function flee_move_check(map_pos)
-    local pos = position_difference(map_pos, qw.map_pos)
+    local pos = los_position(map_pos)
     if not is_safe_at(pos) then
         return false
     end
@@ -228,7 +228,7 @@ function can_flee_to_map_position(dest_pos, start_pos)
 
     local extreme_threat = have_extreme_threat()
     local flee_attackers = 0
-    local start_los_pos = position_difference(start_pos, qw.map_pos)
+    local start_los_pos = los_position(start_pos)
     for _, enemy in ipairs(qw.enemy_list) do
         if enemy_can_flee_attack(enemy, start_los_pos, search.dist) then
             flee_attackers = flee_attackers + 1

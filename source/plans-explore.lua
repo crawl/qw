@@ -193,9 +193,8 @@ function plan_move_towards_travel_feature()
         return false
     end
 
-    if goal_travel.safe_hatch and not goal_travel.want_go then
-        local map_pos = unhash_position(goal_travel.safe_hatch)
-        local result = best_move_towards(map_pos)
+    if goal_travel.safe_hatch_pos and not goal_travel.want_go then
+        local result = best_move_towards(goal_travel.safe_hatch_pos)
         if result then
             return move_towards_destination(result.move, result.des, "goal")
         end
@@ -224,8 +223,8 @@ function plan_move_towards_travel_feature()
 
     if c_persist.altars[god] and c_persist.altars[god][where] then
         for hash, _ in pairs(c_persist.altars[god][where]) do
-            if update_altar(god, where, hash, { feat = const.explore.seen },
-                    true) then
+            if update_altar(god, where, position_from_hash(hash),
+                { feat = const.explore.seen }, true) then
                 qw.restart_cascade = true
             end
         end
@@ -260,14 +259,14 @@ function plan_move_towards_monster()
 
     local mons_targets = {}
     for _, enemy in ipairs(qw.enemy_list) do
-        table.insert(mons_targets, position_sum(qw.map_pos, enemy:pos()))
+        table.insert(mons_targets, enemy:map_pos())
     end
 
     if #mons_targets == 0 then
         for pos in square_iter(const.origin, qw.los_radius) do
             local mons = monster.get_monster_at(pos.x, pos.y)
             if mons and Monster:new(mons):is_enemy() then
-                table.insert(mons_targets, position_sum(qw.map_pos, pos))
+                table.insert(mons_targets, map_position(pos))
             end
         end
     end

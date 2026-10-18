@@ -232,9 +232,9 @@ function assess_kiting_destination(pos)
         return
     end
 
-    local map_pos = position_sum(qw.map_pos, pos)
+    local map_pos = map_position(pos)
     for lpos in square_iter(pos, qw.los_radius) do
-        if map_is_unseen_at(position_sum(qw.map_pos, lpos))
+        if map_is_unseen_at(map_position(lpos))
                 and cell_see_cell(pos, lpos) then
             return false
         end

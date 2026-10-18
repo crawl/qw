@@ -469,7 +469,7 @@ function check_beogh_allies(radius)
     return check_allies(radius, filter)
 end
 
-function update_altar(god, level, hash, state, force)
+function update_altar(god, level, pos, state, force)
     if state.safe == nil and not state.feat and not state.threat then
         error("Undefined altar state.")
     end
@@ -482,11 +482,11 @@ function update_altar(god, level, hash, state, force)
         c_persist.altars[god][level] = {}
     end
 
-    local current = c_persist.altars[god][level][hash]
+    local current = c_persist.altars[god][level][pos.hash]
     if not current then
         current = {}
         cleanup_feature_state(current)
-        c_persist.altars[god][level][hash] = current
+        c_persist.altars[god][level][pos.hash] = current
     end
 
     if state.safe == nil then
@@ -509,7 +509,7 @@ function update_altar(god, level, hash, state, force)
 
     if debug_channel("map") then
         dsay("Updating altar on " .. level .. " at "
-            .. cell_string_from_map_position(unhash_position(hash))
+            .. cell_string_from_map_position(pos)
             .. " from " .. stairs_state_string(current)
             .. " to " .. stairs_state_string(state))
     end
@@ -558,7 +558,7 @@ function update_permanent_flight()
             for hash, state in pairs(altars) do
                 if state.feat >= const.explore.seen
                         and state.feat < const.explore.reachable then
-                    update_altar(god, level, hash,
+                    update_altar(god, level, position_from_hash(hash),
                         { feat = const.explore.reachable })
                 end
             end

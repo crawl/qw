@@ -175,9 +175,8 @@ function plan_use_travel_stairs()
     end
 
     local feat = view.feature_at(0, 0)
-    if goal_travel.safe_hatch and not goal_travel.want_go then
-        local map_pos = unhash_position(goal_travel.safe_hatch)
-        if not positions_equal(qw.map_pos, map_pos)
+    if goal_travel.safe_hatch_pos and not goal_travel.want_go then
+        if not positions_equal(qw.map_pos, goal_travel.safe_hatch_pos)
                 or feat ~= "escape_hatch_down" then
             return false
         end
@@ -204,7 +203,8 @@ function plan_use_travel_stairs()
 end
 
 function plan_abort_safe_stairs()
-    if goal_travel.want_go or not (goal_travel.safe_stairs or goal_travel.safe_hatch) then
+    if goal_travel.want_go
+            or not (goal_travel.safe_stairs or goal_travel.safe_hatch_pos) then
         return false
     end
 

@@ -385,7 +385,7 @@ function register_monster_at(pos)
         table.insert(qw.enemy_list, mons)
     end
 
-    qw.monster_map[hash_position(pos)] = mons
+    qw.monster_map[pos.hash] = mons
 end
 
 function update_monsters()
@@ -419,7 +419,7 @@ function update_monsters()
 end
 
 function get_monster_at(pos)
-    return qw.monster_map[hash_position(pos)]
+    return qw.monster_map[pos.hash]
 end
 
 function get_closest_enemy()
@@ -792,7 +792,7 @@ function monster_has_line_of_fire_at(mons, target_pos)
     local positions = spells.path("Quicksilver Bolt", target_pos.x,
         target_pos.y, mons:x_pos(), mons:y_pos(), true)
     for i, coords in ipairs(positions) do
-        local pos = { x = coords[1], y = coords[2] }
+        local pos = new_position(coords[1], coords[2])
         if positions_equal(pos, target_pos) then
             return true
         end

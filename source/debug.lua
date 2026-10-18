@@ -180,7 +180,7 @@ function test_radius_iter(center, radius, include_center, reverse_radius)
         str = str .. pos_string(pos) .. "; "
 
         local char = i > 61 and "Ø" or string.char(string.byte('A') + i)
-        map[hash_position(pos)] = char
+        map[pos.hash] = char
         i = i + 1
     end
     say(str)
@@ -191,8 +191,8 @@ function test_radius_iter(center, radius, include_center, reverse_radius)
     for y = -radius, radius do
         str = ""
         for x = -radius, radius do
-            local pos = position_sum(center, { x = x, y = y })
-            local char = map[hash_position(pos)]
+            local pos = position_sum(center, new_position(x, y))
+            local char = map[pos.hash]
             if not char then
                 char = " "
             end
@@ -211,13 +211,13 @@ function print_traversal_map(center)
 
     crawl.setopt("msg_condense_repeats = false")
 
-    local map_center = position_sum(qw.map_pos, center)
+    local map_center = map_position(center)
     say("Traversal map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         local str = ""
         for x = -20, 20 do
-            local pos = position_sum(map_center, { x = x, y = y })
+            local pos = position_sum(map_center, new_position(x, y))
             local traversable = map_is_traversable_at(pos)
             local char
             if positions_equal(pos, qw.map_pos) then
@@ -244,21 +244,21 @@ function print_traversal_map(center)
     crawl.setopt("msg_condense_repeats = true")
 end
 
-function print_unexcluded_map(center)
+function print_excluded_map(center)
     if not center then
         center = const.origin
     end
 
     crawl.setopt("msg_condense_repeats = false")
 
-    local map_center = position_sum(qw.map_pos, center)
-    say("Unexcluded map at " .. cell_string_from_map_position(map_center))
+    local map_center = map_position(center)
+    say("Excluded map at " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         local str = ""
         for x = -20, 20 do
-            local pos = position_sum(map_center, { x = x, y = y })
-            local unexcluded = map_is_unexcluded_at(pos)
+            local pos = position_sum(map_center, new_position(x, y))
+            local unexcluded = not map_is_excluded_at(pos)
             local char
             if positions_equal(pos, qw.map_pos) then
                 if unexcluded == nil then
@@ -292,15 +292,15 @@ function print_distance_map(dist_map, center, excluded)
     crawl.setopt("msg_condense_repeats = false")
 
     local map = excluded and dist_map.excluded_map or dist_map.map
-    local map_center = position_sum(qw.map_pos, center)
+    local map_center = map_position(center)
     say("Distance map at " .. cell_string_from_map_position(dist_map.pos)
         .. " from position " .. cell_string_from_map_position(map_center))
     -- This needs to iterate by row then column for display purposes.
     for y = -20, 20 do
         local str = ""
         for x = -20, 20 do
-            local pos = position_sum(map_center, { x = x, y = y })
-            local dist = map[hash_position(pos)]
+            local pos = position_sum(map_center, new_position(x, y))
+            local dist = dist_map.map[pos.hash]
             if positions_equal(pos, qw.map_pos) then
                 if dist == nil then
                     str = str .. "✞"
@@ -362,7 +362,7 @@ function pos_string(pos)
 end
 
 function los_pos_string(map_pos)
-    return pos_string(position_difference(map_pos, qw.map_pos))
+    return pos_string(los_position(map_pos))
 end
 
 function cell_string(cell)
@@ -382,7 +382,7 @@ function cell_string_from_position(pos)
 end
 
 function cell_string_from_map_position(pos)
-    return cell_string_from_position(position_difference(pos, qw.map_pos))
+    return cell_string_from_position(los_position(pos))
 end
 
 function monster_string(mons, props)
@@ -502,12 +502,4 @@ function qw.stringify_table(tab, indent_level)
     end
     res = res .. spaces .. "}"
     return res
-end
-
-function map_position(pos)
-    return position_sum(qw.map_pos, pos)
-end
-
-function los_position(map_pos)
-    return position_difference(map_pos, qw.map_pos)
 end

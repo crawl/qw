@@ -59,7 +59,7 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
             dsay("Assigning melee enemy to its current position")
         end
 
-        melee_enemies[hash_position(enemy:pos())] = enemy
+        melee_enemies[enemy:pos().hash] = enemy
         return enemy:threat()
     end
 
@@ -73,8 +73,7 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
     end
 
     local seed_pos = search.path[#search.path]
-    local seed_hash = hash_position(seed_pos)
-    if not melee_enemies[seed_hash]
+    if not melee_enemies[seed_pos.hash]
             and not get_monster_at(seed_pos)
             and enemy:can_traverse(seed_pos) then
         if debug_channel("retreat-enemy") then
@@ -82,7 +81,7 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
                 .. cell_string_from_position(seed_pos))
         end
 
-        melee_enemies[seed_hash] = enemy
+        melee_enemies[seed_pos.hash] = enemy
         return enemy:threat()
     end
 
@@ -105,14 +104,13 @@ function enemy_melee_score_at(enemy, target_pos, melee_enemies)
     end
 
     for _, pos in ipairs(component) do
-        local hash = hash_position(pos)
-        if not melee_enemies[hash] and not get_monster_at(pos) then
+        if not melee_enemies[pos.hash] and not get_monster_at(pos) then
             if debug_channel("retreat-enemy") then
                 dsay("Assigning melee enemy to destination component position "
                     .. cell_string_from_position(pos))
             end
 
-            melee_enemies[hash] = enemy
+            melee_enemies[pos.hash] = enemy
             return enemy:threat()
         end
     end
@@ -192,7 +190,7 @@ function enemy_los_score_at(enemy, target_pos, player_search, player_los_dist)
         -- the player position, so we walk it in reverse and start from the
         -- first position after our current position.
         for i = #player_search.path - 1, 1, -1 do
-            local pos = position_difference(player_search.path[i], qw.map_pos)
+            local pos = los_position(player_search.path[i])
             if not cell_see_cell(enemy:pos(), pos) then
                 local firing_pos = enemy:choose_firing_pos(pos)
                 if firing_pos then
@@ -254,7 +252,7 @@ function enemy_ranged_score_at(enemy, target_pos, player_search,
         -- backwards through the path, starting from the first from the first
         -- position after our current position.
         for i = #player_search.path - 1, 1, -1 do
-            local pos = position_difference(player_search.path[i], qw.map_pos)
+            local pos = los_position(player_search.path[i])
             if enemy:has_line_of_fire(pos) then
                 sight_score = sight_score + 1
             elseif cell_see_cell(enemy:pos(), pos) then
@@ -286,7 +284,7 @@ function retreat_score_at(target_pos, player_search)
     if player_search then
         -- This starts from the map position of pos.
         for i = 2, #player_search.path do
-            local pos = position_difference(player_search.path[i], qw.map_pos)
+            local pos = los_position(player_search.path[i])
             if cell_see_cell(pos, target_pos) then
                 player_los_dist = i - 1
             end
@@ -361,7 +359,7 @@ function retreat_score_at(target_pos, player_search)
     if player_search and not using_ranged_weapon() then
         local can_melee = false
         for hash, enemy in pairs(melee_enemies) do
-            local pos = unhash_position(hash)
+            local pos = position_from_hash(hash)
             if positions_can_melee(target_pos, pos, enemy:player_melee_range()) then
                 can_melee = true
                 break
@@ -395,7 +393,7 @@ function retreat_score_at(target_pos, player_search)
 end
 
 function retreat_move_check(map_pos)
-    local pos = position_difference(map_pos, qw.map_pos)
+    local pos = los_position(map_pos)
     if not is_safe_at(pos) then
         return false
     end
@@ -409,7 +407,7 @@ function retreat_move_check(map_pos)
 end
 
 function assess_retreat_position(map_pos, dist, cache)
-    local pos = position_difference(map_pos, qw.map_pos)
+    local pos = los_position(map_pos)
     local result = { pos = pos, map_pos = map_pos }
 
     local is_origin = position_is_origin(pos)
@@ -520,7 +518,7 @@ function best_retreat_result_func()
             coroutine.yield()
         end
 
-        local dist = dist_map.excluded_map[hash_position(pos)]
+        local dist = dist_map.excluded_map[pos.hash]
         if dist and dist < max_dist
                 and not map_has_adjacent_unseen_at(pos)
                 and retreat_move_check(pos) then
@@ -576,7 +574,7 @@ function will_fight_extreme_threat()
 end
 
 function retreat_distance_at(pos)
-    local map_pos = position_sum(qw.map_pos, pos)
+    local map_pos = map_position(pos)
     local result = best_retreat_result()
     if not result then
         return const.inf_dist

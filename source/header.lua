@@ -95,5 +95,24 @@ end
 -- All constants go in this table.
 local const = {}
 
+-- Maximum map width. We use this as a general map radius that's guaranteed to
+-- reach the entire map, since qw is never given absolute coordinates by crawl.
+-- This constant must be defined before new_position() is ever called.
+const.gxm = 80
+
+function hash_coords(x, y)
+    return 2 * const.gxm * x + y
+end
+
+function new_position(x, y)
+    -- Some callers might pass nil coordinates returned from e.g. from the clua
+    -- api. Return nil instead of asserting or erroring when trying to hash.
+    if not x or not y then
+        return
+    end
+
+    return { x = x, y = y, hash = hash_coords(x, y) }
+end
+
 -- Plan functions. These must later be initialized as cascades.
 local plans = {}

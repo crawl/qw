@@ -328,7 +328,7 @@ function plan_read_blink()
     end
     if best_count >= cur_count + 2 then
         local scroll = find_item("scroll", "blinking")
-        return read_scroll(scroll,  vector_move(best_x, best_y) .. ".")
+        return read_scroll(scroll, vector_move(best_pos) .. ".")
     end
     return false
 end
@@ -946,7 +946,7 @@ function plan_escape_net()
     end
 
     -- Can move in any direction to escape nets, regardless of what's there.
-    return move_to({ x = 0, y = 1 })
+    return move_to(new_position(0, 1))
 end
 
 function plan_wait_confusion()
@@ -996,7 +996,7 @@ function can_dig_to(pos)
     local positions = spells.path("Dig", pos.x, pos.y, false)
     local hit_grate = false
     for i, coords in ipairs(positions) do
-        local dpos = { x = coords[1], y = coords[2] }
+        local dpos = new_position(coords[1], coords[2])
         if not hit_grate
                 and view.feature_at(dpos.x, dpos.y) == "iron_grate" then
             hit_grate = true

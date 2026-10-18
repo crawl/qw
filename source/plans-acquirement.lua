@@ -77,7 +77,7 @@ function plan_move_for_acquirement()
     end
 
     for pos in radius_iter(const.origin, qw.los_radius) do
-        local map_pos = position_sum(qw.map_pos, pos)
+        local map_pos = map_position(pos)
         if map_is_reachable_at(map_pos) and not destroys_items_at(pos) then
             local result = best_move_towards(map_pos)
             if result and move_to(result.move) then

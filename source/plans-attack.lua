@@ -20,7 +20,7 @@ function plan_flail_at_invis()
         end
 
         if invis_monster_pos.x == 0 then
-            local apos = { x = 0, y = sign(invis_monster_pos.y) }
+            local apos = new_position(0, sign(invis_monster_pos.y))
             if can_attack_invis_at(apos) then
                 do_melee_attack(apos, can_ctrl)
                 return true
@@ -28,7 +28,7 @@ function plan_flail_at_invis()
         end
 
         if invis_monster_pos.y == 0 then
-            local apos = { x = sign(invis_monster_pos.x), y = 0 }
+            local apos = new_position(sign(invis_monster_pos.x), 0)
             if can_attack_invis_at(apos) then
                 do_melee_attack(apos, can_ctrl)
                 return true
@@ -38,7 +38,7 @@ function plan_flail_at_invis()
 
     local tries = 0
     while tries < 100 do
-        local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
+        local pos = new_position(-1 + crawl.random2(3), -1 + crawl.random2(3))
         tries = tries + 1
         if supdist(pos) > 0 and can_attack_invis_at(pos) then
             do_melee_attack(pos, can_ctrl)
@@ -64,14 +64,14 @@ function plan_shoot_at_invis()
         end
 
         if invis_monster_pos.x == 0 then
-            local apos = { x = 0, y = sign(invis_monster_pos.y) }
+            local apos = new_position(0, sign(invis_monster_pos.y))
             if player_has_line_of_fire(apos) then
                 return shoot_launcher(apos)
             end
         end
 
         if invis_monster_pos.y == 0 then
-            local apos = { x = sign(invis_monster_pos.x), y = 0 }
+            local apos = new_position(sign(invis_monster_pos.x), 0)
             if player_has_line_of_fire(apos) then
                 return shoot_launcher(apos)
             end
@@ -80,7 +80,7 @@ function plan_shoot_at_invis()
 
     local tries = 0
     while tries < 100 do
-        local pos = { x = -1 + crawl.random2(3), y = -1 + crawl.random2(3) }
+        local pos = new_position(-1 + crawl.random2(3), -1 + crawl.random2(3))
         tries = tries + 1
         if supdist(pos) > 0 and player_has_line_of_fire(pos) then
             return shoot_launcher(pos)
@@ -401,7 +401,7 @@ function plan_move_towards_enemy()
     end
 
     qw.enemy_memory = position_difference(mons:pos(), move)
-    qw.enemy_map_memory = position_sum(qw.map_pos, mons:pos())
+    qw.enemy_map_memory = mons:map_pos()
     qw.enemy_memory_turns_left = 2
     return move_to(move)
 end

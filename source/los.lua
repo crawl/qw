@@ -1,6 +1,7 @@
 -- Coordinates and LOS
 
-const.origin = { x = 0, y = 0 }
+-- LOS origin.
+const.origin = new_position(0, 0)
 
 function supdist(pos)
     return max(abs(pos.x), abs(pos.y))
@@ -40,30 +41,38 @@ function positions_can_melee(from_pos, to_pos, range)
     if abs_x_diff > abs_y_diff then
         local sign_diff = sign(x_diff)
         if abs_y_diff > 0 then
-            return not is_solid_at({ x = from_pos.x + sign_diff,
-                    y = from_pos.y }, true)
+            return not is_solid_at(
+                new_position(from_pos.x + sign_diff, from_pos.y), true)
                 -- We know that sign(y_diff) == y_diff.
-                or not is_solid_at({ x = from_pos.x + sign_diff,
-                    y = from_pos.y + y_diff }, true)
+                or not is_solid_at(
+                    new_position(from_pos.x + sign_diff, from_pos.y + y_diff),
+                    true)
         else
-            return not is_solid_at({ x = from_pos.x + sign_diff,
-                y = from_pos.y }, true)
+            return not is_solid_at(
+                new_position(from_pos.x + sign_diff, from_pos.y), true)
         end
     elseif abs_x_diff < abs_y_diff then
         local sign_diff = sign(y_diff)
         if abs_x_diff > 0 then
-            return not is_solid_at({ x = from_pos.x,
-                    y = from_pos.y + sign_diff }, true)
-                or not is_solid_at({ x = from_pos.x - x_diff,
-                    y = from_pos.y + sign_diff }, true)
+            return not is_solid_at(
+                new_position(from_pos.x, from_pos.y + sign_diff), true)
+                or not is_solid_at(
+                    new_position(from_pos.x - x_diff, from_pos.y + sign_diff),
+                    true)
         else
-            return not is_solid_at({ x = from_pos.x,
-                y = from_pos.y + sign_diff }, true)
+            return not is_solid_at(
+                new_position(from_pos.x, from_pos.y + sign_diff), true)
         end
     else
-        return not is_solid_at({ x = from_pos.x + sign(x_diff),
-            y = from_pos.y + sign(y_diff) }, true)
+        return not is_solid_at(
+            new_position(from_pos.x + sign(x_diff), from_pos.y + sign(y_diff)),
+            true)
     end
+end
+
+function position_from_hash(hash)
+    local x = math.floor(hash / (2 * const.gxm) + 0.5)
+    return new_position(x, hash - 2 * const.gxm * x)
 end
 
 function square_iter(pos, radius, include_center)
@@ -91,7 +100,7 @@ function square_iter(pos, radius, include_center)
             end
         end
 
-        return { x = pos.x + dx, y = pos.y + dy }
+        return new_position(pos.x + dx, pos.y + dy)
     end
 end
 
@@ -162,17 +171,8 @@ function radius_iter(pos, radius, include_center, reverse_radius)
             dy = dy + square_move[i - 1][2]
         end
 
-        return { x = pos.x + dx, y = pos.y + dy }
+        return new_position(pos.x + dx, pos.y + dy)
     end
-end
-
-function hash_position(pos)
-    return 2 * const.gxm * pos.x + pos.y
-end
-
-function unhash_position(hash)
-    local x = math.floor(hash / (2 * const.gxm) + 0.5)
-    return { x = x, y = hash - 2 * const.gxm * x }
 end
 
 function is_adjacent(pos, center)
@@ -188,11 +188,15 @@ function position_distance(a, b)
 end
 
 function position_difference(a, b)
-    return { x = a.x - b.x, y = a.y - b.y }
+    return new_position(a.x - b.x, a.y - b.y)
 end
 
 function position_sum(a, b)
-    return { x = a.x + b.x, y = a.y + b.y }
+    return new_position(a.x + b.x, a.y + b.y)
+end
+
+function position_coord_sum(pos, x, y)
+    return new_position(pos.x + x, pos.y + y)
 end
 
 function positions_equal(a, b)
@@ -203,6 +207,14 @@ function position_is_origin(a)
     return a.x == 0 and a.y == 0
 end
 
+function map_position(pos)
+    return position_sum(qw.map_pos, pos)
+end
+
+function los_position(map_pos)
+    return position_difference(map_pos, qw.map_pos)
+end
+
 function cell_see_cell(a, b)
     local main_memo = qw.turn_memos.cell_see_cell
     if not main_memo then
@@ -210,25 +222,22 @@ function cell_see_cell(a, b)
         qw.turn_memos.cell_see_cell = main_memo
     end
 
-    local hasha = hash_position(a)
-    local memo = main_memo[hasha]
+    local memo = main_memo[a.hash]
     if not memo then
         memo = {}
-        main_memo[hasha] = memo
+        main_memo[a.hash] = memo
     end
 
-    local hashb = hash_position(b)
-    local value = memo[hashb]
+    local value = memo[b.hash]
     if value ~= nil then
         return value
     end
 
     value = view.cell_see_cell(a.x, a.y, b.x, b.y)
-    memo[hashb] = value
+    memo[b.hash] = value
     return value
 end
 
 function map_cell_see_cell(a, b)
-    return cell_see_cell(position_difference(a, qw.map_pos),
-        position_difference(b, qw.map_pos))
+    return cell_see_cell(map_position(a), map_position(b))
 end

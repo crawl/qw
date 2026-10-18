@@ -23,14 +23,13 @@ function distance_map_remove(dist_map)
 end
 
 function distance_map_initialize_maps(dist_map, excluded_only)
-    local pos_hash = hash_position(dist_map.pos)
     if not excluded_only then
         dist_map.map = {}
-        dist_map.map[pos_hash] = 0
+        dist_map.map[dist_map.pos.hash] = 0
     end
 
     dist_map.excluded_map = {}
-    dist_map.excluded_map[pos_hash] = map_is_unexcluded_at(dist_map.pos) and 0
+    dist_map.excluded_map[dist_map.pos.hash] = map_is_unexcluded_at(dist_map.pos) and 0
         or nil
 end
 
@@ -48,7 +47,6 @@ function distance_map_initialize(pos, permanent, radius)
     local dist_map = {}
 
     dist_map.pos = util.copy_table(pos)
-    dist_map.hash = hash_position(pos)
     dist_map.permanent = permanent
     dist_map.radius = radius
 
@@ -64,17 +62,16 @@ function distance_map_adjacent_dist(pos, dist_map, map_select)
     local excluded_selected = excluded_map_selected(map_select)
     for pos in adjacent_iter(pos) do
         if map_is_traversable_at(pos) then
-            local pos_hash = hash_position(pos)
             local dist
             if main_selected then
-                dist = dist_map.map[pos_hash]
+                dist = dist_map.map[pos.hash]
                 if dist and (not best_dist or best_dist > dist) then
                     best_dist = dist
                 end
             end
 
             if excluded_selected then
-                dist = dist_map.excluded_map[pos_hash]
+                dist = dist_map.excluded_map[pos.hash]
                 if map_is_unexcluded_at(pos)
                         and dist
                         and (not best_excluded_dist
@@ -101,23 +98,22 @@ function distance_map_update_adjacent_pos(pos, center, dist_map)
     end
 
     local update_pos
-    local center_dist = dist_map.map[hash_position(center)]
-    local pos_hash = hash_position(pos)
-    local dist = dist_map.map[pos_hash]
+    local center_dist = dist_map.map[center.hash]
+    local dist = dist_map.map[pos.hash]
     if not center.excluded_only
             and center_dist
             and (not dist or dist > center_dist + 1) then
-        dist_map.map[pos_hash] = center_dist + 1
+        dist_map.map[pos.hash] = center_dist + 1
 
         update_pos = new_update_position(pos)
     end
 
-    center_dist = dist_map.excluded_map[hash_position(center)]
-    dist = dist_map.excluded_map[pos_hash]
+    center_dist = dist_map.excluded_map[center.hash]
+    dist = dist_map.excluded_map[pos.hash]
     if map_is_unexcluded_at(pos)
             and center_dist
             and (not dist or dist > center_dist + 1) then
-        dist_map.excluded_map[pos_hash] = center_dist + 1
+        dist_map.excluded_map[pos.hash] = center_dist + 1
 
         if not update_pos then
             update_pos = new_update_position(pos)
@@ -167,12 +163,9 @@ function distance_map_propagate(dist_map)
 end
 
 function new_update_position(pos)
-    return {
-        x = pos.x,
-        y = pos.y,
-        hash = hash_position(pos),
-        excluded_only = false,
-    }
+    local upos = new_position(pos.x, pos.y)
+    upos.excluded_only = false
+    return upos
 end
 
 function distance_map_update_position(pos, dist_map, map_select)
@@ -184,12 +177,11 @@ function distance_map_update_position(pos, dist_map, map_select)
     local traversable = map_is_traversable_at(pos)
     local dist, excluded_dist, update_pos
     local have_adjacent = false
-    local pos_hash = hash_position(pos)
     -- If we're traversable and don't have a map distance, we just became
     -- traversable, so update the map distance from adjacent squares.
     if main_map_selected(map_select)
             and traversable
-            and not dist_map.map[pos_hash] then
+            and not dist_map.map[pos.hash] then
         dist, excluded_dist = distance_map_adjacent_dist(pos, dist_map,
             map_select)
         have_adjacent = true
@@ -279,18 +271,17 @@ function update_distance_maps(queue, reset)
 end
 
 function get_distance_map(pos, permanent, radius)
-    local hash = hash_position(pos)
-    if not distance_maps[hash] then
+    if not distance_maps[pos.hash] then
         distance_maps[hash] = distance_map_initialize(pos, permanent, radius)
-        distance_map_propagate(distance_maps[hash])
+        distance_map_propagate(distance_maps[pos.hash])
     end
-    return distance_maps[hash]
+    return distance_maps[pos.hash]
 end
 
 function map_is_reachable_at(pos, ignore_exclusions)
     local dist_map = get_distance_map(qw.reachable_position)
     local map = ignore_exclusions and dist_map.map or dist_map.excluded_map
-    return map[hash_position(pos)]
+    return map[pos.hash]
 end
 
 --[[
@@ -315,8 +306,8 @@ function update_reachable_features()
 
     for i, pos in ipairs(positions) do
         if map_is_reachable_at(pos, true) then
-            update_feature(where_branch, where_depth, feats[i],
-                hash_position(pos), { feat = const.explore.reachable })
+            update_feature(where_branch, where_depth, feats[i], pos,
+                { feat = const.explore.reachable })
         end
     end
 
@@ -325,7 +316,7 @@ end
 
 function update_reachable_position()
     for _, dist_map in pairs(distance_maps) do
-        if dist_map.excluded_map[hash_position(qw.map_pos)] then
+        if dist_map.excluded_map[qw.map_pos.hash] then
             qw.reachable_position = dist_map.pos
             return
         end

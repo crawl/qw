@@ -23,7 +23,7 @@ function score_enemy_hit(result, enemy, attack)
         return
     end
 
-    result.hit_positions[hash_position(enemy:pos())] = true
+    result.hit_positions[enemy:pos().hash] = true
 
     for _, prop in ipairs(attack.props) do
         local use_min = attack.min_props[prop]
@@ -164,8 +164,7 @@ function assess_explosion_position(target_pos, attack, required_pos)
         end
     end
 
-    if not required_pos
-            or result.hit_positions[hash_position(required_pos)] then
+    if not required_pos or result.hit_positions[required_pos.hash] then
         return result
     end
 end
@@ -205,7 +204,7 @@ function assess_ranged_attack_position(target_pos, attack, required_pos)
     local result = { attack = attack, pos = target_pos, hit_positions = {} }
     local past_target, at_target_result
     for i, coords in ipairs(positions) do
-        local pos = { x = coords[1], y = coords[2] }
+        local pos = new_position(coords[1], coords[2])
         if position_distance(pos, const.origin) > attack.range then
             break
         end
@@ -293,7 +292,7 @@ function assess_ranged_attack_position(target_pos, attack, required_pos)
                     and destructible_missile
                     and destroys_items_at(pos))
                 and (not required_pos
-                    or result.hit_positions[hash_position(required_pos)]) then
+                    or result.hit_positions[required_pos.hash]) then
             at_target_result = util.copy_table(result)
             at_target_result.aim_at_target = true
             past_target = true
@@ -313,11 +312,8 @@ end
 function best_exploding_attack_position(target_pos, attack, required_pos)
     local best_result
     for pos in adjacent_iter(target_pos, true) do
-        local hash
-        local seen = false
-        if attack.seen_pos then
-            hash = hash_position(pos)
-            seen = attack.seen_pos[hash]
+        if attack.seen_pos and attack.seen_pos[pos.hash] then
+            goto continue
         end
 
         if not seen then
@@ -329,8 +325,8 @@ function best_exploding_attack_position(target_pos, attack, required_pos)
 
         end
 
-        if hash and not seen then
-            attack.seen_pos[hash] = true
+        if attack.seen_pos then
+            attack.seen_pos[pos.hash] = true
         end
     end
     return best_result

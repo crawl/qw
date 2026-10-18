@@ -7,7 +7,7 @@ local reversed_move_keys = { trap = true, cloud = true, blocked = true,
     melee_count = true, slow = true }
 
 function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
-    local to_los_pos = position_difference(to_pos, qw.map_pos)
+    local to_los_pos = los_position(to_pos)
     local result = { move = to_los_pos, dest = dist_map.pos,
         safe = not use_unsafe, trap = 0, cloud = 0, blocked = 0,
         unexcluded = 0, melee_count = 0, slow = 0,
@@ -19,7 +19,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
     end
 
     local map = use_unsafe and dist_map.map or dist_map.excluded_map
-    result.dist = map[hash_position(to_pos)]
+    result.dist = map[to_pos.hash]
     if not result.dist then
         if debug_channel("move-all") and map_is_traversable_at(to_pos) then
             dsay("No path to destination")
@@ -28,7 +28,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    local current_dist = map[hash_position(from_pos)]
+    local current_dist = map[from_pos.hash]
     if current_dist and result.dist >= current_dist then
         if debug_channel("move-all") then
             dsay("Distance of " .. result.dist .. " does not improve the"
@@ -48,7 +48,7 @@ function assess_move(to_pos, from_pos, dist_map, best_result, use_unsafe)
         return
     end
 
-    local from_los_pos = position_difference(from_pos, qw.map_pos)
+    local from_los_pos = los_position(from_pos)
     if not can_move_to(to_los_pos, from_los_pos, use_unsafe) then
         if debug_channel("move-all") then
             dsay("Can't move to position")
@@ -136,11 +136,10 @@ function best_move_towards(dest_pos, from_pos, allow_unsafe)
 
     local dist_map = get_distance_map(dest_pos)
     local current_dist
-    local from_hash = hash_position(from_pos)
     if allow_unsafe then
-        current_dist = dist_map.map[from_hash]
+        current_dist = dist_map.map[from_pos.hash]
     end
-    local current_safe_dist = dist_map.excluded_map[from_hash]
+    local current_safe_dist = dist_map.excluded_map[from_pos.hash]
 
     if debug_channel("move") then
         local msg = "Determining move from "
@@ -231,7 +230,7 @@ end
 
 function map_has_adjacent_runed_doors_at(pos)
     for apos in adjacent_iter(pos) do
-        local los_pos = position_difference(apos, qw.map_pos)
+        local los_pos = los_position(apos)
         if view.feature_at(los_pos.x, los_pos.y) == "runed_clear_door" then
             return true
         end
@@ -302,7 +301,7 @@ function best_move_towards_safety()
             coroutine.yield()
         end
 
-        local los_pos = position_difference(pos, qw.map_pos)
+        local los_pos = los_position(pos)
         if supdist(pos) <= const.gxm
                 and is_safe_at(los_pos)
                 and map_is_reachable_at(pos, true) then
@@ -318,7 +317,7 @@ function assess_flee_blink_position(map_pos)
         return
     end
 
-    local los_pos = position_difference(map_pos, qw.map_pos)
+    local los_pos = los_position(map_pos)
     if not you.see_cell_no_trans(los_pos.x, los_pos.y)
             or not is_safe_at(los_pos) then
         return
@@ -359,8 +358,7 @@ function best_blink_towards_flee_position()
 end
 
 function distance_map_search_from(search, pos, current)
-    local hash = hash_position(pos)
-    if search.seen[hash] then
+    if search.seen[pos.hash] then
         return false
     end
 
@@ -370,7 +368,7 @@ function distance_map_search_from(search, pos, current)
             .. " to " .. cell_string_from_map_position(pos))
     end
 
-    local cache = search.cache[hash]
+    local cache = search.cache[pos.hash]
     if cache ~= nil then
         if debug_channel("move-all") then
             dsay("Returning cached result for search")
@@ -389,7 +387,7 @@ function distance_map_search_from(search, pos, current)
 
     if search.square_func(pos) then
         table.insert(search.path, pos)
-        search.seen[hash] = true
+        search.seen[pos.hash] = true
         local cur_i = #search.path
 
         if do_distance_map_search(search, pos) then
@@ -397,14 +395,14 @@ function distance_map_search_from(search, pos, current)
             for i = cur_i, #search.path do
                 table.insert(cache, search.path[i])
             end
-            search.cache[hash] = cache
+            search.cache[pos.hash] = cache
 
             return true
         else
             search.path[#search.path] = nil
-            search.seen[hash] = nil
+            search.seen[pos.hash] = nil
 
-            search.cache[hash] = false
+            search.cache[pos.hash] = false
             return false
         end
     end
@@ -413,7 +411,7 @@ function distance_map_search_from(search, pos, current)
         dsay("Square function failed")
     end
 
-    search.cache[hash] = false
+    search.cache[pos.hash] = false
     return false
 end
 
@@ -427,13 +425,13 @@ function do_distance_map_search(search, current)
         return true
     end
 
-    local current_dist = search.map[hash_position(current)]
+    local current_dist = search.map[current.hash]
     if not current_dist then
         return false
     end
 
     for pos in adjacent_iter(current) do
-        local dist = search.map[hash_position(pos)]
+        local dist = search.map[pos.hash]
         if dist and dist < current_dist then
             if distance_map_search_from(search, pos, current) then
                 return true
@@ -464,7 +462,7 @@ function distance_map_search(center, target, square_func, min_dist,
 
     local dist_map = get_distance_map(target)
     local map  = allow_unsafe and dist_map.map or dist_map.excluded_map
-    local dist = map[hash_position(center)]
+    local dist = map[center.hash.hash]
     if not dist then
         return
     end
@@ -472,7 +470,7 @@ function distance_map_search(center, target, square_func, min_dist,
     search = { center = center, target = target, square_func = square_func,
         min_dist = min_dist, allow_unsafe = allow_unsafe, map = map,
         dist = dist, path = { center },
-        seen = { [hash_position(center)] = true } }
+        seen = { [center.hash] = true } }
 
     if cache then
         search.cache = cache

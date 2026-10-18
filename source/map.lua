@@ -1,8 +1,6 @@
 ------------------
 -- Level map data processing
 
-const.gxm = 80
-
 -- For a level's autoexplore state.
 const.autoexplore = enum({
     "needed",
@@ -50,16 +48,13 @@ function update_waypoint(new_level)
         new_waypoint = true
     end
 
-    if not qw.map_pos then
-        qw.map_pos = {}
-    end
-    qw.map_pos.x, qw.map_pos.y = travel.waypoint_delta(waypoint_num)
+    qw.map_pos = new_position(travel.waypoint_delta(waypoint_num))
 
     -- The waypoint can become invalid due to entering a new Portal, a new Pan
     -- level, or due to an Abyss shift, etc.
-    if not qw.map_pos.x then
+    if not qw.map_pos then
         travel.set_waypoint(waypoint_num, 0, 0)
-        qw.map_pos.x, qw.map_pos.y = travel.waypoint_delta(waypoint_num)
+        qw.map_pos = new_position(0, 0)
         new_waypoint = true
     end
 
@@ -115,10 +110,9 @@ function find_features(feats, radius)
                 feature_map_positions[feat] = {}
             end
 
-            local gpos = position_sum(qw.map_pos, pos)
-            local hash = hash_position(gpos)
-            if not feature_map_positions[feat][hash] then
-                feature_map_positions[feat][hash] = gpos
+            local gpos = map_position(pos)
+            if not feature_map_positions[feat][gpos.hash] then
+                feature_map_positions[feat][gpos.hash] = gpos
             end
             table.insert(positions, gpos)
             table.insert(found_feats, feat)
@@ -158,8 +152,8 @@ function find_map_items(item_names, radius)
             for _, it in ipairs(floor_items) do
                 local name = it.name()
                 if searches[name] then
-                    local map_pos = position_sum(qw.map_pos, pos)
-                    item_map_positions[name] = map_pos
+                    local map_pos = map_position(pos)
+                    qw.item_positions[name] = map_pos
                     table.insert(positions, map_pos)
                     table.insert(found_items, name)
 
@@ -178,15 +172,15 @@ function find_map_items(item_names, radius)
 end
 
 function is_traversable_at(pos)
-    return traversal_map[hash_position(position_sum(qw.map_pos, pos))]
+    return map_is_traversable_at(map_position(pos))
 end
 
 function map_is_traversable_at(pos)
-    return traversal_map[hash_position(pos)]
+    return qw.traversable_map[pos.hash]
 end
 
 function map_is_unseen_at(pos)
-    return traversal_map[hash_position(pos)] == nil
+    return qw.traversable_map[pos.hash] == nil
 end
 
 function handle_item_searches(cell)
@@ -215,8 +209,8 @@ function handle_item_searches(cell)
 end
 
 function has_exclusion_center_at(pos)
-    local hash = hash_position(position_sum(qw.map_pos, pos))
-    return c_persist.exclusions[where] and c_persist.exclusions[where][hash]
+    local map_pos = map_position(pos)
+    return c_persist.exclusions[where] and c_persist.exclusions[where][map_pos.hash]
 end
 
 --[[
@@ -225,14 +219,14 @@ Are the given map coordinates unexcluded according to the exclusion map cache?
 @treturn boolean True if coordinates are unexcluded, false otherwise.
 --]]
 function map_is_unexcluded_at(pos)
-    return exclusion_map[hash_position(pos)]
+    return exclusion_map[pos.hash]
 end
 
 function unexcluded_at(pos)
-    return map_is_unexcluded_at(position_sum(qw.map_pos, pos))
+    return map_is_unexcluded_at(map_position(pos))
 end
 
-function update_feature(branch, depth, feat, hash, state)
+function update_feature(branch, depth, feat, pos, state)
     local dir, num = stone_stairs_type(feat)
     if dir then
         update_stone_stairs(branch, depth, dir, num, state)
@@ -240,7 +234,7 @@ function update_feature(branch, depth, feat, hash, state)
     end
 
     if feat == "abyssal_stair" then
-        update_abyssal_stairs(hash, state)
+        update_abyssal_stairs(pos, state)
         return
     end
 
@@ -252,7 +246,7 @@ function update_feature(branch, depth, feat, hash, state)
 
     local dir = escape_hatch_type(feat)
     if dir then
-        update_escape_hatch(branch, depth, dir, hash, state)
+        update_escape_hatch(branch, depth, dir, pos, state)
         return
     end
 
@@ -263,7 +257,7 @@ function update_feature(branch, depth, feat, hash, state)
 
     local god = altar_god(feat)
     if god then
-        update_altar(god, make_level(branch, depth), hash, state)
+        update_altar(god, make_level(branch, depth), pos, state)
         return
     end
 end
@@ -289,7 +283,7 @@ function expire_cell_portal(cell)
         local branch = branch_stairs_type(feat)
         if branch and is_portal_branch(branch) then
             for hash, _ in pairs(positions) do
-                if cell.hash == hash then
+                if cell.pos.hash == hash then
                     remove_portal(where, branch)
                     return
                 end
@@ -310,8 +304,8 @@ function update_cell_feature(cell)
         if not feature_map_positions[cell.feat] then
             feature_map_positions[cell.feat] = {}
         end
-        if not feature_map_positions[cell.feat][cell.hash] then
-            feature_map_positions[cell.feat][cell.hash] = cell.pos
+        if not feature_map_positions[cell.feat][cell.pos.hash] then
+            feature_map_positions[cell.feat][cell.pos.hash] = cell.pos
         end
     end
 
@@ -321,8 +315,8 @@ function update_cell_feature(cell)
 
     local enemies = assess_enemies(const.duration.ignore)
     local feat_state = feature_state(cell.los_pos)
-    update_feature(where_branch, where_depth, cell.feat, cell.hash,
-        { safe = exclusion_map[cell.hash], feat = feat_state,
+    update_feature(where_branch, where_depth, cell.feat, cell.pos,
+        { safe = exclusion_map[cell.pos.hash], feat = feat_state,
             threat = enemies.threat })
 
     if feat_state < const.explore.reachable then
@@ -333,15 +327,15 @@ end
 function update_map_at_cell(cell, queue, seen)
     local map_reset = const.map_select.none
 
-    if seen[cell.hash] then
+    if seen[cell.pos.hash] then
         return map_reset
     end
 
     local map_updated = false
-    local old_traversable = traversal_map[cell.hash]
+    local old_traversable = traversal_map[cell.pos.hash]
     local cur_traversable = feature_is_traversable(cell.feat)
     if old_traversable ~= cur_traversable then
-        traversal_map[cell.hash] = cur_traversable
+        traversal_map[cell.pos.hash] = cur_traversable
         -- A cell went from traversable to untraversable, so any distance maps
         -- need a full reset.
         if old_traversable and not cur_traversable then
@@ -350,12 +344,12 @@ function update_map_at_cell(cell, queue, seen)
         map_updated = true
     end
 
-    local old_unexcluded = exclusion_map[cell.hash]
+    local old_unexcluded = exclusion_map[cell.pos.hash]
     local cur_unexcluded =
         not (view.in_known_map_bounds(cell.los_pos.x, cell.los_pos.y)
             and travel.is_excluded(cell.los_pos.x, cell.los_pos.y))
     if cur_traversable and old_unexcluded ~= cur_unexcluded then
-        exclusion_map[cell.hash] = cur_unexcluded
+        exclusion_map[cell.pos.hash] = cur_unexcluded
         -- A traversable cell went from unexcluded to excluded, so the excluded
         -- maps of all distance maps need a reset.
         if old_unexcluded
@@ -367,7 +361,7 @@ function update_map_at_cell(cell, queue, seen)
     end
 
     update_cell_feature(cell)
-    seen[cell.hash] = true
+    seen[cell.pos.hash] = true
 
     if not map_updated then
         return map_reset
@@ -375,7 +369,7 @@ function update_map_at_cell(cell, queue, seen)
 
     for pos in adjacent_iter(cell.los_pos) do
         local acell = cell_from_position(pos, true)
-        if acell and not seen[acell.hash] then
+        if acell and not seen[acell.pos.hash] then
             table.insert(queue, acell)
         end
     end
@@ -553,8 +547,7 @@ function cell_from_position(pos, no_unseen)
     local cell = {}
     cell.los_pos = pos
     cell.feat = feat
-    cell.pos = position_sum(qw.map_pos, pos)
-    cell.hash = hash_position(cell.pos)
+    cell.pos = map_position(pos)
     return cell
 end
 
@@ -617,11 +610,10 @@ function exclude_at(pos, radius)
         return
     end
 
-    local hash = hash_position(map_position(pos))
     if not c_persist.exclusions[where] then
         c_persist.exclusions[where] = {}
     end
-    c_persist.exclusions[where][hash] = true
+    c_persist.exclusions[where][map_position(pos).hash] = true
 
     travel.set_exclude(pos.x, pos.y, radius)
 end
@@ -640,8 +632,7 @@ function unexclude_at(pos)
     end
 
     travel.del_exclude(pos.x, pos.y)
-    local hash = hash_position(map_position(pos))
-    c_persist.exclusions[where][hash] = nil
+    c_persist.exclusions[where][map_position(pos).hash] = nil
 end
 
 function remove_exclusions(record_only)
@@ -654,7 +645,7 @@ function remove_exclusions(record_only)
     end
 
     for hash, _ in pairs(c_persist.exclusions[where]) do
-        unexclude_at(los_position(pos))
+        unexclude_at(position_from_hash(hash))
     end
 end
 

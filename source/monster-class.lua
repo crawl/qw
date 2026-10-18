@@ -93,7 +93,7 @@ end
 function Monster:map_pos()
     return self:property_memo("map_pos",
         function()
-            return position_sum(qw.map_pos, self:pos())
+            return map_position(self:pos())
         end)
 end
 
@@ -115,8 +115,7 @@ function Monster:can_traverse(pos)
         self.props.traversal_map = prop
     end
 
-    local hash = hash_position(pos)
-    local value = prop[hash]
+    local value = prop[pos.hash]
     if value ~= nil then
         return value
     end
@@ -127,7 +126,7 @@ function Monster:can_traverse(pos)
         value = feat == "closed_door" or feat == "closed_clear_door"
     end
 
-    prop[hash] = value
+    prop[pos.hash] = value
     return value
 end
 
@@ -547,14 +546,13 @@ function Monster:choose_firing_pos(pos)
         self.props.firing_pos = {}
     end
 
-    local hash = hash_position(pos)
-    local value = prop[hash]
+    local value = prop[pos.hash]
     if value ~= nil then
         return value
     end
 
     value = monster_choose_firing_pos(self, pos)
-    prop[hash] = value
+    prop[pos.hash] = value
     return value
 end
 
@@ -632,14 +630,13 @@ function Monster:can_melee_at(pos)
         self.props.can_melee_at = prop
     end
 
-    local hash = hash_position(pos)
-    local value = prop[hash]
+    local value = prop[pos.hash]
     if value ~= nil then
         return value
     end
 
     value = positions_can_melee(self:pos(), pos, self:reach_range())
-    prop[hash] = value
+    prop[pos.hash] = value
     return value
 end
 
@@ -654,8 +651,7 @@ function Monster:melee_square_function(dest_pos)
         self.props.melee_square_function = memo
     end
 
-    local hash = hash_position(dest_pos)
-    local func = memo[hash]
+    local func = memo[dest_pos.hash]
     if func then
         return func
     end
@@ -673,7 +669,7 @@ function Monster:melee_square_function(dest_pos)
         return true
     end
 
-    memo[hash] = func
+    memo[dest_pos.hash] = func
     return func
 end
 
@@ -688,21 +684,19 @@ function Monster:melee_move_search(dest_pos, start_pos)
         self.props.move_search = search_memo
     end
 
-    local dest_hash = hash_position(dest_pos)
-    local dest_memo = search_memo[dest_hash]
+    local dest_memo = search_memo[dest_pos.hash]
     if not dest_memo then
         dest_memo = {}
-        search_memo[dest_hash] = dest_memo
+        search_memo[dest_pos.hash] = dest_memo
     end
 
-    local start_hash = hash_position(start_pos)
-    local value = dest_memo[start_hash]
+    local value = dest_memo[start_pos.hash]
     if value ~= nil then
         return value
     end
 
     if not self:can_seek(true) then
-        dest_memo[start_hash] = false
+        dest_memo[start_pos.hash] = false
         return false
     end
 
@@ -712,7 +706,7 @@ function Monster:melee_move_search(dest_pos, start_pos)
         value = false
     end
 
-    dest_memo[start_hash] = value
+    dest_memo[start_pos.hash] = value
     return value
 end
 
@@ -736,14 +730,13 @@ function Monster:has_line_of_fire(pos)
         self.props.has_line_of_fire = prop
     end
 
-    local hash = hash_position(pos)
-    local value = prop[hash]
+    local value = prop[pos.hash]
     if value ~= nil then
         return value
     end
 
     value = monster_has_line_of_fire_at(self, pos)
-    prop[hash] = value
+    prop[pos.hash] = value
     return value
 end
 
@@ -810,14 +803,13 @@ function Monster:has_line_of_fire(pos)
         self.props.has_line_of_fire = prop
     end
 
-    local hash = hash_position(pos)
-    local value = prop[hash]
+    local value = prop[pos.hash]
     if value ~= nil then
         return value
     end
 
     value = monster_has_line_of_fire_at(self, pos)
-    prop[hash] = value
+    prop[pos.hash] = value
     return value
 end
 

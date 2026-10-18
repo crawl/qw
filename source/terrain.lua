@@ -126,7 +126,7 @@ function trap_is_safe_at(pos)
 end
 
 function is_safe_at(pos, assume_flight)
-    local map_pos = position_sum(qw.map_pos, pos)
+    local map_pos = map_position(pos)
     if not map_is_unexcluded_at(map_pos) then
         return false
     end
@@ -149,17 +149,17 @@ function is_safe_at(pos, assume_flight)
 end
 
 function is_cornerish_at(pos)
-    if is_traversable_at({ x = pos.x + 1, y = pos.y + 1 })
-            or is_traversable_at({ x = pos.x + 1, y = pos.y - 1 })
-            or is_traversable_at({ x = pos.x - 1, y = pos.y + 1 })
-            or is_traversable_at({ x = pos.x - 1, y = pos.y - 1 }) then
+    if is_traversable_at(position_coord_sum(pos, 1, 1))
+            or is_traversable_at(position_coord_sum(pos, 1, -1))
+            or is_traversable_at(position_coord_sum(pos, -1, 1))
+            or is_traversable_at(position_coord_sum(pos, -1, -1)) then
         return false
     end
 
-    return (is_traversable_at({ x = pos.x + 1, y = pos.y })
-            or is_traversable_at({ x = pos.x - 1, y = pos.y }))
-        and (is_traversable_at({ x = pos.x, y = pos.y + 1 })
-            or is_traversable_at({ x = pos.x, y = pos.y - 1 }))
+    return (is_traversable_at(position_coord_sum(pos, 1, 0))
+            or is_traversable_at(position_coord_sum(pos, -1, 0)))
+        and (is_traversable_at(position_coord_sum(pos, 0, 1))
+            or is_traversable_at(position_coord_sum(pos, 0, -1)))
 end
 
 function is_adjacent_solid_wall_at(pos)

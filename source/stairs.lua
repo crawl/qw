@@ -293,7 +293,7 @@ function update_branch_stairs(branch, depth, dest_branch, dir, state, force)
     qw.want_goal_update = true
 end
 
-function update_escape_hatch(branch, depth, dir, hash, state, force)
+function update_escape_hatch(branch, depth, dir, pos, state, force)
     if state.safe == nil and not state.feat and not state.threat then
         error("Undefined escape hatch state.")
     end
@@ -310,11 +310,11 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
         data[level] = {}
     end
 
-    local current = data[level][hash]
+    local current = data[level][pos.hash]
     if not current then
         current = {}
         cleanup_feature_state(current)
-        data[level][hash] = current
+        data[level][pos.hash] = current
     end
 
     if state.safe == nil then
@@ -337,7 +337,7 @@ function update_escape_hatch(branch, depth, dir, hash, state, force)
 
     if debug_channel("map") then
         dsay("Updating escape hatch " .. " on " .. level .. " at "
-            .. cell_string_from_map_position(unhash_position(hash))
+            .. cell_string_from_map_position(pos)
             .. " from " .. stairs_state_string(current) .. " to "
             .. stairs_state_string(state))
     end
@@ -349,25 +349,25 @@ end
 
 function get_map_escape_hatch(branch, depth, pos)
     local level = make_level(branch, depth)
-    local hash = hash_position(pos)
-    if c_persist.up_hatches[level] and c_persist.up_hatches[level][hash] then
-        return c_persist.up_hatches[level][hash]
+    if c_persist.up_hatches[level]
+            and c_persist.up_hatches[level][pos.hash] then
+        return c_persist.up_hatches[level][pos.hash]
     elseif c_persist.down_hatches[level]
-            and c_persist.down_hatches[level][hash] then
-        return c_persist.down_hatches[level][hash]
+            and c_persist.down_hatches[level][pos.hash] then
+        return c_persist.down_hatches[level][pos.hash]
     end
 end
 
-function update_pan_transit(hash, state, force)
+function update_pan_transit(pos, state, force)
     if state.safe == nil and not state.feat and not state.threat then
         error("Undefined Pan transit state.")
     end
 
-    local current = c_persist.pan_transits[hash]
+    local current = c_persist.pan_transits[pos.hash]
     if not current then
         current = {}
         cleanup_feature_state(current)
-        c_persist.pan_transits[hash] = current
+        c_persist.pan_transits[pos.hash] = current
     end
 
     if state.safe == nil then
@@ -390,7 +390,7 @@ function update_pan_transit(hash, state, force)
 
     if debug_channel("map") then
         dsay("Updating Pan transit at "
-            .. los_pos_string(unhash_position(hash)) .. " from "
+            .. cell_string_from_map_position(pos) .. " from "
             .. stairs_state_string(current) .. " to "
             .. stairs_state_string(state))
     end
@@ -401,19 +401,19 @@ function update_pan_transit(hash, state, force)
 end
 
 function get_map_pan_transit(pos)
-    return c_persist.pan_transits[hash_position(pos)]
+    return c_persist.pan_transits[pos.hash]
 end
 
-function update_abyssal_stairs(hash, state, force)
+function update_abyssal_stairs(pos, state, force)
     if state.safe == nil and not state.feat and not state.threat then
         error("Undefined Abyssal stairs state.")
     end
 
-    local current = c_persist.abyssal_stairs[hash]
+    local current = c_persist.abyssal_stairs[pos.hash]
     if not current then
         current = {}
         cleanup_feature_state(current)
-        c_persist.abyssal_stairs[hash] = current
+        c_persist.abyssal_stairs[pos.hash] = current
     end
 
     if state.safe == nil then
@@ -436,7 +436,7 @@ function update_abyssal_stairs(hash, state, force)
 
     if debug_channel("map") then
         dsay("Updating Abyssal stairs at "
-            .. los_pos_string(unhash_position(hash)) .. " from "
+            .. cell_string_from_map_position(pos) .. " from "
             .. stairs_state_string(current) .. " to "
             .. stairs_state_string(state))
     end
@@ -449,7 +449,7 @@ function update_abyssal_stairs(hash, state, force)
 end
 
 function get_map_abyssal_stairs(pos)
-    return c_persist.abyssal_stairs[hash_position(pos)]
+    return c_persist.abyssal_stairs[pos.hash]
 end
 
 function get_branch_stairs(branch, depth, stairs_branch, dir)

@@ -334,7 +334,7 @@ function travel_safe_stairs(result)
     end
 
     if best_hash then
-        result.safe_hatch = best_hash
+        result.safe_hatch_pos = position_from_hash(best_hash)
     elseif best_stairs then
         result.safe_stairs = best_stairs
     else
@@ -583,7 +583,7 @@ function update_goal_travel()
     -- leave the level before it's completely explored.
     disable_autoexplore = (goal_travel.stairs_dir
             or goal_travel.safe_stairs
-            or goal_travel.safe_hatch
+            or goal_travel.safe_hatch_pos
             or goal_travel.want_go
             or goal_travel.want_stash)
         and goal_reachable
@@ -613,9 +613,9 @@ function update_goal_travel()
         elseif goal_travel.safe_stairs then
             dsay("Taking specific stairs for safety: "
                 .. goal_travel.safe_stairs)
-        elseif goal_travel.safe_hatch then
+        elseif goal_travel.safe_hatch_pos then
             dsay("Taking hatch on destination level for safety at "
-                .. pos_string(unhash_position(goal_travel.safe_hatch)))
+                .. cell_string_from_map_position(goal_travel.safe_hatch_pos))
         end
 
         if goal_travel.first_dir then
