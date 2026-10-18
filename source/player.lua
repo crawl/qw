@@ -1,7 +1,7 @@
 -----------------------------------------
 -- Player functions and data
 
-const.duration = {
+const.duration = enum({
     -- Ignore this duration.
     "ignore",
     -- Ignore this duration if it's a buff.
@@ -12,7 +12,7 @@ const.duration = {
     "active",
     -- We can get this duration or it's currently active.
     "available",
-}
+})
 
 function initialize_player_durations()
     const.player_durations = {

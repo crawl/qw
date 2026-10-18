@@ -1,7 +1,7 @@
 -----------------------------------------
 -- Attack setup and evaluation
 
-const.attack = { "melee", "launcher", "throw", "evoke" }
+const.attack = enum({ "melee", "launcher", "throw", "evoke" })
 
 -- Is the result from an attack on the first target better than the current
 -- best result?

@@ -1,14 +1,9 @@
 ------------------------
--- Global variables. This file declares shared variables as local to the scope
--- of the final qw lua source file.
+-- Global variables and functions that need early definition.
+-- This file declares shared variables as local to the scope of
+-- the final qw lua source file.
 
--- All constants go in this table.
-local const = {}
-
--- Plan functions. These must later be initialized as cascades.
-local plans = {}
-
--- All variables past this point are qw state.
+-- The main qw table.
 local qw = {}
 
 local branch_data = {}
@@ -86,3 +81,19 @@ local clear_exclusion_count = {}
 local vaults_end_entry_turn
 local tomb2_entry_turn
 local tomb3_entry_turn
+
+-- Define a table of enum values.
+function enum(tbl)
+    local e = {}
+    for i, val in ipairs(tbl) do
+        e[val] = i - 1
+    end
+
+    return e
+end
+
+-- All constants go in this table.
+local const = {}
+
+-- Plan functions. These must later be initialized as cascades.
+local plans = {}

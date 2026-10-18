@@ -3,7 +3,7 @@
 # A bash script to combine qu lua from the qw git repo.
 
 rc_file=
-first_lua_file="variables.lua"
+first_lua_file="header.lua"
 lua_dir="source"
 version=$(git describe)
 lua_out_file="qw.lua"

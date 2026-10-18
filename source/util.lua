@@ -1,15 +1,6 @@
 --------------------
 -- Utility functions
 
-function enum(tbl)
-    local e = {}
-    for i = 0, #tbl - 1 do
-        e[tbl[i + 1]] = i
-    end
-
-    return e
-end
-
 function enum_string(val, tbl)
     for k, v in pairs(tbl) do
         if v == val then

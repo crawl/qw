@@ -19,7 +19,7 @@ const.all_equip_names = { weapon="Weapon", shield="Shield", body="Body Armour", 
 const.upgrade_slots = { "body", "helmet", "cloak", "gloves", "boots", "amulet",
     "ring" }
 
-const.inventory = { "all", "value", "equipped" }
+const.inventory = enum({ "all", "value", "equipped" })
 
 const.missile_delays = { dart=10, boomerang=13, javelin=15, ["large rock"]=20 }
 

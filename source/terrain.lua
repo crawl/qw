@@ -2,13 +2,13 @@
 -- Terrain data and functions.
 
 -- Feature exploration state enum
-const.explore = {
+const.explore = enum({
     "none",
     "seen",
     "diggable",
     "reachable",
     "explored",
-}
+})
 
 function get_feature_name(where_name)
     for _, value in ipairs(portal_data) do

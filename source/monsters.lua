@@ -3,13 +3,13 @@
 
 const.pan_lord_type = 344
 
-const.attitude = {
+const.attitude = enum({
     "hostile",
     "neutral",
     "strict_neutral",
     "peaceful",
     "friendly"
-}
+})
 
 function moderate_threat_level()
     return 2

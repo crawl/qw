@@ -1,18 +1,16 @@
 ------------------
 -- Level map data processing
 
--- Maximum map width. We use this as a general map radius that's guaranteed to
--- reach the entire map, since qw is never given absolute coordinates by crawl.
 const.gxm = 80
 
--- Autoexplore state enum.
-const.autoexplore = {
+-- For a level's autoexplore state.
+const.autoexplore = enum({
     "needed",
     "partial",
     "transporter",
     "runed_door",
     "full",
-}
+})
 
 const.map_select = {
     "none",

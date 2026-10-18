@@ -99,18 +99,7 @@ function initialize_rc_variables()
     qw.enable_profiling = ENABLE_PROFILING
 end
 
-function initialize_enums()
-    const.autoexplore = enum(const.autoexplore)
-    const.explore = enum(const.explore)
-    const.map_select = enum(const.map_select)
-    const.attitude = enum(const.attitude)
-    const.duration = enum(const.duration)
-    const.inventory = enum(const.inventory)
-    const.attack = enum(const.attack)
-end
-
 function initialize_const()
-    initialize_enums()
     initialize_player_durations()
     initialize_ego_damage()
 end

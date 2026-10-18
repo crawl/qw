@@ -1,6 +1,15 @@
 ----------------------
 -- Distance map updates to the level map data.
 
+const.move = enum({
+    "traversable",
+    "safe_terrain",
+    "safe",
+    "retreat",
+    "flee",
+    "kiting",
+})
+
 function distance_map_remove(dist_map)
     if debug_channel("map") then
         dsay("Removing " .. (permanent and "permanent" or "temporary")
