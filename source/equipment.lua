@@ -780,13 +780,14 @@ function unequip_item(item, slot)
         return false
     end
 
-    local verb = "REMOVING"
-    local key = "T"
-    if slot == "ring" or slot == "amulet" then
-        key = "R"
+    say("REMOVING " .. item.name())
+    if slot == "weapon" then
+        magic("w-")
+    elseif slot == "ring" or slot == "amulet" then
+        magic("R" .. item_letter(item))
+    else
+        magic("T" .. item_letter(item))
     end
-    say(verb .. " " .. item.name())
-    magic(key .. item_letter(item))
     return true
 end
 

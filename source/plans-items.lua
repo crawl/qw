@@ -521,9 +521,10 @@ function want_drop_item(item)
         return true
     end
 
+    -- An equipped item is dropped after the upgrade plan replaces it.
     return equip_slot(item)
+        and not item.equipped
         and equip_is_dominated(item)
-        and (not item.equipped or can_swap_item(item, true))
 end
 
 function plan_drop_items()
