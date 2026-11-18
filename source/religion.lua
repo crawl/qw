@@ -284,11 +284,9 @@ function can_recall()
             and can_invoke()
 end
 
+-- Yredelemnul's 0.31 rework removed Drain Life.
 function can_drain_life()
-    return you.god() == "Yredelemnul"
-        and you.piety_rank() >= 4
-        and can_use_mp(6)
-        and can_invoke()
+    return false
 end
 
 function can_recall_ancestor()
@@ -347,11 +345,10 @@ function can_grand_finale()
         and can_invoke()
 end
 
+-- Makhleb's 0.32 rework replaced Summon Greater Servant and Major
+-- Destruction with abilities qw doesn't use yet.
 function can_greater_servant()
-    return you.god() == "Makhleb"
-        and you.piety_rank() >= 5
-        and you.hp() > 10
-        and can_invoke()
+    return false
 end
 
 function can_cleansing_flame(ignore_mp)
@@ -369,10 +366,7 @@ function can_divine_warrior(ignore_mp)
 end
 
 function can_destruction()
-    return you.god() == "Makhleb"
-        and you.hp() > 6
-        and you.piety_rank() >= 4
-        and can_invoke()
+    return false
 end
 
 function can_fiery_armour()

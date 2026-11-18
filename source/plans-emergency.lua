@@ -32,7 +32,7 @@ function use_ru_healing()
 end
 
 function use_ely_healing()
-    use_ability("Greater Healing")
+    use_ability("Heal Self")
 end
 
 function use_purification()
@@ -387,9 +387,9 @@ end
 function plan_recall()
     if can_recall() and want_to_recall() then
         if you.god() == "Yredelemnul" then
-            use_ability("Recall Undead Slaves", "", true)
+            use_ability("Recall Undead Harvest", "", true)
         else
-            use_ability("Recall Orcish Followers", "", true)
+            use_ability("Recall Apostles", "", true)
         end
     end
 
