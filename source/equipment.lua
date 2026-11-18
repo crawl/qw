@@ -7,14 +7,18 @@ const.acquire = { scroll = 1, okawaru_weapon = 2, okawaru_armour = 3,
 -- A table mapping of armour slots. Used for iteration and to map simple slot
 -- names to the full name needed by the items library.
 const.armour_slots = { "shield", "body", "cloak", "helmet", "gloves", "boots" }
-const.armour_equip_names = { shield="Shield", body="Body Armour", cloak="Cloak",
+const.armour_equip_names = { shield="Offhand", body="Body Armour", cloak="Cloak",
     helmet="Helmet", gloves="Gloves", boots="Boots" }
 
 
 const.all_slots = { "weapon", "shield", "body", "helmet", "cloak", "gloves",
     "boots", "amulet", "ring", "gizmo" }
-const.all_equip_names = { weapon="Weapon", shield="Shield", body="Body Armour", cloak="Cloak",
+const.all_equip_names = { weapon="Weapon", shield="Offhand", body="Body Armour", cloak="Cloak",
     helmet="Helmet", gloves="Gloves", boots="Boots", amulet="Amulet", gizmo="Gizmo" }
+
+-- Armour subtype() names that differ from our slot names. Bardings use the
+-- boots slot for our purposes.
+const.armour_subtype_slots = { offhand = "shield", barding = "boots" }
 
 const.upgrade_slots = { "body", "helmet", "cloak", "gloves", "boots", "amulet",
     "ring" }
@@ -30,6 +34,10 @@ function get_slot_item_func(slot, allow_melded)
     end
 
     local item = items.equipped_at(slot_name)
+    if not item and slot == "boots" then
+        item = items.equipped_at("Barding")
+    end
+
     if not item
             or item.is_melded and not allow_melded
             or equip_slot(item) ~= slot then
@@ -60,7 +68,8 @@ function equip_slot(item)
     if class == "weapon" then
         return "weapon"
     elseif class == "armour" then
-        return item.subtype()
+        local slot = item.subtype()
+        return const.armour_subtype_slots[slot] or slot
     elseif class == "jewellery" then
         local sub = item.subtype()
         if sub and sub:find("amulet")
