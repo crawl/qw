@@ -353,7 +353,7 @@ function can_read()
     return not (you.berserk()
         or you.confused()
         or you.silenced()
-        or you.status("engulfed (cannot breathe)")
+        or you.status("flooded lungs")
         or you.status("unable to read"))
 end
 
@@ -384,7 +384,7 @@ end
 function can_use_altars()
     return not (you.berserk()
         or you.silenced()
-        or you.status("engulfed (cannot breathe)"))
+        or you.status("flooded lungs"))
 end
 
 function can_invoke()
@@ -392,7 +392,7 @@ function can_invoke()
         or you.confused()
         or you.silenced()
         or you.under_penance(you.god())
-        or you.status("engulfed (cannot breathe)"))
+        or you.status("flooded lungs"))
 end
 
 function can_berserk()
@@ -510,7 +510,9 @@ function unable_to_move()
     return turn_memo("unable_to_move",
         function()
             local form = you.transform()
-            return form == "tree" or form == "fungus" and qw.danger_in_los
+            return you.status("immotile")
+                or form == "tree"
+                or form == "fungus" and qw.danger_in_los
         end)
 end
 
