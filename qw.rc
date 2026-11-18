@@ -199,6 +199,15 @@ autopickup_exceptions =
 # Which debug message channels to output.
 : DEBUG_CHANNELS = { "goals", "plans" }
 
+# Debug channels whose messages are prefixed with a stack trace.
+: DEBUG_TRACE_CHANNELS = { }
+
+# Enable profiling at startup.
+: ENABLE_PROFILING = false
+
+# Test scenarios for start_scenario(), keyed by name.
+: SCENARIOS = { }
+
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false
 
