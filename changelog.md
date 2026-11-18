@@ -10,6 +10,8 @@ Several clua functions it relies on were added or renamed in 0.33 and 0.34.
 * The split gear and consumable inventory. Only gear counts toward the
   52-item limit, and items are dropped with `item.drop()`.
 * Renamed slots, abilities, mutations, spells, and rc options.
+* New confirmation prompts for equipping items and for changing equipment
+  with monsters nearby, and the "quit" confirmation for the `Quit` goal.
 * Makhleb's servant and destruction abilities and Yredelemnul's Drain Life
   are disabled, since those abilities no longer exist.
 
@@ -17,6 +19,11 @@ Several clua functions it relies on were added or renamed in 0.33 and 0.34.
 * Berserk is used again; a precedence bug had disabled it since 05af909.
 * Starting spells are cast again; a reversed MP check had disabled them
   since 152fbe2.
+* qw could step back and forth forever at the edge of an excluded area,
+  because safe and unsafe move distances were compared; a regression from
+  41d260f.
+* The drop plan no longer tries to drop equipped items, which made it fight
+  the upgrade plan, and weapons are unwielded with `w-` instead of `T`.
 * Plans that referenced undefined functions or variables, including Trog's
   Hand for poison and potions of might.
 * `make-qw.sh` works with the bash 3.2 that macOS ships.
