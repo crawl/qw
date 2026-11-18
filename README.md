@@ -24,9 +24,10 @@ doc](docs/debugging.md) for help with debugging.
 
 ## Running qw
 
-To run qw, you'll need a local build of crawl, or your own crawl WebTiles or
-dgamelaunch server with an appropriate build available. qw needs substantially
-more memory than the 16MB clua limit. Additionally,
+This version of qw supports DCSS 0.34. To run qw, you'll need a local build of
+crawl, or your own crawl WebTiles or dgamelaunch server with an appropriate
+build available. qw needs substantially more memory than the 16MB clua limit.
+Additionally,
 because qw is computationally demanding even with an action delay, it needs to
 run without the lua throttle enabled. For local play, the recommended arguments
 are `-lua-max-memory 128`, and if you're running qw through a WebTiles or
