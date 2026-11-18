@@ -196,7 +196,7 @@ function plan_move_towards_travel_feature()
     if goal_travel.safe_hatch_pos and not goal_travel.want_go then
         local result = best_move_towards(goal_travel.safe_hatch_pos)
         if result then
-            return move_towards_destination(result.move, result.des, "goal")
+            return move_towards_destination(result.move, result.dest_pos, "goal")
         end
 
         return false
