@@ -37,6 +37,8 @@ function c_answer_prompt(prompt)
                 or prompt:find("disrobing")
                 or prompt:find("equipping")) then
         return false
+    elseif prompt:find("Spend multiple turns changing equipment") then
+        return true
     elseif prompt:find("Have to go through") then
         return true
     elseif prompt:find("transient mutations") then
