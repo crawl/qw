@@ -739,6 +739,13 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
 end
 
 function equip_item(item, slot, keep_items)
+    -- The best equipment set is cached, and an item in it can become
+    -- unusable, e.g. a helmet after a mutation.
+    if item.is_useless then
+        reset_best_equip()
+        return false
+    end
+
     local dest_letter = equip_letter_for_item(item, slot, keep_items, true)
     if not dest_letter then
         return false
