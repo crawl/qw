@@ -412,7 +412,7 @@ function max_property_value(prop, level)
     elseif prop == "Clar" then
         return you.race() == "Mummy" and 100 or 20
     elseif prop == "Rampage" then
-        return using_range_weapon() and 0 or 20
+        return using_ranged_weapon() and 0 or 20
     elseif prop == "Harm" then
         return -500
     elseif prop == "Ponderous" then

@@ -12,7 +12,7 @@ function plan_cure_poison()
     end
 
     if can_trogs_hand() then
-        trogs_hand()
+        use_ability("Trog's Hand")
         return true
     end
 
@@ -45,8 +45,6 @@ function should_rest()
 
     return you.berserk()
         or qw.turns < hiding_turn_count + 10
-        or you.god() == "Makhleb"
-            and qw.turns <= hostile_servants_timer + 100
         or reason_to_rest(99.9)
 end
 

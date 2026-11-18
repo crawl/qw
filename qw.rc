@@ -140,10 +140,8 @@ equip_unequip = true
 dump_order = header,hiscore,stats,misc,mutations,skills,spells,inventory
 dump_order += overview,messages,screenshot,monlist,kills,notes,vaults
 dump_order += skill_gains,action_counts,xp_by_level
-ood_interesting = 6
 note_hp_percent = 25
 note_skill_levels = 1,3,6,9,12,15,18,21,24,27
-note_all_spells = true
 
 fire_order = launcher, rock, javelin, boomerang
 
@@ -160,8 +158,6 @@ ignore := runrest_ignore_message
 stop =
 ignore =
 ignore += .*
-
-runrest_ignore_poison = 3:15
 
 # These keys are useful to answer prompts and aren't critical for manual play.
 bindkey = [Y] CMD_NO_CMD_DEFAULT
@@ -198,6 +194,15 @@ autopickup_exceptions =
 
 # Which debug message channels to output.
 : DEBUG_CHANNELS = { "goals", "plans" }
+
+# Debug channels whose messages are prefixed with a stack trace.
+: DEBUG_TRACE_CHANNELS = { }
+
+# Enable profiling at startup.
+: ENABLE_PROFILING = false
+
+# Test scenarios for start_scenario(), keyed by name.
+: SCENARIOS = { }
 
 # Tab just takes a single action (for testing).
 : SINGLE_STEP = false

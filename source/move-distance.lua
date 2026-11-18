@@ -462,7 +462,7 @@ function move_path(move_type, to_pos, melee_range, from_pos)
         dsayf("%s move search from %s%s",
             distance_map_description(dist_map),
             cell_string_from_map_position(to_pos),
-            want_melee and (" with melee range" .. melee_range) or "")
+            melee_range and (" with melee range " .. melee_range) or "")
     end
 
     local best_pos

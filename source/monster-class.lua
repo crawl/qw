@@ -434,7 +434,7 @@ function Monster:hp_fraction()
 end
 
 function Monster:_hp()
-    local hp = tonumber(self.minfo:max_hp():gsub(".-(%d+).*", "%1"))
+    local hp = tonumber((self.minfo:max_hp():gsub(".-(%d+).*", "%1")))
     return hp * self:hp_fraction()
 end
 

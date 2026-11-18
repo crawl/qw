@@ -196,7 +196,7 @@ function plan_move_towards_travel_feature()
     if goal_travel.safe_hatch_pos and not goal_travel.want_go then
         local result = best_move_towards(goal_travel.safe_hatch_pos)
         if result then
-            return move_towards_destination(result.move, result.des, "goal")
+            return move_towards_destination(result.move, result.dest_pos, "goal")
         end
 
         return false
@@ -226,7 +226,7 @@ function plan_move_towards_travel_feature()
     if c_persist.altars[god] and c_persist.altars[god][where] then
         for hash, state in pairs(c_persist.altars[god][where]) do
             if state.explore > const.explore.seen then
-                update_altar_state(god, branch, depth,
+                update_altar_state(god, where_branch, where_depth,
                     position_from_hash(hash), { explore = const.explore.seen },
                     true)
                 qw.restart_cascade = true

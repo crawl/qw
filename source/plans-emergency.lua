@@ -32,7 +32,7 @@ function use_ru_healing()
 end
 
 function use_ely_healing()
-    use_ability("Greater Healing")
+    use_ability("Heal Self")
 end
 
 function use_purification()
@@ -387,9 +387,9 @@ end
 function plan_recall()
     if can_recall() and want_to_recall() then
         if you.god() == "Yredelemnul" then
-            use_ability("Recall Undead Slaves", "", true)
+            use_ability("Recall Undead Harvest", "", true)
         else
-            use_ability("Recall Orcish Followers", "", true)
+            use_ability("Recall Apostles", "", true)
         end
     end
 
@@ -696,7 +696,7 @@ function want_to_trogs_hand()
     local hp, mhp = you.hp()
     return in_branch("Abyss") and mhp - hp >= 30
         or not dangerous_to_attack()
-            and check_enemies_in_list(qw.los_radius, hand_monsters)
+            and check_trogs_hand_enemies(qw.los_radius)
 end
 
 function want_to_berserk()
@@ -820,7 +820,7 @@ function plan_full_inventory_panic()
         return false
     end
 
-    if qw_full_inventory_panic and free_inventory_slots() == 0 then
+    if qw.full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
     else
         return false
@@ -927,7 +927,7 @@ function plan_tomb2_arrival()
     end
 
     if not you.hasted() then
-        return haste()
+        return drink_by_name("haste")
     elseif not you.status("attractive") then
         if drink_by_name("attraction") then
             c_persist.did_tomb2_buff = true
@@ -946,7 +946,7 @@ function plan_tomb3_arrival()
     end
 
     if not you.hasted() then
-        return haste()
+        return drink_by_name("haste")
     elseif not you.status("attractive") then
         if drink_by_name("attraction") then
             c_persist.did_tomb3_buff = true

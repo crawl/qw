@@ -68,7 +68,7 @@ function intrinsic_rpois()
 end
 
 function intrinsic_relec()
-    return sp == "Gargoyle"
+    return you.race() == "Gargoyle"
 end
 
 function intrinsic_sinv()
@@ -359,7 +359,7 @@ function can_read()
     return not (you.berserk()
         or you.confused()
         or you.silenced()
-        or you.status("engulfed (cannot breathe)")
+        or you.status("flooded lungs")
         or you.status("unable to read"))
 end
 
@@ -399,7 +399,7 @@ end
 function can_use_altars()
     return not (you.berserk()
         or you.silenced()
-        or you.status("engulfed (cannot breathe)"))
+        or you.status("flooded lungs"))
 end
 
 function can_invoke()
@@ -407,7 +407,7 @@ function can_invoke()
         or you.confused()
         or you.silenced()
         or you.under_penance(you.god())
-        or you.status("engulfed (cannot breathe)"))
+        or you.status("flooded lungs"))
 end
 
 function can_berserk()
@@ -416,7 +416,7 @@ function can_berserk()
         and you.race() ~= "Formicid"
         and not you.mesmerised()
         and not you.status("afraid")
-        and not you.transform() == "lich"
+        and you.transform() ~= "death"
         and not you.status("on berserk cooldown")
         and you.god() == "Trog"
         and you.piety_rank() >= 1

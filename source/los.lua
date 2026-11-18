@@ -252,6 +252,6 @@ function cell_see_cell(a, b, los_type)
     return turn_memo_args(cell_see_cell_func, a, b, los_type)
 end
 
-function map_cell_see_cell(a, b)
+function map_cell_see_cell(a, b, los_type)
     return cell_see_cell(los_position(a), los_position(b), los_type)
 end

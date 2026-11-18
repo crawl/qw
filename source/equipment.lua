@@ -7,14 +7,18 @@ const.acquire = { scroll = 1, okawaru_weapon = 2, okawaru_armour = 3,
 -- A table mapping of armour slots. Used for iteration and to map simple slot
 -- names to the full name needed by the items library.
 const.armour_slots = { "shield", "body", "cloak", "helmet", "gloves", "boots" }
-const.armour_equip_names = { shield="Shield", body="Body Armour", cloak="Cloak",
+const.armour_equip_names = { shield="Offhand", body="Body Armour", cloak="Cloak",
     helmet="Helmet", gloves="Gloves", boots="Boots" }
 
 
 const.all_slots = { "weapon", "shield", "body", "helmet", "cloak", "gloves",
     "boots", "amulet", "ring", "gizmo" }
-const.all_equip_names = { weapon="Weapon", shield="Shield", body="Body Armour", cloak="Cloak",
+const.all_equip_names = { weapon="Weapon", shield="Offhand", body="Body Armour", cloak="Cloak",
     helmet="Helmet", gloves="Gloves", boots="Boots", amulet="Amulet", gizmo="Gizmo" }
+
+-- Armour subtype() names that differ from our slot names. Bardings use the
+-- boots slot for our purposes.
+const.armour_subtype_slots = { offhand = "shield", barding = "boots" }
 
 const.upgrade_slots = { "body", "helmet", "cloak", "gloves", "boots", "amulet",
     "ring" }
@@ -30,6 +34,10 @@ function get_slot_item_func(slot, allow_melded)
     end
 
     local item = items.equipped_at(slot_name)
+    if not item and slot == "boots" then
+        item = items.equipped_at("Barding")
+    end
+
     if not item
             or item.is_melded and not allow_melded
             or equip_slot(item) ~= slot then
@@ -60,7 +68,8 @@ function equip_slot(item)
     if class == "weapon" then
         return "weapon"
     elseif class == "armour" then
-        return item.subtype()
+        local slot = item.subtype()
+        return const.armour_subtype_slots[slot] or slot
     elseif class == "jewellery" then
         local sub = item.subtype()
         if sub and sub:find("amulet")
@@ -259,7 +268,7 @@ function weapon_delay(weapon, duration_level, ignored_duration)
     if have_duration("finesse", duration_level, ignored_duration) then
         delay = delay / 2
     elseif not weapon.is_ranged
-            and not weapon.class(true) == "missile"
+            and weapon.class(true) ~= "missile"
             and have_duration("berserk", duration_level, ignored_duration) then
         delay = delay * 2 / 3
     elseif have_duration("haste", duration_level, ignored_duration) then
@@ -731,14 +740,28 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
         return
     end
 
+    -- A Coglin's second hand holds either a weapon or a shield, so both
+    -- count toward its two hands.
+    local slots = { slot }
     local max_items = slot_max_items(slot)
-    if max_items == 1
-            or not cur_equip[slot]
-            or #cur_equip[slot] < max_items then
+    if you.race() == "Coglin" and (slot == "weapon" or slot == "shield") then
+        slots = { "weapon", "shield" }
+        max_items = 2
+    end
+
+    if max_items == 1 then
         return ""
     end
 
-    for slot_item in equipped_slot_iter(slot) do
+    local num_items = 0
+    for _ in equipped_slots_iter(slots) do
+        num_items = num_items + 1
+    end
+    if num_items < max_items then
+        return ""
+    end
+
+    for _, slot_item in equipped_slots_iter(slots) do
         if not item_in_equip_set(slot_item, keep_items)
                 and can_swap_item(slot_item, upgrade) then
             return item_letter(slot_item)
@@ -747,6 +770,13 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
 end
 
 function equip_item(item, slot, keep_items)
+    -- The best equipment set is cached, and an item in it can become
+    -- unusable, e.g. a helmet after a mutation.
+    if item.is_useless then
+        reset_best_equip()
+        return false
+    end
+
     local dest_letter = equip_letter_for_item(item, slot, keep_items, true)
     if not dest_letter then
         return false
@@ -771,13 +801,14 @@ function unequip_item(item, slot)
         return false
     end
 
-    local verb = "REMOVING"
-    local key = "T"
-    if slot == "ring" or slot == "amulet" then
-        key = "R"
+    say("REMOVING " .. item.name())
+    if slot == "weapon" then
+        magic("w-")
+    elseif slot == "ring" or slot == "amulet" then
+        magic("R" .. item_letter(item))
+    else
+        magic("T" .. item_letter(item))
     end
-    say(verb .. " " .. item.name())
-    magic(key .. item_letter(item))
     return true
 end
 

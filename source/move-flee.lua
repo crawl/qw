@@ -36,6 +36,7 @@ function get_flee_positions()
             goto continue
         end
 
+        local dist = move_distance(const.move.flee, pos, qw.map_pos)
         if not best_dist or dist < best_dist then
             qw.flee_positions = { pos }
             best_dist = dist

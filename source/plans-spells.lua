@@ -3,8 +3,9 @@ function get_starting_spell()
         return
     end
 
-    local spell_list = { "Foxfire", "Freeze", "Magic Dart", "Necrotise", "Sandblast",
-        "Shock", "Sting", "Summon Small Mammal" }
+    local spell_list = { "Foxfire", "Freeze", "Magic Dart",
+        "Poisonous Vapours", "Sandblast", "Shock", "Soul Splinter",
+        "Summon Small Mammal" }
     for _, sp in ipairs(spell_list) do
         if spells.memorised(sp) and spells.fail(sp) <= 25 then
             return sp
@@ -29,7 +30,7 @@ function spell_castable(sp)
             or you.confused()
             or you.berserk()
             or in_bad_form()
-            or can_use_mp(spells.mana_cost(sp)) then
+            or not can_use_mp(spells.mana_cost(sp)) then
         return false
     end
 
