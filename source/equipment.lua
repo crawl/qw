@@ -702,6 +702,7 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
         return
     end
 
+    local feat = view.feature_at(0, 0)
     if slot == "boots"
             and you.mutation("mertail") > 0
             and (feat == "shallow_water" or feat == "deep_water") then

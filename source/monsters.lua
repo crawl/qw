@@ -490,7 +490,7 @@ end
 
 function assess_hell_enemies(radius)
     if not in_hell_branch() then
-        return { threat = 0, ranged_threat, count = 0 }
+        return { threat = 0, ranged_threat = 0, count = 0 }
     end
 
     -- We're most concerned with hell monsters that aren't vulnerable to any

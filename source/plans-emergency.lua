@@ -310,7 +310,7 @@ function plan_blinking()
     end
     if best_count >= cur_count + 2 then
         local scroll = find_item("scroll", "blinking")
-        return read_scroll(scroll,  vector_move(best_x, best_y) .. ".")
+        return read_scroll(scroll,  vector_move(best_pos) .. ".")
     end
     return false
 end
@@ -388,7 +388,7 @@ function can_might()
 end
 
 function want_to_might()
-    if not danger
+    if not qw.danger_in_los
             or dangerous_to_attack()
             or you.mighty()
             or you.teleporting()
@@ -860,7 +860,7 @@ function plan_full_inventory_panic()
         return false
     end
 
-    if qw_full_inventory_panic and free_inventory_slots() == 0 then
+    if qw.full_inventory_panic and free_inventory_slots() == 0 then
         panic("Inventory is full!")
     else
         return false
@@ -974,7 +974,7 @@ function plan_tomb2_arrival()
     end
 
     if not you.hasted() then
-        return haste()
+        return drink_by_name("haste")
     elseif not you.status("attractive") then
         if drink_by_name("attraction") then
             c_persist.did_tomb2_buff = true
@@ -993,7 +993,7 @@ function plan_tomb3_arrival()
     end
 
     if not you.hasted() then
-        return haste()
+        return drink_by_name("haste")
     elseif not you.status("attractive") then
         if drink_by_name("attraction") then
             c_persist.did_tomb3_buff = true

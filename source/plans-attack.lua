@@ -408,7 +408,7 @@ end
 
 function closest_adjacent_map_position(map_pos)
     if map_is_reachable_at(map_pos) then
-        return pos
+        return map_pos
     end
 
     local best_dist, best_pos

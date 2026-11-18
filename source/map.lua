@@ -608,7 +608,7 @@ function update_map_at_cell(cell, queue, seen)
         -- A traversable cell went from unexcluded to excluded, so the excluded
         -- maps of all distance maps need a reset.
         if old_unexcluded
-                and not unexcluded
+                and not cur_unexcluded
                 and map_reset < const.map_select.both then
             map_reset = const.map_select.excluded
         end

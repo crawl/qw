@@ -169,9 +169,9 @@ function assess_ranged_position(attack, target_pos, second_pos)
         dsay("Targeting " .. cell_string_from_position(target_pos))
     end
 
-    if secondary_pos
+    if second_pos
             and attack.is_exploding
-            and position_distance(target_pos, secondary_pos) > 2 then
+            and position_distance(target_pos, second_pos) > 2 then
         return
     end
 
@@ -250,7 +250,7 @@ function assess_ranged_position(attack, target_pos, second_pos)
                 score_enemy_hit(result, mons, attack)
                 if debug_channel("ranged") then
                     dsay("Attack scores after enemy at " .. pos_string(pos)
-                        .. ": " .. stringify_table(result))
+                        .. ": " .. qw.stringify_table(result))
                 end
             end
         end

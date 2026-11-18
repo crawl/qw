@@ -719,7 +719,7 @@ function distance_map_search_from(search, pos, current)
     end
 
     local cache_result = search.cache[pos.x][pos.y]
-    if cache ~= nil then
+    if cache_result ~= nil then
         if debug_channel("move-all") then
             dsay("Returning cached result for search")
         end
