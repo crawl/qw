@@ -49,7 +49,7 @@ end
 function plan_quit()
     if goal_status == "Quit" then
         c_persist.last_completed_goal = goal_status
-        magic(control('q') .. "yes\r")
+        magic(control("q") .. "quit\r")
         return true
     end
 
