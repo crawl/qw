@@ -510,7 +510,7 @@ end
 
 function set_plan_attack()
     plans.attack = cascade {
-        {plan_starting_spell, "starting_spell"},
+        {plan_starting_spell, "try_starting_spell"},
         {plan_poison_spit, "poison_spit"},
         {plan_targeted_evoke, "attack_wand"},
         {plan_throw, "throw"},
