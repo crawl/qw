@@ -240,7 +240,7 @@ function weapon_delay(weapon, duration_level)
     if have_duration("finesse", duration_level) then
         delay = delay / 2
     elseif not weapon.is_ranged
-            and not weapon.class(true) == "missile"
+            and weapon.class(true) ~= "missile"
             and have_duration("berserk", duration_level) then
         delay = delay * 2 / 3
     elseif have_duration("haste", duration_level) then
