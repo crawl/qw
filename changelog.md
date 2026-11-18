@@ -12,6 +12,8 @@ Several clua functions it relies on were added or renamed in 0.33 and 0.34.
 * Renamed slots, abilities, mutations, spells, and rc options.
 * New confirmation prompts for equipping items and for changing equipment
   with monsters nearby, and the "quit" confirmation for the `Quit` goal.
+* A Coglin's second hand can hold a weapon or a shield.
+* The immotile status and the flooded lungs status (formerly engulfed).
 * Makhleb's servant and destruction abilities and Yredelemnul's Drain Life
   are disabled, since those abilities no longer exist.
 
@@ -24,6 +26,9 @@ Several clua functions it relies on were added or renamed in 0.33 and 0.34.
   41d260f.
 * The drop plan no longer tries to drop equipped items, which made it fight
   the upgrade plan, and weapons are unwielded with `w-` instead of `T`.
+* An item in the cached best equipment set that becomes useless, e.g. a
+  helmet after a mutation, no longer stops qw.
+* A starting spell with no valid target no longer stops qw.
 * Plans that referenced undefined functions or variables, including Trog's
   Hand for poison and potions of might.
 * `make-qw.sh` works with the bash 3.2 that macOS ships.
