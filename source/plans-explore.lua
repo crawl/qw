@@ -197,7 +197,7 @@ function plan_move_towards_travel_feature()
         local map_pos = unhash_position(goal_travel.safe_hatch)
         local result = best_move_towards(map_pos)
         if result then
-            return move_towards_destination(result.move, result.des, "goal")
+            return move_towards_destination(result.move, result.dest, "goal")
         end
 
         return false
