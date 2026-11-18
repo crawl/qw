@@ -68,7 +68,7 @@ function intrinsic_rpois()
 end
 
 function intrinsic_relec()
-    return sp == "Gargoyle"
+    return you.race() == "Gargoyle"
 end
 
 function intrinsic_sinv()

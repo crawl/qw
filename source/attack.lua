@@ -276,7 +276,7 @@ function assess_ranged_attack_position(target_pos, attack, required_pos)
                 if debug_channel("ranged") then
                     dsayf("Attack scores after enemy at %s: %s",
                         pos_string(pos),
-                        stringify_table(result))
+                        qw.stringify_table(result))
                 end
             end
         end

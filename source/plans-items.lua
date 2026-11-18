@@ -108,7 +108,7 @@ function plan_bless_weapon()
     for weapon in inventory_slot_iter("weapon") do
         local value = equip_value(weapon, true, cur_equip, "bless")
         if value > 0 and (not best_value or value > best_value) then
-            best_weapon = item
+            best_weapon = weapon
             best_value = value
         end
     end
@@ -240,7 +240,7 @@ function weapon_brand_is_great(weapon)
     if brand == "speed"
             or brand == "spectralizing"
             or brand == "holy wrath"
-                and (undead_or_demon_branch_soon() or future_tso) then
+                and (undead_or_demon_branch_soon() or qw.future_tso) then
         return true
     -- The best that brand weapon can give us for ranged weapons.
     elseif brand == "heavy" and want_ranged_weapon() then

@@ -12,7 +12,7 @@ function plan_cure_poison()
     end
 
     if can_trogs_hand() then
-        trogs_hand()
+        use_ability("Trog's Hand")
         return true
     end
 
