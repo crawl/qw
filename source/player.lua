@@ -401,7 +401,7 @@ function can_berserk()
         and you.race() ~= "Formicid"
         and not you.mesmerised()
         and not you.status("afraid")
-        and not you.transform() == "lich"
+        and you.transform() ~= "death"
         and not you.status("on berserk cooldown")
         and you.god() == "Trog"
         and you.piety_rank() >= 1
