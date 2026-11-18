@@ -49,7 +49,7 @@ function dangerous_hydra_distance(ignore_weapon)
     end
 
     for _, enemy in ipairs(qw.enemy_list) do
-        if enemy:is_real_hydra() then
+        if enemy:regrows_heads() then
             return enemy:distance()
         end
     end
