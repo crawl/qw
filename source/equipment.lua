@@ -740,14 +740,28 @@ function equip_letter_for_item(item, slot, keep_items, upgrade)
         return
     end
 
+    -- A Coglin's second hand holds either a weapon or a shield, so both
+    -- count toward its two hands.
+    local slots = { slot }
     local max_items = slot_max_items(slot)
-    if max_items == 1
-            or not cur_equip[slot]
-            or #cur_equip[slot] < max_items then
+    if you.race() == "Coglin" and (slot == "weapon" or slot == "shield") then
+        slots = { "weapon", "shield" }
+        max_items = 2
+    end
+
+    if max_items == 1 then
         return ""
     end
 
-    for slot_item in equipped_slot_iter(slot) do
+    local num_items = 0
+    for _ in equipped_slots_iter(slots) do
+        num_items = num_items + 1
+    end
+    if num_items < max_items then
+        return ""
+    end
+
+    for _, slot_item in equipped_slots_iter(slots) do
         if not item_in_equip_set(slot_item, keep_items)
                 and can_swap_item(slot_item, upgrade) then
             return item_letter(slot_item)
