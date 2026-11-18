@@ -39,22 +39,35 @@ shift $(($OPTIND - 1))
 
 set -e
 
-lua_text=$(cat ${lua_dir}/${first_lua_file})
-lua_text+=$'\n'
-lua_text+=$(find source -iname '*.lua' -not -name "$first_lua_file" | sort | xargs cat)
-lua_text="${lua_text/\%VERSION\%/$version}"
+# The version substitution is done with awk because bash 3.2, the macOS
+# default, takes minutes to run a pattern substitution on a string this large.
+lua_text=$( { cat "${lua_dir}/${first_lua_file}";
+    find source -iname '*.lua' -not -name "$first_lua_file" | sort | xargs cat; } \
+    | awk -v version="$version" \
+        '!done && sub(/%VERSION%/, version) { done = 1 } { print }')
 
 if [ -n "$rc_file" ]; then
     if [ -z "$out_file" ]; then
         out_file="$rc_out_file"
     fi
 
-    rc_text=$(cat "$rc_file")
     lua_text=$(printf "<\n%s\n>" "$lua_text")
-    # Quotes needed around $lua_text to prevent expansion of & characters for
-    # bash 5.2 and later.
-    printf "%s\n" "${rc_text/$rc_marker/"$lua_text"}" > "$out_file"
-    rc_nlines=$(echo "$rc_text" | wc -l)
+    lua_tmp=$(mktemp)
+    trap 'rm -f "$lua_tmp"' EXIT
+    printf "%s" "$lua_text" > "$lua_tmp"
+    # The marker is matched literally, so drop the backslash that the default
+    # needed when this was a bash pattern.
+    awk -v marker="${rc_marker#\\}" -v lua_file="$lua_tmp" '
+        BEGIN {
+            while ((getline line < lua_file) > 0)
+                lua = lua (n++ ? "\n" : "") line
+        }
+        !done && (i = index($0, marker)) {
+            $0 = substr($0, 1, i - 1) lua substr($0, i + length(marker))
+            done = 1
+        }
+        { print }' "$rc_file" > "$out_file"
+    rc_nlines=$(wc -l < "$rc_file")
     echo Added $rc_nlines lines from $rc_file to $out_file
 else
     if [ -z "$out_file" ]; then
