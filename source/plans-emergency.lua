@@ -34,7 +34,7 @@ function use_ru_healing()
 end
 
 function use_ely_healing()
-    use_ability("Greater Healing")
+    use_ability("Heal Self")
 end
 
 function use_purification()
@@ -434,9 +434,9 @@ end
 function plan_recall()
     if can_recall() and want_to_recall() then
         if you.god() == "Yredelemnul" then
-            use_ability("Recall Undead Slaves", "", true)
+            use_ability("Recall Undead Harvest", "", true)
         else
-            use_ability("Recall Orcish Followers", "", true)
+            use_ability("Recall Apostles", "", true)
         end
     end
 
@@ -634,11 +634,6 @@ function want_to_teleport()
     end
 
     if qw.have_orb and hp_is_low(33) and check_enemies(2) then
-        return true
-    end
-
-    if count_hostile_summons(qw.los_radius) > 0 and you.xl() < 21 then
-        hostile_summons_timer = you.turns()
         return true
     end
 

@@ -572,16 +572,6 @@ function count_enemies_by_name(radius, name)
         function(enemy) return enemy:name() == name end)
 end
 
-function count_hostile_summons(radius)
-    if you.god() ~= "Makhleb" then
-        return 0
-    end
-
-    return count_enemies(radius,
-        function(enemy) return enemy:is_summoned()
-            and monster_is_greater_servant(enemy) end)
-end
-
 function count_pan_lords(radius)
     return count_enemies(radius,
         function(mons) return mons:type() == const.pan_lord_type end)

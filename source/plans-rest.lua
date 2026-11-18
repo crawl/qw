@@ -44,8 +44,6 @@ function should_rest()
 
     return you.berserk()
         or you.turns() < hiding_turn_count + 10
-        or you.god() == "Makhleb"
-            and you.turns() <= hostile_servants_timer + 100
         or reason_to_rest(99.9)
 end
 
