@@ -426,7 +426,7 @@ end
 
 function ally_divine_warrior(ally)
     return ally:is("summoned")
-        and contains_string_in(mons:name(), { "angel", "daeva" })
+        and contains_string_in(ally:name(), { "angel", "daeva" })
 end
 
 function check_divine_warriors(radius)

@@ -696,7 +696,7 @@ function want_to_trogs_hand()
     local hp, mhp = you.hp()
     return in_branch("Abyss") and mhp - hp >= 30
         or not dangerous_to_attack()
-            and check_enemies_in_list(qw.los_radius, hand_monsters)
+            and check_trogs_hand_enemies(qw.los_radius)
 end
 
 function want_to_berserk()

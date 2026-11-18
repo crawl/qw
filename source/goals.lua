@@ -272,7 +272,7 @@ function determine_goal()
     local chosen_goal, normal_goal = choose_goal()
     local old_status = goal_status
     local status = chosen_goal
-    local goal = chosen_goals
+    local goal = status
 
     if status == "Save" then
         goal_status = status

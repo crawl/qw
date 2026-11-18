@@ -477,8 +477,8 @@ function mons_res_holy_check(mons)
     return mons:res_holy() <= 0
 end
 
-function mons_res_holy_check(mons)
-    return mons:res_holy() <= 0
+function mons_tso_heal_check(mons)
+    return mons:res_holy() <= 0 and not mons:is_summoned()
 end
 
 function mons_holy_wrath_check(mons)

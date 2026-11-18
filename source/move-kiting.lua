@@ -285,8 +285,8 @@ end
 
 function best_kiting_destination_func()
     if debug_channel("kite") then
-        dsayf("Assessing kiting destinations with attack/move delays %d/%d",
-            attack_delay,
+        dsayf("Assessing kiting destinations with attack/move delays %s/%s",
+            kiting_attack_delay(),
             player_move_delay())
     end
 
