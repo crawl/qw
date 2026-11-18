@@ -2,24 +2,23 @@
 -- The common plan functions and the overall turn plan.
 
 function use_ability(name, extra, mute)
-    for letter, abil in pairs(you.ability_table()) do
-        if abil == name then
-            -- Want to make sure we don't get a skill selection screen if we
-            -- were training Dodging.
-            if name == "Sacrifice Nimbleness" then
-                you.train_skill("Fighting", 1)
-            end
-
-            if not mute then
-                say("INVOKING " .. name .. ".")
-            end
-
-            magic("a" .. letter .. (extra or ""))
-            return true
-        end
+    local letter = ability_letters()[name]
+    if not letter then
+        return false
     end
 
-    return false
+    -- Want to make sure we don't get a skill selection screen if we were
+    -- training Dodging.
+    if name == "Sacrifice Nimbleness" then
+        you.train_skill("Fighting", 1)
+    end
+
+    if not mute then
+        say("INVOKING " .. name .. ".")
+    end
+
+    magic("a" .. letter .. (extra or ""))
+    return true
 end
 
 -- This plan is called outside of the turn plan cascade.

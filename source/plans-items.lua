@@ -116,7 +116,7 @@ function can_receive_okawaru_weapon()
     return not c_persist.okawaru_weapon_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
-        and contains_string_in("Receive Weapon", you.abilities())
+        and have_ability("Receive Weapon")
         and can_invoke()
 end
 
@@ -124,7 +124,7 @@ function can_receive_okawaru_armour()
     return not c_persist.okawaru_armour_gifted
         and you.god() == "Okawaru"
         and you.piety_rank() >= 6
-        and contains_string_in("Receive Armour", you.abilities())
+        and have_ability("Receive Armour")
         and can_invoke()
 end
 
@@ -135,7 +135,7 @@ end
 function can_invent_gizmo()
     return not c_persist.invented_gizmo
         and you.xl() >= 14
-        and contains_string_in("Invent Gizmo", you.abilities())
+        and have_ability("Invent Gizmo")
 end
 
 function plan_move_for_acquirement()
@@ -606,7 +606,10 @@ function plan_drop_items()
     for item in inventory_iter() do
         if want_drop_item(item) then
             say("DROPPING " .. item.name() .. ".")
-            magic("d" .. item_letter(item) .. "\r")
+            -- The drop menu is paged by item category and letters are only
+            -- unique within a category, so a key sequence can't select an
+            -- arbitrary item.
+            item.drop()
             return true
         end
     end
@@ -618,7 +621,7 @@ function quaff_unided_potion(min_quantity)
     for it in inventory_iter() do
         if it.class(true) == "potion"
                 and (not min_quantity or it.quantity >= min_quantity)
-                and not it.fully_identified then
+                and not it.is_identified then
             drink_potion(it)
             return true
         end
@@ -636,7 +639,7 @@ end
 
 function read_unided_scroll()
     for item in inventory_iter() do
-        if item.class(true) == "scroll" and not item.fully_identified then
+        if item.class(true) == "scroll" and not item.is_identified then
             read_scroll(item, ".Y")
             return true
         end
@@ -844,7 +847,7 @@ function get_unidentified_item()
     local id_item
     for item in inventory_iter() do
         if item.class(true) == "potion"
-                and not item.fully_identified
+                and not item.is_identified
                 -- Prefer identifying potions over scrolls and prefer
                 -- identifying smaller stacks.
                 and (not id_item
@@ -852,7 +855,7 @@ function get_unidentified_item()
                     or item.quantity < id_item.quantity) then
             id_item = item
         elseif item.class(true) == "scroll"
-                and not item.fully_identified
+                and not item.is_identified
                 and (not id_item or id_item.class(true) ~= "potion")
                 and (not id_item or item.quantity < id_item.quantity) then
             id_item = item

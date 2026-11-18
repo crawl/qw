@@ -629,10 +629,27 @@ function want_to_be_surrounded()
         end)
 end
 
+function ability_letters()
+    return turn_memo("ability_letters",
+        function()
+            local letters = {}
+            for _, info in ipairs(you.ability_info() or {}) do
+                letters[info[1]] = info[3]
+            end
+            return letters
+        end)
+end
+
+function have_ability(name)
+    return ability_letters()[name] ~= nil
+end
+
+-- Crawl no longer reports maximum stats, so these are the current values,
+-- which include temporary effects like Might.
 function max_strength()
-    return select(2, you.strength())
+    return you.strength()
 end
 
 function max_dexterity()
-    return select(2, you.dexterity())
+    return you.dexterity()
 end

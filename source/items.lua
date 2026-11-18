@@ -212,10 +212,17 @@ function floor_item_iter()
     return iter.invent_iterator:new(you.floor_items())
 end
 
+-- Only gear items count against the 52-slot inventory limit. Potions,
+-- scrolls, and evocables have their own letters and no practical limit.
+const.gear_classes = { weapon = true, missile = true, armour = true,
+    jewellery = true, ["magical staff"] = true, talisman = true, gizmo = true }
+
 function free_inventory_slots()
     local slots = 52
-    for _ in inventory_iter() do
-        slots = slots - 1
+    for item in inventory_iter() do
+        if const.gear_classes[item.class(true)] then
+            slots = slots - 1
+        end
     end
     return slots
 end
@@ -349,7 +356,7 @@ function get_unidentified_item()
     local id_item
     for item in inventory_iter() do
         if item.class(true) == "potion"
-                and not item.fully_identified
+                and not item.is_identified
                 -- Prefer identifying potions over scrolls and prefer
                 -- identifying smaller stacks.
                 and (not id_item
@@ -357,7 +364,7 @@ function get_unidentified_item()
                     or item.quantity < id_item.quantity) then
             id_item = item
         elseif item.class(true) == "scroll"
-                and not item.fully_identified
+                and not item.is_identified
                 and (not id_item or id_item.class(true) ~= "potion")
                 and (not id_item or item.quantity < id_item.quantity) then
             id_item = item

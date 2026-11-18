@@ -30,6 +30,7 @@ function Monster:property_memo(name, func)
 end
 
 function Monster:property_memo_args(name, func, ...)
+    local arg = { n = select("#", ...), ... }
     assert(arg.n > 0)
 
     local parent, key
@@ -402,7 +403,7 @@ end
 function Monster:is_ranged(ignore_reach)
     return self:property_memo_args("is_ranged",
         function()
-            return self.minfo:has_known_ranged_attack()
+            return self.minfo:range() > 1
                     and not (ignore_reach and self:reach_range() > 1
                         or self:name():find("kraken")
                         or self:name() == "lost soul")

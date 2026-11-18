@@ -17,6 +17,7 @@ function turn_memo(name, func)
 end
 
 function turn_memo_args(name, func, ...)
+    local arg = { n = select("#", ...), ... }
     assert(arg.n > 0)
 
     local parent, key
